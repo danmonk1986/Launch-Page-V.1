@@ -18,19 +18,27 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   displayName: 'Dan',
   logoText: 'Dan Monk',
   logoUrl: null,
-  goal: 'Undeniable in 2026',
+  goal: "You can do anything. You just can't do everything.",
   mantra: 'search. create. evolve.',
   background: 'synthwave',
-  accentPurple: '#8169af',
-  accentTeal: '#76caba'
+  accentPurple: '#8869cb',
+  accentTeal: '#06f9c2'
 };
+
+/** Oct 15: the neon pair from the logo became the master palette. Move the old defaults over. */
+function upgradePalette(s: BrandSettings): BrandSettings {
+  if (s.accentPurple.toLowerCase() === '#8169af' && s.accentTeal.toLowerCase() === '#76caba') {
+    return { ...s, accentPurple: '#8869cb', accentTeal: '#06f9c2' };
+  }
+  return s;
+}
 
 const LOCAL_KEY = 'launchpage.settings.v1';
 
 function readLocal(): BrandSettings {
   try {
     const raw = localStorage.getItem(LOCAL_KEY);
-    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
+    return raw ? upgradePalette({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) }) : DEFAULT_SETTINGS;
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -86,7 +94,7 @@ export async function loadSettings(userId: string | null): Promise<BrandSettings
       .eq('user_id', userId)
       .maybeSingle();
     if (!error && data) {
-      const s = fromRow(data as Row);
+      const s = upgradePalette(fromRow(data as Row));
       writeLocal(s);
       return s;
     }

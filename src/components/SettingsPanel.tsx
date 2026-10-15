@@ -69,7 +69,7 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword }
           <input value={draft.logoText} onChange={(e) => set('logoText', e.target.value)} />
         </label>
         <label className="field">
-          <span>Logo image link (optional, replaces the text)</span>
+          <span>Logo image link (optional, replaces the LaunchPage logo)</span>
           <input
             type="url"
             inputMode="url"
@@ -79,7 +79,7 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword }
           />
         </label>
         <label className="field">
-          <span>Goal</span>
+          <span>Headline (top bar)</span>
           <input value={draft.goal} onChange={(e) => set('goal', e.target.value)} />
         </label>
         <label className="field">

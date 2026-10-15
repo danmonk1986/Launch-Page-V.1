@@ -3,8 +3,9 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type BrandSettings } from './lib/settings';
 import { downloadExport } from './lib/exportData';
-import { Header } from './components/Header';
-import { Dashboard } from './components/Dashboard';
+import { Header, type PageId } from './components/Header';
+import { DateLine } from './components/Clock';
+import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SignIn } from './components/SignIn';
 
@@ -14,6 +15,7 @@ export default function App() {
   const [settings, setSettings] = useState<BrandSettings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [status, setStatus] = useState('');
+  const [page, setPage] = useState<PageId>('launch');
 
   const userId = session?.user.id ?? null;
 
@@ -53,10 +55,17 @@ export default function App() {
 
   return (
     <div className="app" style={theme} data-bg={settings.background}>
-      <div className="sky" aria-hidden="true" />
+      <div className="sky" aria-hidden="true">
+        <div className="sky-lines" />
+        <div className="sky-horizon" />
+        <div className="sky-floor" />
+      </div>
+      <Header settings={settings} page={page} onPage={setPage} />
       <div className="frame">
-        <Header settings={settings} />
-        <Dashboard />
+        <DateLine shiftLine="Pick a routine to set your shift and wake times (build piece L2)." />
+        <main aria-label={page === 'launch' ? 'Launch Page' : 'Page'}>
+          {page === 'launch' ? <LaunchPageHome /> : <ComingSoon page={page} />}
+        </main>
         <footer className="toolbar">
           <img className="toolbar-logo" src="/launchpage-logo.png" alt="LaunchPage" />
           <p className="toolbar-status" role="status">
