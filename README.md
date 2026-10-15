@@ -36,7 +36,7 @@ npm run dev                  # http://localhost:5173
 ### Supabase (database + login)
 1. Create a free account at supabase.com and a project named `launchpage`, region Canada (Central).
 2. SQL Editor → paste `supabase/migrations/0001_foundation.sql` → Run.
-3. Authentication → URL Configuration: Site URL `https://app.l4unchp4ge.com`; add redirect URLs `http://localhost:5173`, `https://*.pages.dev` and `https://*.workers.dev`.
+3. Authentication → URL Configuration: Site URL `https://app.l4unchp4ge.com`; add redirect URLs `http://localhost:5173` and `https://launch-page-v-1.danmonk1986.workers.dev` (exact addresses: Supabase's `*` only matches one part of a domain name).
 4. Project Settings → API: copy the Project URL and the `anon` public key into `.env.local`. Never use the `service_role` key in this app.
 
 ### Cloudflare Workers (hosting)
