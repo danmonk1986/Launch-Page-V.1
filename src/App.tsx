@@ -70,7 +70,7 @@ export default function App() {
               Brand settings
             </button>
             {supabase && session && (
-              <button className="btn btn-quiet" onClick={() => supabase?.auth.signOut()}>
+              <button className="btn btn-quiet" onClick={() => supabase?.auth.signOut({ scope: 'local' })}>
                 Sign out
               </button>
             )}
@@ -86,6 +86,11 @@ export default function App() {
           supabase && session
             ? async (password) => {
                 const { error } = await supabase!.auth.updateUser({ password });
+                if (error && /session/i.test(error.message)) {
+                  // This device's sign-in has expired: send it back to the sign-in page.
+                  await supabase!.auth.signOut({ scope: 'local' });
+                  return 'This device was signed out. Sign in again, then set your password.';
+                }
                 return error ? error.message : null;
               }
             : undefined
