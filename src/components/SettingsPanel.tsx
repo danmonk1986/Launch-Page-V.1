@@ -6,12 +6,16 @@ type Props = {
   settings: BrandSettings;
   onClose: () => void;
   onSave: (s: BrandSettings) => Promise<void>;
+  /** Present only when signed in to the cloud. Returns an error message, or null on success. */
+  onSetPassword?: (password: string) => Promise<string | null>;
 };
 
-export function SettingsPanel({ open, settings, onClose, onSave }: Props) {
+export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState(settings);
   const [saving, setSaving] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [pwStatus, setPwStatus] = useState('');
 
   useEffect(() => setDraft(settings), [settings, open]);
 
@@ -31,6 +35,19 @@ export function SettingsPanel({ open, settings, onClose, onSave }: Props) {
     await onSave({ ...draft, logoUrl: draft.logoUrl?.trim() || null });
     setSaving(false);
     onClose();
+  }
+
+  async function submitPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!onSetPassword) return;
+    if (newPassword.length < 8) {
+      setPwStatus('Use at least 8 characters.');
+      return;
+    }
+    setPwStatus('Saving password…');
+    const error = await onSetPassword(newPassword);
+    setPwStatus(error ? `Password not saved: ${error}` : 'Password saved. Use it to sign in on any device.');
+    if (!error) setNewPassword('');
   }
 
   return (
@@ -107,6 +124,31 @@ export function SettingsPanel({ open, settings, onClose, onSave }: Props) {
           </button>
         </div>
       </form>
+
+      {onSetPassword && (
+        <form className="account" onSubmit={submitPassword}>
+          <h3 className="account-title">Sign-in password</h3>
+          <label className="field">
+            <span>New password</span>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </label>
+          <div className="sheet-actions">
+            <button type="submit" className="btn btn-quiet">
+              Set password
+            </button>
+          </div>
+          {pwStatus && (
+            <p className="account-status" role="status">
+              {pwStatus}
+            </p>
+          )}
+        </form>
+      )}
     </dialog>
   );
 }

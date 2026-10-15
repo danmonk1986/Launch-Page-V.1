@@ -83,6 +83,14 @@ export default function App() {
         settings={settings}
         onClose={() => setSettingsOpen(false)}
         onSave={handleSave}
+        onSetPassword={
+          supabase && session
+            ? async (password) => {
+                const { error } = await supabase!.auth.updateUser({ password });
+                return error ? error.message : null;
+              }
+            : undefined
+        }
       />
     </div>
   );

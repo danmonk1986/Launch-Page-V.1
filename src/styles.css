@@ -316,3 +316,33 @@ button, input { font: inherit; color: inherit; }
 @media (max-width: 560px) {
   .clock { justify-items: start; text-align: left; }
 }
+
+/* ---------- Sign-in extras + account ---------- */
+.link-btn {
+  margin-top: 14px;
+  width: 100%;
+  min-height: 44px;
+  background: none;
+  border: 0;
+  color: var(--accent-teal);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.account {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--surface-edge);
+}
+
+.account-title { margin: 0 0 12px; font-family: var(--font-head); font-size: 18px; }
+.account-status { margin: 8px 0 0; font-size: 14px; color: var(--mist); }
+
+/* Browser autofill: keep inputs on-theme instead of yellow */
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--beige);
+  -webkit-box-shadow: 0 0 0 1000px var(--night) inset;
+  caret-color: var(--beige);
+}
