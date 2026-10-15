@@ -45,8 +45,7 @@ export default function App() {
   if (!authReady) return <div className="app" style={theme} data-bg={settings.background} />;
   if (supabase && !session) {
     return (
-      <div className="app" style={theme} data-bg={settings.background}>
-        <div className="sky" aria-hidden="true" />
+      <div className="app app-light" style={theme}>
         <SignIn />
       </div>
     );

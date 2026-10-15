@@ -346,3 +346,18 @@ input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 1000px var(--night) inset;
   caret-color: var(--beige);
 }
+
+/* ---------- Light sign-in page: the logo sits on white, as in the Figma welcome screen ---------- */
+.app-light {
+  --night: #ffffff;
+  --beige: #444242;
+  --surface-edge: #dadada;
+  --mist: #989696;
+  color-scheme: light;
+  background: #ffffff;
+  color: #444242;
+}
+
+.app-light .btn { color: #444242; }
+.app-light .signin-error { color: #b3261e; }
+.app-light .link-btn { color: #444242; }
