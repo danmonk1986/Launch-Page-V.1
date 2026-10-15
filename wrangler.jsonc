@@ -1,0 +1,10 @@
+// Cloudflare Workers (static assets only): serves the built app from ./dist.
+// single-page-application: unknown paths fall back to index.html.
+{
+  "name": "launch-page-v-1",
+  "compatibility_date": "2026-10-13",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
