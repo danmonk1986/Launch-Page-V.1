@@ -4,8 +4,6 @@ type Panel = { id: string; title: string; empty: string; piece: string };
 
 // Launch Page layout from the approved mockup. Each panel fills in with its build piece.
 const LEFT: Panel[] = [
-  { id: 'launchers', title: 'Launchers', empty: 'Your launch tiles for the active routine. Launch all opens every tab from a reminder.', piece: 'L3' },
-  { id: 'week', title: 'This week', empty: 'Sunday to Saturday, synced both ways with Google Calendar.', piece: 'L5' },
   { id: 'tasks', title: 'Tasks', empty: 'Due today and your 3 key tasks: project, description, task, status, link, start, end, time.', piece: 'L4' },
   { id: 'journal', title: 'Journal', empty: 'One headline for the day.', piece: 'L6' }
 ];
@@ -22,10 +20,14 @@ function PanelCard({ p }: { p: Panel }) {
   );
 }
 
-export function LaunchPageHome({ today }: { today: ReactNode }) {
+type Slots = { launchers: ReactNode; week: ReactNode; today: ReactNode };
+
+export function LaunchPageHome({ launchers, week, today }: Slots) {
   return (
     <div className="home">
       <div className="home-main">
+        {launchers}
+        {week}
         {LEFT.map((p) => (
           <PanelCard key={p.id} p={p} />
         ))}

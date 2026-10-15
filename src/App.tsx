@@ -8,7 +8,23 @@ import { DateLine } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
-import { TodayPanel } from './components/TodayPanel';
+import { TodayPanel, useNow } from './components/TodayPanel';
+import { BLOCKED_HELP, LaunchersPanel } from './components/Launchers';
+import { LaunchReminder } from './components/LaunchReminder';
+import { WeekCalendar } from './components/WeekCalendar';
+import {
+  isDue,
+  isoDate,
+  launchStore,
+  launcherStore,
+  markHandled,
+  openTabs,
+  readHandled,
+  type Launch,
+  type Launcher
+} from './lib/launchers';
+import { eventStore, type CalEvent } from './lib/events';
+import type { Store } from './lib/store';
 import {
   deleteRoutine,
   loadActive,
@@ -35,6 +51,13 @@ export default function App() {
   const [shift, setShift] = useState<Shift>('nights');
   const [routineProblem, setRoutineProblem] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ open: boolean; routine: Routine | null }>({ open: false, routine: null });
+  const [launchers, setLaunchers] = useState<Launcher[]>([]);
+  const [launches, setLaunches] = useState<Launch[]>([]);
+  const [events, setEvents] = useState<CalEvent[]>([]);
+  const [storeProblem, setStoreProblem] = useState<string | null>(null);
+  const [reminder, setReminder] = useState<Launch | null>(null);
+  const [snoozed, setSnoozed] = useState<Record<string, number>>({});
+  const now = useNow(30_000);
 
   const userId = session?.user.id ?? null;
 
@@ -63,6 +86,12 @@ export default function App() {
       setRoutineProblem(problem);
       setActiveId(list.some((r) => r.id === active.id) ? active.id : list[0]?.id ?? null);
       setShift(active.shift);
+      const [l1, l2, l3] = await Promise.all([launcherStore.load(userId), launchStore.load(userId), eventStore.load(userId)]);
+      if (!live) return;
+      setLaunchers(l1.items);
+      setLaunches(l2.items);
+      setEvents(l3.items);
+      setStoreProblem(l1.problem ?? l2.problem ?? l3.problem);
     })();
     return () => {
       live = false;
@@ -84,6 +113,44 @@ export default function App() {
     const ok = await saveRoutine(userId, r, next);
     if (!exists) pickRoutine(r.id, shift);
     setStatus(ok ? `${r.name} saved.` : `${r.name} saved on this device only.`);
+  }
+
+  // One save/delete pair per list: update the screen first, then the cloud.
+  function ops<T extends { id: string }>(store: Store<T>, list: T[], setList: (l: T[]) => void, name: (t: T) => string) {
+    return {
+      save: async (item: T) => {
+        const next = list.some((x) => x.id === item.id) ? list.map((x) => (x.id === item.id ? item : x)) : [...list, item];
+        setList(next);
+        const ok = await store.save(userId, item, next);
+        setStatus(ok ? `${name(item)} saved.` : `${name(item)} saved on this device only.`);
+      },
+      remove: async (id: string) => {
+        const next = list.filter((x) => x.id !== id);
+        setList(next);
+        await store.remove(userId, id, next);
+        setStatus('Deleted.');
+      }
+    };
+  }
+  const launcherOps = ops(launcherStore, launchers, setLaunchers, (l) => l.name);
+  const launchOps = ops(launchStore, launches, setLaunches, (l) => l.title);
+  const eventOps = ops(eventStore, events, setEvents, (e) => e.title);
+
+  // Timed launches: pop the reminder when one is due and not handled today.
+  useEffect(() => {
+    if (reminder) return;
+    const handled = readHandled();
+    const due = launches.find(
+      (l) => isDue(l, now) && !handled[`${l.id}:${isoDate(now)}`] && !(snoozed[l.id] && snoozed[l.id] > now.getTime())
+    );
+    if (due) setReminder(due);
+  }, [now, launches, reminder, snoozed]);
+
+  function launchNow(l: Launch) {
+    const blocked = openTabs(l.urls);
+    markHandled(l.id, new Date());
+    setReminder(null);
+    setStatus(blocked ? BLOCKED_HELP : `Launched ${l.title}: ${l.urls.length} tabs.`);
   }
 
   async function handleDeleteRoutine(id: string) {
@@ -139,14 +206,27 @@ export default function App() {
             onEdit={() => setEditor({ open: true, routine: activeRoutine })}
           />
         </DateLine>
-        {routineProblem && (
+        {(routineProblem || storeProblem) && (
           <p className="notice" role="status">
-            {routineProblem}
+            {routineProblem ?? storeProblem}
           </p>
         )}
         <main aria-label={page === 'launch' ? 'Launch Page' : 'Page'}>
           {page === 'launch' ? (
             <LaunchPageHome
+              launchers={
+                <LaunchersPanel
+                  routineName={activeRoutine ? routineLabel(activeRoutine, shift) : null}
+                  launchers={launchers}
+                  launches={launches}
+                  onSaveLauncher={launcherOps.save}
+                  onDeleteLauncher={launcherOps.remove}
+                  onSaveLaunch={launchOps.save}
+                  onDeleteLaunch={launchOps.remove}
+                  onStatus={setStatus}
+                />
+              }
+              week={<WeekCalendar events={events} onSave={eventOps.save} onDelete={eventOps.remove} />}
               today={
                 <TodayPanel
                   routine={activeRoutine}
@@ -179,6 +259,18 @@ export default function App() {
           </div>
         </footer>
       </div>
+      <LaunchReminder
+        launch={reminder}
+        onLaunch={launchNow}
+        onSnooze={(l) => {
+          setSnoozed((m) => ({ ...m, [l.id]: Date.now() + 10 * 60_000 }));
+          setReminder(null);
+        }}
+        onSkip={(l) => {
+          markHandled(l.id, new Date());
+          setReminder(null);
+        }}
+      />
       <RoutineEditor
         open={editor.open}
         routine={editor.routine}
