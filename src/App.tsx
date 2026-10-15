@@ -6,6 +6,20 @@ import { downloadExport } from './lib/exportData';
 import { Header, type PageId } from './components/Header';
 import { DateLine } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
+import { RoutinePicker } from './components/RoutinePicker';
+import { RoutineEditor } from './components/RoutineEditor';
+import { TodayPanel } from './components/TodayPanel';
+import {
+  deleteRoutine,
+  loadActive,
+  loadRoutines,
+  routineLabel,
+  saveActive,
+  saveRoutine,
+  shiftLine,
+  type Routine,
+  type Shift
+} from './lib/routines';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SignIn } from './components/SignIn';
 
@@ -16,6 +30,11 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [status, setStatus] = useState('');
   const [page, setPage] = useState<PageId>('launch');
+  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [shift, setShift] = useState<Shift>('nights');
+  const [routineProblem, setRoutineProblem] = useState<string | null>(null);
+  const [editor, setEditor] = useState<{ open: boolean; routine: Routine | null }>({ open: false, routine: null });
 
   const userId = session?.user.id ?? null;
 
@@ -32,6 +51,49 @@ export default function App() {
   useEffect(() => {
     loadSettings(userId).then(setSettings);
   }, [userId]);
+
+  useEffect(() => {
+    if (supabase && !session) return;
+    let live = true;
+    (async () => {
+      const { routines: list, problem } = await loadRoutines(userId);
+      const active = await loadActive(userId);
+      if (!live) return;
+      setRoutines(list);
+      setRoutineProblem(problem);
+      setActiveId(list.some((r) => r.id === active.id) ? active.id : list[0]?.id ?? null);
+      setShift(active.shift);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [userId, session]);
+
+  const activeRoutine = routines.find((r) => r.id === activeId) ?? routines[0] ?? null;
+
+  function pickRoutine(id: string, s: Shift) {
+    setActiveId(id);
+    setShift(s);
+    saveActive(userId, id, s);
+  }
+
+  async function handleSaveRoutine(r: Routine) {
+    const exists = routines.some((x) => x.id === r.id);
+    const next = exists ? routines.map((x) => (x.id === r.id ? r : x)) : [...routines, r];
+    setRoutines(next);
+    const ok = await saveRoutine(userId, r, next);
+    if (!exists) pickRoutine(r.id, shift);
+    setStatus(ok ? `${r.name} saved.` : `${r.name} saved on this device only.`);
+  }
+
+  async function handleDeleteRoutine(id: string) {
+    const gone = routines.find((x) => x.id === id);
+    const next = routines.filter((x) => x.id !== id);
+    setRoutines(next);
+    if (activeId === id) setActiveId(next[0]?.id ?? null);
+    await deleteRoutine(userId, id, next);
+    setStatus(gone ? `${gone.name} deleted.` : 'Deleted.');
+  }
 
   async function handleSave(next: BrandSettings) {
     setSettings(next);
@@ -60,11 +122,42 @@ export default function App() {
         <div className="sky-horizon" />
         <div className="sky-floor" />
       </div>
-      <Header settings={settings} page={page} onPage={setPage} />
+      <Header
+        settings={settings}
+        page={page}
+        onPage={setPage}
+        routineName={activeRoutine ? routineLabel(activeRoutine, shift) : undefined}
+      />
       <div className="frame">
-        <DateLine shiftLine="Pick a routine to set your shift and wake times (build piece L2)." />
+        <DateLine shiftLine={activeRoutine ? shiftLine(activeRoutine, shift) : 'Add a routine to set your shift and wake times.'}>
+          <RoutinePicker
+            routines={routines}
+            activeId={activeRoutine?.id ?? null}
+            shift={shift}
+            onPick={pickRoutine}
+            onAdd={() => setEditor({ open: true, routine: null })}
+            onEdit={() => setEditor({ open: true, routine: activeRoutine })}
+          />
+        </DateLine>
+        {routineProblem && (
+          <p className="notice" role="status">
+            {routineProblem}
+          </p>
+        )}
         <main aria-label={page === 'launch' ? 'Launch Page' : 'Page'}>
-          {page === 'launch' ? <LaunchPageHome /> : <ComingSoon page={page} />}
+          {page === 'launch' ? (
+            <LaunchPageHome
+              today={
+                <TodayPanel
+                  routine={activeRoutine}
+                  shift={shift}
+                  onEdit={() => setEditor({ open: true, routine: activeRoutine })}
+                />
+              }
+            />
+          ) : (
+            <ComingSoon page={page} />
+          )}
         </main>
         <footer className="toolbar">
           <img className="toolbar-logo" src="/launchpage-logo.png" alt="LaunchPage" />
@@ -86,6 +179,14 @@ export default function App() {
           </div>
         </footer>
       </div>
+      <RoutineEditor
+        open={editor.open}
+        routine={editor.routine}
+        nextSort={routines.length}
+        onClose={() => setEditor({ open: false, routine: null })}
+        onSave={handleSaveRoutine}
+        onDelete={handleDeleteRoutine}
+      />
       <SettingsPanel
         open={settingsOpen}
         settings={settings}

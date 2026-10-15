@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 type Panel = { id: string; title: string; empty: string; piece: string };
 
 // Launch Page layout from the approved mockup. Each panel fills in with its build piece.
@@ -7,13 +9,6 @@ const LEFT: Panel[] = [
   { id: 'tasks', title: 'Tasks', empty: 'Due today and your 3 key tasks: project, description, task, status, link, start, end, time.', piece: 'L4' },
   { id: 'journal', title: 'Journal', empty: 'One headline for the day.', piece: 'L6' }
 ];
-
-const TODAY: Panel = {
-  id: 'today',
-  title: 'Today',
-  empty: 'Your routine as a timeline, times flipped for Days or Nights, with now highlighted.',
-  piece: 'L2'
-};
 
 function PanelCard({ p }: { p: Panel }) {
   return (
@@ -27,7 +22,7 @@ function PanelCard({ p }: { p: Panel }) {
   );
 }
 
-export function LaunchPageHome() {
+export function LaunchPageHome({ today }: { today: ReactNode }) {
   return (
     <div className="home">
       <div className="home-main">
@@ -35,7 +30,7 @@ export function LaunchPageHome() {
           <PanelCard key={p.id} p={p} />
         ))}
       </div>
-      <PanelCard p={TODAY} />
+      {today}
     </div>
   );
 }
