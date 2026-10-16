@@ -77,6 +77,50 @@ export function splitShared(list: Launcher[], routineIds: string[]) {
   return { shared, copies, next: [...list.filter((l) => !shared.includes(l)), ...copies] };
 }
 
+/**
+ * Routines saved twice (two devices seeding at once) share a name. Keep one per name:
+ * the active one, else the one with the most tiles. Tiles from the copies move onto the
+ * kept one unless it already has a tile with that name, so nothing you set up is lost.
+ */
+export function dedupeRoutines<R extends { id: string; name: string; kind: string }>(
+  routines: R[],
+  launchers: Launcher[],
+  activeId: string | null
+) {
+  const groups = new Map<string, R[]>();
+  for (const r of routines) {
+    const key = `${r.kind}:${r.name.trim().toLowerCase()}`;
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  const dropRoutines: R[] = [];
+  const moved: Launcher[] = [];
+  const dropTiles: string[] = [];
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const count = (r: R) => launchers.filter((l) => l.routineIds?.includes(r.id)).length;
+    const keep = group.find((r) => r.id === activeId) ?? [...group].sort((a, b) => count(b) - count(a))[0];
+    const kept = launchers.filter((l) => l.routineIds?.includes(keep.id));
+    const names = new Set(kept.map((l) => l.name.trim().toLowerCase()));
+    let sort = kept.reduce((m, l) => Math.max(m, l.sort + 1), 0);
+    for (const r of group) {
+      if (r.id === keep.id) continue;
+      dropRoutines.push(r);
+      for (const l of launchers.filter((x) => x.routineIds?.includes(r.id)).sort((a, b) => a.sort - b.sort)) {
+        const n = l.name.trim().toLowerCase();
+        if (names.has(n)) dropTiles.push(l.id);
+        else {
+          names.add(n);
+          moved.push({ ...l, routineIds: [keep.id], sort: sort++ });
+        }
+      }
+    }
+  }
+  if (!dropRoutines.length) return null;
+  const movedIds = new Map(moved.map((l) => [l.id, l]));
+  const next = launchers.filter((l) => !dropTiles.includes(l.id)).map((l) => movedIds.get(l.id) ?? l);
+  return { routines: routines.filter((r) => !dropRoutines.includes(r)), dropRoutines, moved, dropTiles, launchers: next };
+}
+
 export function seedLaunches(): Launch[] {
   return [
     {

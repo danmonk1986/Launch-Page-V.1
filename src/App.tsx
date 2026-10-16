@@ -24,6 +24,7 @@ import {
   skipToTomorrow,
   launchersFor,
   splitShared,
+  dedupeRoutines,
   type Launch,
   type Launcher
 } from './lib/launchers';
@@ -89,24 +90,35 @@ export default function App() {
     if (supabase && !session) return;
     let live = true;
     (async () => {
-      const { routines: list, problem } = await loadRoutines(userId);
+      const loaded = await loadRoutines(userId);
+      let list = loaded.routines;
       const active = await loadActive(userId);
       if (!live) return;
-      setRoutines(list);
-      setRoutineProblem(problem);
-      setActiveId(list.some((r) => r.id === active.id) ? active.id : list[0]?.id ?? null);
-      setShift(active.shift);
       const [l1, l2, l3] = await Promise.all([launcherStore.load(userId), launchStore.load(userId), eventStore.load(userId)]);
       if (!live) return;
+      let tiles = l1.items;
       // One tile set per routine: copy any shared tiles into each routine, then drop the shared ones.
-      const split = splitShared(l1.items, list.map((r) => r.id));
+      const split = splitShared(tiles, list.map((r) => r.id));
       if (split) {
-        setLaunchers(split.next);
-        for (const c of split.copies) await launcherStore.save(userId, c, split.next);
-        for (const sh of split.shared) await launcherStore.remove(userId, sh.id, split.next);
-      } else {
-        setLaunchers(l1.items);
+        tiles = split.next;
+        for (const c of split.copies) await launcherStore.save(userId, c, tiles);
+        for (const sh of split.shared) await launcherStore.remove(userId, sh.id, tiles);
       }
+      // Routines saved twice: keep one of each, moving any tiles it lacks onto it.
+      const dupes = dedupeRoutines(list, tiles, active.id);
+      if (dupes) {
+        list = dupes.routines;
+        tiles = dupes.launchers;
+        for (const l of dupes.moved) await launcherStore.save(userId, l, tiles);
+        for (const id of dupes.dropTiles) await launcherStore.remove(userId, id, tiles);
+        for (const r of dupes.dropRoutines) await deleteRoutine(userId, r.id, list);
+      }
+      if (!live) return;
+      setRoutines(list);
+      setRoutineProblem(loaded.problem);
+      setActiveId(list.some((r) => r.id === active.id) ? active.id : list[0]?.id ?? null);
+      setShift(active.shift);
+      setLaunchers(tiles);
       setLaunches(l2.items);
       setEvents(l3.items);
       setStoreProblem(l1.problem ?? l2.problem ?? l3.problem);
