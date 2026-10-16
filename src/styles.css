@@ -990,3 +990,9 @@ input:-webkit-autofill:focus {
 .week-arrow:hover { color: var(--beige); }
 .gcal-off, .gcal-off:hover { border-color: var(--accent-purple); color: color-mix(in srgb, var(--accent-purple) 55%, white); }
 .gcal-off:hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
+
+/* Week events: compact, Google events in beige with their calendar colour on the edge */
+.week-event { min-height: 22px; padding: 0 6px; border-radius: 5px; font-size: 12px; font-weight: 600; line-height: 22px; }
+.ev-google { background: var(--beige); color: #14102b; border-left: 3px solid var(--accent-purple); }
+.ev-time { font-size: 10px; margin-right: 4px; opacity: 0.75; }
+.week-grid { row-gap: 4px; }

@@ -172,7 +172,7 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
       {gError && <p className="panel-empty">{gError}</p>}
 
       <div className="week-scroll">
-        <div className="week-grid" style={{ gridTemplateRows: `auto repeat(${Math.max(lanes, 1)}, 32px)` }}>
+        <div className="week-grid" style={{ gridTemplateRows: `auto repeat(${Math.max(lanes, 1)}, 24px)` }}>
           {days.map((d, i) => {
             const iso = isoDate(d);
             return (
