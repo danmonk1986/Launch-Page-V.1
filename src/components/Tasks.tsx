@@ -307,7 +307,6 @@ export function TasksPage(p: Common & { onOpenProjects: () => void; onImport: (f
             <span className="sr-only">Import tasks</span>
             <input
               type="file"
-              accept=".json,application/json"
               hidden
               onChange={(e) => {
                 const f = e.target.files?.[0];
