@@ -293,14 +293,8 @@ export function TasksPanel(p: Common & { onOpenAll: () => void }) {
 /** The Tasks page: the whole list, in the Launch Sheet's sections. */
 export function TasksPage(p: Common & { onOpenProjects: () => void }) {
   const editor = useTaskEditor(p);
-  const [area, setArea] = useState<string | null>(null);
-  const tree = projectTree(p.projects);
-  const inArea = (t: Task) => {
-    if (!area) return true;
-    const proj = p.projects.find((x) => x.id === t.projectId);
-    return !!proj && (proj.id === area || proj.parentId === area);
-  };
-  const grouped = groupTasks(p.tasks.filter(inArea), p.today);
+  const [view, setView] = useState<Section | null>(null);
+  const grouped = groupTasks(p.tasks, p.today);
   return (
     <section className="panel panel-tasks-page" aria-labelledby="h-tasks-page">
       <div className="panel-head">
@@ -316,25 +310,23 @@ export function TasksPage(p: Common & { onOpenProjects: () => void }) {
           </button>
         </div>
       </div>
-      <div className="area-filter" role="group" aria-label="Show tasks for">
-        <button type="button" className="area-pill" aria-pressed={!area} onClick={() => setArea(null)}>
-          All
-        </button>
-        {tree.map(({ area: a }) => (
+      <div className="area-filter" role="group" aria-label="Show">
+        {SECTIONS.map((sec) => (
           <button
-            key={a.id}
+            key={sec.id}
             type="button"
             className="area-pill"
-            aria-pressed={area === a.id}
-            style={{ ['--chip' as string]: a.color }}
-            onClick={() => setArea(area === a.id ? null : a.id)}
+            aria-pressed={view === sec.id}
+            title={sec.hint}
+            onClick={() => setView(view === sec.id ? null : sec.id)}
           >
-            {a.name}
+            {sec.pill ?? sec.title} <span className="pill-count">{grouped[sec.id].length}</span>
           </button>
         ))}
       </div>
       <TaskTable
-        sections={SECTIONS.map((s) => s.id)}
+        key={view ?? 'all'}
+        sections={view ? [view] : SECTIONS.map((s) => s.id)}
         grouped={grouped}
         projects={p.projects}
         today={p.today}
@@ -342,7 +334,7 @@ export function TasksPage(p: Common & { onOpenProjects: () => void }) {
         onEdit={editor.edit}
         onTomorrow={(t) => p.onSave(toTomorrow(t))}
         onClear={(t) => p.onSave({ ...t, cleared: true })}
-        collapsible
+        collapsible={!view}
       />
       {editor.sheet}
     </section>

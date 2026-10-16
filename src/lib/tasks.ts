@@ -162,19 +162,18 @@ export const isRecurring = (t: Task) => t.status === 'MTH RCR' || t.status === '
 
 // ---------- Sections (how the sheet sorts its list) ----------
 
-export type Section = 'due' | 'key' | 'wip' | 'appts' | 'soon' | 'ondeck' | 'pending' | 'monthly' | 'annual' | 'done';
+export type Section = 'due' | 'key' | 'wip' | 'appts' | 'ondeck' | 'monthly' | 'annual' | 'pending' | 'done';
 
-export const SECTIONS: { id: Section; title: string; hint: string }[] = [
+export const SECTIONS: { id: Section; title: string; hint: string; pill?: string }[] = [
   { id: 'due', title: 'Due today', hint: 'Date required is today or earlier' },
   { id: 'key', title: '3 key tasks', hint: 'Status THREE' },
-  { id: 'wip', title: 'In progress', hint: 'Status WIP' },
+  { id: 'wip', title: 'In progress', hint: 'Status WIP, or due within 30 days' },
   { id: 'appts', title: 'Appointments', hint: 'Status APPOINTMENT' },
-  { id: 'soon', title: 'Within 30 days', hint: 'Due in the next 30 days' },
-  { id: 'ondeck', title: 'On deck (+30 days)', hint: 'Due more than 30 days out, or ON DECK' },
-  { id: 'pending', title: 'Pending', hint: 'No date yet' },
-  { id: 'monthly', title: 'Monthly recurring', hint: 'MTH RCR' },
-  { id: 'annual', title: 'Annual recurring', hint: 'ANN RCR' },
-  { id: 'done', title: 'Done', hint: 'Checked off' }
+  { id: 'ondeck', title: 'On deck (+30 days)', hint: 'Due more than 30 days out, or ON DECK', pill: 'On deck' },
+  { id: 'monthly', title: 'Monthly recurring', hint: 'MTH RCR', pill: 'Monthly' },
+  { id: 'annual', title: 'Annual recurring', hint: 'ANN RCR', pill: 'Annual' },
+  { id: 'pending', title: 'Pending (no date)', hint: 'Anything without a date', pill: 'Pending' },
+  { id: 'done', title: 'Completed', hint: 'Checked off' }
 ];
 
 const dayDiff = (iso: string, today: Date) => {
@@ -199,7 +198,7 @@ export function sectionOf(t: Task, today: Date): Section {
   if (t.status === 'APPTS') return 'appts';
   if (t.status === 'ON DECK') return 'ondeck';
   if (!due) return 'pending';
-  return dayDiff(due, today) <= 30 ? 'soon' : 'ondeck';
+  return dayDiff(due, today) <= 30 ? 'wip' : 'ondeck';
 }
 
 /** DUE / OVERDUE badge for rows in Due today. */
