@@ -37,3 +37,37 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip }: Props) {
     </Sheet>
   );
 }
+
+type TimeUpProps = {
+  launch: Launch | null;
+  onDone: (l: Launch) => void;
+  onMore: (l: Launch) => void;
+  onTomorrow: (l: Launch) => void;
+};
+
+/** The end alarm: the time allotted for a launched launch has run out. */
+export function TimeUpReminder({ launch, onDone, onMore, onTomorrow }: TimeUpProps) {
+  return (
+    <Sheet open={!!launch} title={launch ? `Time's up: ${launch.title}` : "Time's up"} onClose={() => launch && onMore(launch)}>
+      {launch && (
+        <div className="reminder">
+          <p className="reminder-time">
+            {formatMinutes((toMinutes(launch.atTime) + launch.minutes) % 1440)} · {launch.minutes} minutes are up
+          </p>
+          <p className="panel-empty">Did you finish? Check it off, take 10 more minutes, or move it to tomorrow.</p>
+          <div className="sheet-actions">
+            <button type="button" className="btn btn-quiet" onClick={() => onTomorrow(launch)}>
+              Move to tomorrow
+            </button>
+            <button type="button" className="btn btn-quiet" onClick={() => onMore(launch)}>
+              +10 min
+            </button>
+            <button type="button" className="btn" onClick={() => onDone(launch)}>
+              Done ✓
+            </button>
+          </div>
+        </div>
+      )}
+    </Sheet>
+  );
+}

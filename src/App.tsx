@@ -10,7 +10,8 @@ import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
 import { TodayPanel, useNow } from './components/TodayPanel';
 import { BLOCKED_HELP, LaunchersPanel } from './components/Launchers';
-import { LaunchReminder } from './components/LaunchReminder';
+import { LaunchReminder, TimeUpReminder } from './components/LaunchReminder';
+import { chime, notify, readAlertPrefs, unlockAudioOnFirstGesture, writeAlertPrefs, type AlertPrefs } from './lib/alerts';
 import { WeekCalendar } from './components/WeekCalendar';
 import {
   isDue,
@@ -59,6 +60,12 @@ export default function App() {
   const [reminder, setReminder] = useState<Launch | null>(null);
   const [snoozed, setSnoozed] = useState<Record<string, number>>({});
   const [handled, setHandled] = useState(() => readHandled());
+  const [timeUp, setTimeUp] = useState<Launch | null>(null);
+  const [extraMinutes, setExtraMinutes] = useState<Record<string, number>>({});
+  const [endAlerted, setEndAlerted] = useState<Record<string, true>>({});
+  const [alertPrefs, setAlertPrefs] = useState<AlertPrefs>(() => readAlertPrefs());
+
+  useEffect(() => unlockAudioOnFirstGesture(), []);
   const now = useNow(30_000);
 
   const userId = session?.user.id ?? null;
@@ -146,6 +153,38 @@ export default function App() {
     );
     if (due) setReminder(due);
   }, [now, launches, reminder, snoozed, handled]);
+
+  // Start alert: chime + desktop notification when a reminder pops.
+  useEffect(() => {
+    if (!reminder) return;
+    if (alertPrefs.sound) chime('start');
+    if (alertPrefs.notify) notify(`Launch time: ${reminder.title}`, `${reminder.urls.length} tabs · ${reminder.minutes} min`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reminder?.id]);
+
+  // End alarm: a launched launch whose time allotted has run out.
+  useEffect(() => {
+    if (timeUp || reminder) return;
+    const today = isoDate(now);
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const over = launches.find((l) => {
+      const key = `${l.id}:${today}`;
+      if (handled[key] !== 'launched' || endAlerted[key]) return false;
+      const [h, m] = l.atTime.split(':').map(Number);
+      const end = h * 60 + m + l.minutes + (extraMinutes[l.id] ?? 0);
+      return nowMin >= end;
+    });
+    if (!over) return;
+    setEndAlerted((m) => ({ ...m, [`${over.id}:${today}`]: true }));
+    setTimeUp(over);
+    if (alertPrefs.sound) chime('end');
+    if (alertPrefs.notify) notify(`Time's up: ${over.title}`, `${over.minutes} minutes are done. Check it off or take 10 more.`);
+  }, [now, launches, handled, endAlerted, extraMinutes, timeUp, reminder, alertPrefs]);
+
+  function updateAlertPrefs(next: AlertPrefs) {
+    setAlertPrefs(next);
+    writeAlertPrefs(next);
+  }
 
   async function finishLaunch(l: Launch, how: 'done' | 'skipped') {
     setHandled(markHandled(l.id, new Date(), how));
@@ -241,6 +280,8 @@ export default function App() {
                   handled={handled}
                   today={now}
                   onFinish={finishLaunch}
+                  alertPrefs={alertPrefs}
+                  onAlertPrefs={updateAlertPrefs}
                 />
               }
               week={<WeekCalendar events={events} onSave={eventOps.save} onDelete={eventOps.remove} />}
@@ -284,6 +325,27 @@ export default function App() {
           setReminder(null);
         }}
         onSkip={(l) => finishLaunch(l, 'skipped')}
+      />
+      <TimeUpReminder
+        launch={timeUp}
+        onDone={(l) => {
+          setTimeUp(null);
+          finishLaunch(l, 'done');
+        }}
+        onMore={(l) => {
+          setTimeUp(null);
+          setExtraMinutes((m) => ({ ...m, [l.id]: (m[l.id] ?? 0) + 10 }));
+          setEndAlerted((m) => {
+            const next = { ...m };
+            delete next[`${l.id}:${isoDate(new Date())}`];
+            return next;
+          });
+          setStatus(`${l.title}: 10 more minutes.`);
+        }}
+        onTomorrow={(l) => {
+          setTimeUp(null);
+          finishLaunch(l, 'skipped');
+        }}
       />
       <RoutineEditor
         open={editor.open}

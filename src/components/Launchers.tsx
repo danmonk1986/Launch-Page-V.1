@@ -14,6 +14,7 @@ import {
   type TileColor
 } from '../lib/launchers';
 import { formatMinutes, toMinutes } from '../lib/routines';
+import { askNotificationPermission, chime, notificationsSupported, type AlertPrefs } from '../lib/alerts';
 
 type Props = {
   routineName: string | null;
@@ -27,6 +28,8 @@ type Props = {
   handled: Record<string, HandledHow | true>;
   today: Date;
   onFinish: (l: Launch, how: 'done' | 'skipped') => void;
+  alertPrefs: AlertPrefs;
+  onAlertPrefs: (p: AlertPrefs) => void;
 };
 
 const COLORS: TileColor[] = ['teal', 'purple', 'green'];
@@ -182,7 +185,10 @@ export function LaunchersPanel(p: Props) {
 
       <div className="timed">
         <div className="timed-head">
-          <h3 className="timed-title">Timed launches</h3>
+          <div className="timed-title-row">
+            <h3 className="timed-title">Timed launches</h3>
+            <AlertToggles prefs={p.alertPrefs} onChange={p.onAlertPrefs} onStatus={p.onStatus} />
+          </div>
           <button
             type="button"
             className="link-btn link-btn-inline"
@@ -320,6 +326,58 @@ export function LaunchersPanel(p: Props) {
         />
       </Sheet>
     </section>
+  );
+}
+
+function AlertToggles({
+  prefs,
+  onChange,
+  onStatus
+}: {
+  prefs: AlertPrefs;
+  onChange: (p: AlertPrefs) => void;
+  onStatus: (m: string) => void;
+}) {
+  return (
+    <div className="alert-toggles">
+      <button
+        type="button"
+        className="quick-btn alert-btn"
+        aria-pressed={prefs.sound}
+        aria-label={prefs.sound ? 'Sound on: start and end chimes' : 'Sound off'}
+        title={prefs.sound ? 'Sound on' : 'Sound off'}
+        onClick={() => {
+          const next = { ...prefs, sound: !prefs.sound };
+          onChange(next);
+          if (next.sound) chime('start');
+        }}
+      >
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 9v6h4l5 4V5L8 9H4z" />
+          {prefs.sound ? <path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" /> : <path d="M17 9l5 6M22 9l-5 6" />}
+        </svg>
+      </button>
+      {notificationsSupported() && (
+        <button
+          type="button"
+          className="quick-btn alert-btn"
+          aria-pressed={prefs.notify}
+          aria-label={prefs.notify ? 'Desktop notifications on' : 'Desktop notifications off'}
+          title={prefs.notify ? 'Notifications on' : 'Notifications off'}
+          onClick={async () => {
+            if (prefs.notify) return onChange({ ...prefs, notify: false });
+            const ok = await askNotificationPermission();
+            if (ok) onChange({ ...prefs, notify: true });
+            else onStatus('Notifications are blocked for this site. Allow them in the browser’s site settings, then try again.');
+          }}
+        >
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2zM10 21h4" />
+            {!prefs.notify && <path d="M3 3l18 18" />}
+          </svg>
+        </button>
+      )}
+    </div>
   );
 }
 

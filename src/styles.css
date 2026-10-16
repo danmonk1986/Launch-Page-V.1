@@ -847,3 +847,9 @@ input:-webkit-autofill:focus {
 .timed-more svg { transition: transform 0.15s ease; }
 .timed-more svg.is-open { transform: rotate(180deg); }
 @media (prefers-reduced-motion: reduce) { .timed-more svg { transition: none; } }
+
+/* Alert toggles beside Timed launches */
+.timed-title-row { display: flex; align-items: center; gap: 12px; }
+.alert-toggles { display: flex; gap: 6px; }
+.alert-btn { width: 36px; height: 36px; border: 1px solid var(--edge); color: var(--dim); }
+.alert-btn[aria-pressed='true'] { border-color: var(--accent-teal); color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
