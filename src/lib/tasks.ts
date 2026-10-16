@@ -35,6 +35,8 @@ export interface Task {
   doneAt: string | null;
   /** Done and cleared off the Done list (kept for 26 Days and history). */
   cleared: boolean;
+  /** Removed: sits in Recently deleted for 30 days, then goes for good. */
+  deletedAt: string | null;
   googleEventId: string | null;
   launchId: string | null;
   sort: number;
@@ -58,6 +60,7 @@ type Row = {
   done: boolean;
   done_at: string | null;
   cleared: boolean;
+  deleted_at?: string | null;
   google_event_id: string | null;
   launch_id: string | null;
   sort: number;
@@ -69,11 +72,12 @@ export const taskStore = makeStore<Task, Row>({
   orderBy: 'sort',
   script: 'supabase/migrations/0008_projects_tasks.sql',
   seed: () => [],
-  latestScript: 'supabase/migrations/0009_task_steps.sql',
-  // Before 0009 is run: save without the step link (it stays on this device until then).
+  latestScript: 'supabase/migrations/0010_task_trash.sql',
+  // Before 0009 / 0010 are run: save without the step link and trash date (kept on this device until then).
   legacyRow: (r) => {
     const x = { ...r };
     delete x.parent_id;
+    delete x.deleted_at;
     return x;
   },
   toRow: (t) => ({
@@ -94,6 +98,7 @@ export const taskStore = makeStore<Task, Row>({
     done: t.done,
     done_at: t.doneAt,
     cleared: t.cleared,
+    deleted_at: t.deletedAt,
     google_event_id: t.googleEventId,
     launch_id: t.launchId,
     sort: t.sort
@@ -116,6 +121,7 @@ export const taskStore = makeStore<Task, Row>({
     done: r.done,
     doneAt: r.done_at,
     cleared: r.cleared ?? false,
+    deletedAt: r.deleted_at ?? null,
     googleEventId: r.google_event_id,
     launchId: r.launch_id,
     sort: r.sort
@@ -141,6 +147,7 @@ export function newTask(sort: number, projectId: string | null = null): Task {
     done: false,
     doneAt: null,
     cleared: false,
+    deletedAt: null,
     googleEventId: null,
     launchId: null,
     sort
@@ -175,7 +182,7 @@ export const isRecurring = (t: Task) => t.status === 'MTH RCR' || t.status === '
 
 // ---------- Sections (how the sheet sorts its list) ----------
 
-export type Section = 'due' | 'key' | 'wip' | 'appts' | 'ondeck' | 'monthly' | 'annual' | 'pending' | 'done';
+export type Section = 'due' | 'key' | 'wip' | 'appts' | 'ondeck' | 'monthly' | 'annual' | 'pending' | 'done' | 'deleted';
 
 export const SECTIONS: { id: Section; title: string; hint: string; pill?: string }[] = [
   { id: 'due', title: 'Due today', hint: 'Date required is today or earlier' },
@@ -186,7 +193,8 @@ export const SECTIONS: { id: Section; title: string; hint: string; pill?: string
   { id: 'monthly', title: 'Monthly recurring', hint: 'MTH RCR', pill: 'Monthly' },
   { id: 'annual', title: 'Annual recurring', hint: 'ANN RCR', pill: 'Annual' },
   { id: 'pending', title: 'Pending (no date)', hint: 'Anything without a date', pill: 'Pending' },
-  { id: 'done', title: 'Completed', hint: 'Checked off' }
+  { id: 'done', title: 'Completed', hint: 'Checked off' },
+  { id: 'deleted', title: 'Recently deleted', hint: 'Removed in the last 30 days; restore from ⋯', pill: 'Deleted' }
 ];
 
 const dayDiff = (iso: string, today: Date) => {
@@ -199,6 +207,7 @@ const dayDiff = (iso: string, today: Date) => {
 export const doneToday = (t: Task, today: Date) => !!t.doneAt && isoDate(new Date(t.doneAt)) === isoDate(today);
 
 export function sectionOf(t: Task, today: Date): Section {
+  if (t.deletedAt) return 'deleted';
   if (isRecurring(t)) {
     if (repeatsOn(t, today) && !doneToday(t, today)) return 'due';
     return t.status === 'ANN RCR' ? 'annual' : 'monthly';
@@ -226,7 +235,14 @@ export function groupTasks(list: Task[], today: Date) {
   const out = Object.fromEntries(SECTIONS.map((s) => [s.id, [] as Task[]])) as Record<Section, Task[]>;
   const ids = new Set(list.map((t) => t.id));
   // Steps travel with their task, so only top-level tasks are sorted into groups.
-  for (const t of list) if (!(t.done && t.cleared) && !(t.parentId && ids.has(t.parentId))) out[sectionOf(t, today)].push(t);
+  const deleted = new Set(list.filter((t) => t.deletedAt).map((t) => t.id));
+  for (const t of list) {
+    if (t.done && t.cleared && !t.deletedAt) continue;
+    // A step stays under its task, unless the step alone was deleted (then it shows in Recently deleted).
+    const underParent = !!t.parentId && ids.has(t.parentId);
+    if (underParent && !(t.deletedAt && !deleted.has(t.parentId!))) continue;
+    out[sectionOf(t, today)].push(t);
+  }
   const byDate = (a: Task, b: Task) =>
     (a.endDate ?? '9999').localeCompare(b.endDate ?? '9999') || (a.atTime ?? '99').localeCompare(b.atTime ?? '99') || a.sort - b.sort;
   for (const k of Object.keys(out) as Section[]) out[k].sort(byDate);
@@ -316,7 +332,12 @@ export function buildImport(rows: ImportRow[], existing: Task[], projects: Proje
 /** Steps under each task, in order. */
 export function stepsByParent(list: Task[]) {
   const m = new Map<string, Task[]>();
-  for (const t of list) if (t.parentId) m.set(t.parentId, [...(m.get(t.parentId) ?? []), t]);
+  const deleted = new Set(list.filter((t) => t.deletedAt).map((t) => t.id));
+  for (const t of list) {
+    if (!t.parentId) continue;
+    if (t.deletedAt && !deleted.has(t.parentId)) continue; // deleted on its own: shown in Recently deleted
+    m.set(t.parentId, [...(m.get(t.parentId) ?? []), t]);
+  }
   for (const v of m.values()) v.sort((a, b) => a.sort - b.sort);
   return m;
 }
@@ -333,3 +354,7 @@ export function newStep(parent: Task, text: string, sort: number): Task {
     endDate: parent.endDate
   };
 }
+
+/** Removed more than 30 days ago: gone for good. */
+export const trashExpired = (t: Task, now = new Date()) =>
+  !!t.deletedAt && now.getTime() - new Date(t.deletedAt).getTime() > 30 * 86_400_000;

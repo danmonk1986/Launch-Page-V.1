@@ -72,6 +72,8 @@ type Actions = {
   addStep: (parent: Task) => void;
   moveTo: (t: Task, iso: string) => void;
   remove: (t: Task) => void;
+  restore: (t: Task) => void;
+  purge: (t: Task) => void;
   clear: (t: Task) => void;
   toCalendar: (t: Task) => void;
   toLaunch: (t: Task) => void;
@@ -112,7 +114,17 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
       >
         <Icon d="M5 12h.01M12 12h.01M19 12h.01" size={18} />
       </button>
-      {open && (
+      {open && t.deletedAt && (
+        <div className="row-menu-list" role="menu">
+          <button type="button" role="menuitem" onClick={run(() => act.restore(t))}>
+            Restore
+          </button>
+          <button type="button" role="menuitem" className="menu-danger" onClick={run(() => act.purge(t))}>
+            Delete forever
+          </button>
+        </div>
+      )}
+      {open && !t.deletedAt && (
         <div className="row-menu-list" role="menu">
           <button type="button" role="menuitem" onClick={run(() => act.toCalendar(t))}>
             {t.googleEventId ? 'Add to calendar again' : 'Add to calendar'}
@@ -192,7 +204,7 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
       <td className="col-time">{t.atTime ? formatMinutes(toMinutes(t.atTime)) : ''}</td>
       <td className="col-actions">
         <div className="timed-quick">
-          <button
+          {!t.deletedAt && <button
             type="button"
             className="quick-btn quick-done task-quick"
             aria-pressed={checked}
@@ -201,7 +213,7 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
             onClick={() => act.toggle(t)}
           >
             <Icon d="M5 12.5l4.5 4.5L19 7.5" />
-          </button>
+          </button>}
           <RowMenu t={t} act={act} checked={checked} />
         </div>
       </td>
@@ -226,7 +238,7 @@ function TaskTable({
   act: Actions;
   collapsible?: boolean;
 }) {
-  const [closed, setClosed] = useState<Record<string, boolean>>({ done: true, monthly: true, annual: true });
+  const [closed, setClosed] = useState<Record<string, boolean>>({ done: true, monthly: true, annual: true, deleted: true });
   return (
     <div className="task-scroll">
       <table className="task-table">
@@ -318,7 +330,9 @@ function useTaskEditor(p: EditorProps) {
             setOpen(false);
           }}
           onDelete={async (id) => {
-            await p.onDelete(id);
+            // Delete in the form also goes to Recently deleted.
+            const t = p.tasks.find((x) => x.id === id);
+            if (t) await p.onSave({ ...t, deletedAt: new Date().toISOString() });
             setOpen(false);
           }}
         />
@@ -353,7 +367,9 @@ function useActions(p: PageProps, editor: ReturnType<typeof useTaskEditor>): Act
     edit: editor.edit,
     addStep: editor.addStep,
     moveTo: (t, iso) => p.onSave({ ...t, endDate: iso, startDate: t.startDate && t.startDate > iso ? iso : t.startDate }),
-    remove: (t) => p.onDelete(t.id),
+    remove: (t) => p.onSave({ ...t, deletedAt: new Date().toISOString() }),
+    restore: (t) => p.onSave({ ...t, deletedAt: null }),
+    purge: (t) => p.onDelete(t.id),
     clear: (t) => p.onSave({ ...t, cleared: true }),
     toCalendar: p.onAddToCalendar,
     toLaunch: p.onCreateLaunch
@@ -391,7 +407,7 @@ export function TasksPage(p: PageProps & { onOpenProjects: () => void; onImport:
   const act = useActions(p, editor);
   const [view, setView] = useState<Section | null>(null);
   const grouped = groupTasks(p.tasks, p.today);
-  const topLevel = Object.values(grouped).reduce((n, l) => n + l.length, 0);
+  const topLevel = Object.entries(grouped).reduce((n, [k, l]) => (k === 'deleted' ? n : n + l.length), 0);
   return (
     <section className="panel panel-tasks-page" aria-labelledby="h-tasks-page">
       <div className="panel-head">
