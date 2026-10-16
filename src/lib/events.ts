@@ -11,7 +11,15 @@ export interface CalEvent {
   color: EventColor;
   sort: number;
   /** Set on events that live in Google Calendar (never saved to Supabase). */
-  google?: { id: string; link: string | null; time: string | null };
+  google?: {
+    id: string;
+    calendarId: string;
+    calendar: string | null;
+    color: string | null;
+    readOnly: boolean;
+    link: string | null;
+    time: string | null;
+  };
 }
 
 type Row = {

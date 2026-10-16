@@ -970,3 +970,23 @@ input:-webkit-autofill:focus {
 .title-btn { all: unset; cursor: pointer; }
 .title-btn:hover { color: var(--accent-teal); }
 .panel-week .panel-head, .panel-launchers .panel-head { align-items: center; }
+
+/* Week header: tighter to the days, plain teal arrows, purple = tap to connect */
+.panel-week .panel-head { margin-bottom: 4px; }
+.week-arrow {
+  min-width: 28px;
+  height: 36px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--accent-teal);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  cursor: pointer;
+}
+.week-arrow:hover { color: var(--beige); }
+.gcal-off, .gcal-off:hover { border-color: var(--accent-purple); color: color-mix(in srgb, var(--accent-purple) 55%, white); }
+.gcal-off:hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }

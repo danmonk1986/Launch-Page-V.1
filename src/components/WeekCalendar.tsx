@@ -135,8 +135,8 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
           )}
         </h2>
         <div className="panel-actions week-tools">
-          <button type="button" className="icon-btn tool-btn" aria-label="Previous week" title="Previous week" onClick={() => setOffset((o) => o - 1)}>
-            <Icon d="M15 5l-7 7 7 7" />
+          <button type="button" className="week-arrow" aria-label="Previous week" title="Previous week" onClick={() => setOffset((o) => o - 1)}>
+            {"<"}
           </button>
           {googleConfigured() && (
             <button
@@ -163,8 +163,8 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
           >
             <Icon d="M12 5v14M5 12h14" />
           </button>
-          <button type="button" className="icon-btn tool-btn" aria-label="Next week" title="Next week" onClick={() => setOffset((o) => o + 1)}>
-            <Icon d="M9 5l7 7-7 7" />
+          <button type="button" className="week-arrow" aria-label="Next week" title="Next week" onClick={() => setOffset((o) => o + 1)}>
+            {">"}
           </button>
         </div>
       </div>
@@ -198,8 +198,12 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
               key={event.id}
               type="button"
               className={`week-event ev-${event.google ? 'google' : event.color}`}
-              style={{ gridColumn: `${f} / ${t + 1}`, gridRow: lane + 2 }}
-              title={event.google ? 'From Google Calendar' : undefined}
+              style={{
+                gridColumn: `${f} / ${t + 1}`,
+                gridRow: lane + 2,
+                ...(event.google?.color ? { borderLeftColor: event.google.color } : {})
+              }}
+              title={event.google ? `${event.title} · ${event.google.calendar ?? 'Google Calendar'}` : event.title}
               onClick={() => {
                 setEditing(event);
                 setOpen(true);
@@ -287,6 +291,7 @@ function EventForm({
   const [toGoogle, setToGoogle] = useState(googleOn);
   const set = <K extends keyof CalEvent>(k: K, v: CalEvent[K]) => setD((x) => ({ ...x, [k]: v }));
   const isGoogle = !!d.google;
+  const readOnly = !!d.google?.readOnly;
   const timed = !!d.google?.time;
   const google = isGoogle || (!event && toGoogle);
 
@@ -301,12 +306,18 @@ function EventForm({
     >
       <label className="field">
         <span>Event</span>
-        <input required value={d.title} onChange={(e) => set('title', e.target.value)} placeholder="Pay mid-month bills" />
+        <input required readOnly={readOnly} value={d.title} onChange={(e) => set('title', e.target.value)} placeholder="Pay mid-month bills" />
       </label>
-      {timed ? (
+      {isGoogle && d.google?.calendar && (
         <p className="field-hint event-when">
-          {new Date(`${d.startDate}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })} at {d.google!.time}.
-          Change the time in Google Calendar.
+          From {d.google.calendar}
+          {readOnly ? ' (view only).' : '.'}
+        </p>
+      )}
+      {timed || readOnly ? (
+        <p className="field-hint event-when">
+          {new Date(`${d.startDate}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}
+          {d.google?.time ? ` at ${d.google.time}. Change the time in Google Calendar.` : d.endDate !== d.startDate ? ` to ${new Date(`${d.endDate}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}.` : '.'}
         </p>
       ) : (
         <div className="time-grid">
@@ -365,7 +376,7 @@ function EventForm({
         </p>
       )}
       <div className="sheet-actions sheet-actions-split">
-        {event ? (
+        {event && !readOnly ? (
           <button type="button" className="btn btn-quiet btn-danger" aria-label={`Delete ${event.title}`} onClick={() => onDelete(event)}>
             Delete
           </button>
@@ -376,9 +387,11 @@ function EventForm({
           <button type="button" className="btn btn-quiet" onClick={onCancel}>
             Cancel
           </button>
-          <button type="submit" className="btn" disabled={!d.title.trim()}>
-            Save
-          </button>
+          {!readOnly && (
+            <button type="submit" className="btn" disabled={!d.title.trim()}>
+              Save
+            </button>
+          )}
         </div>
       </div>
     </form>

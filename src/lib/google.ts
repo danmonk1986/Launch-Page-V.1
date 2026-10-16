@@ -9,8 +9,11 @@ import { isoDate } from './launchers';
 export const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) || '';
 export const googleConfigured = () => !!GOOGLE_CLIENT_ID;
 
-const SCOPE = 'https://www.googleapis.com/auth/calendar.events';
-const API = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+// events: read and write events on every calendar; calendarlist.readonly: see which calendars you have.
+const SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly';
+const BASE = 'https://www.googleapis.com/calendar/v3';
+const eventsUrl = (calendarId: string) => `${BASE}/calendars/${encodeURIComponent(calendarId)}/events`;
+const SCOPE_KEY = 'launchpage.google.scope.v1';
 const TOKEN_KEY = 'launchpage.google.token.v1';
 const CONNECTED_KEY = 'launchpage.google.connected.v1';
 
@@ -91,9 +94,21 @@ export async function connectGoogle(): Promise<void> {
         /* ignore */
       }
       setConnected(true);
+      try {
+        localStorage.setItem(SCOPE_KEY, SCOPE);
+      } catch {
+        /* ignore */
+      }
       resolve();
     };
-    client.requestAccessToken({ prompt: wasConnected() ? '' : 'consent' });
+    // Ask again (consent) the first time, or when the app needs a new kind of access.
+    let sameScope = false;
+    try {
+      sameScope = localStorage.getItem(SCOPE_KEY) === SCOPE;
+    } catch {
+      /* ignore */
+    }
+    client.requestAccessToken({ prompt: wasConnected() && sameScope ? '' : 'consent' });
   });
 }
 
@@ -120,7 +135,7 @@ async function call<T>(url: string, init: RequestInit = {}): Promise<T> {
     ...init,
     headers: { Authorization: `Bearer ${token!.value}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) }
   });
-  if (res.status === 401) {
+  if (res.status === 401 || res.status === 403) {
     token = null;
     throw new GoogleAuthError('Reconnect Google Calendar.');
   }
@@ -137,7 +152,9 @@ const dayOf = (g: GDate) => (g.date ? g.date : isoDate(new Date(g.dateTime!)));
 const nextDay = (iso: string) => isoDate(addDays(new Date(`${iso}T12:00:00`), 1));
 const prevDay = (iso: string) => isoDate(addDays(new Date(`${iso}T12:00:00`), -1));
 
-function fromGoogle(g: GEvent): CalEvent {
+type Cal = { id: string; summary?: string; backgroundColor?: string; accessRole?: string; selected?: boolean; primary?: boolean };
+
+function fromGoogle(g: GEvent, cal: Cal = { id: 'primary', accessRole: 'owner' }): CalEvent {
   const allDay = !!g.start.date;
   const start = dayOf(g.start);
   // All-day end dates in Google are the day after; timed events end on their own date.
@@ -152,12 +169,27 @@ function fromGoogle(g: GEvent): CalEvent {
     sort: 0,
     google: {
       id: g.id,
+      calendarId: cal.id,
+      calendar: cal.summary ?? null,
+      color: cal.backgroundColor ?? null,
+      readOnly: cal.accessRole !== 'owner' && cal.accessRole !== 'writer',
       link: g.htmlLink ?? null,
       time: allDay ? null : new Date(g.start.dateTime!).toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' })
     }
   };
 }
 
+let primaryCal: Cal = { id: 'primary', accessRole: 'owner' };
+
+/** The calendars ticked in Google Calendar's sidebar. */
+async function listCalendars(): Promise<Cal[]> {
+  const data = await call<{ items: Cal[] }>(`${BASE}/users/me/calendarList?minAccessRole=reader&maxResults=250`);
+  const cals = (data.items ?? []).filter((c) => c.selected !== false);
+  primaryCal = cals.find((c) => c.primary) ?? primaryCal;
+  return cals.length ? cals : [primaryCal];
+}
+
+/** Every event this week across all your shown calendars. */
 export async function listGoogleEvents(from: string, to: string): Promise<CalEvent[]> {
   const q = new URLSearchParams({
     timeMin: new Date(`${from}T00:00:00`).toISOString(),
@@ -166,17 +198,28 @@ export async function listGoogleEvents(from: string, to: string): Promise<CalEve
     orderBy: 'startTime',
     maxResults: '250'
   });
-  const data = await call<{ items: GEvent[] }>(`${API}?${q}`);
-  return (data.items ?? []).filter((g) => g.status !== 'cancelled').map(fromGoogle);
+  const cals = await listCalendars();
+  const lists = await Promise.all(
+    cals.map(async (cal) => {
+      try {
+        const data = await call<{ items: GEvent[] }>(`${eventsUrl(cal.id)}?${q}`);
+        return (data.items ?? []).filter((g) => g.status !== 'cancelled').map((g) => fromGoogle(g, cal));
+      } catch (err) {
+        if (err instanceof GoogleAuthError) throw err;
+        return []; // one calendar failing shouldn't hide the rest
+      }
+    })
+  );
+  return lists.flat();
 }
 
 /** New all-day event in Google Calendar (LaunchPage events are whole days). */
 export async function createGoogleEvent(e: CalEvent): Promise<CalEvent> {
-  const g = await call<GEvent>(API, {
+  const g = await call<GEvent>(eventsUrl('primary'), {
     method: 'POST',
     body: JSON.stringify({ summary: e.title, start: { date: e.startDate }, end: { date: nextDay(e.endDate) } })
   });
-  return fromGoogle(g);
+  return fromGoogle(g, primaryCal);
 }
 
 /** Rename, and move dates for all-day events. Timed events keep their times. */
@@ -186,10 +229,11 @@ export async function updateGoogleEvent(e: CalEvent): Promise<CalEvent> {
     body.start = { date: e.startDate };
     body.end = { date: nextDay(e.endDate) };
   }
-  const g = await call<GEvent>(`${API}/${encodeURIComponent(e.google!.id)}`, { method: 'PATCH', body: JSON.stringify(body) });
-  return fromGoogle(g);
+  const cal = e.google!;
+  const g = await call<GEvent>(`${eventsUrl(cal.calendarId)}/${encodeURIComponent(cal.id)}`, { method: 'PATCH', body: JSON.stringify(body) });
+  return fromGoogle(g, { id: cal.calendarId, summary: cal.calendar ?? undefined, backgroundColor: cal.color ?? undefined, accessRole: 'owner' });
 }
 
 export async function deleteGoogleEvent(e: CalEvent) {
-  await call<void>(`${API}/${encodeURIComponent(e.google!.id)}`, { method: 'DELETE' });
+  await call<void>(`${eventsUrl(e.google!.calendarId)}/${encodeURIComponent(e.google!.id)}`, { method: 'DELETE' });
 }
