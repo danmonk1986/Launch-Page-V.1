@@ -1126,3 +1126,19 @@ input:-webkit-autofill:focus {
   .topbar-controls { justify-content: flex-start; }
   .topbar-right .picker-main { font-size: 12px; letter-spacing: 0.08em; padding: 0 10px; }
 }
+
+/* Launcher tiles: fixed size; the row count changes instead of the tiles stretching */
+.tiles { grid-template-columns: repeat(auto-fill, 196px); justify-content: start; }
+.tile { height: 62px; min-height: 0; }
+.tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 520px) {
+  .tiles { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); }
+}
+.char-count { float: right; font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
+@media (max-width: 520px) {
+  .tiles { gap: 8px; }
+  .tile { padding: 8px 8px; gap: 8px; height: 56px; }
+  .tile-badge { width: 26px; height: 26px; border-radius: 8px; font-size: 12px; }
+  .tile-name { font-size: 13px; }
+  .tile-note { font-size: 11px; }
+}

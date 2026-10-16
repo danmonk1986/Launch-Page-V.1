@@ -35,6 +35,10 @@ type Props = {
   onFinish: (l: Launch, how: 'done' | 'skipped') => void;
 };
 
+/** What fits on one line of a fixed-width tile. */
+const NAME_MAX = 14;
+const NOTE_MAX = 20;
+
 const COLORS: TileColor[] = ['teal', 'purple', 'green', 'pink'];
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -458,9 +462,12 @@ function TileForm({
       }}
     >
       <label className="field">
-        <span>Name</span>
+        <span>
+          Name <span className="char-count">{d.name.length}/{NAME_MAX}</span>
+        </span>
         <input
           required
+          maxLength={NAME_MAX}
           list={open.length ? 'launcher-originals' : undefined}
           autoComplete="off"
           value={d.name}
@@ -469,7 +476,7 @@ function TileForm({
             const p = open.find((x) => x.name.toLowerCase() === name.trim().toLowerCase());
             setD((x) => (p ? { ...x, name: p.name, note: p.note, url: p.url, color: p.color } : { ...x, name }));
           }}
-          placeholder={!open.length ? 'Online banking' : 'Type a new one or pick an original'}
+          placeholder={!open.length ? 'Online bank' : 'New, or pick an original'}
         />
         {open.length > 0 && (
           <datalist id="launcher-originals">
@@ -494,8 +501,10 @@ function TileForm({
         />
       </label>
       <label className="field">
-        <span>Note under the name</span>
-        <input value={d.note} onChange={(e) => set('note', e.target.value)} placeholder="Bills" />
+        <span>
+          Note under the name <span className="char-count">{d.note.length}/{NOTE_MAX}</span>
+        </span>
+        <input maxLength={NOTE_MAX} value={d.note} onChange={(e) => set('note', e.target.value)} placeholder="Bills" />
       </label>
       {tile && tiles.length > 1 && (
         <label className="field">
