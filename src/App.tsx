@@ -20,6 +20,7 @@ import {
   markHandled,
   openTabs,
   readHandled,
+  skipToTomorrow,
   type Launch,
   type Launcher
 } from './lib/launchers';
@@ -146,15 +147,22 @@ export default function App() {
     if (due) setReminder(due);
   }, [now, launches, reminder, snoozed, handled]);
 
-  function finishLaunch(l: Launch, how: 'done' | 'skipped') {
+  async function finishLaunch(l: Launch, how: 'done' | 'skipped') {
     setHandled(markHandled(l.id, new Date(), how));
     if (reminder?.id === l.id) setReminder(null);
-    setStatus(how === 'done' ? `${l.title} checked off for today.` : `${l.title} skipped today.`);
+    if (how === 'skipped') {
+      // Skip today = same time tomorrow.
+      await launchOps.save(skipToTomorrow(l, new Date()));
+      setStatus(`${l.title} moved to tomorrow, same time.`);
+    } else {
+      setStatus(`${l.title} checked off for today.`);
+    }
   }
 
   function launchNow(l: Launch) {
     const blocked = openTabs(l.urls);
-    setHandled(markHandled(l.id, new Date(), 'done'));
+    // Opening the tabs is not finishing: it stays open until checked off.
+    setHandled(markHandled(l.id, new Date(), 'launched'));
     setReminder(null);
     setStatus(blocked ? BLOCKED_HELP : `Launched ${l.title}: ${l.urls.length} tabs.`);
   }

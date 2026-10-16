@@ -777,3 +777,27 @@ input:-webkit-autofill:focus {
 .quick-done:hover { background: color-mix(in srgb, var(--accent-teal) 18%, transparent); }
 .quick-skip { border: 1px solid var(--edge-strong); color: var(--mist); }
 .quick-skip:hover { background: rgb(136 105 203 / 0.2); color: var(--beige); }
+
+/* Timed launches: expand/collapse, launched state */
+.timed-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.timed-toggle svg { transition: transform 0.15s ease; }
+.timed-toggle svg.is-open { transform: rotate(180deg); }
+.timed-count { font-size: 11px; letter-spacing: 0.1em; color: var(--dim); }
+.timed-item.is-launched .timed-row { background: color-mix(in srgb, var(--accent-teal) 10%, transparent); }
+.timed-item.is-launched .timed-meta { color: var(--accent-teal); }
+
+@media (prefers-reduced-motion: reduce) { .timed-toggle svg { transition: none; } }

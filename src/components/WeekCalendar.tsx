@@ -139,7 +139,6 @@ function EventForm({
   const [d, setD] = useState<CalEvent>(
     () => event ?? { id: crypto.randomUUID(), title: '', startDate: date, endDate: date, color: 'teal', sort: 0 }
   );
-  const [sure, setSure] = useState(false);
   const set = <K extends keyof CalEvent>(k: K, v: CalEvent[K]) => setD((x) => ({ ...x, [k]: v }));
 
   return (
@@ -190,12 +189,10 @@ function EventForm({
           <button
             type="button"
             className="btn btn-quiet btn-danger"
-            onClick={async () => {
-              if (!sure) return setSure(true);
-              await onDelete(event.id);
-            }}
+            aria-label={`Delete ${event.title}`}
+            onClick={() => onDelete(event.id)}
           >
-            {sure ? `Delete ${event.title} for good` : 'Delete'}
+            Delete
           </button>
         ) : (
           <span />

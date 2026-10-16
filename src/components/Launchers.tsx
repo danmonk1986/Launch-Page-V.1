@@ -4,6 +4,7 @@ import {
   describeSchedule,
   happensOn,
   isoDate,
+  orderLaunches,
   type HandledHow,
   normalizeUrl,
   openTabs,
@@ -42,6 +43,9 @@ export function LaunchersPanel(p: Props) {
   const [timed, setTimed] = useState<Launch | null>(null);
   const [timedOpen, setTimedOpen] = useState(false);
   const [launched, setLaunched] = useState<{ count: number; blocked: number } | null>(null);
+  const [showAllTimed, setShowAllTimed] = useState(false);
+  const ordered = orderLaunches(p.launches, p.today, p.handled);
+  const visible = showAllTimed ? ordered : ordered.slice(0, 3);
 
   function launchAll() {
     const urls = p.launchers.map((l) => l.url).filter(Boolean);
@@ -142,7 +146,26 @@ export function LaunchersPanel(p: Props) {
 
       <div className="timed">
         <div className="timed-head">
-          <h3 className="timed-title">Timed launches</h3>
+          <h3 className="timed-title">
+            {p.launches.length > 3 ? (
+              <button
+                type="button"
+                className="timed-toggle"
+                aria-expanded={showAllTimed}
+                onClick={() => setShowAllTimed((v) => !v)}
+              >
+                Timed launches
+                <span className="timed-count">
+                  {showAllTimed ? 'all' : `3 of ${p.launches.length}`}
+                </span>
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className={showAllTimed ? 'is-open' : ''}>
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+            ) : (
+              'Timed launches'
+            )}
+          </h3>
           <button
             type="button"
             className="link-btn link-btn-inline"
@@ -158,12 +181,12 @@ export function LaunchersPanel(p: Props) {
           <p className="panel-empty">At a set time, a reminder pops up and one tap opens every tab you need.</p>
         ) : (
           <ul className="timed-list">
-            {p.launches.map((l) => {
+            {visible.map((l) => {
               const todays = l.active && happensOn(l, p.today);
               const state = p.handled[`${l.id}:${isoDate(p.today)}`];
               const how = state === true ? 'done' : state;
               return (
-                <li key={l.id} className={`timed-item${how ? ` is-${how}` : ''}`}>
+                <li key={l.id} className={`timed-item${how && how !== 'launched' ? ` is-${how}` : ''}${how === 'launched' ? ' is-launched' : ''}`}>
                   <button
                     type="button"
                     className="timed-row"
@@ -177,11 +200,12 @@ export function LaunchersPanel(p: Props) {
                     <span className="timed-meta">
                       {describeSchedule(l)} · {l.minutes} min · {l.urls.length} {l.urls.length === 1 ? 'tab' : 'tabs'}
                       {!l.active && ' · off'}
+                      {how === 'launched' && ' · launched, check it off when done'}
                       {how === 'done' && ' · done today'}
-                      {how === 'skipped' && ' · skipped today'}
+                      {how === 'skipped' && ' · skipped, back tomorrow'}
                     </span>
                   </button>
-                  {todays && !how && (
+                  {todays && (!how || how === 'launched') && (
                     <div className="timed-quick">
                       <button
                         type="button"
@@ -251,17 +275,9 @@ export function LaunchersPanel(p: Props) {
 }
 
 function DeleteButton({ label, onDelete }: { label: string; onDelete: () => Promise<void> }) {
-  const [sure, setSure] = useState(false);
   return (
-    <button
-      type="button"
-      className="btn btn-quiet btn-danger"
-      onClick={async () => {
-        if (!sure) return setSure(true);
-        await onDelete();
-      }}
-    >
-      {sure ? `Delete ${label} for good` : 'Delete'}
+    <button type="button" className="btn btn-quiet btn-danger" aria-label={`Delete ${label}`} onClick={() => onDelete()}>
+      Delete
     </button>
   );
 }
@@ -359,6 +375,7 @@ function TimedForm({
         minutes: 30,
         urls: [],
         active: true,
+        movedTo: null,
         sort: nextSort
       }
   );

@@ -28,6 +28,8 @@ export interface Launch {
   minutes: number;
   urls: string[];
   active: boolean;
+  /** A one-time make-up date, set when a repeating launch is skipped. */
+  movedTo: string | null;
   sort: number;
 }
 
@@ -69,6 +71,7 @@ export function seedLaunches(): Launch[] {
       minutes: 30,
       urls: [],
       active: false, // an example: add the bill sites, then switch it on
+      movedTo: null,
       sort: 0
     }
   ];
@@ -95,6 +98,7 @@ type LaunchRow = {
   minutes: number;
   urls: string[];
   active: boolean;
+  moved_to?: string | null;
   sort: number;
 };
 
@@ -125,6 +129,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     minutes: l.minutes,
     urls: l.urls,
     active: l.active,
+    ...(l.movedTo ? { moved_to: l.movedTo } : {}),
     sort: l.sort
   }),
   fromRow: (r) => ({
@@ -138,6 +143,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     minutes: r.minutes,
     urls: r.urls ?? [],
     active: r.active,
+    movedTo: r.moved_to ?? null,
     sort: r.sort
   })
 });
@@ -148,6 +154,7 @@ export const isoDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export function happensOn(l: Launch, day: Date) {
+  if (l.movedTo && l.movedTo === isoDate(day)) return true;
   if (l.repeat === 'weekly') return l.weekdays.includes(day.getDay());
   if (l.repeat === 'monthly') return l.monthDay === day.getDate();
   return l.onDate === isoDate(day);
@@ -206,7 +213,8 @@ export function openTabs(urls: string[]) {
 
 const HANDLED_KEY = 'launchpage.launches.handled.v1';
 
-export type HandledHow = 'done' | 'skipped';
+/** launched = tabs opened, waiting for you to check it off; done and skipped close it for today. */
+export type HandledHow = 'launched' | 'done' | 'skipped';
 
 export function readHandled(): Record<string, HandledHow | true> {
   try {
@@ -225,4 +233,24 @@ export function markHandled(id: string, day: Date, how: HandledHow = 'done') {
     /* ignore */
   }
   return all;
+}
+
+/** Skip today: a one-off moves to tomorrow; a repeating launch gets a make-up tomorrow, same time. */
+export function skipToTomorrow(l: Launch, today: Date): Launch {
+  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 12);
+  const tomorrow = isoDate(t);
+  return l.repeat === 'once' ? { ...l, onDate: tomorrow, movedTo: null } : { ...l, movedTo: tomorrow };
+}
+
+/** Today's open ones first (by time), then the rest by time. */
+export function orderLaunches(list: Launch[], today: Date, handled: Record<string, HandledHow | true>) {
+  const key = (l: Launch) => `${l.id}:${isoDate(today)}`;
+  const rank = (l: Launch) => {
+    const h = handled[key(l)];
+    const todays = l.active && happensOn(l, today);
+    if (todays && (!h || h === 'launched')) return 0;
+    if (todays) return 1;
+    return l.active ? 2 : 3;
+  };
+  return [...list].sort((a, b) => rank(a) - rank(b) || a.atTime.localeCompare(b.atTime));
 }
