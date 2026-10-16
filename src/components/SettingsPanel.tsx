@@ -105,7 +105,7 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword }
         </fieldset>
 
         <fieldset className="field">
-          <legend>Colours</legend>
+          <legend>Theme colours</legend>
           <div className="swatches">
             <label className="field swatch">
               <span>Teal</span>
@@ -124,7 +124,7 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword }
               <input type="color" value={draft.accentPink} onChange={(e) => set('accentPink', e.target.value)} />
             </label>
           </div>
-          <p className="field-hint">All four are launcher colours. Teal and Purple also colour the whole app.</p>
+          <p className="field-hint">Your four theme colours. Teal and Purple run the app today; all four are launcher colours, and Green and Pink are ready for other places.</p>
         </fieldset>
 
         <div className="sheet-actions">

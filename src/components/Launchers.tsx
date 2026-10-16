@@ -41,6 +41,8 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 type TimedView = 'active' | 'complete' | 'tomorrow' | 'all';
 
+const CLEARED_KEY = 'launchpage.launches.cleared.v1';
+
 const TIMED_VIEWS: [TimedView, string][] = [
   ['active', 'Active'],
   ['complete', 'Complete'],
@@ -78,9 +80,29 @@ export function LaunchersPanel(p: Props) {
     const h = p.handled[`${l.id}:${isoDate(p.today)}`];
     return h === true ? 'done' : h;
   };
+  // Rows cleared from today's Complete list (this device). The launch itself stays.
+  const [cleared, setCleared] = useState<Record<string, true>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(CLEARED_KEY) ?? '{}');
+    } catch {
+      return {};
+    }
+  });
+  const clearKey = (l: Launch) => `${l.id}:${isoDate(p.today)}`;
+  function clearFromComplete(l: Launch) {
+    const next = { ...cleared, [clearKey(l)]: true as const };
+    setCleared(next);
+    try {
+      localStorage.setItem(CLEARED_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  }
   const views: Record<TimedView, Launch[]> = {
     active: ordered.filter((l) => l.active && happensOn(l, p.today) && (!stateOf(l) || stateOf(l) === 'launched')),
-    complete: ordered.filter((l) => happensOn(l, p.today) && (stateOf(l) === 'done' || stateOf(l) === 'skipped')),
+    complete: ordered.filter(
+      (l) => happensOn(l, p.today) && (stateOf(l) === 'done' || stateOf(l) === 'skipped') && !cleared[clearKey(l)]
+    ),
     tomorrow: [...p.launches]
       .filter((l) => l.active && happensOn(l, tomorrow))
       .sort((a, b) => a.atTime.localeCompare(b.atTime)),
@@ -281,6 +303,21 @@ export function LaunchersPanel(p: Props) {
                         aria-label={`Skip ${l.title} today`}
                         title="Skip today"
                         onClick={() => p.onFinish(l, 'skipped')}
+                      >
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                          <path d="M6 6l12 12M18 6L6 18" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  {view === 'complete' && (
+                    <div className="timed-quick">
+                      <button
+                        type="button"
+                        className="quick-btn quick-skip"
+                        aria-label={`Clear ${l.title} from Complete`}
+                        title="Clear from Complete"
+                        onClick={() => clearFromComplete(l)}
                       >
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                           <path d="M6 6l12 12M18 6L6 18" />

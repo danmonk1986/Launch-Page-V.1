@@ -249,8 +249,8 @@ export default function App() {
   const theme = {
     '--accent-purple': settings.accentPurple,
     '--accent-teal': settings.accentTeal,
-    '--tile-green': settings.accentGreen,
-    '--tile-pink': settings.accentPink
+    '--accent-green': settings.accentGreen,
+    '--accent-pink': settings.accentPink
   } as CSSProperties;
 
   if (!authReady) return <div className="app" style={theme} data-bg={settings.background} />;
