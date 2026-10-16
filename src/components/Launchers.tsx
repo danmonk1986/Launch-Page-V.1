@@ -24,6 +24,8 @@ type Props = {
   launchers: Launcher[];
   launches: Launch[];
   onSaveLauncher: (l: Launcher) => Promise<void>;
+  /** Saves a reordered set of tiles in one go. */
+  onSaveLaunchers: (l: Launcher[]) => Promise<void>;
   onDeleteLauncher: (id: string) => Promise<void>;
   onSaveLaunch: (l: Launch) => Promise<void>;
   onDeleteLaunch: (id: string) => Promise<void>;
@@ -310,9 +312,19 @@ export function LaunchersPanel(p: Props) {
           nextSort={p.launchers.length}
           routineId={p.routineId}
           taken={p.launchers.map((l) => l.name)}
+          tiles={p.launchers}
           onCancel={() => setTileOpen(false)}
-          onSave={async (l) => {
-            await p.onSaveLauncher(l);
+          onSave={async (l, position) => {
+            const others = p.launchers.filter((x) => x.id !== l.id);
+            const from = p.launchers.findIndex((x) => x.id === l.id);
+            if (position === null || position === from) {
+              await p.onSaveLauncher(l);
+            } else {
+              others.splice(position, 0, l);
+              await p.onSaveLaunchers(
+                others.map((x, i) => ({ ...x, sort: i })).filter((x) => x.id === l.id || p.launchers.find((o) => o.id === x.id)?.sort !== x.sort)
+              );
+            }
             setTileOpen(false);
           }}
           onDelete={async (id) => {
@@ -367,6 +379,7 @@ function TileForm({
   nextSort,
   routineId,
   taken,
+  tiles,
   onCancel,
   onSave,
   onDelete
@@ -375,8 +388,10 @@ function TileForm({
   nextSort: number;
   routineId: string | null;
   taken: string[];
+  tiles: Launcher[];
   onCancel: () => void;
-  onSave: (l: Launcher) => Promise<void>;
+  /** position: the new place in the routine's tiles (0 = first), or null to leave it. */
+  onSave: (l: Launcher, position: number | null) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
   const [d, setD] = useState<Launcher>(
@@ -392,6 +407,8 @@ function TileForm({
       }
   );
   const open = LAUNCHER_PRESETS.filter((p) => !taken.includes(p.name));
+  const from = tile ? tiles.findIndex((t) => t.id === tile.id) : -1;
+  const [position, setPosition] = useState(from);
   const set = <K extends keyof Launcher>(k: K, v: Launcher[K]) => setD((x) => ({ ...x, [k]: v }));
 
   return (
@@ -399,24 +416,24 @@ function TileForm({
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.name.trim()) return;
-        await onSave({ ...d, name: d.name.trim(), note: d.note.trim(), url: isBarePrefix(d.url) ? '' : d.url.trim() });
+        await onSave({ ...d, name: d.name.trim(), note: d.note.trim(), url: isBarePrefix(d.url) ? '' : d.url.trim() }, tile ? position : null);
       }}
     >
       <label className="field">
         <span>Name</span>
         <input
           required
-          list={tile ? undefined : 'launcher-originals'}
+          list={open.length ? 'launcher-originals' : undefined}
           autoComplete="off"
           value={d.name}
           onChange={(e) => {
             const name = e.target.value;
-            const p = tile ? null : open.find((x) => x.name.toLowerCase() === name.trim().toLowerCase());
+            const p = open.find((x) => x.name.toLowerCase() === name.trim().toLowerCase());
             setD((x) => (p ? { ...x, name: p.name, note: p.note, url: p.url, color: p.color } : { ...x, name }));
           }}
-          placeholder={tile || !open.length ? 'Online banking' : 'Type a new one or pick an original'}
+          placeholder={!open.length ? 'Online banking' : 'Type a new one or pick an original'}
         />
-        {!tile && (
+        {open.length > 0 && (
           <datalist id="launcher-originals">
             {open.map((p) => (
               <option key={p.name} value={p.name}>
@@ -442,6 +459,19 @@ function TileForm({
         <span>Note under the name</span>
         <input value={d.note} onChange={(e) => set('note', e.target.value)} placeholder="Bills" />
       </label>
+      {tile && tiles.length > 1 && (
+        <label className="field">
+          <span>Position</span>
+          <select value={position} onChange={(e) => setPosition(Number(e.target.value))}>
+            {tiles.map((t, i) => (
+              <option key={t.id} value={i}>
+                {i + 1}
+                {i === from ? ' (here now)' : ` · where ${t.name} is`}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <fieldset className="field">
         <legend>Colour</legend>
         <div className="choice-row">

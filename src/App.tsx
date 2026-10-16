@@ -142,6 +142,15 @@ export default function App() {
         const ok = await store.save(userId, item, next);
         setStatus(ok ? `${name(item)} saved.` : `${name(item)} saved on this device only.`);
       },
+      /** Several at once (a reorder), so no save works from a stale list. */
+      saveMany: async (items: T[]) => {
+        const byId = new Map(items.map((i) => [i.id, i]));
+        const next = [...list.map((x) => byId.get(x.id) ?? x), ...items.filter((i) => !list.some((x) => x.id === i.id))];
+        setList(next);
+        let ok = true;
+        for (const i of items) ok = (await store.save(userId, i, next)) && ok;
+        setStatus(ok ? 'Saved.' : 'Saved on this device only.');
+      },
       remove: async (id: string) => {
         const next = list.filter((x) => x.id !== id);
         setList(next);
@@ -278,6 +287,7 @@ export default function App() {
                   routineId={activeRoutine?.id ?? null}
                   launches={launches}
                   onSaveLauncher={launcherOps.save}
+                  onSaveLaunchers={launcherOps.saveMany}
                   onDeleteLauncher={launcherOps.remove}
                   onSaveLaunch={launchOps.save}
                   onDeleteLaunch={launchOps.remove}

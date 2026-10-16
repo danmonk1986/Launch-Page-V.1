@@ -65,7 +65,7 @@ export function seedLaunchers(): Launcher[] {
 
 /** The tiles that belong to one routine. Each routine keeps its own set. */
 export const launchersFor = (list: Launcher[], routineId: string | null) =>
-  routineId ? list.filter((l) => l.routineIds?.includes(routineId)) : [];
+  routineId ? list.filter((l) => l.routineIds?.includes(routineId)).sort((a, b) => a.sort - b.sort) : [];
 
 /** Tiles shared by every routine (the old model) become one separate copy per routine. */
 export function splitShared(list: Launcher[], routineIds: string[]) {
