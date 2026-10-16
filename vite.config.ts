@@ -9,6 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: false,
       includeAssets: ['launchpage-logo.png', 'favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'LaunchPage',
@@ -26,6 +27,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.origin.includes('fonts.g'),
