@@ -171,6 +171,14 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
   );
 }
 
+const CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP', 'AUD', 'MXN', 'JPY'];
+/** "1140 USD" ⇄ { amount: "1140", currency: "USD" }; plain numbers are CAD. */
+function splitExpense(v: string) {
+  const m = v.trim().match(/^(.*?)\s*([A-Za-z]{3})$/);
+  return m && CURRENCIES.includes(m[2].toUpperCase()) ? { amount: m[1].trim(), currency: m[2].toUpperCase() } : { amount: v.trim(), currency: 'CAD' };
+}
+const joinExpense = (amount: string, currency: string) => (amount.trim() ? `${amount.trim()} ${currency}` : '');
+
 const PHONE = /^\+?[\d\s().-]{7,}$/;
 
 /** Info: a link, or a phone number you can tap to call. */
@@ -632,7 +640,22 @@ function TaskForm({
         </label>
         <label className="field">
           <span>Expense (optional)</span>
-          <input value={d.expense} onChange={(e) => set('expense', e.target.value)} placeholder="1140 USD" />
+          <div className="expense-row">
+            <input
+              inputMode="decimal"
+              aria-label="Amount"
+              value={splitExpense(d.expense).amount}
+              onChange={(e) => set('expense', joinExpense(e.target.value, splitExpense(d.expense).currency))}
+              placeholder="1140"
+            />
+            <select aria-label="Currency" value={splitExpense(d.expense).currency} onChange={(e) => set('expense', joinExpense(splitExpense(d.expense).amount, e.target.value))}>
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
         </label>
       </div>
       <label className="field">

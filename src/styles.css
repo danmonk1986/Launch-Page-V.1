@@ -1238,3 +1238,25 @@ input:-webkit-autofill:focus {
 .now-card .tl-steps { grid-column: 1 / -1; grid-row: 2; }
 .panel-today .tl-block { padding: 8px 14px; grid-template-columns: 70px 14px minmax(0, 1fr); }
 .panel-today .tl-time, .now-card .tl-time { text-align: left; white-space: nowrap; }
+
+/* Routine list reads like the Now box: notes on their own line starting under the time */
+.panel-today .tl-block, .now-card { grid-template-columns: 70px 44px minmax(0, 1fr); column-gap: 8px; row-gap: 2px; }
+.panel-today .tl-block .tl-body { display: contents; }
+.panel-today .tl-block .tl-label { grid-column: 3; }
+.panel-today .tl-block .tl-steps { grid-column: 1 / -1; grid-row: 2; }
+.panel-today .tl-dot { justify-self: center; margin-top: 6px; }
+.now-pill {
+  justify-self: center; align-self: start; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 800;
+  letter-spacing: 0.1em; background: var(--accent-teal); color: #14102b;
+  box-shadow: 0 0 10px var(--accent-teal), 0 0 22px color-mix(in srgb, var(--accent-teal) 60%, transparent);
+  animation: now-glow 2.4s ease-in-out infinite;
+}
+@keyframes now-glow { 50% { box-shadow: 0 0 4px var(--accent-teal), 0 0 10px color-mix(in srgb, var(--accent-teal) 40%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .now-pill { animation: none; } }
+
+/* Routine menu: edit and add as icons */
+.picker-tools { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 10px 4px; }
+
+/* Tasks: long Info names end in … */
+.task-table td.col-link { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.expense-row { display: grid; grid-template-columns: 1fr 96px; gap: 8px; }

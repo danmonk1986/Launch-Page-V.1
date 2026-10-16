@@ -85,30 +85,40 @@ export function RoutinePicker({ routines, activeId, shift, onPick, onAdd, onEdit
             );
           })}
           <div className="picker-rule" />
-          {active && (
+          <div className="picker-tools">
+            {active && (
+              <button
+                type="button"
+                role="menuitem"
+                className="icon-btn tool-btn"
+                aria-label={`Edit ${active.name}`}
+                title={`Edit ${active.name}`}
+                onClick={() => {
+                  onEdit();
+                  setOpen(false);
+                }}
+              >
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
+                </svg>
+              </button>
+            )}
             <button
               type="button"
               role="menuitem"
-              className="picker-item picker-action"
+              className="icon-btn tool-btn"
+              aria-label="Add routine or ritual"
+              title="Add routine or ritual"
               onClick={() => {
-                onEdit();
+                onAdd();
                 setOpen(false);
               }}
             >
-              Edit {active.name}
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
             </button>
-          )}
-          <button
-            type="button"
-            role="menuitem"
-            className="picker-item picker-action"
-            onClick={() => {
-              onAdd();
-              setOpen(false);
-            }}
-          >
-            + Add routine or ritual
-          </button>
+          </div>
         </div>
       )}
     </div>

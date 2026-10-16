@@ -108,3 +108,17 @@ Dan's setup (10–15 min):
 2. Dan's notes from testing Tasks on shift.
 3. Invite people (needs one more Google permission). Calendar Add uses the project picker.
 4. Hard stop: Dan powers down by 6:20 AM after a max-output night.
+
+## Polish (Oct 16, 5:10–5:45 AM)
+
+- Tasks: Info column (link or tap-to-call phone, long names end in …), Expense column with currency (CAD default), centred columns, same-width project pills, Task keeps its width, description suggestions.
+- Forms site-wide: Save · Delete · Close icons in the header. All icon buttons 36px. ⚙ menu: Brand settings · Export · Change password · Sign out. Tabs fold into a teal ⌄ when narrow.
+- Recently deleted (30 days, Restore / Delete forever) — run `0010_task_trash.sql`.
+- Routine card: glowing NOW pill in the Now box; every item's notes on their own line under the time. Routine menu: edit and add as icons.
+- Create launch with no time: 9:30 AM (first work block).
+
+## Next session (tonight)
+
+1. Run `0009_task_steps.sql` and `0010_task_trash.sql` if not done.
+2. Dan's notes from testing; tie it all together (launches ↔ tasks ↔ calendar).
+3. Start the Planner.

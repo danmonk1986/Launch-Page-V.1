@@ -33,12 +33,9 @@ export function TodayPanel({ routine, shift, onEdit }: Props) {
         {nowBlock && (
           <div className="now-card" aria-label="Right now">
             <span className="tl-time">{nowBlock.time ?? ''}</span>
-            <span className="tl-dot" aria-hidden="true" />
+            <span className="now-pill">NOW</span>
             <div className="tl-body">
-              <span className="tl-label">
-                {nowBlock.label}
-                <span className="tl-now">now</span>
-              </span>
+              <span className="tl-label">{nowBlock.label}</span>
               {nowBlock.steps.length > 0 && <span className="tl-steps">{nowBlock.steps.join(' · ')}</span>}
             </div>
           </div>
