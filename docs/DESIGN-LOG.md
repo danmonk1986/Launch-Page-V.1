@@ -40,7 +40,8 @@ Live app: https://launch-page-v-1.danmonk1986.workers.dev · Repo: danmonk1986/L
 5. `0005_launch_alerts.sql` (alarm/notification per launch)
 6. `0006_launcher_pink.sql` (fourth tile colour)
 7. `0007_tile_colours.sql` (Green and Pink sync from Brand settings)
-8. `0008_projects_tasks.sql` (areas, projects and tasks)
+8. `0008_projects_tasks.sql` (areas, projects and tasks) ✅ Oct 16
+9. `0009_task_steps.sql` (steps under tasks)
 
 ## Google Calendar sync (built Oct 16)
 
@@ -92,3 +93,18 @@ Dan's setup (10–15 min):
 2. Dan's notes on the Tasks page.
 3. Task actions: Add to calendar · Invite people · Create launch. Then calendar Add uses the project picker.
 4. Optional: paste-in import of Launch Sheet task rows.
+
+## Tasks round 2 (Oct 16, 3:30–4:10 AM)
+
+- Pills: ALL · DUE TODAY · 3 KEY TASKS · IN PROGRESS · APPOINTMENTS · ON DECK · MONTHLY · ANNUAL · PENDING · COMPLETED. Due today hides when empty.
+- Monthly repeats: "on a date" (the 17th) or "on a weekday" (2nd Tuesday). Annual: month + day.
+- Launch Sheet TO-DO LIST imported from a file (114 tasks; overdue redated to Oct 24). Import button on the Tasks page; the file stays out of the repo.
+- ⋯ menu per row: Add to calendar (project's Google calendar) · Create launch · Add a step · Move to tomorrow · Move to… · Remove.
+- Steps under tasks (+ beside the name, Steps in the form). Alternating soft-teal (#76CABA) rows instead of lines.
+
+## Next session
+
+1. Run `0009_task_steps.sql`.
+2. Dan's notes from testing Tasks on shift.
+3. Invite people (needs one more Google permission). Calendar Add uses the project picker.
+4. Hard stop: Dan powers down by 6:20 AM after a max-output night.
