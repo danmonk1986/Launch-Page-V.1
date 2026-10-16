@@ -183,7 +183,9 @@ function TaskTable({
           const s = SECTIONS.find((x) => x.id === id)!;
           const rows = grouped[id];
           const shut = collapsible && closed[id];
-          if (collapsible && !rows.length && id !== 'due' && id !== 'key') return null;
+          // Empty groups stay out of the way; Due today hides too when nothing is due.
+          if (!rows.length && id === 'due') return null;
+          if (collapsible && !rows.length && id !== 'key') return null;
           return (
             <tbody key={id}>
               <tr className="task-section">
@@ -324,6 +326,9 @@ export function TasksPage(p: Common & { onOpenProjects: () => void; onImport: (f
         </div>
       </div>
       <div className="area-filter" role="group" aria-label="Show">
+        <button type="button" className="area-pill" aria-pressed={view === null} onClick={() => setView(null)}>
+          All <span className="pill-count">{p.tasks.filter((t) => !(t.done && t.cleared)).length}</span>
+        </button>
         {SECTIONS.map((sec) => (
           <button
             key={sec.id}
