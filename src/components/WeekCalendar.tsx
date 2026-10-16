@@ -127,6 +127,14 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
           </h2>
           <p className="panel-sub">
             {range}
+            {offset !== 0 && (
+              <>
+                {' · '}
+                <button type="button" className="link-btn link-btn-inline link-quiet" onClick={() => setOffset(0)}>
+                  This week
+                </button>
+              </>
+            )}
             {g === 'on' && (
               <>
                 {' · '}Google Calendar{' '}
@@ -137,38 +145,37 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
             )}
           </p>
         </div>
-        <div className="panel-actions">
-          {g === 'off' && googleConfigured() && (
-            <button type="button" className="btn btn-quiet" onClick={connect}>
-              Connect Google
-            </button>
-          )}
-          {g === 'reconnect' && (
-            <button type="button" className="btn btn-quiet" onClick={connect} title="Google's pass lasts an hour. One click renews it.">
-              Reconnect Google
-            </button>
-          )}
-          <button type="button" className="icon-btn" aria-label="Previous week" onClick={() => setOffset((o) => o - 1)}>
-            ‹
+        <div className="panel-actions week-tools">
+          <button type="button" className="icon-btn tool-btn" aria-label="Previous week" title="Previous week" onClick={() => setOffset((o) => o - 1)}>
+            <Icon d="M15 5l-7 7 7 7" />
           </button>
-          {offset !== 0 && (
-            <button type="button" className="btn btn-quiet" onClick={() => setOffset(0)}>
-              Today
+          {googleConfigured() && (
+            <button
+              type="button"
+              className={`icon-btn tool-btn${g === 'reconnect' ? ' tool-btn-warn' : ''}`}
+              aria-pressed={g === 'on' || g === 'loading'}
+              aria-label={g === 'off' ? 'Connect Google Calendar' : g === 'reconnect' ? 'Reconnect Google Calendar' : 'Refresh Google Calendar'}
+              title={g === 'off' ? 'Connect Google Calendar' : g === 'reconnect' ? 'Reconnect Google (the pass lasts an hour)' : 'Google Calendar connected · tap to refresh'}
+              onClick={g === 'on' || g === 'loading' ? refresh : connect}
+            >
+              <Icon d="M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" />
             </button>
           )}
-          <button type="button" className="icon-btn" aria-label="Next week" onClick={() => setOffset((o) => o + 1)}>
-            ›
-          </button>
           <button
             type="button"
-            className="btn btn-quiet"
+            className="icon-btn tool-btn"
+            aria-label="Add event"
+            title="Add event"
             onClick={() => {
               setEditing(null);
               setNewDate(offset === 0 ? today : from);
               setOpen(true);
             }}
           >
-            + Add event
+            <Icon d="M12 5v14M5 12h14" />
+          </button>
+          <button type="button" className="icon-btn tool-btn" aria-label="Next week" title="Next week" onClick={() => setOffset((o) => o + 1)}>
+            <Icon d="M9 5l7 7-7 7" />
           </button>
         </div>
       </div>
@@ -259,6 +266,14 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
         />
       </Sheet>
     </section>
+  );
+}
+
+function Icon({ d }: { d: string }) {
+  return (
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} />
+    </svg>
   );
 }
 
