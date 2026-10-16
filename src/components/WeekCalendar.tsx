@@ -202,7 +202,7 @@ function EventForm({
             Cancel
           </button>
           <button type="submit" className="btn" disabled={!d.title.trim()}>
-            Save event
+            Save
           </button>
         </div>
       </div>

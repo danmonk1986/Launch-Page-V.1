@@ -175,7 +175,7 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
               Cancel
             </button>
             <button type="submit" className="btn" disabled={saving || !draft.name.trim()}>
-              {saving ? 'Saving…' : 'Save routine'}
+              {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
         </div>

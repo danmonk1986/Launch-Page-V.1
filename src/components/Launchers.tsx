@@ -493,7 +493,7 @@ function TileForm({
             Cancel
           </button>
           <button type="submit" className="btn" disabled={!d.name.trim()}>
-            Save launch
+            Save
           </button>
         </div>
       </div>
@@ -707,7 +707,7 @@ function TimedForm({
             Cancel
           </button>
           <button type="submit" className="btn" disabled={!d.title.trim()}>
-            Save timed launch
+            Save
           </button>
         </div>
       </div>
