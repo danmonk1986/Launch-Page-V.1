@@ -199,35 +199,37 @@ export function LaunchersPanel(p: Props) {
         <div className="timed-head">
           <div className="timed-title-row">
             <h3 className="timed-title">Timed launches</h3>
+            <div className="timed-tabs" role="tablist" aria-label="Timed launches">
+              {TIMED_VIEWS.map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === id}
+                  className="timed-tab"
+                  onClick={() => {
+                    setView(id);
+                    setShowAllTimed(false);
+                  }}
+                >
+                  {label}
+                  <span className="timed-tab-count">{views[id].length}</span>
+                </button>
+              ))}
+            </div>
           </div>
           <button
             type="button"
-            className="link-btn link-btn-inline"
+            className="icon-btn tool-btn"
+            aria-label="Add a timed launch"
+            title="Add timed launch"
             onClick={() => {
               setTimed(null);
               setTimedOpen(true);
             }}
           >
-            + Add timed launch
+            <Icon d="M12 5v14M5 12h14" />
           </button>
-        </div>
-        <div className="timed-tabs" role="tablist" aria-label="Timed launches">
-          {TIMED_VIEWS.map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={view === id}
-              className="timed-tab"
-              onClick={() => {
-                setView(id);
-                setShowAllTimed(false);
-              }}
-            >
-              {label}
-              <span className="timed-tab-count">{views[id].length}</span>
-            </button>
-          ))}
         </div>
         {list.length === 0 ? (
           <p className="panel-empty timed-empty">{p.launches.length === 0 ? 'At a set time, a reminder pops up and one tap opens every tab you need.' : EMPTY[view]}</p>

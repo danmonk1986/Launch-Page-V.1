@@ -910,3 +910,16 @@ input:-webkit-autofill:focus {
 .timed-tab-count { font-size: 11px; }
 .timed-tab[aria-selected='true'] { border-bottom-color: var(--accent-purple); color: color-mix(in srgb, var(--accent-purple) 55%, white); }
 .timed-tab[aria-selected='true'] .timed-tab-count { color: color-mix(in srgb, var(--accent-purple) 55%, white); }
+
+/* Timed launches: title, tabs and + on one line, the line under them all */
+.timed-head { align-items: flex-end; border-bottom: 1px solid var(--edge); padding-bottom: 6px; margin-bottom: 10px; }
+.timed-title-row { flex-wrap: wrap; align-items: flex-end; column-gap: 28px; row-gap: 4px; }
+.timed-title { line-height: 30px; }
+.timed-tabs { border-bottom: 0; margin: 0 0 -7px; }
+.timed-head .tool-btn { margin-bottom: 0; }
+.timed-title-row { align-items: center; margin-bottom: -7px; }
+.timed-tabs { margin: 0; }
+.timed-head { align-items: center; }
+.timed-head .tool-btn { margin-bottom: 0; }
+.timed-head { border-bottom: 0; padding-bottom: 0; }
+.timed-title-row { margin-bottom: 0; }
