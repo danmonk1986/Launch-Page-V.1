@@ -184,7 +184,8 @@ let primaryCal: Cal = { id: 'primary', accessRole: 'owner' };
 /** The calendars ticked in Google Calendar's sidebar. */
 async function listCalendars(): Promise<Cal[]> {
   const data = await call<{ items: Cal[] }>(`${BASE}/users/me/calendarList?minAccessRole=reader&maxResults=250`);
-  const cals = (data.items ?? []).filter((c) => c.selected !== false);
+  // Shown calendars only, and never Google's holiday calendars (no holidays off as a consultant).
+  const cals = (data.items ?? []).filter((c) => c.selected !== false && !c.id.includes('#holiday@group.v.calendar.google.com'));
   primaryCal = cals.find((c) => c.primary) ?? primaryCal;
   return cals.length ? cals : [primaryCal];
 }
