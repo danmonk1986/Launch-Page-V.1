@@ -78,3 +78,17 @@ Dan's setup (10–15 min):
 - ✓ checks off (strike-through like timed launches), ✗ moves to tomorrow; on a done task ✗ clears it from Done.
 - Areas: NORTH STAR (was THEME), DANMONK26, HEALTH+WELLNESS, FNTSY LVNG › Travel+Adventure, STARDVST APP SHOP › StreamVU / LaunchPage / Zaptor, STARDVST BRAND SHOP (clients), STARDVST MWD, STARDVST LTD (grey). Each has a neon colour and links to a Google calendar (auto-linked by name).
 - Launch Page shows Due today and 3 key tasks only.
+
+## Launch Page housekeeping (Oct 16, 2:50–3:10 AM)
+
+- Header: tabs under the logo; right side has the ⚙ settings gear + compact routine picker (40px) above the date and time at their original size. The page date line and shift line are gone.
+- Routine panel: list keeps its order from wake-up; a standalone glowing "now" card sits on top.
+- Week: compact ivory Google boxes with a pastel-neon calendar edge; monthly themes (CONSISTENCY, AUDACITY) line up along the bottom row; holiday calendars hidden.
+- Launcher tiles: fixed 196 × 62px, reflow instead of stretching; name 14 / note 20 characters with a counter.
+
+## Next session
+
+1. Run `0008_projects_tasks.sql`.
+2. Dan's notes on the Tasks page.
+3. Task actions: Add to calendar · Invite people · Create launch. Then calendar Add uses the project picker.
+4. Optional: paste-in import of Launch Sheet task rows.
