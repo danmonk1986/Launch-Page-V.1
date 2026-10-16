@@ -33,7 +33,7 @@ type Props = {
   onFinish: (l: Launch, how: 'done' | 'skipped') => void;
 };
 
-const COLORS: TileColor[] = ['teal', 'purple', 'green'];
+const COLORS: TileColor[] = ['teal', 'purple', 'green', 'pink'];
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -449,7 +449,7 @@ function TileForm({
             <label key={c} className="choice">
               <input type="radio" name="tile-color" checked={d.color === c} onChange={() => set('color', c)} />
               <span className={`swatch-dot tile-${c}`} aria-hidden="true" />
-              <span>{c === 'teal' ? 'Teal' : c === 'purple' ? 'Purple' : 'Green'}</span>
+              <span>{c === 'teal' ? 'Teal' : c === 'purple' ? 'Purple' : c === 'green' ? 'Green' : 'Pink'}</span>
             </label>
           ))}
         </div>

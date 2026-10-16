@@ -1,7 +1,7 @@
 import { makeStore } from './store';
 import { toMinutes } from './routines';
 
-export type TileColor = 'teal' | 'purple' | 'green';
+export type TileColor = 'teal' | 'purple' | 'green' | 'pink';
 
 export interface Launcher {
   id: string;
@@ -55,7 +55,7 @@ export const LAUNCHER_PRESETS: LauncherPreset[] = [
   { name: 'Notes', note: 'Notes', url: '', color: 'green' },
   { name: 'LaunchPage', note: 'Launch Sheet', url: LAUNCH_SHEET, color: 'purple' },
   { name: 'Instagram', note: 'Social', url: 'https://www.instagram.com', color: 'teal' },
-  { name: 'Figma', note: 'Design', url: 'https://www.figma.com/files', color: 'purple' },
+  { name: 'Figma', note: 'Design', url: 'https://www.figma.com/files', color: 'pink' },
   { name: 'SoundCloud', note: 'Music', url: 'https://soundcloud.com', color: 'green' }
 ];
 
