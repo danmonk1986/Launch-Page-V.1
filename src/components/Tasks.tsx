@@ -126,6 +126,9 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
       )}
       {open && !t.deletedAt && (
         <div className="row-menu-list" role="menu">
+          <button type="button" role="menuitem" onClick={run(() => act.edit(t))}>
+            Edit
+          </button>
           <button type="button" role="menuitem" onClick={run(() => act.toCalendar(t))}>
             {t.googleEventId ? 'Add to calendar again' : 'Add to calendar'}
           </button>

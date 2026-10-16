@@ -1188,3 +1188,4 @@ input:-webkit-autofill:focus {
 .task-row.is-alt td:first-child { border-radius: 8px 0 0 8px; }
 .task-row.is-alt td:last-child { border-radius: 0 8px 8px 0; }
 .task-row:hover td { background: color-mix(in srgb, var(--accent-purple) 10%, transparent); }
+.row-menu-list > button { text-transform: uppercase; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
