@@ -27,6 +27,22 @@ const COLORS: EventColor[] = ['teal', 'purple', 'blue'];
 
 type GState = 'off' | 'reconnect' | 'loading' | 'on';
 
+const THEMES_KEY = 'launchpage.week.themes.v1';
+function readThemes(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(THEMES_KEY) ?? '[]') as string[]);
+  } catch {
+    return new Set();
+  }
+}
+function writeThemes(t: Set<string>) {
+  try {
+    localStorage.setItem(THEMES_KEY, JSON.stringify([...t].slice(-50)));
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Sunday to Saturday. Multi-day events span their days; click a day to add, an event to edit. */
 export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
   const [offset, setOffset] = useState(0);
@@ -110,7 +126,29 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
   }
 
   const all = [...events, ...gEvents];
-  const placed = layoutWeek(all, start);
+  // Themes (like CONSISTENCY or AUDACITY): one-day, all-day events whose name repeats on
+  // 3+ days this week. They sit in a line along the bottom instead of jumping between rows.
+  const dayCount = new Map<string, Set<string>>();
+  for (const e of all) {
+    if (e.google?.time || e.startDate !== e.endDate) continue;
+    const k = e.title.trim().toLowerCase();
+    dayCount.set(k, (dayCount.get(k) ?? new Set()).add(e.startDate));
+  }
+  // Remembered once seen, so a theme that only touches 1–2 days of a week (month change) still lines up.
+  const known = readThemes();
+  let learned = false;
+  for (const [k, days] of dayCount) {
+    if (days.size >= 3 && !known.has(k)) {
+      known.add(k);
+      learned = true;
+    }
+  }
+  if (learned) writeThemes(known);
+  const isTheme = (e: CalEvent) => !e.google?.time && e.startDate === e.endDate && known.has(e.title.trim().toLowerCase());
+  const main = layoutWeek(all.filter((e) => !isTheme(e)), start);
+  const mainLanes = main.reduce((m, p) => Math.max(m, p.lane + 1), 0);
+  const themes = layoutWeek(all.filter(isTheme), start).map((p) => ({ ...p, lane: p.lane + mainLanes }));
+  const placed = [...main, ...themes];
   const lanes = placed.reduce((m, p) => Math.max(m, p.lane + 1), 0);
   const end = days[6];
   const range = `${start.toLocaleDateString('en-CA', { month: 'long', day: 'numeric' })} – ${end.toLocaleDateString('en-CA', {

@@ -996,3 +996,4 @@ input:-webkit-autofill:focus {
 .ev-google { background: var(--beige); color: #14102b; border-left: 3px solid var(--accent-purple); }
 .ev-time { font-size: 10px; margin-right: 4px; opacity: 0.75; }
 .week-grid { row-gap: 4px; }
+.ev-google { background: #fffbf0; }
