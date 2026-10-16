@@ -33,6 +33,27 @@ const COLORS: TileColor[] = ['teal', 'purple', 'green'];
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+type TimedView = 'active' | 'complete' | 'tomorrow' | 'all';
+
+const TIMED_VIEWS: [TimedView, string][] = [
+  ['active', 'Active'],
+  ['complete', 'Complete'],
+  ['tomorrow', 'Tomorrow'],
+  ['all', 'All']
+];
+
+const EMPTY: Record<TimedView, string> = {
+  active: 'Nothing left to launch today.',
+  complete: 'Nothing checked off or skipped yet today.',
+  tomorrow: 'Nothing scheduled for tomorrow.',
+  all: 'No timed launches yet.'
+};
+
+/** Typing a link starts from https://www. so you only add the rest. */
+const PREFIX = 'https://www.';
+const withPrefix = (v: string) => (v.trim() ? v : PREFIX);
+const isBarePrefix = (v: string) => /^https?:\/\/(www\.)?$/i.test(v.trim());
+
 export const BLOCKED_HELP =
   'Your browser blocked some tabs. Allow pop-ups for this site, then launch again.';
 
@@ -44,8 +65,23 @@ export function LaunchersPanel(p: Props) {
   const [timedOpen, setTimedOpen] = useState(false);
   const [launched, setLaunched] = useState<{ count: number; blocked: number } | null>(null);
   const [showAllTimed, setShowAllTimed] = useState(false);
+  const [view, setView] = useState<TimedView>('active');
   const ordered = orderLaunches(p.launches, p.today, p.handled);
-  const visible = showAllTimed ? ordered : ordered.slice(0, 3);
+  const tomorrow = new Date(p.today.getFullYear(), p.today.getMonth(), p.today.getDate() + 1, 12);
+  const stateOf = (l: Launch) => {
+    const h = p.handled[`${l.id}:${isoDate(p.today)}`];
+    return h === true ? 'done' : h;
+  };
+  const views: Record<TimedView, Launch[]> = {
+    active: ordered.filter((l) => l.active && happensOn(l, p.today) && (!stateOf(l) || stateOf(l) === 'launched')),
+    complete: ordered.filter((l) => happensOn(l, p.today) && (stateOf(l) === 'done' || stateOf(l) === 'skipped')),
+    tomorrow: [...p.launches]
+      .filter((l) => l.active && happensOn(l, tomorrow))
+      .sort((a, b) => a.atTime.localeCompare(b.atTime)),
+    all: [...p.launches].sort((a, b) => a.atTime.localeCompare(b.atTime))
+  };
+  const list = views[view];
+  const visible = showAllTimed ? list : list.slice(0, 3);
 
   function launchAll() {
     const urls = p.launchers.map((l) => l.url).filter(Boolean);
@@ -146,26 +182,7 @@ export function LaunchersPanel(p: Props) {
 
       <div className="timed">
         <div className="timed-head">
-          <h3 className="timed-title">
-            {p.launches.length > 3 ? (
-              <button
-                type="button"
-                className="timed-toggle"
-                aria-expanded={showAllTimed}
-                onClick={() => setShowAllTimed((v) => !v)}
-              >
-                Timed launches
-                <span className="timed-count">
-                  {showAllTimed ? 'all' : `3 of ${p.launches.length}`}
-                </span>
-                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className={showAllTimed ? 'is-open' : ''}>
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </button>
-            ) : (
-              'Timed launches'
-            )}
-          </h3>
+          <h3 className="timed-title">Timed launches</h3>
           <button
             type="button"
             className="link-btn link-btn-inline"
@@ -177,14 +194,33 @@ export function LaunchersPanel(p: Props) {
             + Add timed launch
           </button>
         </div>
-        {p.launches.length === 0 ? (
-          <p className="panel-empty">At a set time, a reminder pops up and one tap opens every tab you need.</p>
+        <div className="timed-tabs" role="tablist" aria-label="Timed launches">
+          {TIMED_VIEWS.map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={view === id}
+              className="timed-tab"
+              onClick={() => {
+                setView(id);
+                setShowAllTimed(false);
+              }}
+            >
+              {label}
+              <span className="timed-tab-count">{views[id].length}</span>
+            </button>
+          ))}
+        </div>
+        {list.length === 0 ? (
+          <p className="panel-empty timed-empty">{p.launches.length === 0 ? 'At a set time, a reminder pops up and one tap opens every tab you need.' : EMPTY[view]}</p>
         ) : (
           <ul className="timed-list">
             {visible.map((l) => {
-              const todays = l.active && happensOn(l, p.today);
-              const state = p.handled[`${l.id}:${isoDate(p.today)}`];
-              const how = state === true ? 'done' : state;
+              // Tomorrow shows plain rows: today's check-offs belong to today.
+              const ahead = view === 'tomorrow';
+              const todays = !ahead && l.active && happensOn(l, p.today);
+              const how = ahead ? undefined : stateOf(l);
               return (
                 <li key={l.id} className={`timed-item${how && how !== 'launched' ? ` is-${how}` : ''}${how === 'launched' ? ' is-launched' : ''}`}>
                   <button
@@ -235,6 +271,19 @@ export function LaunchersPanel(p: Props) {
               );
             })}
           </ul>
+        )}
+        {list.length > 3 && (
+          <button
+            type="button"
+            className="timed-more"
+            aria-expanded={showAllTimed}
+            onClick={() => setShowAllTimed((v) => !v)}
+          >
+            {showAllTimed ? 'Show 3' : `Show all ${list.length}`}
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className={showAllTimed ? 'is-open' : ''}>
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
         )}
       </div>
 
@@ -305,7 +354,7 @@ function TileForm({
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.name.trim()) return;
-        await onSave({ ...d, name: d.name.trim(), note: d.note.trim(), url: d.url.trim() });
+        await onSave({ ...d, name: d.name.trim(), note: d.note.trim(), url: isBarePrefix(d.url) ? '' : d.url.trim() });
       }}
     >
       <label className="field">
@@ -314,7 +363,15 @@ function TileForm({
       </label>
       <label className="field">
         <span>Link</span>
-        <input type="url" inputMode="url" value={d.url} onChange={(e) => set('url', e.target.value)} placeholder="https://…" />
+        <input
+          type="url"
+          inputMode="url"
+          value={d.url}
+          onFocus={() => set('url', withPrefix(d.url))}
+          onBlur={() => isBarePrefix(d.url) && set('url', '')}
+          onChange={(e) => set('url', e.target.value)}
+          placeholder="https://www.example.com"
+        />
       </label>
       <label className="field">
         <span>Note under the name</span>
@@ -398,7 +455,7 @@ function TimedForm({
         const extras = extra
           .split(/\s+/)
           .map((u) => u.trim())
-          .filter(Boolean);
+          .filter((u) => u && !isBarePrefix(u));
         await onSave({ ...d, title: d.title.trim(), urls: [...tileUrls, ...extras] });
       }}
     >
@@ -484,7 +541,19 @@ function TimedForm({
       </fieldset>
       <label className="field">
         <span>Other links, one per line</span>
-        <textarea rows={3} value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="https://www.atb.com" />
+        <textarea
+          rows={3}
+          value={extra}
+          onFocus={() => setExtra((v) => (v.trim() ? (v.endsWith('\n') ? v + PREFIX : v) : PREFIX))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              setExtra((v) => `${v}\n${PREFIX}`);
+            }
+          }}
+          onChange={(e) => setExtra(e.target.value)}
+          placeholder="https://www.atb.com"
+        />
       </label>
 
       <label className="choice choice-wide">
