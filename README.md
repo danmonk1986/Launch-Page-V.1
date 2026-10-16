@@ -74,4 +74,4 @@ public/                   LaunchPage logo and app icons
 - The user's brand layer is editable: logo, goal, mantra, background (synthwave / night sky / plain), purple and teal accents.
 - The moving neon floor is the only animation; it stops when the device asks for reduced motion.
 
-The AI Design Log lives in the LaunchPage brain-dump doc.
+The AI Design Log lives in the LaunchPage brain-dump doc, with a checkpoint copy in docs/DESIGN-LOG.md.
