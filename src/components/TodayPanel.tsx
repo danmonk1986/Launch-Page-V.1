@@ -17,9 +17,7 @@ export function TodayPanel({ routine, shift, onEdit }: Props) {
   const now = useNow();
   const blocks = routine ? toBlocks(routine, shift) : [];
   const current = nowBlockIndex(blocks, now);
-  // What you're on now sits at the top; the rest of the cycle follows in order.
-  const order = blocks.map((_, i) => i);
-  const ordered = current > 0 ? [...order.slice(current), ...order.slice(0, current)] : order;
+  const nowBlock = current >= 0 ? blocks[current] : null;
 
   return (
     <section className="panel panel-today" aria-label="Today's routine">
@@ -31,8 +29,22 @@ export function TodayPanel({ routine, shift, onEdit }: Props) {
           </button>
         </div>
       ) : (
+        <>
+        {nowBlock && (
+          <div className="now-card" aria-label="Right now">
+            <span className="tl-time">{nowBlock.time ?? ''}</span>
+            <span className="tl-dot" aria-hidden="true" />
+            <div className="tl-body">
+              <span className="tl-label">
+                {nowBlock.label}
+                <span className="tl-now">now</span>
+              </span>
+              {nowBlock.steps.length > 0 && <span className="tl-steps">{nowBlock.steps.join(' · ')}</span>}
+            </div>
+          </div>
+        )}
         <ol className="timeline">
-          {ordered.map((i) => ({ b: blocks[i], i })).map(({ b, i }) => (
+          {blocks.map((b, i) => (
             <li key={i} className={`tl-block${i === current ? ' is-now' : ''}`} aria-current={i === current ? 'time' : undefined}>
               <span className="tl-time">{b.time ?? ''}</span>
               <span className="tl-dot" aria-hidden="true" />
@@ -46,6 +58,7 @@ export function TodayPanel({ routine, shift, onEdit }: Props) {
             </li>
           ))}
         </ol>
+        </>
       )}
     </section>
   );

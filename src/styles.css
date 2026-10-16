@@ -1059,39 +1059,70 @@ input:-webkit-autofill:focus {
 .project-add-child { justify-self: start; margin-left: 34px; font-size: 12px; }
 .tab { padding: 0 10px; }
 
-/* Header: routine picker top right, date and time under it; no date line on the page */
-.topbar { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "logo words right" "logo tabs right"; align-items: center; column-gap: 24px; row-gap: 4px; }
-.topbar-logo { grid-area: logo; }
-.topbar-words { grid-area: words; }
-.topbar .tabs { grid-area: tabs; margin-left: -10px; }
-.topbar-right { grid-area: right; display: grid; justify-items: end; gap: 8px; }
-.header-clock { margin: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: baseline; gap: 4px 12px; }
-.header-clock time { font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--beige); }
-.header-time { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--accent-teal); }
+/* Header: same single row as before; the routine picker + gear sit where the mode chip was, date and time under them */
+.topbar-right { display: grid; grid-template-columns: auto auto; align-items: center; justify-items: end; gap: 6px 8px; }
+.topbar-right .header-clock { grid-column: 1 / -1; }
+.header-clock { margin: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: baseline; gap: 2px 10px; }
+.header-clock time { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--beige); }
+.header-time { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--accent-teal); }
 .frame { padding-top: 22px; }
 .home > .panel-today { min-height: 0; }
 .panel-today { padding-top: 14px; }
-@media (max-width: 760px) {
-  .topbar { grid-template-columns: auto 1fr; grid-template-areas: "logo right" "words words" "tabs tabs"; }
-}
 
-/* Header right: routine picker + settings gear on one line, date and time underneath */
-.topbar-right { grid-template-columns: auto auto; align-items: center; column-gap: 8px; }
-.topbar-right .header-clock { grid-column: 1 / -1; }
+
 .gear-btn { width: 40px; height: 40px; }
 
-/* Header on iPad and phone: logo + routine on top, motto, then the tabs in one scrolling row */
-@media (max-width: 1100px) {
-  .topbar { grid-template-columns: auto 1fr; grid-template-areas: "logo right" "words words" "tabs tabs"; row-gap: 10px; }
-  .topbar .tabs { margin-left: -10px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+/* Phone: tabs in one row you can swipe */
+@media (max-width: 560px) {
+  .topbar .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
   .topbar .tabs::-webkit-scrollbar { display: none; }
   .tab { white-space: nowrap; flex: none; }
-  .topbar-right { justify-self: end; }
+  .topbar-right { justify-items: start; }
+  .header-clock { justify-content: flex-start; }
+}
+
+/* Routine: a standalone "now" card on top; the list keeps its order from wake-up, with now marked lightly */
+.now-card {
+  display: grid; grid-template-columns: 76px 14px minmax(0, 1fr); align-items: start; gap: 10px;
+  padding: 12px 8px; margin-bottom: 10px; border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-teal) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-teal) 45%, transparent);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--accent-teal) 18%, transparent);
+}
+.now-card .tl-time { color: var(--accent-teal); font-weight: 700; }
+.now-card .tl-dot { background: var(--accent-teal); box-shadow: 0 0 10px var(--accent-teal); }
+.now-card .tl-label { font-weight: 700; }
+.tl-block.is-now { background: none; }
+.tl-block.is-now .tl-now { display: none; }
+/* Header: logo + motto as always, tabs underneath starting under the logo;
+   right side: settings gear + routine picker (gear height) above the date and time at their original size */
+.topbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "logo words right" "tabs tabs right"; align-items: center; column-gap: 28px; row-gap: 6px; }
+.topbar-logo { grid-area: logo; }
+.topbar-words { grid-area: words; }
+.topbar .tabs { grid-area: tabs; margin-left: -10px; }
+.topbar-right { grid-area: right; display: grid; grid-template-columns: auto auto; justify-content: end; justify-items: end; align-items: center; gap: 8px; }
+.topbar-right .picker { justify-self: end; }
+.topbar-right .picker-split { height: 40px; border-radius: 10px; }
+.topbar-right .picker-main { min-width: 0; padding: 0 14px; font-size: 13px; }
+.topbar-right .picker-caret { width: 40px; }
+.topbar-right .gear-btn { width: 40px; height: 40px; }
+.topbar-right .header-clock { grid-column: 1 / -1; gap: 4px 16px; }
+.header-clock time { font-size: clamp(22px, 3vw, 28px); font-weight: 700; letter-spacing: 0.08em; }
+.header-time { font-size: clamp(20px, 2.6vw, 24px); font-variant-numeric: tabular-nums; }
+@media (max-width: 1000px) {
+  .topbar { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "logo right" "words words" "tabs tabs"; }
 }
 @media (max-width: 560px) {
-  .topbar { grid-template-columns: 1fr; grid-template-areas: "logo" "right" "words" "tabs"; }
-  .topbar-right { justify-self: stretch; justify-items: start; grid-template-columns: minmax(0, 1fr) auto; }
-  .topbar-right .header-clock { justify-content: flex-start; }
-  .topbar-right .picker { min-width: 0; }
-  .motto { font-size: 14px; }
+  .topbar { grid-template-columns: minmax(0, 1fr); grid-template-areas: "logo" "right" "words" "tabs"; }
+  .topbar-right { justify-content: start; justify-items: start; }
+  .header-clock { justify-content: flex-start; }
+  .topbar .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+}
+
+.topbar-right { grid-template-columns: auto; }
+.topbar-controls { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.topbar-right .picker-main { white-space: nowrap; }
+@media (max-width: 560px) {
+  .topbar-controls { justify-content: flex-start; }
+  .topbar-right .picker-main { font-size: 12px; letter-spacing: 0.08em; padding: 0 10px; }
 }
