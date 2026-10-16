@@ -174,6 +174,9 @@ export const launcherStore = makeStore<Launcher, LauncherRow>({
   localKey: 'launchpage.launchers.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0003_launchers_events.sql',
+  latestScript: 'supabase/migrations/0006_launcher_pink.sql',
+  // Before 0006 is run, pink is refused: save the tile as purple in Supabase until then.
+  legacyRow: (r) => (r.color === 'pink' ? { ...r, color: 'purple' } : r),
   seed: seedLaunchers,
   toRow: (l) => ({ id: l.id, name: l.name, note: l.note, url: l.url, color: l.color, routine_ids: l.routineIds, sort: l.sort }),
   fromRow: (r) => ({ id: r.id, name: r.name, note: r.note, url: r.url, color: r.color, routineIds: r.routine_ids, sort: r.sort })
@@ -184,6 +187,15 @@ export const launchStore = makeStore<Launch, LaunchRow>({
   localKey: 'launchpage.launches.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0003_launchers_events.sql',
+  latestScript: 'supabase/migrations/0005_launch_alerts.sql',
+  // Before 0004/0005 are run: save without moved_to, sound and notify.
+  legacyRow: (r) => {
+    const x = { ...r };
+    delete x.moved_to;
+    delete x.sound;
+    delete x.notify;
+    return x;
+  },
   seed: seedLaunches,
   toRow: (l) => ({
     id: l.id,
