@@ -206,7 +206,9 @@ export function openTabs(urls: string[]) {
 
 const HANDLED_KEY = 'launchpage.launches.handled.v1';
 
-export function readHandled(): Record<string, true> {
+export type HandledHow = 'done' | 'skipped';
+
+export function readHandled(): Record<string, HandledHow | true> {
   try {
     return JSON.parse(localStorage.getItem(HANDLED_KEY) ?? '{}');
   } catch {
@@ -214,12 +216,13 @@ export function readHandled(): Record<string, true> {
   }
 }
 
-export function markHandled(id: string, day: Date) {
+export function markHandled(id: string, day: Date, how: HandledHow = 'done') {
   const all = readHandled();
-  all[`${id}:${isoDate(day)}`] = true;
+  all[`${id}:${isoDate(day)}`] = how;
   try {
     localStorage.setItem(HANDLED_KEY, JSON.stringify(all));
   } catch {
     /* ignore */
   }
+  return all;
 }

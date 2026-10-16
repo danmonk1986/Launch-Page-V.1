@@ -281,7 +281,7 @@ p { margin: 0; }
 .field { display: grid; gap: 6px; margin: 0 0 14px; border: 0; padding: 0; }
 .field > span, .field > legend { font-size: 14px; font-weight: 500; color: var(--dim); padding: 0; }
 
-.field input:not([type='radio']):not([type='color']) {
+.field input:not([type='radio']):not([type='color']):not([type='checkbox']) {
   width: 100%;
   min-height: 44px;
   padding: 8px 12px;
@@ -369,7 +369,7 @@ p { margin: 0; }
   color: #444242;
 }
 
-.app-light .field input:not([type='radio']):not([type='color']) { background: #ffffff; }
+.app-light .field input:not([type='radio']):not([type='color']):not([type='checkbox']) { background: #ffffff; }
 .app-light .btn { color: #444242; }
 .app-light .signin-error { color: #b3261e; }
 .app-light .link-btn { color: #444242; }
@@ -748,3 +748,32 @@ input:-webkit-autofill:focus {
 .launch-help ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .launch-help strong { color: var(--beige); }
 .launch-help .link-btn { justify-self: start; }
+
+/* Checkboxes and radios keep their size, even when a label wraps */
+.choice input[type='checkbox'],
+.choice input[type='radio'] { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--accent-teal); }
+
+/* Timed launches: check off or skip today without opening */
+.timed-item { display: flex; align-items: center; gap: 8px; }
+.timed-item .timed-row { flex: 1; min-width: 0; }
+.timed-item.is-done .timed-name,
+.timed-item.is-skipped .timed-name { text-decoration: line-through; text-decoration-color: var(--dim); color: var(--mist); }
+.timed-item.is-done .timed-time,
+.timed-item.is-skipped .timed-time { color: var(--dim); }
+.timed-quick { display: flex; gap: 6px; flex: none; }
+
+.quick-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.quick-done { border: 1px solid var(--accent-teal); color: var(--accent-teal); }
+.quick-done:hover { background: color-mix(in srgb, var(--accent-teal) 18%, transparent); }
+.quick-skip { border: 1px solid var(--edge-strong); color: var(--mist); }
+.quick-skip:hover { background: rgb(136 105 203 / 0.2); color: var(--beige); }

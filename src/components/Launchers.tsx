@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Sheet } from './Sheet';
 import {
   describeSchedule,
+  happensOn,
+  isoDate,
+  type HandledHow,
   normalizeUrl,
   openTabs,
   type Launch,
@@ -20,6 +23,9 @@ type Props = {
   onSaveLaunch: (l: Launch) => Promise<void>;
   onDeleteLaunch: (id: string) => Promise<void>;
   onStatus: (msg: string) => void;
+  handled: Record<string, HandledHow | true>;
+  today: Date;
+  onFinish: (l: Launch, how: 'done' | 'skipped') => void;
 };
 
 const COLORS: TileColor[] = ['teal', 'purple', 'green'];
@@ -152,25 +158,58 @@ export function LaunchersPanel(p: Props) {
           <p className="panel-empty">At a set time, a reminder pops up and one tap opens every tab you need.</p>
         ) : (
           <ul className="timed-list">
-            {p.launches.map((l) => (
-              <li key={l.id}>
-                <button
-                  type="button"
-                  className="timed-row"
-                  onClick={() => {
-                    setTimed(l);
-                    setTimedOpen(true);
-                  }}
-                >
-                  <span className="timed-time">{formatMinutes(toMinutes(l.atTime))}</span>
-                  <span className="timed-name">{l.title}</span>
-                  <span className="timed-meta">
-                    {describeSchedule(l)} · {l.minutes} min · {l.urls.length} {l.urls.length === 1 ? 'tab' : 'tabs'}
-                    {!l.active && ' · off'}
-                  </span>
-                </button>
-              </li>
-            ))}
+            {p.launches.map((l) => {
+              const todays = l.active && happensOn(l, p.today);
+              const state = p.handled[`${l.id}:${isoDate(p.today)}`];
+              const how = state === true ? 'done' : state;
+              return (
+                <li key={l.id} className={`timed-item${how ? ` is-${how}` : ''}`}>
+                  <button
+                    type="button"
+                    className="timed-row"
+                    onClick={() => {
+                      setTimed(l);
+                      setTimedOpen(true);
+                    }}
+                  >
+                    <span className="timed-time">{formatMinutes(toMinutes(l.atTime))}</span>
+                    <span className="timed-name">{l.title}</span>
+                    <span className="timed-meta">
+                      {describeSchedule(l)} · {l.minutes} min · {l.urls.length} {l.urls.length === 1 ? 'tab' : 'tabs'}
+                      {!l.active && ' · off'}
+                      {how === 'done' && ' · done today'}
+                      {how === 'skipped' && ' · skipped today'}
+                    </span>
+                  </button>
+                  {todays && !how && (
+                    <div className="timed-quick">
+                      <button
+                        type="button"
+                        className="quick-btn quick-done"
+                        aria-label={`Check off ${l.title} for today`}
+                        title="Done today"
+                        onClick={() => p.onFinish(l, 'done')}
+                      >
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12.5l4.5 4.5L19 7.5" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-btn quick-skip"
+                        aria-label={`Skip ${l.title} today`}
+                        title="Skip today"
+                        onClick={() => p.onFinish(l, 'skipped')}
+                      >
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                          <path d="M6 6l12 12M18 6L6 18" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

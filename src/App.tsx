@@ -57,6 +57,7 @@ export default function App() {
   const [storeProblem, setStoreProblem] = useState<string | null>(null);
   const [reminder, setReminder] = useState<Launch | null>(null);
   const [snoozed, setSnoozed] = useState<Record<string, number>>({});
+  const [handled, setHandled] = useState(() => readHandled());
   const now = useNow(30_000);
 
   const userId = session?.user.id ?? null;
@@ -139,16 +140,21 @@ export default function App() {
   // Timed launches: pop the reminder when one is due and not handled today.
   useEffect(() => {
     if (reminder) return;
-    const handled = readHandled();
     const due = launches.find(
       (l) => isDue(l, now) && !handled[`${l.id}:${isoDate(now)}`] && !(snoozed[l.id] && snoozed[l.id] > now.getTime())
     );
     if (due) setReminder(due);
-  }, [now, launches, reminder, snoozed]);
+  }, [now, launches, reminder, snoozed, handled]);
+
+  function finishLaunch(l: Launch, how: 'done' | 'skipped') {
+    setHandled(markHandled(l.id, new Date(), how));
+    if (reminder?.id === l.id) setReminder(null);
+    setStatus(how === 'done' ? `${l.title} checked off for today.` : `${l.title} skipped today.`);
+  }
 
   function launchNow(l: Launch) {
     const blocked = openTabs(l.urls);
-    markHandled(l.id, new Date());
+    setHandled(markHandled(l.id, new Date(), 'done'));
     setReminder(null);
     setStatus(blocked ? BLOCKED_HELP : `Launched ${l.title}: ${l.urls.length} tabs.`);
   }
@@ -224,6 +230,9 @@ export default function App() {
                   onSaveLaunch={launchOps.save}
                   onDeleteLaunch={launchOps.remove}
                   onStatus={setStatus}
+                  handled={handled}
+                  today={now}
+                  onFinish={finishLaunch}
                 />
               }
               week={<WeekCalendar events={events} onSave={eventOps.save} onDelete={eventOps.remove} />}
@@ -266,10 +275,7 @@ export default function App() {
           setSnoozed((m) => ({ ...m, [l.id]: Date.now() + 10 * 60_000 }));
           setReminder(null);
         }}
-        onSkip={(l) => {
-          markHandled(l.id, new Date());
-          setReminder(null);
-        }}
+        onSkip={(l) => finishLaunch(l, 'skipped')}
       />
       <RoutineEditor
         open={editor.open}
