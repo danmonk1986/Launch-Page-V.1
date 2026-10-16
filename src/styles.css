@@ -732,3 +732,19 @@ input:-webkit-autofill:focus {
 .swatch-dot.ev-blue { background: #a0b4ff; }
 
 .week-empty { margin-top: 12px; }
+
+.launch-help {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-teal) 55%, transparent);
+  background: rgb(15 11 34 / 0.85);
+  font-size: 14px;
+  color: var(--mist);
+  display: grid;
+  gap: 8px;
+}
+
+.launch-help ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.launch-help strong { color: var(--beige); }
+.launch-help .link-btn { justify-self: start; }

@@ -27,7 +27,7 @@ const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const BLOCKED_HELP =
-  'Your browser blocked some tabs. Allow pop-ups for this site (the icon at the right end of the address bar), then try again.';
+  'Your browser blocked some tabs. Allow pop-ups for this site, then launch again.';
 
 export function LaunchersPanel(p: Props) {
   const [editing, setEditing] = useState(false);
@@ -35,11 +35,13 @@ export function LaunchersPanel(p: Props) {
   const [tileOpen, setTileOpen] = useState(false);
   const [timed, setTimed] = useState<Launch | null>(null);
   const [timedOpen, setTimedOpen] = useState(false);
+  const [launched, setLaunched] = useState<{ count: number; blocked: number } | null>(null);
 
   function launchAll() {
     const urls = p.launchers.map((l) => l.url).filter(Boolean);
     if (!urls.length) return p.onStatus('Add links to your tiles first.');
     const blocked = openTabs(urls);
+    setLaunched({ count: urls.length, blocked });
     p.onStatus(blocked ? BLOCKED_HELP : `Launched ${urls.length} tabs.`);
   }
 
@@ -71,6 +73,31 @@ export function LaunchersPanel(p: Props) {
           </button>
         </div>
       </div>
+
+      {launched && (
+        <div className="launch-help" role="status">
+          <p>
+            {launched.blocked
+              ? `Your browser blocked ${launched.blocked} of ${launched.count} tabs.`
+              : `Sent ${launched.count} tabs. Only one opened? Your browser is blocking the rest as pop-ups.`}{' '}
+            Allow pop-ups for this site once, then launch again:
+          </p>
+          <ul>
+            <li>
+              <strong>Firefox:</strong> Options in the yellow bar at the top → Allow pop-ups for this site.
+            </li>
+            <li>
+              <strong>Chrome:</strong> the blocked pop-up icon at the right of the address bar → Always allow.
+            </li>
+            <li>
+              <strong>Safari (iPad):</strong> Settings → Apps → Safari → turn off Block Pop-ups.
+            </li>
+          </ul>
+          <button type="button" className="link-btn link-btn-inline" onClick={() => setLaunched(null)}>
+            All tabs opened, hide this
+          </button>
+        </div>
+      )}
 
       <ul className="tiles">
         {p.launchers.map((l) => (
