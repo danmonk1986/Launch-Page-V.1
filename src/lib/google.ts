@@ -152,6 +152,31 @@ const dayOf = (g: GDate) => (g.date ? g.date : isoDate(new Date(g.dateTime!)));
 const nextDay = (iso: string) => isoDate(addDays(new Date(`${iso}T12:00:00`), 1));
 const prevDay = (iso: string) => isoDate(addDays(new Date(`${iso}T12:00:00`), -1));
 
+/**
+ * Pastel neons instead of Google's colours, so each calendar's edge pops against the
+ * striped synthwave background. Areas get fixed colours; any other calendar gets one
+ * from the palette by name (always the same one). Editable per area in a later step.
+ */
+const NEON = ['#06F9C2', '#B794FF', '#FF6AD5', '#9DFF8A', '#7FDBFF', '#FFE066', '#FF9F68', '#5CE1E6', '#FF8FAB', '#C3F73A'];
+const AREA_NEON: [RegExp, string][] = [
+  [/ltd/i, '#C8C6C6'], // STARDVST LTD: tax prep and the boring stuff, in grey
+  [/theme/i, '#06F9C2'],
+  [/danmonk/i, '#B794FF'],
+  [/fntsy|travel|adventure/i, '#FF9F68'],
+  [/health|wellness/i, '#FF8FAB'],
+  [/brand/i, '#7FDBFF'],
+  [/mwd/i, '#FFE066'],
+  [/app shop|launch|stream|zaptor/i, '#9DFF8A']
+];
+function neonFor(cal: { id: string; summary?: string }) {
+  const name = cal.summary ?? cal.id;
+  const hit = AREA_NEON.find(([re]) => re.test(name));
+  if (hit) return hit[1];
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return NEON[h % NEON.length];
+}
+
 type Cal = { id: string; summary?: string; backgroundColor?: string; accessRole?: string; selected?: boolean; primary?: boolean };
 
 function fromGoogle(g: GEvent, cal: Cal = { id: 'primary', accessRole: 'owner' }): CalEvent {
@@ -171,7 +196,7 @@ function fromGoogle(g: GEvent, cal: Cal = { id: 'primary', accessRole: 'owner' }
       id: g.id,
       calendarId: cal.id,
       calendar: cal.summary ?? null,
-      color: cal.backgroundColor ?? null,
+      color: neonFor(cal),
       readOnly: cal.accessRole !== 'owner' && cal.accessRole !== 'writer',
       link: g.htmlLink ?? null,
       time: allDay ? null : new Date(g.start.dateTime!).toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' })
