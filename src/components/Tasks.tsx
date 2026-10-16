@@ -108,7 +108,7 @@ function TaskRows({
                 t.linkLabel
               )}
             </td>
-            <td className="col-date">{isRecurring(t) ? t.repeatRule ?? '' : shortDate(t.startDate)}</td>
+            <td className="col-date">{isRecurring(t) ? describeRule(t) : shortDate(t.startDate)}</td>
             <td className="col-date">{isRecurring(t) ? '' : shortDate(t.endDate)}</td>
             <td className="col-time">{t.atTime ? formatMinutes(toMinutes(t.atTime)) : ''}</td>
             <td className="col-actions">
@@ -366,7 +366,8 @@ function TaskForm({
         e.preventDefault();
         if (!d.task.trim()) return;
         const endDate = d.endDate && d.startDate && d.endDate < d.startDate ? d.startDate : d.endDate;
-        await onSave({ ...d, task: d.task.trim(), description: d.description.trim(), endDate });
+        const repeatRule = recurring ? d.repeatRule ?? (d.status === 'ANN RCR' ? '01-01' : '1') : d.repeatRule;
+        await onSave({ ...d, task: d.task.trim(), description: d.description.trim(), endDate, repeatRule });
       }}
     >
       <div className="time-grid">
@@ -416,14 +417,7 @@ function TaskForm({
         </label>
       </div>
       {recurring ? (
-        <label className="field">
-          <span>{d.status === 'ANN RCR' ? 'Every year on (MM-DD)' : 'Every month on'}</span>
-          <input
-            value={d.repeatRule ?? ''}
-            onChange={(e) => set('repeatRule', e.target.value.toUpperCase() || null)}
-            placeholder={d.status === 'ANN RCR' ? '03-15' : '17, 1st THU or LAST WED'}
-          />
-        </label>
+        <RepeatPicker annual={d.status === 'ANN RCR'} rule={d.repeatRule} onChange={(r) => set('repeatRule', r)} />
       ) : (
         <div className="time-grid">
           <label className="field">
@@ -468,5 +462,107 @@ function TaskForm({
         </div>
       </div>
     </form>
+  );
+}
+
+// ---------- Repeat picker: "on the 5th" or "every 2nd Tuesday"; annual = month + day ----------
+
+const ORD = ['1ST', '2ND', '3RD', '4TH', 'LAST'];
+const ORD_LABEL: Record<string, string> = { '1ST': '1st', '2ND': '2nd', '3RD': '3rd', '4TH': '4th', LAST: 'Last' };
+const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+const WEEKDAY_LABEL: Record<string, string> = { MON: 'Monday', TUE: 'Tuesday', WED: 'Wednesday', THU: 'Thursday', FRI: 'Friday', SAT: 'Saturday', SUN: 'Sunday' };
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const nth = (n: number) => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
+
+/** "1st THURSDAY", "17th", "Mar 15" for the table. */
+export function describeRule(t: Task) {
+  const r = (t.repeatRule ?? '').trim().toUpperCase();
+  if (!r) return '';
+  if (t.status === 'ANN RCR') {
+    const m = r.match(/^(\d{1,2})-(\d{1,2})$/);
+    return m ? `${MONTHS[Number(m[1]) - 1] ?? ''} ${Number(m[2])}` : r;
+  }
+  if (/^\d{1,2}$/.test(r)) return nth(Number(r));
+  const m = r.match(/^(1ST|2ND|3RD|4TH|LAST)\s+([A-Z]{3})/);
+  return m ? `${ORD_LABEL[m[1]]} ${WEEKDAY_LABEL[m[2]]?.toUpperCase() ?? m[2]}` : r;
+}
+
+function RepeatPicker({ annual, rule, onChange }: { annual: boolean; rule: string | null; onChange: (r: string | null) => void }) {
+  const r = (rule ?? '').trim().toUpperCase();
+  if (annual) {
+    const m = r.match(/^(\d{1,2})-(\d{1,2})$/);
+    const month = m ? Number(m[1]) : 1;
+    const day = m ? Number(m[2]) : 1;
+    const put = (mo: number, dy: number) => onChange(`${String(mo).padStart(2, '0')}-${String(dy).padStart(2, '0')}`);
+    return (
+      <fieldset className="field">
+        <legend>Every year on</legend>
+        <div className="time-grid">
+          <select aria-label="Month" value={month} onChange={(e) => put(Number(e.target.value), day)}>
+            {MONTHS.map((mo, i) => (
+              <option key={mo} value={i + 1}>
+                {mo}
+              </option>
+            ))}
+          </select>
+          <select aria-label="Day" value={day} onChange={(e) => put(month, Number(e.target.value))}>
+            {Array.from({ length: 31 }, (_, i) => (
+              <option key={i} value={i + 1}>
+                {i + 1}
+              </option>
+            ))}
+          </select>
+        </div>
+      </fieldset>
+    );
+  }
+  const wk = r.match(/^(1ST|2ND|3RD|4TH|LAST)\s+([A-Z]{3})/);
+  const mode: 'day' | 'weekday' = wk ? 'weekday' : 'day';
+  const dayNum = /^\d{1,2}$/.test(r) ? Number(r) : 1;
+  const ord = wk ? wk[1] : '1ST';
+  const dow = wk ? wk[2] : 'MON';
+  return (
+    <fieldset className="field">
+      <legend>Every month</legend>
+      <div className="choice-row">
+        <label className="choice">
+          <input type="radio" name="repeat-mode" checked={mode === 'day'} onChange={() => onChange(String(dayNum))} />
+          <span>On a date</span>
+        </label>
+        <label className="choice">
+          <input type="radio" name="repeat-mode" checked={mode === 'weekday'} onChange={() => onChange(`${ord} ${dow}`)} />
+          <span>On a weekday</span>
+        </label>
+      </div>
+      {mode === 'day' ? (
+        <div className="time-grid repeat-row">
+          <select aria-label="Day of the month" value={dayNum} onChange={(e) => onChange(e.target.value)}>
+            {Array.from({ length: 31 }, (_, i) => (
+              <option key={i} value={i + 1}>
+                the {nth(i + 1)}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <div className="time-grid repeat-row">
+          <select aria-label="Which week" value={ord} onChange={(e) => onChange(`${e.target.value} ${dow}`)}>
+            {ORD.map((o) => (
+              <option key={o} value={o}>
+                {ORD_LABEL[o]}
+              </option>
+            ))}
+          </select>
+          <select aria-label="Weekday" value={dow} onChange={(e) => onChange(`${ord} ${e.target.value}`)}>
+            {WEEKDAYS.map((w) => (
+              <option key={w} value={w}>
+                {WEEKDAY_LABEL[w]}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <p className="field-hint">Days past the end of a short month land on its last day.</p>
+    </fieldset>
   );
 }

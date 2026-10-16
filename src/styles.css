@@ -1146,3 +1146,4 @@ input:-webkit-autofill:focus {
 .pill-count { font-family: var(--font-mono); font-size: 10px; opacity: 0.7; margin-left: 4px; }
 .area-filter { gap: 4px; }
 .area-filter .area-pill { padding: 4px 9px; letter-spacing: 0.04em; }
+.repeat-row { margin-top: 10px; }
