@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { BrandSettings } from '../lib/settings';
 
 export type PageId = 'launch' | 'tasks' | 'days26' | 'summary' | 'planner';
@@ -14,11 +15,11 @@ type Props = {
   settings: BrandSettings;
   page: PageId;
   onPage: (p: PageId) => void;
-  /** Active routine name; shown once routines arrive (L2). */
-  routineName?: string;
+  /** Top right: the routine picker with the date and time under it. */
+  right?: ReactNode;
 };
 
-export function Header({ settings, page, onPage, routineName }: Props) {
+export function Header({ settings, page, onPage, right }: Props) {
   return (
     <header className="topbar">
       <img
@@ -30,7 +31,7 @@ export function Header({ settings, page, onPage, routineName }: Props) {
         <p className="motto">{settings.goal}</p>
         <p className="mantra">{settings.mantra}</p>
       </div>
-      {routineName && <span className="mode-chip">{routineName}</span>}
+      {right && <div className="topbar-right">{right}</div>}
       <nav className="tabs" aria-label="Pages">
         {PAGES.map((p) => (
           <button

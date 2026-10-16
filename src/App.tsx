@@ -4,7 +4,7 @@ import { supabase } from './lib/supabase';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type BrandSettings } from './lib/settings';
 import { downloadExport } from './lib/exportData';
 import { Header, type PageId } from './components/Header';
-import { DateLine } from './components/Clock';
+import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
@@ -42,7 +42,6 @@ import {
   routineLabel,
   saveActive,
   saveRoutine,
-  shiftLine,
   type Routine,
   type Shift
 } from './lib/routines';
@@ -313,19 +312,27 @@ export default function App() {
         settings={settings}
         page={page}
         onPage={setPage}
-        routineName={activeRoutine ? routineLabel(activeRoutine, shift) : undefined}
+        right={
+          <>
+            <RoutinePicker
+              routines={routines}
+              activeId={activeRoutine?.id ?? null}
+              shift={shift}
+              onPick={pickRoutine}
+              onAdd={() => setEditor({ open: true, routine: null })}
+              onEdit={() => setEditor({ open: true, routine: activeRoutine })}
+            />
+            <button type="button" className="icon-btn tool-btn gear-btn" aria-label="Settings" title="Settings" onClick={() => setSettingsOpen(true)}>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+              </svg>
+            </button>
+            <HeaderClock />
+          </>
+        }
       />
       <div className="frame">
-        <DateLine shiftLine={activeRoutine ? shiftLine(activeRoutine, shift) : 'Add a routine to set your shift and wake times.'}>
-          <RoutinePicker
-            routines={routines}
-            activeId={activeRoutine?.id ?? null}
-            shift={shift}
-            onPick={pickRoutine}
-            onAdd={() => setEditor({ open: true, routine: null })}
-            onEdit={() => setEditor({ open: true, routine: activeRoutine })}
-          />
-        </DateLine>
         {(routineProblem || storeProblem) && (
           <p className="notice" role="status">
             {routineProblem ?? storeProblem}

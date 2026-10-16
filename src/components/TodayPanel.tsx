@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { nowBlockIndex, routineLabel, toBlocks, type Routine, type Shift } from '../lib/routines';
+import { nowBlockIndex, toBlocks, type Routine, type Shift } from '../lib/routines';
 
 export function useNow(everyMs = 30_000) {
   const [now, setNow] = useState(() => new Date());
@@ -17,17 +17,12 @@ export function TodayPanel({ routine, shift, onEdit }: Props) {
   const now = useNow();
   const blocks = routine ? toBlocks(routine, shift) : [];
   const current = nowBlockIndex(blocks, now);
+  // What you're on now sits at the top; the rest of the cycle follows in order.
+  const order = blocks.map((_, i) => i);
+  const ordered = current > 0 ? [...order.slice(current), ...order.slice(0, current)] : order;
 
   return (
-    <section className="panel panel-today" aria-labelledby="h-today">
-      <h2 id="h-today" className="panel-title">
-        Today
-      </h2>
-      {routine && (
-        <p className="today-sub">
-          {routine.kind === 'ritual' ? 'Ritual' : 'Routine'} · {routineLabel(routine, shift)}
-        </p>
-      )}
+    <section className="panel panel-today" aria-label="Today's routine">
       {blocks.length === 0 ? (
         <div className="today-empty">
           <p className="panel-empty">No steps yet. Add them and they show here as today's timeline.</p>
@@ -37,7 +32,7 @@ export function TodayPanel({ routine, shift, onEdit }: Props) {
         </div>
       ) : (
         <ol className="timeline">
-          {blocks.map((b, i) => (
+          {ordered.map((i) => ({ b: blocks[i], i })).map(({ b, i }) => (
             <li key={i} className={`tl-block${i === current ? ' is-now' : ''}`} aria-current={i === current ? 'time' : undefined}>
               <span className="tl-time">{b.time ?? ''}</span>
               <span className="tl-dot" aria-hidden="true" />
