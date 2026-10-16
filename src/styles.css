@@ -940,3 +940,33 @@ input:-webkit-autofill:focus {
 .panel-week .tool-btn { width: 36px; height: 36px; border-radius: 8px; }
 .panel-week .week-tools { gap: 6px; }
 .tool-btn-warn { border-color: var(--accent-pink); color: var(--accent-pink); }
+
+/* Week: day headers read like the timed tabs ("SUN 11"), today underlined in purple */
+.week-day {
+  flex-direction: row;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 0 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--mist);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.week-day:hover { color: var(--beige); border-color: transparent; }
+.week-dow { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; }
+.week-num { font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--dim); }
+.week-day.is-today { background: transparent; border-bottom-color: var(--accent-purple); color: color-mix(in srgb, var(--accent-purple) 55%, white); }
+.week-day.is-today .week-num { color: inherit; }
+
+/* Google button: orange = tap to connect, teal = connected (tap to disconnect) */
+.gcal-off { border-color: #ff9f43; color: #ff9f43; }
+.gcal-off:hover { background: rgb(255 159 67 / 0.12); color: #ff9f43; border-color: #ff9f43; }
+.gcal-on { border-color: var(--accent-teal); color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
+
+.title-btn { all: unset; cursor: pointer; }
+.title-btn:hover { color: var(--accent-teal); }
+.panel-week .panel-head, .panel-launchers .panel-head { align-items: center; }

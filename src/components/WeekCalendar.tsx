@@ -121,30 +121,19 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
   return (
     <section className="panel panel-week" aria-labelledby="h-week">
       <div className="panel-head">
-        <div>
-          <h2 id="h-week" className="panel-title">
-            {offset === 0 ? 'This week' : 'Week of'}
-          </h2>
-          <p className="panel-sub">
-            {range}
-            {offset !== 0 && (
-              <>
-                {' · '}
-                <button type="button" className="link-btn link-btn-inline link-quiet" onClick={() => setOffset(0)}>
-                  This week
-                </button>
-              </>
-            )}
-            {g === 'on' && (
-              <>
-                {' · '}Google Calendar{' '}
-                <button type="button" className="link-btn link-btn-inline link-quiet" onClick={disconnect}>
-                  Disconnect
-                </button>
-              </>
-            )}
-          </p>
-        </div>
+        <h2 id="h-week" className="panel-title" title={range}>
+          {offset === 0 ? (
+            'This week'
+          ) : (
+            <button type="button" className="title-btn" title="Back to this week" onClick={() => setOffset(0)}>
+              {offset === 1
+                ? 'Next week'
+                : offset === -1
+                  ? 'Last week'
+                  : `Week of ${start.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}`}
+            </button>
+          )}
+        </h2>
         <div className="panel-actions week-tools">
           <button type="button" className="icon-btn tool-btn" aria-label="Previous week" title="Previous week" onClick={() => setOffset((o) => o - 1)}>
             <Icon d="M15 5l-7 7 7 7" />
@@ -152,11 +141,11 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
           {googleConfigured() && (
             <button
               type="button"
-              className={`icon-btn tool-btn${g === 'reconnect' ? ' tool-btn-warn' : ''}`}
+              className={`icon-btn tool-btn ${g === 'on' || g === 'loading' ? 'gcal-on' : 'gcal-off'}`}
               aria-pressed={g === 'on' || g === 'loading'}
-              aria-label={g === 'off' ? 'Connect Google Calendar' : g === 'reconnect' ? 'Reconnect Google Calendar' : 'Refresh Google Calendar'}
-              title={g === 'off' ? 'Connect Google Calendar' : g === 'reconnect' ? 'Reconnect Google (the pass lasts an hour)' : 'Google Calendar connected · tap to refresh'}
-              onClick={g === 'on' || g === 'loading' ? refresh : connect}
+              aria-label={g === 'off' ? 'Connect Google Calendar' : g === 'reconnect' ? 'Reconnect Google Calendar' : 'Disconnect Google Calendar'}
+              title={g === 'off' ? 'Connect Google Calendar' : g === 'reconnect' ? 'Reconnect Google (the pass lasts an hour)' : 'Google Calendar connected · tap to disconnect'}
+              onClick={g === 'on' || g === 'loading' ? disconnect : connect}
             >
               <Icon d="M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" />
             </button>
@@ -199,7 +188,7 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
                   setOpen(true);
                 }}
               >
-                <span className="week-dow">{d.toLocaleDateString('en-CA', { weekday: 'short' })}</span>
+                <span className="week-dow">{d.toLocaleDateString('en-CA', { weekday: 'short' }).replace('.', '')}</span>
                 <span className="week-num">{d.getDate()}</span>
               </button>
             );

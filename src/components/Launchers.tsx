@@ -126,7 +126,6 @@ export function LaunchersPanel(p: Props) {
           <h2 id="h-launchers" className="panel-title">
             Launchers
           </h2>
-          {p.routineName && <p className="panel-sub">For {p.routineName}</p>}
         </div>
         <div className="panel-actions">
           <button
