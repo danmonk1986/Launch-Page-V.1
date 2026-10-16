@@ -217,3 +217,83 @@ export function groupTasks(list: Task[], today: Date) {
   for (const k of Object.keys(out) as Section[]) out[k].sort(byDate);
   return out;
 }
+
+// ---------- Import (Launch Sheet export → tasks) ----------
+
+export type ImportRow = {
+  project: string | null; // "STARDVST APP SHOP" or "STARDVST APP SHOP › LaunchPage"
+  description?: string;
+  task: string;
+  status?: string;
+  link?: string;
+  linkLabel?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  atTime?: string | null;
+  repeatRule?: string | null;
+  expense?: string;
+  notes?: string;
+  done?: boolean;
+  doneAt?: string | null;
+};
+
+type ProjectLike = { id: string; name: string; color: string; parentId: string | null; calendarId: string | null; sort: number };
+
+/**
+ * Turns import rows into tasks. Projects are matched by name ("AREA › Project");
+ * any that don't exist yet are created. Rows already in the list (same task,
+ * description and project) are skipped, so importing twice doesn't double up.
+ */
+export function buildImport(rows: ImportRow[], existing: Task[], projects: ProjectLike[]) {
+  const all = [...projects];
+  const created: ProjectLike[] = [];
+  const low = (s: string) => s.trim().toLowerCase();
+  const findOrMake = (name: string, parentId: string | null) => {
+    let p = all.find((x) => low(x.name) === low(name) && (parentId ? x.parentId === parentId : true));
+    if (!p) {
+      const parent = parentId ? all.find((x) => x.id === parentId) : null;
+      p = { id: crypto.randomUUID(), name: name.trim(), color: parent?.color ?? '#C8C6C6', parentId, calendarId: null, sort: all.length };
+      all.push(p);
+      created.push(p);
+    }
+    return p;
+  };
+  const projectFor = (path: string | null) => {
+    if (!path) return null;
+    const [area, child] = path.split('›').map((s) => s.trim());
+    const a = findOrMake(area, null);
+    return child ? findOrMake(child, a.id).id : a.id;
+  };
+  const key = (t: { task: string; description: string; projectId: string | null; status: string; done: boolean }) =>
+    `${low(t.task)}|${low(t.description)}|${t.projectId ?? ''}|${t.status}|${t.done}`;
+  const seen = new Set(existing.map(key));
+  let sort = existing.reduce((m, t) => Math.max(m, t.sort + 1), 0);
+  const tasks: Task[] = [];
+  let skipped = 0;
+  for (const r of rows) {
+    if (!r.task?.trim()) continue;
+    const t: Task = {
+      ...newTask(sort++, projectFor(r.project)),
+      description: r.description ?? '',
+      task: r.task.trim(),
+      status: r.status || 'PENDING',
+      link: r.link ?? '',
+      linkLabel: r.linkLabel ?? '',
+      startDate: r.startDate ?? null,
+      endDate: r.endDate ?? null,
+      atTime: r.atTime ?? null,
+      repeatRule: r.repeatRule ?? null,
+      expense: r.expense ?? '',
+      notes: r.notes ?? '',
+      done: !!r.done,
+      doneAt: r.doneAt ?? null
+    };
+    // Only rows already in LaunchPage are skipped; repeats inside the file (7 × "Wix -") all come in.
+    if (seen.has(key(t))) {
+      skipped += 1;
+      continue;
+    }
+    tasks.push(t);
+  }
+  return { tasks, created, skipped };
+}

@@ -291,7 +291,7 @@ export function TasksPanel(p: Common & { onOpenAll: () => void }) {
 }
 
 /** The Tasks page: the whole list, in the Launch Sheet's sections. */
-export function TasksPage(p: Common & { onOpenProjects: () => void }) {
+export function TasksPage(p: Common & { onOpenProjects: () => void; onImport: (file: File) => void }) {
   const editor = useTaskEditor(p);
   const [view, setView] = useState<Section | null>(null);
   const grouped = groupTasks(p.tasks, p.today);
@@ -302,6 +302,20 @@ export function TasksPage(p: Common & { onOpenProjects: () => void }) {
           Tasks
         </h2>
         <div className="panel-actions">
+          <label className="icon-btn tool-btn import-btn" title="Import tasks (Launch Sheet file)">
+            <Icon d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+            <span className="sr-only">Import tasks</span>
+            <input
+              type="file"
+              accept=".json,application/json"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) p.onImport(f);
+                e.target.value = '';
+              }}
+            />
+          </label>
           <button type="button" className="icon-btn tool-btn" aria-label="Projects" title="Areas and projects" onClick={p.onOpenProjects}>
             <Icon d={FOLDER} />
           </button>

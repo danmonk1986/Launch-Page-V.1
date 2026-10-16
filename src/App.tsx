@@ -16,7 +16,7 @@ import { WeekCalendar } from './components/WeekCalendar';
 import { TasksPage, TasksPanel } from './components/Tasks';
 import { ProjectsSheet } from './components/Projects';
 import { matchCalendar, projectStore, type Project } from './lib/projects';
-import { taskStore, type Task } from './lib/tasks';
+import { buildImport, taskStore, type ImportRow, type Task } from './lib/tasks';
 import { knownCalendars } from './lib/google';
 import {
   isDue,
@@ -207,6 +207,19 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calVersion, projects.length]);
 
+  async function importTasks(file: File) {
+    try {
+      const data = JSON.parse(await file.text()) as { tasks?: ImportRow[] };
+      if (!Array.isArray(data.tasks)) return setStatus('That file has no tasks in it.');
+      const { tasks: add, created, skipped } = buildImport(data.tasks, tasks, projects);
+      if (created.length) await projectOps.saveMany(created);
+      if (add.length) await taskOps.saveMany(add);
+      setStatus(`Imported ${add.length} tasks${created.length ? `, ${created.length} new projects` : ''}${skipped ? ` (${skipped} already here)` : ''}.`);
+    } catch {
+      setStatus('Could not read that file.');
+    }
+  }
+
   async function deleteProject(p: Project) {
     // Anything nested under it moves up a level rather than disappearing.
     const kids = projects.filter((x) => x.parentId === p.id).map((x) => ({ ...x, parentId: p.parentId }));
@@ -396,6 +409,7 @@ export default function App() {
               onSave={taskOps.save}
               onDelete={taskOps.remove}
               onOpenProjects={() => setProjectsOpen(true)}
+              onImport={importTasks}
             />
           ) : (
             <ComingSoon page={page} />
