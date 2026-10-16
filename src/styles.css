@@ -925,3 +925,13 @@ input:-webkit-autofill:focus {
 .timed-head .tool-btn { margin-bottom: 0; }
 .timed-head { border-bottom: 0; padding-bottom: 0; }
 .timed-title-row { margin-bottom: 0; }
+
+/* Google Calendar events in the week strip */
+.ev-google {
+  background: color-mix(in srgb, var(--accent-pink) 18%, transparent);
+  color: #ffe3f6;
+  border-left: 3px solid var(--accent-pink);
+}
+.ev-time { font-family: var(--font-mono); font-size: 11px; opacity: 0.85; margin-right: 6px; }
+.link-quiet { color: var(--dim); font-size: 13px; text-decoration: underline; }
+.event-when { margin: 0 0 14px; font-size: 14px; }

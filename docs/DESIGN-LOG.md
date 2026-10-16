@@ -11,7 +11,7 @@ Live app: https://launch-page-v-1.danmonk1986.workers.dev · Repo: danmonk1986/L
 | L2 Routines (MWD Days/Nights, HQ, timeline) | ✅ built and tested |
 | L3 Launchers + timed launches | ✅ built and tested |
 | Week calendar strip (LaunchPage events) | ✅ built |
-| Google Calendar two-way sync | ▶ next, plan agreed below, waiting on setup |
+| Google Calendar two-way sync | ✅ built (Oct 16, 1 AM), switches on once VITE_GOOGLE_CLIENT_ID is set |
 | L4 To-Do (Due today + 3 key tasks) | after calendar |
 | Link timed launches · calendar · to-dos | after To-Do |
 | Routine rules, L6 Journal, 26 Days page | later |
@@ -41,7 +41,13 @@ Live app: https://launch-page-v-1.danmonk1986.workers.dev · Repo: danmonk1986/L
 6. `0006_launcher_pink.sql` (fourth tile colour)
 7. `0007_tile_colours.sql` (Green and Pink sync from Brand settings)
 
-## Next: Google Calendar sync plan
+## Google Calendar sync (built Oct 16)
+
+- Connect Google / Reconnect Google button on the week panel; Google events show with a pink edge and their time.
+- New events: Save to LaunchPage or Google Calendar. Google events: rename, move all-day dates, delete, Open in Google Calendar. Timed events keep their times (change those in Google).
+- Refreshes when the tab gets focus and every 5 minutes.
+
+### Plan
 
 - The app talks to Google straight from the browser with Google's sign-in (token lasts an hour, renews quietly). No server code, no cost, no secret key in the app; only a public Client ID.
 - Read: Google events show in the week strip beside LaunchPage events.

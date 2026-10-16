@@ -311,7 +311,7 @@ export default function App() {
                   onFinish={finishLaunch}
                 />
               }
-              week={<WeekCalendar events={events} onSave={eventOps.save} onDelete={eventOps.remove} />}
+              week={<WeekCalendar events={events} onSave={eventOps.save} onDelete={eventOps.remove} onStatus={setStatus} />}
               today={
                 <TodayPanel
                   routine={activeRoutine}
