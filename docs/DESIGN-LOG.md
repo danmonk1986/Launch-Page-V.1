@@ -12,7 +12,7 @@ Live app: https://launch-page-v-1.danmonk1986.workers.dev · Repo: danmonk1986/L
 | L3 Launchers + timed launches | ✅ built and tested |
 | Week calendar strip (LaunchPage events) | ✅ built |
 | Google Calendar two-way sync | ✅ built (Oct 16, 1 AM), switches on once VITE_GOOGLE_CLIENT_ID is set |
-| L4 To-Do (Due today + 3 key tasks) | after calendar |
+| L4 Tasks (own tab + Due today / 3 key tasks on the Launch Page) | ▶ stage 1–2 built Oct 16, 2:40 AM; Add to calendar / Invite / Create launch next |
 | Link timed launches · calendar · to-dos | after To-Do |
 | Routine rules, L6 Journal, 26 Days page | later |
 
@@ -40,6 +40,7 @@ Live app: https://launch-page-v-1.danmonk1986.workers.dev · Repo: danmonk1986/L
 5. `0005_launch_alerts.sql` (alarm/notification per launch)
 6. `0006_launcher_pink.sql` (fourth tile colour)
 7. `0007_tile_colours.sql` (Green and Pink sync from Brand settings)
+8. `0008_projects_tasks.sql` (areas, projects and tasks)
 
 ## Google Calendar sync (built Oct 16)
 
@@ -69,3 +70,11 @@ Dan's setup (10–15 min):
 - Domain: transfer l4unchp4ge.com from Wix to Porkbun, nameservers to Cloudflare, then app.l4unchp4ge.com.
 - Custom email sender for Supabase sign-in links.
 - Launcher archive.
+
+## L4 Tasks (Oct 16)
+
+- Tasks tab: sections like the Launch Sheet: Due today · 3 key tasks · In progress · Appointments · Within 30 days · On deck (+30) · Pending · Monthly recurring · Annual recurring · Done.
+- Due today is automatic: date required today or earlier, or a recurring task whose day is today. 3 key tasks = status THREE.
+- ✓ checks off (strike-through like timed launches), ✗ moves to tomorrow; on a done task ✗ clears it from Done.
+- Areas: NORTH STAR (was THEME), DANMONK26, HEALTH+WELLNESS, FNTSY LVNG › Travel+Adventure, STARDVST APP SHOP › StreamVU / LaunchPage / Zaptor, STARDVST BRAND SHOP (clients), STARDVST MWD, STARDVST LTD (grey). Each has a neon colour and links to a Google calendar (auto-linked by name).
+- Launch Page shows Due today and 3 key tasks only.

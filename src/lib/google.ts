@@ -204,7 +204,19 @@ function fromGoogle(g: GEvent, cal: Cal = { id: 'primary', accessRole: 'owner' }
   };
 }
 
+export type GoogleCalendar = Cal;
+
 let primaryCal: Cal = { id: 'primary', accessRole: 'owner' };
+const CALS_KEY = 'launchpage.google.calendars.v1';
+
+/** The calendars seen last time (kept on this device so Projects can list them offline). */
+export function knownCalendars(): GoogleCalendar[] {
+  try {
+    return JSON.parse(localStorage.getItem(CALS_KEY) ?? '[]') as GoogleCalendar[];
+  } catch {
+    return [];
+  }
+}
 
 /** The calendars ticked in Google Calendar's sidebar. */
 async function listCalendars(): Promise<Cal[]> {
@@ -212,6 +224,11 @@ async function listCalendars(): Promise<Cal[]> {
   // Shown calendars only, and never Google's holiday calendars (no holidays off as a consultant).
   const cals = (data.items ?? []).filter((c) => c.selected !== false && !c.id.includes('#holiday@group.v.calendar.google.com'));
   primaryCal = cals.find((c) => c.primary) ?? primaryCal;
+  try {
+    localStorage.setItem(CALS_KEY, JSON.stringify(cals.map(({ id, summary, accessRole, primary }) => ({ id, summary, accessRole, primary }))));
+  } catch {
+    /* ignore */
+  }
   return cals.length ? cals : [primaryCal];
 }
 

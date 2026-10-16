@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Sheet } from './Sheet';
 import { addDays, layoutWeek, weekStart, type CalEvent, type EventColor } from '../lib/events';
 import { isoDate } from '../lib/launchers';
+import { colorForCalendar, type Project } from '../lib/projects';
 import {
   connectGoogle,
   createGoogleEvent,
@@ -18,6 +19,10 @@ import {
 
 type Props = {
   events: CalEvent[];
+  /** Areas and projects: a linked calendar's events take its colour. */
+  projects?: Project[];
+  /** Told whenever Google's calendar list has been read. */
+  onCalendars?: () => void;
   onSave: (e: CalEvent) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onStatus?: (msg: string) => void;
@@ -44,7 +49,7 @@ function writeThemes(t: Set<string>) {
 }
 
 /** Sunday to Saturday. Multi-day events span their days; click a day to add, an event to edit. */
-export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
+export function WeekCalendar({ events, projects = [], onCalendars, onSave, onDelete, onStatus }: Props) {
   const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<CalEvent | null>(null);
   const [newDate, setNewDate] = useState<string | null>(null);
@@ -69,6 +74,7 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
     setG('loading');
     try {
       setGEvents(await listGoogleEvents(from, to));
+      onCalendars?.();
       setGError(null);
       setG('on');
     } catch (err) {
@@ -239,7 +245,9 @@ export function WeekCalendar({ events, onSave, onDelete, onStatus }: Props) {
               style={{
                 gridColumn: `${f} / ${t + 1}`,
                 gridRow: lane + 2,
-                ...(event.google?.color ? { borderLeftColor: event.google.color } : {})
+                ...(event.google
+                  ? { borderLeftColor: colorForCalendar(projects, event.google.calendarId) ?? event.google.color ?? undefined }
+                  : {})
               }}
               title={event.google ? `${event.title} · ${event.google.calendar ?? 'Google Calendar'}` : event.title}
               onClick={() => {

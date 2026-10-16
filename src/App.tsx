@@ -13,6 +13,11 @@ import { BLOCKED_HELP, LaunchersPanel } from './components/Launchers';
 import { LaunchReminder, TimeUpReminder } from './components/LaunchReminder';
 import { chime, notify, unlockAudioOnFirstGesture } from './lib/alerts';
 import { WeekCalendar } from './components/WeekCalendar';
+import { TasksPage, TasksPanel } from './components/Tasks';
+import { ProjectsSheet } from './components/Projects';
+import { matchCalendar, projectStore, type Project } from './lib/projects';
+import { taskStore, type Task } from './lib/tasks';
+import { knownCalendars } from './lib/google';
 import {
   isDue,
   isoDate,
@@ -59,6 +64,10 @@ export default function App() {
   const [launchers, setLaunchers] = useState<Launcher[]>([]);
   const [launches, setLaunches] = useState<Launch[]>([]);
   const [events, setEvents] = useState<CalEvent[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [projectsOpen, setProjectsOpen] = useState(false);
+  const [calVersion, setCalVersion] = useState(0);
   const [storeProblem, setStoreProblem] = useState<string | null>(null);
   const [reminder, setReminder] = useState<Launch | null>(null);
   const [snoozed, setSnoozed] = useState<Record<string, number>>({});
@@ -121,7 +130,11 @@ export default function App() {
       setLaunchers(tiles);
       setLaunches(l2.items);
       setEvents(l3.items);
-      setStoreProblem(l1.problem ?? l2.problem ?? l3.problem);
+      const [p1, t1] = await Promise.all([projectStore.load(userId), taskStore.load(userId)]);
+      if (!live) return;
+      setProjects(p1.items);
+      setTasks(t1.items);
+      setStoreProblem(l1.problem ?? l2.problem ?? l3.problem ?? p1.problem ?? t1.problem);
     })();
     return () => {
       live = false;
@@ -174,6 +187,33 @@ export default function App() {
   const launcherOps = ops(launcherStore, launchers, setLaunchers, (l) => l.name);
   const launchOps = ops(launchStore, launches, setLaunches, (l) => l.title);
   const eventOps = ops(eventStore, events, setEvents, (e) => e.title);
+  const projectOps = ops(projectStore, projects, setProjects, (p) => p.name);
+  const taskOps = ops(taskStore, tasks, setTasks, (t) => t.task);
+
+  // Link areas to Google calendars with the same name, once, the first time Google's list is seen.
+  useEffect(() => {
+    if (!projects.length) return;
+    const cals = knownCalendars();
+    const taken = new Set(projects.map((p) => p.calendarId).filter(Boolean));
+    const linked: Project[] = [];
+    for (const c of cals) {
+      if (taken.has(c.id)) continue;
+      const p = matchCalendar(projects, c.summary ?? '');
+      if (p && !p.calendarId && !linked.some((x) => x.id === p.id)) {
+        linked.push({ ...p, calendarId: c.id });
+        taken.add(c.id);
+      }
+    }
+    if (linked.length) projectOps.saveMany(linked);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calVersion, projects.length]);
+
+  async function deleteProject(p: Project) {
+    // Anything nested under it moves up a level rather than disappearing.
+    const kids = projects.filter((x) => x.parentId === p.id).map((x) => ({ ...x, parentId: p.parentId }));
+    if (kids.length) await projectOps.saveMany(kids);
+    await projectOps.remove(p.id);
+  }
 
   // Timed launches: pop the reminder when one is due and not handled today.
   useEffect(() => {
@@ -311,7 +351,26 @@ export default function App() {
                   onFinish={finishLaunch}
                 />
               }
-              week={<WeekCalendar events={events} onSave={eventOps.save} onDelete={eventOps.remove} onStatus={setStatus} />}
+              week={
+                <WeekCalendar
+                  events={events}
+                  projects={projects}
+                  onCalendars={() => setCalVersion((v) => v + 1)}
+                  onSave={eventOps.save}
+                  onDelete={eventOps.remove}
+                  onStatus={setStatus}
+                />
+              }
+              tasks={
+                <TasksPanel
+                  tasks={tasks}
+                  projects={projects}
+                  today={now}
+                  onSave={taskOps.save}
+                  onDelete={taskOps.remove}
+                  onOpenAll={() => setPage('tasks')}
+                />
+              }
               today={
                 <TodayPanel
                   routine={activeRoutine}
@@ -320,9 +379,26 @@ export default function App() {
                 />
               }
             />
+          ) : page === 'tasks' ? (
+            <TasksPage
+              tasks={tasks}
+              projects={projects}
+              today={now}
+              onSave={taskOps.save}
+              onDelete={taskOps.remove}
+              onOpenProjects={() => setProjectsOpen(true)}
+            />
           ) : (
             <ComingSoon page={page} />
           )}
+          <ProjectsSheet
+            open={projectsOpen}
+            onClose={() => setProjectsOpen(false)}
+            projects={projects}
+            calendars={knownCalendars()}
+            onSave={projectOps.save}
+            onDelete={deleteProject}
+          />
         </main>
         <footer className="toolbar">
           <img className="toolbar-logo" src="/launchpage-logo.png" alt="LaunchPage" />

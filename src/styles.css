@@ -998,3 +998,63 @@ input:-webkit-autofill:focus {
 .week-grid { row-gap: 4px; }
 .ev-google { background: #fffbf0; }
 .ev-google { border-left-width: 5px; }
+
+/* ---------- Tasks (L4) ---------- */
+.panel-tasks, .panel-tasks-page { overflow: hidden; }
+.task-scroll { overflow-x: auto; margin: 0 -8px; }
+.task-table { width: 100%; min-width: 860px; border-collapse: collapse; font-size: 13px; }
+.task-table thead th {
+  text-align: left; padding: 6px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--dim); border-bottom: 1px solid var(--edge);
+}
+.task-section th {
+  text-align: left; padding: 14px 8px 6px; font-size: 13px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--accent-teal);
+}
+.section-count { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin-left: 6px; letter-spacing: 0; }
+.section-btn { all: unset; cursor: pointer; display: inline-flex; align-items: baseline; gap: 6px; }
+.section-btn:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 3px; }
+.section-caret { display: inline-block; width: 12px; color: var(--dim); }
+.task-row td { padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, var(--edge) 60%, transparent); vertical-align: middle; }
+.task-row:hover td { background: color-mix(in srgb, var(--accent-purple) 8%, transparent); }
+.task-empty { padding: 6px 8px 10px; color: var(--mist); font-size: 13px; }
+.task-name { all: unset; cursor: pointer; font-weight: 600; color: var(--beige); }
+.task-name:hover { color: var(--accent-teal); }
+.task-row.is-done .task-name, .task-row.is-done .col-desc { text-decoration: line-through; text-decoration-color: var(--dim); color: var(--mist); }
+.task-row.is-done .chip { opacity: 0.55; }
+.col-desc { color: var(--mist); }
+.col-date, .col-time { font-family: var(--font-mono); font-size: 12px; color: var(--mist); white-space: nowrap; }
+.col-link a { color: var(--accent-teal); font-weight: 600; font-size: 12px; letter-spacing: 0.04em; }
+.col-actions { width: 80px; }
+.task-quick { width: 32px; height: 32px; border-radius: 8px; }
+.quick-done[aria-pressed='true'] { background: color-mix(in srgb, var(--accent-teal) 22%, transparent); }
+.chip {
+  display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+  background: color-mix(in srgb, var(--chip, var(--accent-teal)) 22%, transparent);
+  color: var(--chip, var(--accent-teal)); border: 1px solid color-mix(in srgb, var(--chip, var(--accent-teal)) 55%, transparent);
+}
+.chip-empty { background: none; border-color: transparent; color: var(--dim); }
+.status { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 6px; background: rgb(245 245 220 / 0.08); color: var(--mist); white-space: nowrap; }
+.status-three { color: color-mix(in srgb, var(--accent-purple) 55%, white); background: color-mix(in srgb, var(--accent-purple) 22%, transparent); }
+.status-wip { color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 14%, transparent); }
+.status-due { color: #14102b; background: var(--accent-teal); }
+.status-overdue { color: #14102b; background: var(--accent-pink); }
+.area-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+.area-pill {
+  padding: 4px 12px; border-radius: 999px; border: 1px solid var(--edge); background: transparent; color: var(--mist);
+  font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer;
+}
+.area-pill[aria-pressed='true'] { border-color: var(--chip, var(--accent-teal)); color: var(--chip, var(--accent-teal)); background: color-mix(in srgb, var(--chip, var(--accent-teal)) 14%, transparent); }
+
+/* Projects sheet */
+.project-list { display: grid; gap: 10px; }
+.project-group { display: grid; gap: 2px; }
+.project-row { all: unset; cursor: pointer; display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; }
+.project-row:hover, .project-row:focus-visible { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
+.project-area .project-name { font-weight: 700; letter-spacing: 0.06em; }
+.project-child { padding-left: 34px; }
+.project-dot { width: 12px; height: 12px; border-radius: 50%; }
+.project-cal { font-size: 12px; color: var(--dim); }
+.project-add-child { justify-self: start; margin-left: 34px; font-size: 12px; }
+.tab { padding: 0 10px; }
