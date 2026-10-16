@@ -11,7 +11,7 @@ import { RoutineEditor } from './components/RoutineEditor';
 import { TodayPanel, useNow } from './components/TodayPanel';
 import { BLOCKED_HELP, LaunchersPanel } from './components/Launchers';
 import { LaunchReminder, TimeUpReminder } from './components/LaunchReminder';
-import { chime, notify, readAlertPrefs, unlockAudioOnFirstGesture, writeAlertPrefs, type AlertPrefs } from './lib/alerts';
+import { chime, notify, unlockAudioOnFirstGesture } from './lib/alerts';
 import { WeekCalendar } from './components/WeekCalendar';
 import {
   isDue,
@@ -65,7 +65,6 @@ export default function App() {
   const [timeUp, setTimeUp] = useState<Launch | null>(null);
   const [extraMinutes, setExtraMinutes] = useState<Record<string, number>>({});
   const [endAlerted, setEndAlerted] = useState<Record<string, true>>({});
-  const [alertPrefs, setAlertPrefs] = useState<AlertPrefs>(() => readAlertPrefs());
 
   useEffect(() => unlockAudioOnFirstGesture(), []);
   const now = useNow(30_000);
@@ -167,8 +166,8 @@ export default function App() {
   // Start alert: chime + desktop notification when a reminder pops.
   useEffect(() => {
     if (!reminder) return;
-    if (alertPrefs.sound) chime('start');
-    if (alertPrefs.notify) notify(`Launch time: ${reminder.title}`, `${reminder.urls.length} tabs · ${reminder.minutes} min`);
+    if (reminder.sound !== false) chime('start');
+    if (reminder.notify) notify(`Launch time: ${reminder.title}`, `${reminder.urls.length} tabs · ${reminder.minutes} min`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reminder?.id]);
 
@@ -187,14 +186,9 @@ export default function App() {
     if (!over) return;
     setEndAlerted((m) => ({ ...m, [`${over.id}:${today}`]: true }));
     setTimeUp(over);
-    if (alertPrefs.sound) chime('end');
-    if (alertPrefs.notify) notify(`Time's up: ${over.title}`, `${over.minutes} minutes are done. Check it off or take 10 more.`);
-  }, [now, launches, handled, endAlerted, extraMinutes, timeUp, reminder, alertPrefs]);
-
-  function updateAlertPrefs(next: AlertPrefs) {
-    setAlertPrefs(next);
-    writeAlertPrefs(next);
-  }
+    if (over.sound !== false) chime('end');
+    if (over.notify) notify(`Time's up: ${over.title}`, `${over.minutes} minutes are done. Check it off or take 10 more.`);
+  }, [now, launches, handled, endAlerted, extraMinutes, timeUp, reminder]);
 
   async function finishLaunch(l: Launch, how: 'done' | 'skipped') {
     setHandled(markHandled(l.id, new Date(), how));
@@ -291,8 +285,6 @@ export default function App() {
                   handled={handled}
                   today={now}
                   onFinish={finishLaunch}
-                  alertPrefs={alertPrefs}
-                  onAlertPrefs={updateAlertPrefs}
                 />
               }
               week={<WeekCalendar events={events} onSave={eventOps.save} onDelete={eventOps.remove} />}

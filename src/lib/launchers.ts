@@ -30,6 +30,10 @@ export interface Launch {
   active: boolean;
   /** A one-time make-up date, set when a repeating launch is skipped. */
   movedTo: string | null;
+  /** Chime at the start and when the time allotted runs out. */
+  sound: boolean;
+  /** Desktop notification at the start and the end. */
+  notify: boolean;
   sort: number;
 }
 
@@ -87,6 +91,8 @@ export function seedLaunches(): Launch[] {
       urls: [],
       active: false, // an example: add the bill sites, then switch it on
       movedTo: null,
+      sound: true,
+      notify: false,
       sort: 0
     }
   ];
@@ -114,6 +120,8 @@ type LaunchRow = {
   urls: string[];
   active: boolean;
   moved_to?: string | null;
+  sound?: boolean;
+  notify?: boolean;
   sort: number;
 };
 
@@ -145,6 +153,8 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     urls: l.urls,
     active: l.active,
     ...(l.movedTo ? { moved_to: l.movedTo } : {}),
+    sound: l.sound,
+    notify: l.notify,
     sort: l.sort
   }),
   fromRow: (r) => ({
@@ -159,6 +169,8 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     urls: r.urls ?? [],
     active: r.active,
     movedTo: r.moved_to ?? null,
+    sound: r.sound ?? true,
+    notify: r.notify ?? false,
     sort: r.sort
   })
 });

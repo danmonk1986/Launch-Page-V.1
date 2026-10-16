@@ -15,7 +15,7 @@ import {
   type TileColor
 } from '../lib/launchers';
 import { formatMinutes, toMinutes } from '../lib/routines';
-import { askNotificationPermission, chime, notificationsSupported, type AlertPrefs } from '../lib/alerts';
+import { askNotificationPermission, chime, notificationsSupported } from '../lib/alerts';
 
 type Props = {
   routineName: string | null;
@@ -31,8 +31,6 @@ type Props = {
   handled: Record<string, HandledHow | true>;
   today: Date;
   onFinish: (l: Launch, how: 'done' | 'skipped') => void;
-  alertPrefs: AlertPrefs;
-  onAlertPrefs: (p: AlertPrefs) => void;
 };
 
 const COLORS: TileColor[] = ['teal', 'purple', 'green'];
@@ -107,21 +105,30 @@ export function LaunchersPanel(p: Props) {
           {p.routineName && <p className="panel-sub">For {p.routineName}</p>}
         </div>
         <div className="panel-actions">
-          <button type="button" className="btn btn-quiet" aria-pressed={editing} onClick={() => setEditing((e) => !e)}>
-            {editing ? 'Done' : 'Edit'}
+          <button
+            type="button"
+            className="icon-btn tool-btn"
+            aria-pressed={editing}
+            aria-label={editing ? 'Done editing launchers' : 'Edit launchers'}
+            title={editing ? 'Done' : 'Edit'}
+            onClick={() => setEditing((e) => !e)}
+          >
+            {editing ? <Icon d="M5 12l5 5L20 7" /> : <Icon d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />}
           </button>
           <button
             type="button"
-            className="btn btn-quiet"
+            className="icon-btn tool-btn"
+            aria-label="Add a launcher"
+            title="Add"
             onClick={() => {
               setTile(null);
               setTileOpen(true);
             }}
           >
-            + Add launch
+            <Icon d="M12 5v14M5 12h14" />
           </button>
-          <button type="button" className="btn" onClick={launchAll}>
-            Launch all
+          <button type="button" className="icon-btn tool-btn tool-btn-go" aria-label="Launch all" title="Launch all" onClick={launchAll}>
+            <Icon d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
           </button>
         </div>
       </div>
@@ -190,7 +197,6 @@ export function LaunchersPanel(p: Props) {
         <div className="timed-head">
           <div className="timed-title-row">
             <h3 className="timed-title">Timed launches</h3>
-            <AlertToggles prefs={p.alertPrefs} onChange={p.onAlertPrefs} onStatus={p.onStatus} />
           </div>
           <button
             type="button"
@@ -244,6 +250,8 @@ export function LaunchersPanel(p: Props) {
                     <span className="timed-name">{l.title}</span>
                     <span className="timed-meta">
                       {describeSchedule(l)} · {l.minutes} min · {l.urls.length} {l.urls.length === 1 ? 'tab' : 'tabs'}
+                      {l.sound && ' · 🔊'}
+                      {l.notify && ' · 🔔'}
                       {!l.active && ' · off'}
                       {how === 'launched' && ' · launched, check it off when done'}
                       {how === 'done' && ' · done today'}
@@ -334,57 +342,17 @@ export function LaunchersPanel(p: Props) {
   );
 }
 
-function AlertToggles({
-  prefs,
-  onChange,
-  onStatus
-}: {
-  prefs: AlertPrefs;
-  onChange: (p: AlertPrefs) => void;
-  onStatus: (m: string) => void;
-}) {
+
+function Icon({ d }: { d: string }) {
   return (
-    <div className="alert-toggles">
-      <button
-        type="button"
-        className="quick-btn alert-btn"
-        aria-pressed={prefs.sound}
-        aria-label={prefs.sound ? 'Sound on: start and end chimes' : 'Sound off'}
-        title={prefs.sound ? 'Sound on' : 'Sound off'}
-        onClick={() => {
-          const next = { ...prefs, sound: !prefs.sound };
-          onChange(next);
-          if (next.sound) chime('start');
-        }}
-      >
-        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 9v6h4l5 4V5L8 9H4z" />
-          {prefs.sound ? <path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" /> : <path d="M17 9l5 6M22 9l-5 6" />}
-        </svg>
-      </button>
-      {notificationsSupported() && (
-        <button
-          type="button"
-          className="quick-btn alert-btn"
-          aria-pressed={prefs.notify}
-          aria-label={prefs.notify ? 'Desktop notifications on' : 'Desktop notifications off'}
-          title={prefs.notify ? 'Notifications on' : 'Notifications off'}
-          onClick={async () => {
-            if (prefs.notify) return onChange({ ...prefs, notify: false });
-            const ok = await askNotificationPermission();
-            if (ok) onChange({ ...prefs, notify: true });
-            else onStatus('Notifications are blocked for this site. Allow them in the browser’s site settings, then try again.');
-          }}
-        >
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2zM10 21h4" />
-            {!prefs.notify && <path d="M3 3l18 18" />}
-          </svg>
-        </button>
-      )}
-    </div>
+    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} />
+    </svg>
   );
 }
+
+const SOUND_ICON = 'M4 9v6h4l5 4V5L8 9H4zM16 9a4 4 0 0 1 0 6';
+const BELL_ICON = 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2zM10 21h4';
 
 function DeleteButton({ label, onDelete }: { label: string; onDelete: () => Promise<void> }) {
   return (
@@ -423,7 +391,7 @@ function TileForm({
         sort: nextSort
       }
   );
-  const [preset, setPreset] = useState('');
+  const open = LAUNCHER_PRESETS.filter((p) => !taken.includes(p.name));
   const set = <K extends keyof Launcher>(k: K, v: Launcher[K]) => setD((x) => ({ ...x, [k]: v }));
 
   return (
@@ -434,30 +402,29 @@ function TileForm({
         await onSave({ ...d, name: d.name.trim(), note: d.note.trim(), url: isBarePrefix(d.url) ? '' : d.url.trim() });
       }}
     >
-      {!tile && LAUNCHER_PRESETS.some((p) => !taken.includes(p.name)) && (
-        <label className="field">
-          <span>Add back an original</span>
-          <select
-            value={preset}
-            onChange={(e) => {
-              const name = e.target.value;
-              setPreset(name);
-              const p = LAUNCHER_PRESETS.find((x) => x.name === name);
-              setD((x) => (p ? { ...x, name: p.name, note: p.note, url: p.url, color: p.color } : { ...x, name: '', note: '', url: '' }));
-            }}
-          >
-            <option value="">Custom</option>
-            {LAUNCHER_PRESETS.filter((p) => !taken.includes(p.name)).map((p) => (
-              <option key={p.name} value={p.name}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
       <label className="field">
         <span>Name</span>
-        <input required value={d.name} onChange={(e) => set('name', e.target.value)} placeholder="Online banking" />
+        <input
+          required
+          list={tile ? undefined : 'launcher-originals'}
+          autoComplete="off"
+          value={d.name}
+          onChange={(e) => {
+            const name = e.target.value;
+            const p = tile ? null : open.find((x) => x.name.toLowerCase() === name.trim().toLowerCase());
+            setD((x) => (p ? { ...x, name: p.name, note: p.note, url: p.url, color: p.color } : { ...x, name }));
+          }}
+          placeholder={tile || !open.length ? 'Online banking' : 'Type a new one or pick an original'}
+        />
+        {!tile && (
+          <datalist id="launcher-originals">
+            {open.map((p) => (
+              <option key={p.name} value={p.name}>
+                {p.note}
+              </option>
+            ))}
+          </datalist>
+        )}
       </label>
       <label className="field">
         <span>Link</span>
@@ -531,6 +498,8 @@ function TimedForm({
         urls: [],
         active: true,
         movedTo: null,
+        sound: true,
+        notify: false,
         sort: nextSort
       }
   );
@@ -538,6 +507,7 @@ function TimedForm({
     (launch?.urls ?? []).filter((u) => !launchers.some((l) => l.url && l.url === u)).join('\n')
   );
   const set = <K extends keyof Launch>(k: K, v: Launch[K]) => setD((x) => ({ ...x, [k]: v }));
+  const [notifyBlocked, setNotifyBlocked] = useState(false);
   const picked = new Set(d.urls);
   const toggleUrl = (url: string) =>
     set('urls', picked.has(url) ? d.urls.filter((u) => u !== url) : [...d.urls, url]);
@@ -579,6 +549,45 @@ function TimedForm({
           />
         </label>
       </div>
+
+      <fieldset className="field">
+        <legend>Alerts for this launch</legend>
+        <div className="choice-row">
+          <button
+            type="button"
+            className="alert-chip"
+            aria-pressed={d.sound}
+            onClick={() => {
+              if (!d.sound) chime('start');
+              set('sound', !d.sound);
+            }}
+          >
+            <Icon d={d.sound ? SOUND_ICON : 'M4 9v6h4l5 4V5L8 9H4zM17 9l5 6M22 9l-5 6'} />
+            <span>{d.sound ? 'Alarm on' : 'Alarm off'}</span>
+          </button>
+          {notificationsSupported() && (
+            <button
+              type="button"
+              className="alert-chip"
+              aria-pressed={d.notify}
+              onClick={async () => {
+                if (d.notify) return set('notify', false);
+                const ok = await askNotificationPermission();
+                setNotifyBlocked(!ok);
+                if (ok) set('notify', true);
+              }}
+            >
+              <Icon d={d.notify ? BELL_ICON : BELL_ICON + 'M3 3l18 18'} />
+              <span>{d.notify ? 'Notification on' : 'Notification off'}</span>
+            </button>
+          )}
+        </div>
+        <p className="field-hint">
+          {notifyBlocked
+            ? 'Notifications are blocked for this site. Allow them in the browser’s site settings, then try again.'
+            : 'The alarm chimes at the start and when the time allotted runs out.'}
+        </p>
+      </fieldset>
 
       <fieldset className="field">
         <legend>Repeats</legend>

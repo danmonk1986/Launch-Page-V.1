@@ -864,3 +864,19 @@ input:-webkit-autofill:focus {
   color: var(--beige);
   font: inherit;
 }
+
+/* Launcher toolbar: icon buttons */
+.tool-btn { display: inline-flex; align-items: center; justify-content: center; color: var(--beige); border-color: var(--edge-strong); }
+.tool-btn:hover { border-color: var(--accent-teal); color: var(--accent-teal); }
+.tool-btn[aria-pressed='true'] { border-color: var(--accent-teal); color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
+.tool-btn-go { background: var(--accent-teal); border-color: var(--accent-teal); color: #120c2a; }
+.tool-btn-go:hover { color: #120c2a; filter: brightness(1.08); }
+
+/* Per-launch alert chips */
+.alert-chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px;
+  border-radius: 10px; border: 1px solid var(--edge-strong); background: transparent; color: var(--dim);
+  font: inherit; cursor: pointer;
+}
+.alert-chip[aria-pressed='true'] { border-color: var(--accent-teal); color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
+.field-hint { margin: 8px 0 0; font-size: 13px; color: var(--dim); }
