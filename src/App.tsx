@@ -250,14 +250,17 @@ export default function App() {
   /** ⋯ → Create launch: a timed launch from the task, opening its link at its time. */
   async function createLaunchFromTask(t: Task) {
     const monthly = t.status === 'MTH RCR' && /^\d{1,2}$/.test(t.repeatRule ?? '');
+    // No time: 9:30 AM, the first work block. No date: today if 9:30 hasn't passed, else tomorrow.
+    const now = new Date();
+    const firstBlock = now.getHours() * 60 + now.getMinutes() < 9 * 60 + 30 ? now : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12);
     const launch: Launch = {
       id: crypto.randomUUID(),
       title: t.task,
-      atTime: t.atTime ?? '09:00',
+      atTime: t.atTime ?? '09:30',
       repeat: monthly ? 'monthly' : 'once',
       weekdays: [],
       monthDay: monthly ? Number(t.repeatRule) : null,
-      onDate: monthly ? null : t.endDate ?? t.startDate ?? isoDate(new Date()),
+      onDate: monthly ? null : t.endDate ?? t.startDate ?? isoDate(firstBlock),
       minutes: 30,
       urls: t.link ? [t.link] : [],
       active: true,
@@ -268,7 +271,7 @@ export default function App() {
     };
     await launchOps.save(launch);
     await taskOps.save({ ...t, launchId: launch.id });
-    setStatus(`Timed launch made for ${t.task}${t.atTime ? '' : ' at 9:00 AM. Change the time in Timed launches'}.`);
+    setStatus(`Timed launch made for ${t.task}${t.atTime ? '' : ' at 9:30 AM. Change the time in Timed launches'}.`);
   }
 
   async function deleteProject(p: Project) {

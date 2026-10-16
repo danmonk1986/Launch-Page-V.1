@@ -1189,3 +1189,12 @@ input:-webkit-autofill:focus {
 .task-row.is-alt td:last-child { border-radius: 0 8px 8px 0; }
 .task-row:hover td { background: color-mix(in srgb, var(--accent-purple) 10%, transparent); }
 .row-menu-list > button { text-transform: uppercase; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
+
+/* Tasks table: centred info columns, fixed-width project pills, Task keeps its room when the page narrows */
+.task-table th.col-center, .task-table td.col-center { text-align: center; }
+.task-table .col-project { width: 140px; }
+.task-table .chip { display: inline-block; width: 124px; text-align: center; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.task-table .col-task { min-width: 240px; }
+.task-table .col-desc { min-width: 120px; max-width: 220px; }
+.task-table .col-expense { font-family: var(--font-mono); font-size: 12px; color: var(--mist); white-space: nowrap; }
+.task-table { min-width: 1040px; }

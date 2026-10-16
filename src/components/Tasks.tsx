@@ -171,6 +171,20 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
   );
 }
 
+const PHONE = /^\+?[\d\s().-]{7,}$/;
+
+/** Info: a link, or a phone number you can tap to call. */
+function InfoLink({ t }: { t: Task }) {
+  const v = t.link.trim();
+  if (!v) return <>{t.linkLabel}</>;
+  if (PHONE.test(v)) return <a href={`tel:${v.replace(/[^\d+]/g, '')}`}>{t.linkLabel || v}</a>;
+  return (
+    <a href={normalizeUrl(v)} target="_blank" rel="noopener noreferrer">
+      {t.linkLabel || 'Open'}
+    </a>
+  );
+}
+
 function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boolean; alt?: boolean; projects: Project[]; today: Date; act: Actions }) {
   const badge = dueBadge(t, today);
   const checked = isRecurring(t) ? doneToday(t, today) : t.done;
@@ -190,21 +204,16 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
           )}
         </span>
       </td>
-      <td className="col-status">
+      <td className="col-status col-center">
         {!step && <span className={`status status-${(badge ?? t.status).replace(/\s+/g, '-').toLowerCase()}`}>{badge ?? t.status}</span>}
       </td>
-      <td className="col-link">
-        {t.link ? (
-          <a href={normalizeUrl(t.link)} target="_blank" rel="noopener noreferrer">
-            {t.linkLabel || 'Open'}
-          </a>
-        ) : (
-          t.linkLabel
-        )}
+      <td className="col-link col-center">
+        <InfoLink t={t} />
       </td>
-      <td className="col-date">{isRecurring(t) ? describeRule(t) : shortDate(t.startDate)}</td>
-      <td className="col-date">{isRecurring(t) ? '' : shortDate(t.endDate)}</td>
-      <td className="col-time">{t.atTime ? formatMinutes(toMinutes(t.atTime)) : ''}</td>
+      <td className="col-date col-center">{isRecurring(t) ? describeRule(t) : shortDate(t.startDate)}</td>
+      <td className="col-date col-center">{isRecurring(t) ? '' : shortDate(t.endDate)}</td>
+      <td className="col-time col-center">{t.atTime ? formatMinutes(toMinutes(t.atTime)) : ''}</td>
+      <td className="col-expense col-center">{t.expense}</td>
       <td className="col-actions">
         <div className="timed-quick">
           {!t.deletedAt && <button
@@ -247,14 +256,15 @@ function TaskTable({
       <table className="task-table">
         <thead>
           <tr>
-            <th>Project</th>
-            <th>Description</th>
-            <th>Task</th>
-            <th>Status</th>
-            <th>Link</th>
-            <th>Start</th>
-            <th>Required</th>
-            <th>Time</th>
+            <th className="col-project">Project</th>
+            <th className="col-desc">Description</th>
+            <th className="col-task">Task</th>
+            <th className="col-center">Status</th>
+            <th className="col-center">Info</th>
+            <th className="col-center">Start</th>
+            <th className="col-center">Required</th>
+            <th className="col-center">Time</th>
+            <th className="col-center">Expense</th>
             <th className="col-actions" aria-label="Done or more" />
           </tr>
         </thead>
@@ -268,7 +278,7 @@ function TaskTable({
           return (
             <tbody key={id}>
               <tr className="task-section">
-                <th colSpan={9} scope="rowgroup">
+                <th colSpan={10} scope="rowgroup">
                   {collapsible ? (
                     <button type="button" className="section-btn" aria-expanded={!shut} onClick={() => setClosed((c) => ({ ...c, [id]: !c[id] }))}>
                       <span className="section-caret" aria-hidden="true">
@@ -285,7 +295,7 @@ function TaskTable({
               </tr>
               {!shut && rows.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="task-empty">
+                  <td colSpan={10} className="task-empty">
                     {id === 'key' ? 'Set a task to THREE to make it one of your 3 key tasks.' : 'Nothing here.'}
                   </td>
                 </tr>
@@ -323,6 +333,7 @@ function useTaskEditor(p: EditorProps) {
           isNew={isNew}
           isStep={!!editing.parentId}
           existingSteps={stepsByParent(p.tasks).get(editing.id) ?? []}
+          descriptions={[...new Set(p.tasks.map((x) => x.description.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
           projects={p.projects}
           onCancel={() => setOpen(false)}
           onSave={async (t, newSteps) => {
@@ -476,6 +487,7 @@ function TaskForm({
   isNew,
   isStep,
   existingSteps,
+  descriptions,
   projects,
   onCancel,
   onSave,
@@ -485,6 +497,7 @@ function TaskForm({
   isNew: boolean;
   isStep: boolean;
   existingSteps: Task[];
+  descriptions: string[];
   projects: Project[];
   onCancel: () => void;
   /** newSteps: names typed into the Steps list, created underneath on save. */
@@ -575,15 +588,26 @@ function TaskForm({
       )}
       <label className="field">
         <span>Description</span>
-        <input value={d.description} onChange={(e) => set('description', e.target.value)} placeholder="New Location" />
+        <input
+          list="task-descriptions"
+          autoComplete="off"
+          value={d.description}
+          onChange={(e) => set('description', e.target.value)}
+          placeholder="New, or pick one you've used"
+        />
+        <datalist id="task-descriptions">
+          {descriptions.map((x) => (
+            <option key={x} value={x} />
+          ))}
+        </datalist>
       </label>
       <div className="time-grid">
         <label className="field">
-          <span>Link</span>
-          <input type="url" inputMode="url" value={d.link} onChange={(e) => set('link', e.target.value)} placeholder="https://www.rentfaster.ca" />
+          <span>Info (link or phone)</span>
+          <input value={d.link} onChange={(e) => set('link', e.target.value)} placeholder="https://www.rentfaster.ca or 780-555-0123" />
         </label>
         <label className="field">
-          <span>Link name</span>
+          <span>Info name</span>
           <input value={d.linkLabel} onChange={(e) => set('linkLabel', e.target.value)} placeholder="RENTFASTER" />
         </label>
       </div>
