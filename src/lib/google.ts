@@ -280,3 +280,31 @@ export async function updateGoogleEvent(e: CalEvent): Promise<CalEvent> {
 export async function deleteGoogleEvent(e: CalEvent) {
   await call<void>(`${eventsUrl(e.google!.calendarId)}/${encodeURIComponent(e.google!.id)}`, { method: 'DELETE' });
 }
+
+/**
+ * A task on its project's calendar: all day, or at its time for an hour.
+ * Must start from a click so the Google sign-in can open if the pass ran out.
+ */
+export async function addTaskToGoogle(opts: {
+  calendarId: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  time: string | null; // HH:MM
+  minutes?: number;
+  details?: string;
+}) {
+  if (!hasToken()) await connectGoogle();
+  const body: Record<string, unknown> = { summary: opts.title, description: opts.details || undefined };
+  if (opts.time) {
+    const start = new Date(`${opts.date}T${opts.time}:00`);
+    const end = new Date(start.getTime() + (opts.minutes ?? 60) * 60_000);
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    body.start = { dateTime: start.toISOString(), timeZone: tz };
+    body.end = { dateTime: end.toISOString(), timeZone: tz };
+  } else {
+    body.start = { date: opts.date };
+    body.end = { date: nextDay(opts.date) };
+  }
+  const g = await call<GEvent>(eventsUrl(opts.calendarId || 'primary'), { method: 'POST', body: JSON.stringify(body) });
+  return g.id;
+}

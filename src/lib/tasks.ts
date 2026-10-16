@@ -17,6 +17,8 @@ export const STATUS_LABEL: Record<string, string> = {
 
 export interface Task {
   id: string;
+  /** Set on a step: the task it sits under. */
+  parentId: string | null;
   projectId: string | null;
   description: string;
   task: string;
@@ -40,6 +42,7 @@ export interface Task {
 
 type Row = {
   id: string;
+  parent_id?: string | null;
   project_id: string | null;
   description: string;
   task: string;
@@ -66,8 +69,16 @@ export const taskStore = makeStore<Task, Row>({
   orderBy: 'sort',
   script: 'supabase/migrations/0008_projects_tasks.sql',
   seed: () => [],
+  latestScript: 'supabase/migrations/0009_task_steps.sql',
+  // Before 0009 is run: save without the step link (it stays on this device until then).
+  legacyRow: (r) => {
+    const x = { ...r };
+    delete x.parent_id;
+    return x;
+  },
   toRow: (t) => ({
     id: t.id,
+    ...(t.parentId ? { parent_id: t.parentId } : {}),
     project_id: t.projectId,
     description: t.description,
     task: t.task,
@@ -89,6 +100,7 @@ export const taskStore = makeStore<Task, Row>({
   }),
   fromRow: (r) => ({
     id: r.id,
+    parentId: r.parent_id ?? null,
     projectId: r.project_id,
     description: r.description ?? '',
     task: r.task,
@@ -113,6 +125,7 @@ export const taskStore = makeStore<Task, Row>({
 export function newTask(sort: number, projectId: string | null = null): Task {
   return {
     id: crypto.randomUUID(),
+    parentId: null,
     projectId,
     description: '',
     task: '',
@@ -211,7 +224,9 @@ export function dueBadge(t: Task, today: Date): 'DUE' | 'OVERDUE' | null {
 
 export function groupTasks(list: Task[], today: Date) {
   const out = Object.fromEntries(SECTIONS.map((s) => [s.id, [] as Task[]])) as Record<Section, Task[]>;
-  for (const t of list) if (!(t.done && t.cleared)) out[sectionOf(t, today)].push(t);
+  const ids = new Set(list.map((t) => t.id));
+  // Steps travel with their task, so only top-level tasks are sorted into groups.
+  for (const t of list) if (!(t.done && t.cleared) && !(t.parentId && ids.has(t.parentId))) out[sectionOf(t, today)].push(t);
   const byDate = (a: Task, b: Task) =>
     (a.endDate ?? '9999').localeCompare(b.endDate ?? '9999') || (a.atTime ?? '99').localeCompare(b.atTime ?? '99') || a.sort - b.sort;
   for (const k of Object.keys(out) as Section[]) out[k].sort(byDate);
@@ -296,4 +311,25 @@ export function buildImport(rows: ImportRow[], existing: Task[], projects: Proje
     tasks.push(t);
   }
   return { tasks, created, skipped };
+}
+
+/** Steps under each task, in order. */
+export function stepsByParent(list: Task[]) {
+  const m = new Map<string, Task[]>();
+  for (const t of list) if (t.parentId) m.set(t.parentId, [...(m.get(t.parentId) ?? []), t]);
+  for (const v of m.values()) v.sort((a, b) => a.sort - b.sort);
+  return m;
+}
+
+/** A new step under a task: same project, description, status and dates. */
+export function newStep(parent: Task, text: string, sort: number): Task {
+  return {
+    ...newTask(sort, parent.projectId),
+    parentId: parent.id,
+    task: text.trim(),
+    description: parent.description,
+    status: isRecurring(parent) ? 'WIP' : parent.status,
+    startDate: parent.startDate,
+    endDate: parent.endDate
+  };
 }

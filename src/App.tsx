@@ -17,7 +17,7 @@ import { TasksPage, TasksPanel } from './components/Tasks';
 import { ProjectsSheet } from './components/Projects';
 import { matchCalendar, projectStore, type Project } from './lib/projects';
 import { buildImport, taskStore, type ImportRow, type Task } from './lib/tasks';
-import { knownCalendars } from './lib/google';
+import { addTaskToGoogle, googleConfigured, knownCalendars } from './lib/google';
 import {
   isDue,
   isoDate,
@@ -220,6 +220,53 @@ export default function App() {
     }
   }
 
+  /** ⋯ → Add to calendar: the task goes on its project's Google calendar (all day, or an hour at its time). */
+  async function addTaskToCalendar(t: Task) {
+    if (!googleConfigured()) return setStatus('Google Calendar isn’t set up for this app yet.');
+    const proj = projects.find((x) => x.id === t.projectId);
+    const parent = proj?.parentId ? projects.find((x) => x.id === proj.parentId) : null;
+    const calendarId = proj?.calendarId ?? parent?.calendarId ?? 'primary';
+    const date = t.endDate ?? t.startDate ?? isoDate(new Date());
+    try {
+      const id = await addTaskToGoogle({
+        calendarId,
+        title: t.task,
+        date,
+        time: t.atTime,
+        details: [t.description, t.link].filter(Boolean).join('\n')
+      });
+      await taskOps.save({ ...t, googleEventId: id });
+      const cal = knownCalendars().find((c) => c.id === calendarId)?.summary ?? 'your calendar';
+      setStatus(`${t.task} added to ${cal} on ${new Date(`${date}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`);
+    } catch (err) {
+      setStatus((err as Error).message || 'Could not add it to Google Calendar.');
+    }
+  }
+
+  /** ⋯ → Create launch: a timed launch from the task, opening its link at its time. */
+  async function createLaunchFromTask(t: Task) {
+    const monthly = t.status === 'MTH RCR' && /^\d{1,2}$/.test(t.repeatRule ?? '');
+    const launch: Launch = {
+      id: crypto.randomUUID(),
+      title: t.task,
+      atTime: t.atTime ?? '09:00',
+      repeat: monthly ? 'monthly' : 'once',
+      weekdays: [],
+      monthDay: monthly ? Number(t.repeatRule) : null,
+      onDate: monthly ? null : t.endDate ?? t.startDate ?? isoDate(new Date()),
+      minutes: 30,
+      urls: t.link ? [t.link] : [],
+      active: true,
+      movedTo: null,
+      sound: true,
+      notify: false,
+      sort: launches.length
+    };
+    await launchOps.save(launch);
+    await taskOps.save({ ...t, launchId: launch.id });
+    setStatus(`Timed launch made for ${t.task}${t.atTime ? '' : ' at 9:00 AM. Change the time in Timed launches'}.`);
+  }
+
   async function deleteProject(p: Project) {
     // Anything nested under it moves up a level rather than disappearing.
     const kids = projects.filter((x) => x.parentId === p.id).map((x) => ({ ...x, parentId: p.parentId }));
@@ -390,6 +437,9 @@ export default function App() {
                   today={now}
                   onSave={taskOps.save}
                   onDelete={taskOps.remove}
+                  onSaveMany={taskOps.saveMany}
+                  onAddToCalendar={addTaskToCalendar}
+                  onCreateLaunch={createLaunchFromTask}
                   onOpenAll={() => setPage('tasks')}
                 />
               }
@@ -408,6 +458,9 @@ export default function App() {
               today={now}
               onSave={taskOps.save}
               onDelete={taskOps.remove}
+                  onSaveMany={taskOps.saveMany}
+                  onAddToCalendar={addTaskToCalendar}
+                  onCreateLaunch={createLaunchFromTask}
               onOpenProjects={() => setProjectsOpen(true)}
               onImport={importTasks}
             />

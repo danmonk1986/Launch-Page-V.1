@@ -1149,3 +1149,42 @@ input:-webkit-autofill:focus {
 .repeat-row { margin-top: 10px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .import-btn { cursor: pointer; }
+
+/* Tasks: ⋯ row menu */
+.row-menu { position: relative; }
+.row-menu-list {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 210px; display: grid; padding: 6px;
+  background: rgb(22 16 46 / 0.98); border: 1px solid var(--accent-purple); border-radius: 12px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45), 0 0 24px color-mix(in srgb, var(--accent-purple) 30%, transparent);
+}
+.row-menu-list > button { all: unset; cursor: pointer; padding: 9px 12px; border-radius: 8px; font-size: 13px; color: var(--beige); }
+.row-menu-list > button:hover, .row-menu-list > button:focus-visible { background: color-mix(in srgb, var(--accent-purple) 22%, transparent); }
+.row-menu-list .menu-danger { color: #ffb4a8; }
+.row-menu-date { display: flex; gap: 6px; padding: 6px; }
+.row-menu-date input { flex: 1; min-height: 36px; border-radius: 8px; border: 1px solid var(--edge-strong); background: rgb(15 11 34 / 0.95); color: var(--beige); padding: 0 8px; font: inherit; font-size: 13px; }
+.row-menu-date .btn { min-height: 36px; padding: 0 12px; }
+
+/* Steps */
+.task-cell { display: inline-flex; align-items: center; gap: 8px; }
+.step-add {
+  all: unset; cursor: pointer; width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 6px;
+  border: 1px solid var(--edge); color: var(--dim); font-size: 14px; line-height: 1; opacity: 0; transition: opacity 0.15s;
+}
+.task-row:hover .step-add, .step-add:focus-visible { opacity: 1; }
+@media (hover: none) { .step-add { opacity: 0.7; } }
+.step-add:hover { color: var(--accent-teal); border-color: var(--accent-teal); }
+.task-row.is-step .task-name { font-weight: 500; color: var(--mist); }
+.step-mark { display: block; text-align: right; color: var(--dim); padding-right: 6px; }
+.steps-field { display: grid; gap: 6px; }
+.steps-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; color: var(--mist); font-size: 14px; }
+.steps-list .is-done { text-decoration: line-through; color: var(--dim); }
+.step-input { display: flex; align-items: center; gap: 8px; color: var(--dim); }
+.step-input input { flex: 1; }
+.step-more { justify-self: start; font-size: 13px; }
+
+/* Rows: no lines; every other task (with its steps) gets a soft tint of the original teal */
+.task-row td { border-bottom: 0; }
+.task-row.is-alt td { background: rgb(118 202 186 / 0.07); }
+.task-row.is-alt td:first-child { border-radius: 8px 0 0 8px; }
+.task-row.is-alt td:last-child { border-radius: 0 8px 8px 0; }
+.task-row:hover td { background: color-mix(in srgb, var(--accent-purple) 10%, transparent); }

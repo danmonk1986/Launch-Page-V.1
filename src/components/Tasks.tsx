@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Sheet } from './Sheet';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { normalizeUrl } from '../lib/launchers';
@@ -8,10 +8,12 @@ import {
   dueBadge,
   groupTasks,
   isRecurring,
+  newStep,
   newTask,
   SECTIONS,
   STATUS_LABEL,
   STATUSES,
+  stepsByParent,
   type Section,
   type Task
 } from '../lib/tasks';
@@ -63,103 +65,165 @@ function ProjectChip({ projects, id }: { projects: Project[]; id: string | null 
   );
 }
 
-function TaskRows({
-  list,
-  projects,
-  today,
-  onToggle,
-  onEdit,
-  onTomorrow,
-  onClear
-}: {
-  list: Task[];
-  projects: Project[];
-  today: Date;
-  onToggle: (t: Task) => void;
-  onEdit: (t: Task) => void;
-  onTomorrow: (t: Task) => void;
-  onClear: (t: Task) => void;
-}) {
+/** Everything a row can do. */
+type Actions = {
+  toggle: (t: Task) => void;
+  edit: (t: Task) => void;
+  addStep: (parent: Task) => void;
+  moveTo: (t: Task, iso: string) => void;
+  remove: (t: Task) => void;
+  clear: (t: Task) => void;
+  toCalendar: (t: Task) => void;
+  toLaunch: (t: Task) => void;
+};
+
+const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** The ⋯ menu on a row. */
+function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const tomorrow = isoOf(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 1, 12));
+  const [date, setDate] = useState(t.endDate ?? tomorrow);
+  const close = () => {
+    setOpen(false);
+    setPicking(false);
+  };
+  const run = (fn: () => void) => () => {
+    fn();
+    close();
+  };
   return (
-    <>
-      {list.map((t) => {
-        const badge = dueBadge(t, today);
-        const checked = isRecurring(t) ? doneToday(t, today) : t.done;
-        return (
-          <tr key={t.id} className={`task-row${checked ? ' is-done' : ''}`}>
-            <td className="col-project">
-              <ProjectChip projects={projects} id={t.projectId} />
-            </td>
-            <td className="col-desc">{t.description}</td>
-            <td className="col-task">
-              <button type="button" className="task-name" onClick={() => onEdit(t)}>
-                {t.task}
+    <div
+      className="row-menu"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) close();
+      }}
+      onKeyDown={(e) => e.key === 'Escape' && close()}
+    >
+      <button
+        type="button"
+        className="quick-btn quick-skip task-quick"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`More for ${t.task}`}
+        title="More"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Icon d="M5 12h.01M12 12h.01M19 12h.01" size={18} />
+      </button>
+      {open && (
+        <div className="row-menu-list" role="menu">
+          <button type="button" role="menuitem" onClick={run(() => act.toCalendar(t))}>
+            {t.googleEventId ? 'Add to calendar again' : 'Add to calendar'}
+          </button>
+          <button type="button" role="menuitem" onClick={run(() => act.toLaunch(t))}>
+            {t.launchId ? 'Create launch again' : 'Create launch'}
+          </button>
+          <button type="button" role="menuitem" onClick={run(() => act.addStep(t))}>
+            Add a step
+          </button>
+          {!isRecurring(t) && !checked && (
+            <>
+              <button type="button" role="menuitem" onClick={run(() => act.moveTo(t, tomorrow))}>
+                Move to tomorrow
               </button>
-            </td>
-            <td className="col-status">
-              <span className={`status status-${(badge ?? t.status).replace(/\s+/g, '-').toLowerCase()}`}>{badge ?? t.status}</span>
-            </td>
-            <td className="col-link">
-              {t.link ? (
-                <a href={normalizeUrl(t.link)} target="_blank" rel="noopener noreferrer">
-                  {t.linkLabel || 'Open'}
-                </a>
+              {picking ? (
+                <div className="row-menu-date">
+                  <input type="date" aria-label="Move to date" value={date} onChange={(e) => setDate(e.target.value)} autoFocus />
+                  <button type="button" className="btn" disabled={!date} onClick={run(() => act.moveTo(t, date))}>
+                    Move
+                  </button>
+                </div>
               ) : (
-                t.linkLabel
-              )}
-            </td>
-            <td className="col-date">{isRecurring(t) ? describeRule(t) : shortDate(t.startDate)}</td>
-            <td className="col-date">{isRecurring(t) ? '' : shortDate(t.endDate)}</td>
-            <td className="col-time">{t.atTime ? formatMinutes(toMinutes(t.atTime)) : ''}</td>
-            <td className="col-actions">
-              <div className="timed-quick">
-                <button
-                  type="button"
-                  className="quick-btn quick-done task-quick"
-                  aria-pressed={checked}
-                  aria-label={checked ? `Undo done: ${t.task}` : `Check off ${t.task}`}
-                  title={checked ? 'Undo' : 'Done'}
-                  onClick={() => onToggle(t)}
-                >
-                  <Icon d="M5 12.5l4.5 4.5L19 7.5" />
+                <button type="button" role="menuitem" onClick={() => setPicking(true)}>
+                  Move to…
                 </button>
-                {checked && !isRecurring(t) ? (
-                  <button type="button" className="quick-btn quick-skip task-quick" aria-label={`Clear ${t.task} from Done`} title="Clear from Done" onClick={() => onClear(t)}>
-                    <Icon d="M6 6l12 12M18 6L6 18" />
-                  </button>
-                ) : !checked && !isRecurring(t) ? (
-                  <button type="button" className="quick-btn quick-skip task-quick" aria-label={`Move ${t.task} to tomorrow`} title="Move to tomorrow" onClick={() => onTomorrow(t)}>
-                    <Icon d="M6 6l12 12M18 6L6 18" />
-                  </button>
-                ) : null}
-              </div>
-            </td>
-          </tr>
-        );
-      })}
-    </>
+              )}
+            </>
+          )}
+          {checked && !isRecurring(t) && (
+            <button type="button" role="menuitem" onClick={run(() => act.clear(t))}>
+              Clear from Completed
+            </button>
+          )}
+          <button type="button" role="menuitem" className="menu-danger" onClick={run(() => act.remove(t))}>
+            Remove
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boolean; alt?: boolean; projects: Project[]; today: Date; act: Actions }) {
+  const badge = dueBadge(t, today);
+  const checked = isRecurring(t) ? doneToday(t, today) : t.done;
+  return (
+    <tr className={`task-row${checked ? ' is-done' : ''}${step ? ' is-step' : ''}${alt ? ' is-alt' : ''}`}>
+      <td className="col-project">{step ? <span className="step-mark" aria-hidden="true">↳</span> : <ProjectChip projects={projects} id={t.projectId} />}</td>
+      <td className="col-desc">{step ? '' : t.description}</td>
+      <td className="col-task">
+        <span className="task-cell">
+          <button type="button" className="task-name" onClick={() => act.edit(t)}>
+            {t.task}
+          </button>
+          {!step && (
+            <button type="button" className="step-add" aria-label={`Add a step under ${t.task}`} title="Add a step" onClick={() => act.addStep(t)}>
+              +
+            </button>
+          )}
+        </span>
+      </td>
+      <td className="col-status">
+        {!step && <span className={`status status-${(badge ?? t.status).replace(/\s+/g, '-').toLowerCase()}`}>{badge ?? t.status}</span>}
+      </td>
+      <td className="col-link">
+        {t.link ? (
+          <a href={normalizeUrl(t.link)} target="_blank" rel="noopener noreferrer">
+            {t.linkLabel || 'Open'}
+          </a>
+        ) : (
+          t.linkLabel
+        )}
+      </td>
+      <td className="col-date">{isRecurring(t) ? describeRule(t) : shortDate(t.startDate)}</td>
+      <td className="col-date">{isRecurring(t) ? '' : shortDate(t.endDate)}</td>
+      <td className="col-time">{t.atTime ? formatMinutes(toMinutes(t.atTime)) : ''}</td>
+      <td className="col-actions">
+        <div className="timed-quick">
+          <button
+            type="button"
+            className="quick-btn quick-done task-quick"
+            aria-pressed={checked}
+            aria-label={checked ? `Undo done: ${t.task}` : `Check off ${t.task}`}
+            title={checked ? 'Undo' : 'Done'}
+            onClick={() => act.toggle(t)}
+          >
+            <Icon d="M5 12.5l4.5 4.5L19 7.5" />
+          </button>
+          <RowMenu t={t} act={act} checked={checked} />
+        </div>
+      </td>
+    </tr>
   );
 }
 
 function TaskTable({
   sections,
   grouped,
+  steps,
   projects,
   today,
-  onToggle,
-  onEdit,
-  onTomorrow,
-  onClear,
+  act,
   collapsible
 }: {
   sections: Section[];
   grouped: Record<Section, Task[]>;
+  steps: Map<string, Task[]>;
   projects: Project[];
   today: Date;
-  onToggle: (t: Task) => void;
-  onEdit: (t: Task) => void;
-  onTomorrow: (t: Task) => void;
-  onClear: (t: Task) => void;
+  act: Actions;
   collapsible?: boolean;
 }) {
   const [closed, setClosed] = useState<Record<string, boolean>>({ done: true, monthly: true, annual: true });
@@ -176,7 +240,7 @@ function TaskTable({
             <th>Start</th>
             <th>Required</th>
             <th>Time</th>
-            <th className="col-actions" aria-label="Done or move" />
+            <th className="col-actions" aria-label="Done or more" />
           </tr>
         </thead>
         {sections.map((id) => {
@@ -207,13 +271,19 @@ function TaskTable({
               {!shut && rows.length === 0 && (
                 <tr>
                   <td colSpan={9} className="task-empty">
-                    {id === 'due' ? 'Nothing due. Nice.' : id === 'key' ? 'Set a task to THREE to make it one of your 3 key tasks.' : 'Nothing here.'}
+                    {id === 'key' ? 'Set a task to THREE to make it one of your 3 key tasks.' : 'Nothing here.'}
                   </td>
                 </tr>
               )}
-              {!shut && (
-                <TaskRows list={rows} projects={projects} today={today} onToggle={onToggle} onEdit={onEdit} onTomorrow={onTomorrow} onClear={onClear} />
-              )}
+              {!shut &&
+                rows.map((t, i) => (
+                  <Fragment key={t.id}>
+                    <TaskRow t={t} alt={i % 2 === 1} projects={projects} today={today} act={act} />
+                    {(steps.get(t.id) ?? []).map((st) => (
+                      <TaskRow key={st.id} t={st} step alt={i % 2 === 1} projects={projects} today={today} act={act} />
+                    ))}
+                  </Fragment>
+                ))}
             </tbody>
           );
         })}
@@ -222,20 +292,29 @@ function TaskTable({
   );
 }
 
-function useTaskEditor(p: Common) {
+type EditorProps = Common & { onSaveMany: (t: Task[]) => Promise<void> };
+
+function useTaskEditor(p: EditorProps) {
   const [editing, setEditing] = useState<Task | null>(null);
   const [open, setOpen] = useState(false);
+  const isNew = !!editing && !p.tasks.some((t) => t.id === editing.id);
+  const parent = editing?.parentId ? p.tasks.find((t) => t.id === editing.parentId) ?? null : null;
   const sheet = (
-    <Sheet open={open} title={editing && p.tasks.some((t) => t.id === editing.id) ? 'Edit task' : 'Add task'} onClose={() => setOpen(false)} wide>
+    <Sheet open={open} title={parent ? (isNew ? `Add a step to ${parent.task}` : 'Edit step') : isNew ? 'Add task' : 'Edit task'} onClose={() => setOpen(false)} wide>
       {editing && (
         <TaskForm
           key={editing.id}
           task={editing}
-          isNew={!p.tasks.some((t) => t.id === editing.id)}
+          isNew={isNew}
+          isStep={!!editing.parentId}
+          existingSteps={stepsByParent(p.tasks).get(editing.id) ?? []}
           projects={p.projects}
           onCancel={() => setOpen(false)}
-          onSave={async (t) => {
-            await p.onSave(t);
+          onSave={async (t, newSteps) => {
+            const base = p.tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0);
+            const kids = newSteps.filter((s) => s.trim()).map((s, i) => newStep(t, s, base + i));
+            if (kids.length) await p.onSaveMany([t, ...kids]);
+            else await p.onSave(t);
             setOpen(false);
           }}
           onDelete={async (id) => {
@@ -255,13 +334,36 @@ function useTaskEditor(p: Common) {
     add: () => {
       setEditing(newTask(p.tasks.length));
       setOpen(true);
+    },
+    addStep: (parentTask: Task) => {
+      setEditing(newStep(parentTask, '', p.tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0)));
+      setOpen(true);
     }
   };
 }
 
+type PageProps = EditorProps & {
+  onAddToCalendar: (t: Task) => void;
+  onCreateLaunch: (t: Task) => void;
+};
+
+function useActions(p: PageProps, editor: ReturnType<typeof useTaskEditor>): Actions {
+  return {
+    toggle: (t) => p.onSave(toggleDone(t)),
+    edit: editor.edit,
+    addStep: editor.addStep,
+    moveTo: (t, iso) => p.onSave({ ...t, endDate: iso, startDate: t.startDate && t.startDate > iso ? iso : t.startDate }),
+    remove: (t) => p.onDelete(t.id),
+    clear: (t) => p.onSave({ ...t, cleared: true }),
+    toCalendar: p.onAddToCalendar,
+    toLaunch: p.onCreateLaunch
+  };
+}
+
 /** Launch Page: just Due today and the 3 key tasks. */
-export function TasksPanel(p: Common & { onOpenAll: () => void }) {
+export function TasksPanel(p: PageProps & { onOpenAll: () => void }) {
   const editor = useTaskEditor(p);
+  const act = useActions(p, editor);
   const grouped = groupTasks(p.tasks, p.today);
   return (
     <section className="panel panel-tasks" aria-labelledby="h-tasks">
@@ -277,26 +379,19 @@ export function TasksPanel(p: Common & { onOpenAll: () => void }) {
           </button>
         </div>
       </div>
-      <TaskTable
-        sections={['due', 'key']}
-        grouped={grouped}
-        projects={p.projects}
-        today={p.today}
-        onToggle={(t) => p.onSave(toggleDone(t))}
-        onEdit={editor.edit}
-        onTomorrow={(t) => p.onSave(toTomorrow(t))}
-        onClear={(t) => p.onSave({ ...t, cleared: true })}
-      />
+      <TaskTable sections={['due', 'key']} grouped={grouped} steps={stepsByParent(p.tasks)} projects={p.projects} today={p.today} act={act} />
       {editor.sheet}
     </section>
   );
 }
 
 /** The Tasks page: the whole list, in the Launch Sheet's sections. */
-export function TasksPage(p: Common & { onOpenProjects: () => void; onImport: (file: File) => void }) {
+export function TasksPage(p: PageProps & { onOpenProjects: () => void; onImport: (file: File) => void }) {
   const editor = useTaskEditor(p);
+  const act = useActions(p, editor);
   const [view, setView] = useState<Section | null>(null);
   const grouped = groupTasks(p.tasks, p.today);
+  const topLevel = Object.values(grouped).reduce((n, l) => n + l.length, 0);
   return (
     <section className="panel panel-tasks-page" aria-labelledby="h-tasks-page">
       <div className="panel-head">
@@ -327,7 +422,7 @@ export function TasksPage(p: Common & { onOpenProjects: () => void; onImport: (f
       </div>
       <div className="area-filter" role="group" aria-label="Show">
         <button type="button" className="area-pill" aria-pressed={view === null} onClick={() => setView(null)}>
-          All <span className="pill-count">{p.tasks.filter((t) => !(t.done && t.cleared)).length}</span>
+          All <span className="pill-count">{topLevel}</span>
         </button>
         {SECTIONS.map((sec) => (
           <button
@@ -346,12 +441,10 @@ export function TasksPage(p: Common & { onOpenProjects: () => void; onImport: (f
         key={view ?? 'all'}
         sections={view ? [view] : SECTIONS.map((s) => s.id)}
         grouped={grouped}
+        steps={stepsByParent(p.tasks)}
         projects={p.projects}
         today={p.today}
-        onToggle={(t) => p.onSave(toggleDone(t))}
-        onEdit={editor.edit}
-        onTomorrow={(t) => p.onSave(toTomorrow(t))}
-        onClear={(t) => p.onSave({ ...t, cleared: true })}
+        act={act}
         collapsible={!view}
       />
       {editor.sheet}
@@ -362,6 +455,8 @@ export function TasksPage(p: Common & { onOpenProjects: () => void; onImport: (f
 function TaskForm({
   task,
   isNew,
+  isStep,
+  existingSteps,
   projects,
   onCancel,
   onSave,
@@ -369,12 +464,16 @@ function TaskForm({
 }: {
   task: Task;
   isNew: boolean;
+  isStep: boolean;
+  existingSteps: Task[];
   projects: Project[];
   onCancel: () => void;
-  onSave: (t: Task) => Promise<void>;
+  /** newSteps: names typed into the Steps list, created underneath on save. */
+  onSave: (t: Task, newSteps: string[]) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
   const [d, setD] = useState<Task>(task);
+  const [steps, setSteps] = useState<string[]>([]);
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setD((x) => ({ ...x, [k]: v }));
   const recurring = d.status === 'MTH RCR' || d.status === 'ANN RCR';
   const tree = projectTree(projects);
@@ -385,7 +484,7 @@ function TaskForm({
         if (!d.task.trim()) return;
         const endDate = d.endDate && d.startDate && d.endDate < d.startDate ? d.startDate : d.endDate;
         const repeatRule = recurring ? d.repeatRule ?? (d.status === 'ANN RCR' ? '01-01' : '1') : d.repeatRule;
-        await onSave({ ...d, task: d.task.trim(), description: d.description.trim(), endDate, repeatRule });
+        await onSave({ ...d, task: d.task.trim(), description: d.description.trim(), endDate, repeatRule }, steps);
       }}
     >
       <div className="time-grid">
@@ -420,6 +519,41 @@ function TaskForm({
         <span>Task</span>
         <input required value={d.task} onChange={(e) => set('task', e.target.value)} placeholder="Relocate Brand Shop" />
       </label>
+      {!isStep && (
+        <div className="field steps-field">
+          <span>Steps</span>
+          {existingSteps.length > 0 && (
+            <ul className="steps-list">
+              {existingSteps.map((st) => (
+                <li key={st.id} className={st.done ? 'is-done' : ''}>
+                  ↳ {st.task}
+                </li>
+              ))}
+            </ul>
+          )}
+          {steps.map((text, i) => (
+            <div key={i} className="step-input">
+              <span aria-hidden="true">↳</span>
+              <input
+                aria-label={`Step ${existingSteps.length + i + 1}`}
+                value={text}
+                autoFocus={i === steps.length - 1}
+                onChange={(e) => setSteps((list) => list.map((x, j) => (j === i ? e.target.value : x)))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setSteps((list) => [...list, '']);
+                  }
+                }}
+                placeholder="Next step"
+              />
+            </div>
+          ))}
+          <button type="button" className="link-btn link-btn-inline step-more" onClick={() => setSteps((list) => [...list, ''])}>
+            + Add a step
+          </button>
+        </div>
+      )}
       <label className="field">
         <span>Description</span>
         <input value={d.description} onChange={(e) => set('description', e.target.value)} placeholder="New Location" />
