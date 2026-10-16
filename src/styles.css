@@ -1228,3 +1228,13 @@ input:-webkit-autofill:focus {
 .panel-head, .panel-week .panel-head, .panel-launchers .panel-head { margin-bottom: 14px; min-height: 36px; align-items: center; }
 .panel-head .panel-title { line-height: 36px; }
 .tabs-more-list { left: auto; right: 0; }
+
+/* Routine card: the Now box sits the same distance from the card edge on every side;
+   its notes run on one line under it, starting under the time; the list lines up with it */
+.panel-today { padding: 24px; }
+.now-card { margin: 0 0 14px; padding: 12px 14px; grid-template-columns: 70px 14px minmax(0, 1fr); row-gap: 4px; }
+.now-card .tl-body { display: contents; }
+.now-card .tl-label { grid-column: 3; }
+.now-card .tl-steps { grid-column: 1 / -1; grid-row: 2; }
+.panel-today .tl-block { padding: 8px 14px; grid-template-columns: 70px 14px minmax(0, 1fr); }
+.panel-today .tl-time, .now-card .tl-time { text-align: left; white-space: nowrap; }
