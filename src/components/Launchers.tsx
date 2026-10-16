@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sheet } from './Sheet';
 import {
   describeSchedule,
+  LAUNCHER_PRESETS,
   happensOn,
   isoDate,
   orderLaunches,
@@ -18,6 +19,8 @@ import { askNotificationPermission, chime, notificationsSupported, type AlertPre
 
 type Props = {
   routineName: string | null;
+  /** New tiles belong to this routine only. */
+  routineId: string | null;
   launchers: Launcher[];
   launches: Launch[];
   onSaveLauncher: (l: Launcher) => Promise<void>;
@@ -297,6 +300,8 @@ export function LaunchersPanel(p: Props) {
         <TileForm
           tile={tile}
           nextSort={p.launchers.length}
+          routineId={p.routineId}
+          taken={p.launchers.map((l) => l.name)}
           onCancel={() => setTileOpen(false)}
           onSave={async (l) => {
             await p.onSaveLauncher(l);
@@ -392,19 +397,33 @@ function DeleteButton({ label, onDelete }: { label: string; onDelete: () => Prom
 function TileForm({
   tile,
   nextSort,
+  routineId,
+  taken,
   onCancel,
   onSave,
   onDelete
 }: {
   tile: Launcher | null;
   nextSort: number;
+  routineId: string | null;
+  taken: string[];
   onCancel: () => void;
   onSave: (l: Launcher) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
   const [d, setD] = useState<Launcher>(
-    () => tile ?? { id: crypto.randomUUID(), name: '', note: '', url: '', color: 'teal', routineIds: null, sort: nextSort }
+    () =>
+      tile ?? {
+        id: crypto.randomUUID(),
+        name: '',
+        note: '',
+        url: '',
+        color: 'teal',
+        routineIds: routineId ? [routineId] : null,
+        sort: nextSort
+      }
   );
+  const [preset, setPreset] = useState('');
   const set = <K extends keyof Launcher>(k: K, v: Launcher[K]) => setD((x) => ({ ...x, [k]: v }));
 
   return (
@@ -415,6 +434,27 @@ function TileForm({
         await onSave({ ...d, name: d.name.trim(), note: d.note.trim(), url: isBarePrefix(d.url) ? '' : d.url.trim() });
       }}
     >
+      {!tile && LAUNCHER_PRESETS.some((p) => !taken.includes(p.name)) && (
+        <label className="field">
+          <span>Add back an original</span>
+          <select
+            value={preset}
+            onChange={(e) => {
+              const name = e.target.value;
+              setPreset(name);
+              const p = LAUNCHER_PRESETS.find((x) => x.name === name);
+              setD((x) => (p ? { ...x, name: p.name, note: p.note, url: p.url, color: p.color } : { ...x, name: '', note: '', url: '' }));
+            }}
+          >
+            <option value="">Custom</option>
+            {LAUNCHER_PRESETS.filter((p) => !taken.includes(p.name)).map((p) => (
+              <option key={p.name} value={p.name}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label className="field">
         <span>Name</span>
         <input required value={d.name} onChange={(e) => set('name', e.target.value)} placeholder="Online banking" />

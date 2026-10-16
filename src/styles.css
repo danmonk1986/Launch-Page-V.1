@@ -853,3 +853,14 @@ input:-webkit-autofill:focus {
 .alert-toggles { display: flex; gap: 6px; }
 .alert-btn { width: 36px; height: 36px; border: 1px solid var(--edge); color: var(--dim); }
 .alert-btn[aria-pressed='true'] { border-color: var(--accent-teal); color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
+
+.field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--edge-strong);
+  background: rgb(15 11 34 / 0.95);
+  color: var(--beige);
+  font: inherit;
+}

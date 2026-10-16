@@ -22,6 +22,8 @@ import {
   openTabs,
   readHandled,
   skipToTomorrow,
+  launchersFor,
+  splitShared,
   type Launch,
   type Launcher
 } from './lib/launchers';
@@ -97,7 +99,15 @@ export default function App() {
       setShift(active.shift);
       const [l1, l2, l3] = await Promise.all([launcherStore.load(userId), launchStore.load(userId), eventStore.load(userId)]);
       if (!live) return;
-      setLaunchers(l1.items);
+      // One tile set per routine: copy any shared tiles into each routine, then drop the shared ones.
+      const split = splitShared(l1.items, list.map((r) => r.id));
+      if (split) {
+        setLaunchers(split.next);
+        for (const c of split.copies) await launcherStore.save(userId, c, split.next);
+        for (const sh of split.shared) await launcherStore.remove(userId, sh.id, split.next);
+      } else {
+        setLaunchers(l1.items);
+      }
       setLaunches(l2.items);
       setEvents(l3.items);
       setStoreProblem(l1.problem ?? l2.problem ?? l3.problem);
@@ -270,7 +280,8 @@ export default function App() {
               launchers={
                 <LaunchersPanel
                   routineName={activeRoutine ? routineLabel(activeRoutine, shift) : null}
-                  launchers={launchers}
+                  launchers={launchersFor(launchers, activeRoutine?.id ?? null)}
+                  routineId={activeRoutine?.id ?? null}
                   launches={launches}
                   onSaveLauncher={launcherOps.save}
                   onDeleteLauncher={launcherOps.remove}

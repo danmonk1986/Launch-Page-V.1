@@ -36,26 +36,41 @@ export interface Launch {
 const LAUNCH_SHEET = 'https://docs.google.com/spreadsheets/d/1rH_8_qYR592YNtbU0oEeByxpmkLm6R4bgVltUr8KABw/edit';
 
 /** The eight tiles from the LAUNCH PAGE tab of the Launch Sheet. */
+export interface LauncherPreset {
+  name: string;
+  note: string;
+  url: string;
+  color: TileColor;
+}
+
+/** The eight tiles from the LAUNCH PAGE tab of the Launch Sheet, offered under + Add launch. */
+export const LAUNCHER_PRESETS: LauncherPreset[] = [
+  { name: 'Gmail', note: 'Email', url: 'https://mail.google.com', color: 'teal' },
+  { name: 'Gemini', note: 'AI research', url: 'https://gemini.google.com', color: 'purple' },
+  { name: 'Calendar', note: 'Schedule', url: 'https://calendar.google.com', color: 'teal' },
+  { name: 'Notes', note: 'Notes', url: '', color: 'green' },
+  { name: 'LaunchPage', note: 'Launch Sheet', url: LAUNCH_SHEET, color: 'purple' },
+  { name: 'Instagram', note: 'Social', url: 'https://www.instagram.com', color: 'teal' },
+  { name: 'Figma', note: 'Design', url: 'https://www.figma.com/files', color: 'purple' },
+  { name: 'SoundCloud', note: 'Music', url: 'https://soundcloud.com', color: 'green' }
+];
+
 export function seedLaunchers(): Launcher[] {
-  const tiles: [string, string, string, TileColor][] = [
-    ['Gmail', 'Email', 'https://mail.google.com', 'teal'],
-    ['Gemini', 'AI research', 'https://gemini.google.com', 'purple'],
-    ['Calendar', 'Schedule', 'https://calendar.google.com', 'teal'],
-    ['Notes', 'Add your notes link', '', 'green'],
-    ['LaunchPage', 'Launch Sheet', LAUNCH_SHEET, 'purple'],
-    ['Instagram', 'Social', 'https://www.instagram.com', 'teal'],
-    ['Figma', 'Design', 'https://www.figma.com/files', 'purple'],
-    ['SoundCloud', 'Music', 'https://soundcloud.com', 'green']
-  ];
-  return tiles.map(([name, note, url, color], i) => ({
-    id: crypto.randomUUID(),
-    name,
-    note,
-    url,
-    color,
-    routineIds: null,
-    sort: i
-  }));
+  return LAUNCHER_PRESETS.map((p, i) => ({ id: crypto.randomUUID(), ...p, routineIds: null, sort: i }));
+}
+
+/** The tiles that belong to one routine. Each routine keeps its own set. */
+export const launchersFor = (list: Launcher[], routineId: string | null) =>
+  routineId ? list.filter((l) => l.routineIds?.includes(routineId)) : [];
+
+/** Tiles shared by every routine (the old model) become one separate copy per routine. */
+export function splitShared(list: Launcher[], routineIds: string[]) {
+  const shared = list.filter((l) => !l.routineIds || l.routineIds.length === 0);
+  if (!shared.length || !routineIds.length) return null;
+  const copies = routineIds.flatMap((rid) =>
+    shared.map((l) => ({ ...l, id: crypto.randomUUID(), routineIds: [rid] }))
+  );
+  return { shared, copies, next: [...list.filter((l) => !shared.includes(l)), ...copies] };
 }
 
 export function seedLaunches(): Launch[] {
