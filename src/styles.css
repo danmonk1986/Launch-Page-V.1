@@ -900,3 +900,13 @@ input:-webkit-autofill:focus {
 }
 .timed-tab:hover { color: var(--beige); }
 .timed-tab[aria-selected='true'] { background: transparent; border-bottom-color: var(--accent-teal); color: var(--accent-teal); }
+
+/* Toolbar: one step up from 30px, same everywhere (touch included) */
+.panel-launchers .tool-btn { width: 36px; height: 36px; border-radius: 8px; }
+.panel-launchers .tool-btn svg { width: 16px; height: 16px; }
+
+/* Timed tabs: smaller text, purple for the open one */
+.timed-tab { font-size: 11px; min-height: 30px; gap: 6px; }
+.timed-tab-count { font-size: 11px; }
+.timed-tab[aria-selected='true'] { border-bottom-color: var(--accent-purple); color: color-mix(in srgb, var(--accent-purple) 55%, white); }
+.timed-tab[aria-selected='true'] .timed-tab-count { color: color-mix(in srgb, var(--accent-purple) 55%, white); }
