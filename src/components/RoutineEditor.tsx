@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Kind, Routine, RoutineItem } from '../lib/routines';
+import { CLOSE_ICON, HeadIcon, SAVE_ICON, TRASH_ICON } from './Sheet';
 
 type Props = {
   open: boolean;
@@ -68,10 +69,34 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
       <form onSubmit={submit}>
         <div className="sheet-head">
           <h2 id="routine-title">{routine ? `Edit ${routine.name}` : 'New routine or ritual'}</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
-            ×
-          </button>
+          <div className="sheet-tools">
+            <button type="submit" className="icon-btn tool-btn tool-btn-go" disabled={saving || !draft.name.trim()} aria-label="Save" title="Save">
+              <HeadIcon d={SAVE_ICON} />
+            </button>
+            {routine && (
+              <button
+                type="button"
+                className={`icon-btn tool-btn tool-btn-danger${confirmDelete ? ' is-armed' : ''}`}
+                aria-label={confirmDelete ? `Delete ${routine.name} for good` : `Delete ${routine.name}`}
+                title={confirmDelete ? 'Click again to delete for good' : 'Delete'}
+                onClick={async () => {
+                  if (!confirmDelete) {
+                    setConfirmDelete(true);
+                    return;
+                  }
+                  await onDelete(routine.id);
+                  onClose();
+                }}
+              >
+                <HeadIcon d={TRASH_ICON} />
+              </button>
+            )}
+            <button type="button" className="icon-btn tool-btn" onClick={onClose} aria-label="Close" title="Close">
+              <HeadIcon d={CLOSE_ICON} />
+            </button>
+          </div>
         </div>
+        {confirmDelete && <p className="field-hint delete-hint">Click the trash again to delete {routine?.name} for good.</p>}
 
         <label className="field">
           <span>Name</span>
@@ -151,34 +176,6 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
           )}
         </fieldset>
 
-        <div className="sheet-actions sheet-actions-split">
-          {routine ? (
-            <button
-              type="button"
-              className="btn btn-quiet btn-danger"
-              onClick={async () => {
-                if (!confirmDelete) {
-                  setConfirmDelete(true);
-                  return;
-                }
-                await onDelete(routine.id);
-                onClose();
-              }}
-            >
-              {confirmDelete ? `Delete ${routine.name} for good` : 'Delete'}
-            </button>
-          ) : (
-            <span />
-          )}
-          <div className="sheet-actions">
-            <button type="button" className="btn btn-quiet" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" className="btn" disabled={saving || !draft.name.trim()}>
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        </div>
       </form>
     </dialog>
   );

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Sheet } from './Sheet';
+import { useCallback, useEffect, useState, useId } from 'react';
+import { FormActions, Sheet } from './Sheet';
 import { addDays, layoutWeek, weekStart, type CalEvent, type EventColor } from '../lib/events';
 import { isoDate } from '../lib/launchers';
 import { colorForCalendar, type Project } from '../lib/projects';
@@ -320,14 +320,13 @@ function EventForm({
   event,
   date,
   googleOn,
-  onCancel,
   onSave,
   onDelete
 }: {
   event: CalEvent | null;
   date: string;
   googleOn: boolean;
-  onCancel: () => void;
+  onCancel?: () => void;
   onSave: (e: CalEvent, toGoogle: boolean) => Promise<void>;
   onDelete: (e: CalEvent) => Promise<void>;
 }) {
@@ -341,8 +340,9 @@ function EventForm({
   const timed = !!d.google?.time;
   const google = isGoogle || (!event && toGoogle);
 
+  const formId = useId();
   return (
-    <form
+    <form id={formId}
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.title.trim()) return;
@@ -421,25 +421,7 @@ function EventForm({
           </a>
         </p>
       )}
-      <div className="sheet-actions sheet-actions-split">
-        {event && !readOnly ? (
-          <button type="button" className="btn btn-quiet btn-danger" aria-label={`Delete ${event.title}`} onClick={() => onDelete(event)}>
-            Delete
-          </button>
-        ) : (
-          <span />
-        )}
-        <div className="sheet-actions">
-          <button type="button" className="btn btn-quiet" onClick={onCancel}>
-            Cancel
-          </button>
-          {!readOnly && (
-            <button type="submit" className="btn" disabled={!d.title.trim()}>
-              Save
-            </button>
-          )}
-        </div>
-      </div>
+      <FormActions formId={formId} hideSave={readOnly} saveDisabled={!d.title.trim()} onDelete={event && !readOnly ? () => onDelete(event) : undefined} deleteLabel={event?.title} />
     </form>
   );
 }

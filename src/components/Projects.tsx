@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Sheet } from './Sheet';
+import { useState, useId } from 'react';
+import { FormActions, Sheet } from './Sheet';
 import { projectTree, type Project } from '../lib/projects';
 import type { GoogleCalendar } from '../lib/google';
 
@@ -93,7 +93,6 @@ function ProjectForm({
   isNew,
   projects,
   calendars,
-  onCancel,
   onSave,
   onDelete
 }: {
@@ -101,7 +100,7 @@ function ProjectForm({
   isNew: boolean;
   projects: Project[];
   calendars: GoogleCalendar[];
-  onCancel: () => void;
+  onCancel?: () => void;
   onSave: (p: Project) => Promise<void>;
   onDelete: (p: Project) => Promise<void>;
 }) {
@@ -109,8 +108,9 @@ function ProjectForm({
   const set = <K extends keyof Project>(k: K, v: Project[K]) => setD((x) => ({ ...x, [k]: v }));
   const hasChildren = projects.some((p) => p.parentId === project.id);
   const areas = projects.filter((p) => !p.parentId && p.id !== project.id);
+  const formId = useId();
   return (
-    <form
+    <form id={formId}
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.name.trim()) return;
@@ -150,23 +150,7 @@ function ProjectForm({
         </select>
       </label>
       {!calendars.length && <p className="field-hint">Connect Google Calendar on the Launch Page to pick one.</p>}
-      <div className="sheet-actions sheet-actions-split">
-        {!isNew ? (
-          <button type="button" className="btn btn-quiet btn-danger" aria-label={`Delete ${project.name}`} onClick={() => onDelete(project)}>
-            Delete
-          </button>
-        ) : (
-          <span />
-        )}
-        <div className="sheet-actions">
-          <button type="button" className="btn btn-quiet" onClick={onCancel}>
-            Back
-          </button>
-          <button type="submit" className="btn" disabled={!d.name.trim()}>
-            Save
-          </button>
-        </div>
-      </div>
+      <FormActions formId={formId} saveDisabled={!d.name.trim()} onDelete={!isNew ? () => onDelete(project) : undefined} deleteLabel={project.name} />
     </form>
   );
 }

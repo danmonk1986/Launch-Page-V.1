@@ -1,5 +1,5 @@
-import { Fragment, useState } from 'react';
-import { Sheet } from './Sheet';
+import { Fragment, useState, useId } from 'react';
+import { FormActions, Sheet } from './Sheet';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { normalizeUrl } from '../lib/launchers';
 import { projectLabel, projectTree, type Project } from '../lib/projects';
@@ -489,7 +489,6 @@ function TaskForm({
   existingSteps,
   descriptions,
   projects,
-  onCancel,
   onSave,
   onDelete
 }: {
@@ -499,7 +498,7 @@ function TaskForm({
   existingSteps: Task[];
   descriptions: string[];
   projects: Project[];
-  onCancel: () => void;
+  onCancel?: () => void;
   /** newSteps: names typed into the Steps list, created underneath on save. */
   onSave: (t: Task, newSteps: string[]) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -509,8 +508,9 @@ function TaskForm({
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setD((x) => ({ ...x, [k]: v }));
   const recurring = d.status === 'MTH RCR' || d.status === 'ANN RCR';
   const tree = projectTree(projects);
+  const formId = useId();
   return (
-    <form
+    <form id={formId}
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.task.trim()) return;
@@ -639,23 +639,7 @@ function TaskForm({
         <span>Notes</span>
         <input value={d.notes} onChange={(e) => set('notes', e.target.value)} />
       </label>
-      <div className="sheet-actions sheet-actions-split">
-        {!isNew ? (
-          <button type="button" className="btn btn-quiet btn-danger" aria-label={`Delete ${task.task}`} onClick={() => onDelete(task.id)}>
-            Delete
-          </button>
-        ) : (
-          <span />
-        )}
-        <div className="sheet-actions">
-          <button type="button" className="btn btn-quiet" onClick={onCancel}>
-            Cancel
-          </button>
-          <button type="submit" className="btn" disabled={!d.task.trim()}>
-            Save
-          </button>
-        </div>
-      </div>
+      <FormActions formId={formId} saveDisabled={!d.task.trim()} onDelete={!isNew ? () => onDelete(task.id) : undefined} deleteLabel={task.task} />
     </form>
   );
 }

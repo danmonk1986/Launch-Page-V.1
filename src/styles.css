@@ -1198,3 +1198,33 @@ input:-webkit-autofill:focus {
 .task-table .col-desc { min-width: 120px; max-width: 220px; }
 .task-table .col-expense { font-family: var(--font-mono); font-size: 12px; color: var(--mist); white-space: nowrap; }
 .task-table { min-width: 1040px; }
+
+/* Sheet header: title left, then Save · Delete · Close icons */
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sheet-tools, .sheet-tool-slot { display: flex; align-items: center; gap: 8px; }
+.tool-btn-danger { color: #ffb4a8; border-color: rgb(255 180 168 / 0.45); }
+.tool-btn-danger:hover { color: #ffb4a8; border-color: #ffb4a8; background: rgb(255 180 168 / 0.1); }
+.tool-btn-danger.is-armed { background: #ffb4a8; color: #14102b; border-color: #ffb4a8; }
+.tool-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.delete-hint { color: #ffb4a8; margin-top: -6px; }
+.gear-menu-list { left: auto; right: 0; min-width: 200px; }
+.gear-menu { z-index: 40; }
+
+/* Tabs fold into a teal ⌄ menu when they don't fit */
+.topbar .tabs { position: relative; flex-wrap: nowrap; overflow: visible; min-width: 0; }
+.tabs-ruler { position: absolute; visibility: hidden; pointer-events: none; display: flex; gap: 4px; white-space: nowrap; height: 0; overflow: hidden; }
+.tab { white-space: nowrap; flex: none; }
+.tabs-more-btn { color: var(--accent-teal); display: inline-flex; align-items: center; }
+.tabs-more-btn.is-active { border-bottom-color: var(--accent-teal); }
+.tabs-more-list { left: 0; right: auto; }
+.tabs-more-list [aria-current='page'] { color: var(--accent-teal); }
+
+/* One size for every icon button; one gap from each card's header to its first item */
+.tool-btn, .panel-launchers .tool-btn, .panel-week .tool-btn, .topbar-right .gear-btn, .sheet-tools .tool-btn,
+.quick-btn, .task-quick, .timed-quick .quick-btn { width: 36px; height: 36px; border-radius: 8px; }
+.tool-btn svg, .quick-btn svg { width: 16px; height: 16px; }
+.topbar-right .picker-split { height: 36px; border-radius: 8px; }
+.topbar-right .picker-caret { width: 36px; }
+.panel-head, .panel-week .panel-head, .panel-launchers .panel-head { margin-bottom: 14px; min-height: 36px; align-items: center; }
+.panel-head .panel-title { line-height: 36px; }
+.tabs-more-list { left: auto; right: 0; }

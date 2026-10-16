@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Background, BrandSettings } from '../lib/settings';
+import { CLOSE_ICON, HeadIcon, SAVE_ICON } from './Sheet';
 
 type Props = {
   open: boolean;
@@ -55,9 +56,14 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword }
       <form onSubmit={submit}>
         <div className="sheet-head">
           <h2 id="settings-title">Brand settings</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close settings">
-            ×
-          </button>
+          <div className="sheet-tools">
+            <button type="submit" className="icon-btn tool-btn tool-btn-go" disabled={saving} aria-label="Save settings" title="Save">
+              <HeadIcon d={SAVE_ICON} />
+            </button>
+            <button type="button" className="icon-btn tool-btn" onClick={onClose} aria-label="Close settings" title="Close">
+              <HeadIcon d={CLOSE_ICON} />
+            </button>
+          </div>
         </div>
 
         <label className="field">
@@ -127,14 +133,6 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword }
           <p className="field-hint">Your four theme colours. Teal and Purple run the app today; all four are launcher colours, and Green and Pink are ready for other places.</p>
         </fieldset>
 
-        <div className="sheet-actions">
-          <button type="button" className="btn btn-quiet" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="btn" disabled={saving}>
-            {saving ? 'Saving…' : 'Save settings'}
-          </button>
-        </div>
       </form>
 
       {onSetPassword && (

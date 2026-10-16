@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Sheet } from './Sheet';
+import { useState, useId } from 'react';
+import { FormActions, Sheet } from './Sheet';
 import {
   describeSchedule,
   LAUNCHER_PRESETS,
@@ -408,13 +408,6 @@ function Icon({ d }: { d: string }) {
 const SOUND_ICON = 'M4 9v6h4l5 4V5L8 9H4zM16 9a4 4 0 0 1 0 6';
 const BELL_ICON = 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2zM10 21h4';
 
-function DeleteButton({ label, onDelete }: { label: string; onDelete: () => Promise<void> }) {
-  return (
-    <button type="button" className="btn btn-quiet btn-danger" aria-label={`Delete ${label}`} onClick={() => onDelete()}>
-      Delete
-    </button>
-  );
-}
 
 function TileForm({
   tile,
@@ -422,7 +415,6 @@ function TileForm({
   routineId,
   taken,
   tiles,
-  onCancel,
   onSave,
   onDelete
 }: {
@@ -431,7 +423,7 @@ function TileForm({
   routineId: string | null;
   taken: string[];
   tiles: Launcher[];
-  onCancel: () => void;
+  onCancel?: () => void;
   /** position: the new place in the routine's tiles (0 = first), or null to leave it. */
   onSave: (l: Launcher, position: number | null) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -453,8 +445,9 @@ function TileForm({
   const [position, setPosition] = useState(from);
   const set = <K extends keyof Launcher>(k: K, v: Launcher[K]) => setD((x) => ({ ...x, [k]: v }));
 
+  const formId = useId();
   return (
-    <form
+    <form id={formId}
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.name.trim()) return;
@@ -531,17 +524,7 @@ function TileForm({
           ))}
         </div>
       </fieldset>
-      <div className="sheet-actions sheet-actions-split">
-        {tile ? <DeleteButton label={tile.name} onDelete={() => onDelete(tile.id)} /> : <span />}
-        <div className="sheet-actions">
-          <button type="button" className="btn btn-quiet" onClick={onCancel}>
-            Cancel
-          </button>
-          <button type="submit" className="btn" disabled={!d.name.trim()}>
-            Save
-          </button>
-        </div>
-      </div>
+      <FormActions formId={formId} saveDisabled={!d.name.trim()} onDelete={tile ? () => onDelete(tile.id) : undefined} deleteLabel={tile?.name} />
     </form>
   );
 }
@@ -550,14 +533,13 @@ function TimedForm({
   launch,
   launchers,
   nextSort,
-  onCancel,
   onSave,
   onDelete
 }: {
   launch: Launch | null;
   launchers: Launcher[];
   nextSort: number;
-  onCancel: () => void;
+  onCancel?: () => void;
   onSave: (l: Launch) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
@@ -591,8 +573,9 @@ function TimedForm({
   const toggleDay = (i: number) =>
     set('weekdays', d.weekdays.includes(i) ? d.weekdays.filter((x) => x !== i) : [...d.weekdays, i].sort());
 
+  const formId = useId();
   return (
-    <form
+    <form id={formId}
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.title.trim()) return;
@@ -745,17 +728,7 @@ function TimedForm({
         <span>On: remind me at this time</span>
       </label>
 
-      <div className="sheet-actions sheet-actions-split">
-        {launch ? <DeleteButton label={launch.title} onDelete={() => onDelete(launch.id)} /> : <span />}
-        <div className="sheet-actions">
-          <button type="button" className="btn btn-quiet" onClick={onCancel}>
-            Cancel
-          </button>
-          <button type="submit" className="btn" disabled={!d.title.trim()}>
-            Save
-          </button>
-        </div>
-      </div>
+      <FormActions formId={formId} saveDisabled={!d.title.trim()} onDelete={launch ? () => onDelete(launch.id) : undefined} deleteLabel={launch?.title} />
     </form>
   );
 }
