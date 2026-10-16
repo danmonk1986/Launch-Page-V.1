@@ -573,11 +573,11 @@ function TimedForm({
           <span>Time allotted (minutes)</span>
           <input
             type="number"
-            min={5}
+            min={1}
             max={480}
-            step={5}
+            step={1}
             value={d.minutes}
-            onChange={(e) => set('minutes', Math.max(5, Number(e.target.value) || 30))}
+            onChange={(e) => set('minutes', Math.min(480, Math.max(1, Number(e.target.value) || 1)))}
           />
         </label>
       </div>
