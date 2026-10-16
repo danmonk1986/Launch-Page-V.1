@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['launchpage-logo.png'],
+      includeAssets: ['launchpage-logo.png', 'favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'LaunchPage',
         short_name: 'LaunchPage',
@@ -20,7 +20,8 @@ export default defineConfig({
         start_url: '/',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       },
       workbox: {
