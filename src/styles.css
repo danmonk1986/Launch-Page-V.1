@@ -610,8 +610,8 @@ input:-webkit-autofill:focus {
 
 .tile-teal { background: var(--accent-teal); }
 .tile-purple { background: var(--accent-purple); }
-.tile-green { background: #98ee92; }
-.tile-pink { background: #ff6ad5; }
+.tile-green { background: var(--tile-green, #98ee92); }
+.tile-pink { background: var(--tile-pink, #ff6ad5); }
 
 .tile-words { display: grid; min-width: 0; }
 .tile-name { font-weight: 600; font-size: 15px; }

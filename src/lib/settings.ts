@@ -11,6 +11,9 @@ export interface BrandSettings {
   background: Background;
   accentPurple: string;
   accentTeal: string;
+  /** Launcher colours 3 and 4. Purple and Teal are 1 and 2 and also colour the whole app. */
+  accentGreen: string;
+  accentPink: string;
 }
 
 /** First user's brand. Every field is editable in Settings. */
@@ -22,7 +25,9 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   mantra: 'search. create. evolve.',
   background: 'synthwave',
   accentPurple: '#8869cb',
-  accentTeal: '#06f9c2'
+  accentTeal: '#06f9c2',
+  accentGreen: '#98ee92',
+  accentPink: '#ff6ad5'
 };
 
 /** Oct 15: the neon pair from the logo became the master palette. Move the old defaults over. */
@@ -61,6 +66,8 @@ type Row = {
   background: Background;
   accent_purple: string;
   accent_teal: string;
+  accent_green?: string;
+  accent_pink?: string;
 };
 
 const toRow = (s: BrandSettings): Row => ({
@@ -71,7 +78,9 @@ const toRow = (s: BrandSettings): Row => ({
   mantra: s.mantra,
   background: s.background,
   accent_purple: s.accentPurple,
-  accent_teal: s.accentTeal
+  accent_teal: s.accentTeal,
+  accent_green: s.accentGreen,
+  accent_pink: s.accentPink
 });
 
 const fromRow = (r: Row): BrandSettings => ({
@@ -82,7 +91,10 @@ const fromRow = (r: Row): BrandSettings => ({
   mantra: r.mantra,
   background: r.background,
   accentPurple: r.accent_purple,
-  accentTeal: r.accent_teal
+  accentTeal: r.accent_teal,
+  // Before 0007 is run these columns are missing: keep this device's choice.
+  accentGreen: r.accent_green ?? readLocal().accentGreen,
+  accentPink: r.accent_pink ?? readLocal().accentPink
 });
 
 /** Cloud copy wins when signed in; the local copy is the offline fallback. */
@@ -113,8 +125,12 @@ export async function saveSettings(
 ): Promise<{ synced: boolean }> {
   writeLocal(s);
   if (!supabase || !userId) return { synced: false };
-  const { error } = await supabase
-    .from('settings')
-    .upsert({ user_id: userId, ...toRow(s) });
-  return { synced: !error };
+  const row = toRow(s);
+  const { error } = await supabase.from('settings').upsert({ user_id: userId, ...row });
+  if (!error) return { synced: true };
+  // 0007 not run yet: save everything else; the two new colours stay on this device.
+  delete row.accent_green;
+  delete row.accent_pink;
+  await supabase.from('settings').upsert({ user_id: userId, ...row });
+  return { synced: false };
 }

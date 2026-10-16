@@ -104,16 +104,28 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword }
           </div>
         </fieldset>
 
-        <div className="swatches">
-          <label className="field swatch">
-            <span>Purple</span>
-            <input type="color" value={draft.accentPurple} onChange={(e) => set('accentPurple', e.target.value)} />
-          </label>
-          <label className="field swatch">
-            <span>Teal</span>
-            <input type="color" value={draft.accentTeal} onChange={(e) => set('accentTeal', e.target.value)} />
-          </label>
-        </div>
+        <fieldset className="field">
+          <legend>Colours</legend>
+          <div className="swatches">
+            <label className="field swatch">
+              <span>Teal</span>
+              <input type="color" value={draft.accentTeal} onChange={(e) => set('accentTeal', e.target.value)} />
+            </label>
+            <label className="field swatch">
+              <span>Purple</span>
+              <input type="color" value={draft.accentPurple} onChange={(e) => set('accentPurple', e.target.value)} />
+            </label>
+            <label className="field swatch">
+              <span>Green</span>
+              <input type="color" value={draft.accentGreen} onChange={(e) => set('accentGreen', e.target.value)} />
+            </label>
+            <label className="field swatch">
+              <span>Pink</span>
+              <input type="color" value={draft.accentPink} onChange={(e) => set('accentPink', e.target.value)} />
+            </label>
+          </div>
+          <p className="field-hint">All four are launcher colours. Teal and Purple also colour the whole app.</p>
+        </fieldset>
 
         <div className="sheet-actions">
           <button type="button" className="btn btn-quiet" onClick={onClose}>
