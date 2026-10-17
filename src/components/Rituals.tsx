@@ -202,7 +202,8 @@ export function MeditationCrawl({ title, script, onClose, onCheck }: { title: st
     const text = textRef.current;
     const stage = stageRef.current;
     if (!text || !stage) return;
-    let y = 0;
+    // Start partway up, so the first words reach the horizon in about half the time (~7 s, not ~15).
+    let y = -0.27 * stage.getBoundingClientRect().height;
     let last = performance.now();
     let holdUntil = 0;
     const done = new Set<Element>();
@@ -239,7 +240,7 @@ export function MeditationCrawl({ title, script, onClose, onCheck }: { title: st
       }
       frame = requestAnimationFrame(tick);
     };
-    text.style.transform = 'translateY(0px)';
+    text.style.transform = `translateY(${y}px)`;
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [run, still]);
@@ -279,7 +280,6 @@ export function MeditationCrawl({ title, script, onClose, onCheck }: { title: st
       <div className="crawl-stage" ref={stageRef}>
         <div className="crawl-plane">
           <div key={run} ref={textRef} className="crawl-text">
-            <p className="crawl-title">{title}</p>
             {lines.map((line, i) => {
               const hold = pauseSeconds(line);
               return hold !== null ? (
