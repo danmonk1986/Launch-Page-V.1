@@ -643,7 +643,7 @@ function NonNegEditor({ list, config, onSave }: { list: NonNeg[]; config: Config
             </select>
             {n.log ? (
               <label className="d26-edit-target">
-                <input type="number" min={n.log === 'productivity' ? 0.25 : 5} step={n.log === 'productivity' ? 0.25 : 5} value={n.target} onChange={(e) => set(i, { target: Number(e.target.value) || 0 })} aria-label="Needed a day" />
+                <input type="number" min={n.log === 'productivity' ? 0.25 : 5} step="any" value={n.target} onChange={(e) => set(i, { target: Number(e.target.value) || 0 })} aria-label="Needed a day" />
                 <span>{n.log === 'productivity' ? 'blocks' : 'min'}</span>
               </label>
             ) : (
@@ -688,10 +688,10 @@ function NonNegEditor({ list, config, onSave }: { list: NonNeg[]; config: Config
       <fieldset className="field d26-limits">
         <legend>Vice load limit a day</legend>
         <label>
-          HQ <input type="number" min={0} step={0.5} value={cfg.viceLimitHQ} onChange={(e) => setCfg({ ...cfg, viceLimitHQ: Number(e.target.value) || 0 })} />
+          HQ <input type="number" min={0} step="any" value={cfg.viceLimitHQ} onChange={(e) => setCfg({ ...cfg, viceLimitHQ: Number(e.target.value) || 0 })} />
         </label>
         <label>
-          MWD <input type="number" min={0} step={0.5} value={cfg.viceLimitMWD} onChange={(e) => setCfg({ ...cfg, viceLimitMWD: Number(e.target.value) || 0 })} />
+          MWD <input type="number" min={0} step="any" value={cfg.viceLimitMWD} onChange={(e) => setCfg({ ...cfg, viceLimitMWD: Number(e.target.value) || 0 })} />
         </label>
       </fieldset>
       <FormActions formId={formId} />
@@ -894,10 +894,11 @@ function LogForm({ entry, isNew, config, pastVices, onSave, onDelete }: { entry:
   const listId = useId();
   const set = (patch: Partial<LogEntry>) => setD((x) => ({ ...x, ...patch }));
   const valid = d.amount > 0 && d.qty > 0 && (d.kind !== 'vices' || !!d.note.trim());
-  const amountField = (label: string, step: number, min: number) => (
+  // Any amount is fine (700 kcal, a 22-minute break): no step rule for the browser to enforce.
+  const amountField = (label: string, min: number) => (
     <label className="field">
       <span>{label}</span>
-      <input type="number" inputMode="decimal" min={min} step={step} value={d.amount || ''} onChange={(e) => set({ amount: Number(e.target.value) || 0 })} autoFocus={isNew && d.kind === 'food'} />
+      <input type="number" inputMode="decimal" min={min} step="any" value={d.amount || ''} onChange={(e) => set({ amount: Number(e.target.value) || 0 })} autoFocus={isNew && d.kind === 'food'} />
     </label>
   );
   return (
@@ -919,18 +920,18 @@ function LogForm({ entry, isNew, config, pastVices, onSave, onDelete }: { entry:
       {d.kind === 'activity' && (
         <>
           <Pills value={d.unit} label="Count in" options={[{ v: 'min', label: 'Minutes' }, { v: 'steps', label: 'Steps' }]} onChange={(u) => set({ unit: u, amount: u === 'steps' ? 1000 : 10 })} />
-          {amountField(d.unit === 'steps' ? 'Steps' : 'Minutes', d.unit === 'steps' ? 500 : 5, 1)}
+          {amountField(d.unit === 'steps' ? 'Steps' : 'Minutes', 1)}
         </>
       )}
 
       {d.kind === 'rest' && (
         <>
           <Pills value={d.unit} label="Kind of rest" options={[{ v: 'h', label: 'Sleep (hours)' }, { v: 'min', label: 'Break (minutes)' }]} onChange={(u) => set({ unit: u, amount: u === 'h' ? 8 : 15 })} />
-          {amountField(d.unit === 'h' ? 'Hours' : 'Minutes', d.unit === 'h' ? 0.25 : 5, d.unit === 'h' ? 0.25 : 1)}
+          {amountField(d.unit === 'h' ? 'Hours' : 'Minutes', d.unit === 'h' ? 0.25 : 1)}
         </>
       )}
 
-      {d.kind === 'food' && amountField('Calories (kcal)', 10, 1)}
+      {d.kind === 'food' && amountField('Calories (kcal)', 1)}
 
       {d.kind === 'h2o' && (
         <Pills value={d.amount} label="Size" options={H2O_SIZES.map((s) => ({ v: s.ml, label: `${s.label} · ${s.ml} ml` }))} onChange={(ml) => set({ amount: ml })} />
