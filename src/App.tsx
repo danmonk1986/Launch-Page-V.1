@@ -379,7 +379,7 @@ export default function App() {
   // 26 Days: today's record remembers the mode it's lived in and the list as it is today.
   const d26Mode = modeOf(activeRoutine);
   const d26Shift = effShift(d26Mode, shift);
-  const d26Today = routineDay(now, flipsNow(d26Mode, shift));
+  const d26Today = routineDay(now, activeRoutine, shift, flipsNow(d26Mode, shift));
   useEffect(() => {
     if (!d26Ready || !activeRoutine) return;
     const items = snapshot(nonnegs);

@@ -117,9 +117,24 @@ export const effShift = (mode: Mode, shift: Shift): Shift => (mode === 'MWD' ? s
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-/** 4 AM to 4 AM, or 4 PM to 4 PM on nights. */
-export function routineDay(now: Date, flip: boolean) {
-  return iso(new Date(now.getTime() - (flip ? 16 : 4) * 3_600_000));
+/**
+ * When the day resets, in minutes after midnight: the routine's Bed time (flipped on Nights).
+ * A routine without a bed time resets at 4 AM, or 4 PM on nights.
+ */
+export function resetMinutes(r: Routine | null, shift: Shift, flip: boolean) {
+  return r?.bed ? shiftMinutes(r.bed, shift, r.flips) : flip ? 16 * 60 : 4 * 60;
+}
+
+/**
+ * The routine day: from one bed time to the next. It's named for the date you wake up into,
+ * so a night shift that runs past midnight stays on the day it started.
+ */
+export function routineDay(now: Date, r: Routine | null, shift: Shift, flip: boolean) {
+  const reset = resetMinutes(r, shift, flip);
+  const since = (now.getHours() * 60 + now.getMinutes() - reset + 1440) % 1440;
+  const lastReset = now.getTime() - since * 60_000;
+  const wake = r?.wake ? shiftMinutes(r.wake, shift, r.flips) : reset;
+  return iso(new Date(lastReset + ((wake - reset + 1440) % 1440) * 60_000));
 }
 
 export function addDays(day: string, n: number) {
@@ -128,15 +143,11 @@ export function addDays(day: string, n: number) {
   return iso(d);
 }
 
-/** Minutes since the routine day started. */
-function sinceStart(min: number, flip: boolean) {
-  return (min - (flip ? 16 * 60 : 4 * 60) + 1440) % 1440;
-}
-
-/** The section you're in: each runs up to its check-in. */
-export function currentSection(now: Date, flip: boolean): Section {
-  const n = sinceStart(now.getHours() * 60 + now.getMinutes(), flip);
-  for (const s of SECTIONS) if (n < sinceStart(shiftMinutes(s.checkIn, flip ? 'nights' : 'days', true), flip)) return s.id;
+/** The section you're in: each runs up to its check-in, counted from the reset. */
+export function currentSection(now: Date, reset: number, flip: boolean): Section {
+  const since = (min: number) => (min - reset + 1440) % 1440;
+  const n = since(now.getHours() * 60 + now.getMinutes());
+  for (const s of SECTIONS) if (n < since(shiftMinutes(s.checkIn, flip ? 'nights' : 'days', true))) return s.id;
   return 'evening';
 }
 

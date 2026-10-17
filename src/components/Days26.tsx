@@ -23,6 +23,7 @@ import {
   modeOf,
   modeRow,
   readShownQuote,
+  resetMinutes,
   routineDay,
   scoreDay,
   shuffleFrom,
@@ -97,7 +98,8 @@ export function Days26Page(p: Props) {
   const { now, routine, shift, nonnegs, records, logs, config } = p;
   const mode = modeOf(routine);
   const flip = flipsNow(mode, shift);
-  const today = routineDay(now, flip);
+  const today = routineDay(now, routine, shift, flip);
+  const reset = resetMinutes(routine, shift, flip);
   const rec = records.find((r) => r.day === today) ?? null;
   const items = activeNonNegs(nonnegs);
   const [log, setLog] = useState<{ entry: LogEntry; isNew: boolean } | null>(null);
@@ -147,6 +149,7 @@ export function Days26Page(p: Props) {
         today={today}
         now={now}
         flip={flip}
+        reset={reset}
         mode={mode}
         routine={routine}
         shift={shift}
@@ -430,6 +433,7 @@ type NonNegCardProps = {
   today: string;
   now: Date;
   flip: boolean;
+  reset: number;
   mode: Mode;
   routine: Routine | null;
   shift: Shift;
@@ -440,10 +444,10 @@ type NonNegCardProps = {
   onEdit: () => void;
 };
 
-function NonNegCard({ items, rec, records, logs, config, today, now, flip, mode, routine, shift, onToggle, onLog, ritualFor, onOpenRitual, onEdit }: NonNegCardProps) {
+function NonNegCard({ items, rec, records, logs, config, today, now, flip, reset, mode, routine, shift, onToggle, onLog, ritualFor, onOpenRitual, onEdit }: NonNegCardProps) {
   const done = (n: NonNeg) => isDone({ id: n.id, label: n.label, log: n.log, target: n.target }, rec, logs, today);
   const count = items.filter(done).length;
-  const cur = currentSection(now, flip);
+  const cur = currentSection(now, reset, flip);
   const weekDays = [...Array(7).keys()].map((i) => addDays(today, i - 6));
   // Last 7 routine days: on baseline, a dip, or nothing recorded; today is the ring.
   const results = finished(records, logs, config, today, null);
