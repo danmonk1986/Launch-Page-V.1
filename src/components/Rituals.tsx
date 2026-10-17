@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { FormActions } from './Sheet';
 import { Icon } from './Tasks';
 import type { Routine, RoutineItem } from '../lib/routines';
@@ -84,7 +84,7 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
               ) : (
                 <span className="rit-label">{s.label}</span>
               )}
-              {type === 'meditation' && <SaveOnBlur className="rit-text" value={s.script ?? ''} placeholder="The words that play up the screen" label={`${s.label} script`} onSave={(v) => setScript(i, v)} />}
+              {type === 'meditation' && <SaveOnBlur className="rit-text rit-script" grow value={s.script ?? ''} placeholder="The words that play up the screen" label={`${s.label} script`} onSave={(v) => setScript(i, v)} />}
               {type === 'checkin' && (
                 <SaveOnBlur
                   className="rit-text"
@@ -120,8 +120,16 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
 }
 
 /** A text box that saves when you leave it (and as you pause typing). */
-function SaveOnBlur({ value, onSave, placeholder, label, className }: { value: string; onSave: (v: string) => void; placeholder: string; label: string; className: string }) {
+function SaveOnBlur({ value, onSave, placeholder, label, className, grow }: { value: string; onSave: (v: string) => void; placeholder: string; label: string; className: string; grow?: boolean }) {
   const [v, setV] = useState(value);
+  const box = useRef<HTMLTextAreaElement>(null);
+  // Grow to fit every line (the meditation box), so its line breaks are never hidden behind a scrollbar.
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!grow || !el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [v, grow]);
   const dirty = useRef(false);
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => {
@@ -135,6 +143,7 @@ function SaveOnBlur({ value, onSave, placeholder, label, className }: { value: s
   };
   return (
     <textarea
+      ref={box}
       className={className}
       value={v}
       rows={4}

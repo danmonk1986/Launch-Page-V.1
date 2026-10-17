@@ -1855,10 +1855,11 @@ dialog.crawl::backdrop { background: #000000; }
   --crawl-mask: linear-gradient(to bottom, transparent 0%, #000000 30%, #000000 calc(71% - var(--crawl-row) - 18px), transparent calc(71% - var(--crawl-row)));
   -webkit-mask-image: var(--crawl-mask); mask-image: var(--crawl-mask);
 }
-.crawl-plane { position: absolute; left: 50%; bottom: 0; width: min(760px, 88vw); height: 180vh; transform: translateX(-50%) rotateX(24deg); transform-origin: 50% 100%; }
+/* Width in em so the meditation box can match the crawl's line breaks (21.1 characters' worth of em at any size). */
+.crawl-plane { position: absolute; left: 50%; bottom: 0; font-size: clamp(22px, 3.2vw, 36px); width: min(21.1em, 88vw); height: 180vh; transform: translateX(-50%) rotateX(24deg); transform-origin: 50% 100%; }
 .crawl-text {
   position: absolute; left: 0; right: 0; top: 100%; will-change: transform;
-  font-family: var(--font-head); font-weight: 700; font-size: clamp(22px, 3.2vw, 36px); line-height: 1.55; letter-spacing: 0.04em;
+  font-family: var(--font-head); font-weight: 700; font-size: 1em; line-height: 1.55; letter-spacing: 0.04em;
   text-align: center; white-space: pre-wrap; color: var(--accent-teal);
   text-shadow: 0 0 16px color-mix(in srgb, var(--accent-teal) 40%, transparent);
 }
@@ -1895,3 +1896,12 @@ dialog.crawl::backdrop { background: #000000; }
 .rit-step.is-meditation .d26-check, .rit-step.is-checkin .d26-check { grid-column: 3; grid-row: 1; }
 .rit-step.is-meditation .rit-text, .rit-step.is-checkin .rit-text { grid-column: 1 / -1; }
 .crawl-text { text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* Meditation box: same font, caps, spacing and line width as the crawl, so a line breaks here where it breaks on screen. */
+.rit-step.is-meditation .rit-script {
+  justify-self: center; box-sizing: content-box; width: 21.1em; max-width: calc(100% - 26px);
+  padding: 12px; overflow: hidden; resize: none; min-height: 0;
+  font-family: var(--font-head); font-weight: 700; font-size: 17px; line-height: 1.55; letter-spacing: 0.06em;
+  text-transform: uppercase; text-align: center; color: var(--accent-teal);
+}
+.rit-step.is-meditation .rit-script::placeholder { text-transform: none; letter-spacing: normal; font-weight: 400; color: var(--dim); }

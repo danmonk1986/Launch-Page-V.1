@@ -176,3 +176,4 @@ Dan's story: Rise to Shine as a timed launch. When busy he pushes it (Snooze / S
 - Oct 17, 3:55 AM · Ritual layout (Dan's sketch): plain steps are small tiles, four to a row (three on tablets, two on phones), number · name · tick on one line; meditation and check-in steps take full rows with their text box underneath. No sideways scrolling.
 - Oct 17, 3:55 AM · Meditation crawl text in all caps, like the title.
 - Oct 17, 4 AM · Meditation crawl: no title (just the words), and it starts partway up so the first line clears the horizon in about 7 s instead of 15.
+- Oct 17, 4:05 AM · Meditation box on the ritual: same font, caps, letter spacing and line width (in em) as the crawl, centred and in teal, so each line breaks in the box where it will on screen; the box grows to fit instead of scrolling. The crawl's width is now set in em to keep the two in step (matches on laptop widths).
