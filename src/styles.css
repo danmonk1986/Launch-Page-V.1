@@ -1456,3 +1456,29 @@ input:-webkit-autofill:focus {
 .combo-kind { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-teal); }
 .app[data-tone='light'] .combo-list { background: #ffffff; box-shadow: 0 12px 32px rgb(68 66 66 / 0.18); }
 .tone-row { margin-top: 10px; }
+
+/* ---------- Routine editor (Oct 16) ---------- */
+.step-row { grid-template-columns: 150px minmax(0, 1fr) 44px 44px; }
+.step-rows.is-resort .step-row { grid-template-columns: 36px 150px minmax(0, 1fr) 44px 44px; }
+.step-row .tool-btn { width: 44px; height: 44px; }
+.step-menu-wrap { position: relative; }
+.step-menu { min-width: 200px; }
+.row-menu-list > button:disabled { opacity: 0.4; cursor: default; }
+.step-handle {
+  all: unset; cursor: grab; width: 36px; height: 44px; display: grid; place-items: center;
+  color: var(--accent-teal); border-radius: 8px; touch-action: none;
+}
+.step-handle:active { cursor: grabbing; }
+.step-handle:focus-visible { outline: 2px solid var(--accent-teal); }
+.step-row.is-dragging { opacity: 0.75; }
+.resort-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; font-size: 13px; color: var(--accent-teal); }
+.resort-done { min-height: 34px; padding: 0 14px; }
+.flip-hint { margin: -6px 0 14px; }
+@media (max-width: 560px) {
+  .step-row { grid-template-columns: 100px minmax(0, 1fr) 40px 40px; gap: 6px; }
+  .step-rows.is-resort .step-row { grid-template-columns: 26px 92px minmax(0, 1fr) 40px 40px; }
+  .step-row .icon-btn, .step-row .icon-btn:nth-of-type(1) { display: grid; width: 40px; height: 44px; }
+  .step-row input[type='time'] { padding: 8px 6px; font-size: 14px; }
+}
+.app[data-tone='light'] .row-menu-list { background: #ffffff; }
+.step-rows.has-menu { padding-bottom: 190px; }

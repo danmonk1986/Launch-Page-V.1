@@ -1,4 +1,4 @@
-import { useState, useId, useRef } from 'react';
+import { useEffect, useState, useId, useRef } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import {
   describeSchedule,
@@ -35,6 +35,9 @@ type Props = {
   handled: Record<string, HandledHow | true>;
   today: Date;
   onFinish: (l: Launch, how: 'done' | 'skipped') => void;
+  /** Opens Add timed launch filled in (from a routine step). */
+  preset?: { title: string; atTime: string; n: number } | null;
+  onPresetUsed?: () => void;
 };
 
 /** What fits on one line of a fixed-width tile. */
@@ -77,6 +80,15 @@ export function LaunchersPanel(p: Props) {
   const [tileOpen, setTileOpen] = useState(false);
   const [timed, setTimed] = useState<Launch | null>(null);
   const [timedOpen, setTimedOpen] = useState(false);
+  const [fill, setFill] = useState<{ title: string; atTime: string } | null>(null);
+  useEffect(() => {
+    if (!p.preset) return;
+    setTimed(null);
+    setFill({ title: p.preset.title, atTime: p.preset.atTime });
+    setTimedOpen(true);
+    p.onPresetUsed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.preset]);
   const [launched, setLaunched] = useState<{ count: number; blocked: number } | null>(null);
   const [showAllTimed, setShowAllTimed] = useState(false);
   const [view, setView] = useState<TimedView>('active');
@@ -252,6 +264,7 @@ export function LaunchersPanel(p: Props) {
             title="Add timed launch"
             onClick={() => {
               setTimed(null);
+              setFill(null);
               setTimedOpen(true);
             }}
           >
@@ -377,9 +390,18 @@ export function LaunchersPanel(p: Props) {
         />
       </Sheet>
 
-      <Sheet open={timedOpen} title={timed ? `Edit ${timed.title}` : 'Add timed launch'} onClose={() => setTimedOpen(false)} wide>
+      <Sheet
+        open={timedOpen}
+        title={timed ? `Edit ${timed.title}` : 'Add timed launch'}
+        onClose={() => {
+          setTimedOpen(false);
+          setFill(null);
+        }}
+        wide
+      >
         <TimedForm
           launch={timed}
+          fill={timed ? null : fill}
           launchers={p.launchers}
           nextSort={p.launches.length}
           onCancel={() => setTimedOpen(false)}
@@ -519,12 +541,14 @@ function TileForm({
 
 function TimedForm({
   launch,
+  fill,
   launchers,
   nextSort,
   onSave,
   onDelete
 }: {
   launch: Launch | null;
+  fill?: { title: string; atTime: string } | null;
   launchers: Launcher[];
   nextSort: number;
   onCancel?: () => void;
@@ -535,8 +559,8 @@ function TimedForm({
     () =>
       launch ?? {
         id: crypto.randomUUID(),
-        title: '',
-        atTime: '10:00',
+        title: fill?.title ?? '',
+        atTime: fill?.atTime ?? '10:00',
         repeat: 'weekly',
         weekdays: [1, 2, 3, 4, 5],
         monthDay: 1,

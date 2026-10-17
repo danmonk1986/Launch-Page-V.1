@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 export type Kind = 'routine' | 'ritual';
 export type Shift = 'days' | 'nights';
 
-/** A step. A timed step starts a block; untimed steps after it belong to that block. */
+/** A step. The time is optional; untimed steps show as their own rows too. */
 export interface RoutineItem {
   time: string | null; // "HH:MM", 24-hour, as written for Days
   label: string;
@@ -136,19 +136,18 @@ export interface Block {
   steps: string[];
 }
 
+/** Every step is its own row, with or without a time (Oct 16: grouping under the step above retired). */
 export function toBlocks(r: Routine, shift: Shift): Block[] {
-  const blocks: Block[] = [];
-  for (const it of r.items) {
-    if (!it.label.trim()) continue;
-    if (it.time || blocks.length === 0) {
+  return r.items
+    .filter((it) => it.label.trim())
+    .map((it) => {
       const minutes = it.time ? shiftMinutes(it.time, shift, r.flips) : null;
-      blocks.push({ minutes, time: minutes === null ? null : formatMinutes(minutes), label: it.label, steps: [] });
-    } else {
-      blocks[blocks.length - 1].steps.push(it.label);
-    }
-  }
-  return blocks;
+      return { minutes, time: minutes === null ? null : formatMinutes(minutes), label: it.label, steps: [] };
+    });
 }
+
+/** Rituals move to 26 Days; the picker and the Launch Page only show routines. */
+export const routinesOnly = (list: Routine[]) => list.filter((r) => r.kind !== 'ritual');
 
 /**
  * The block happening now. Routine order is kept, so a Nights routine that runs past

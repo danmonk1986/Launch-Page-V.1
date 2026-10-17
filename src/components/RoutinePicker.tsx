@@ -64,7 +64,7 @@ export function RoutinePicker({ routines, activeId, shift, onPick, onAdd, onEdit
         </button>
       </div>
       {open && (
-        <div className="picker-menu" role="menu" aria-label="Routines and rituals">
+        <div className="picker-menu" role="menu" aria-label="Routines">
           {choices.map(({ r, s }) => {
             const on = active?.id === r.id && (!r.flips || s === shift);
             return (
@@ -80,7 +80,6 @@ export function RoutinePicker({ routines, activeId, shift, onPick, onAdd, onEdit
                 }}
               >
                 <span>{routineLabel(r, s)}</span>
-                <span className="picker-kind">{r.kind === 'ritual' ? 'Ritual' : 'Routine'}</span>
               </button>
             );
           })}
@@ -107,8 +106,8 @@ export function RoutinePicker({ routines, activeId, shift, onPick, onAdd, onEdit
               type="button"
               role="menuitem"
               className="icon-btn tool-btn"
-              aria-label="Add routine or ritual"
-              title="Add routine or ritual"
+              aria-label="Add a routine"
+              title="Add a routine"
               onClick={() => {
                 onAdd();
                 setOpen(false);

@@ -8,6 +8,7 @@ import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
+import { addNonNeg, readNonNegs } from './lib/nonneg';
 import { TodayPanel, useNow } from './components/TodayPanel';
 import { BLOCKED_HELP, LaunchersPanel } from './components/Launchers';
 import { LaunchReminder, TimeUpReminder } from './components/LaunchReminder';
@@ -42,7 +43,9 @@ import {
   loadActive,
   loadRoutines,
   routineLabel,
+  routinesOnly,
   saveActive,
+  shiftMinutes,
   saveRoutine,
   type Routine,
   type Shift
@@ -157,7 +160,11 @@ export default function App() {
     };
   }, [userId, session]);
 
-  const activeRoutine = routines.find((r) => r.id === activeId) ?? routines[0] ?? null;
+  // Rituals are kept for 26 Days but no longer picked or shown on the Launch Page.
+  const shownRoutines = routinesOnly(routines);
+  const activeRoutine = shownRoutines.find((r) => r.id === activeId) ?? shownRoutines[0] ?? null;
+  // "+ Timed launch" from a routine step: opens Add timed launch on the Launch Page, filled in.
+  const [timedPreset, setTimedPreset] = useState<{ title: string; atTime: string; n: number } | null>(null);
 
   function pickRoutine(id: string, s: Shift) {
     setActiveId(id);
@@ -435,7 +442,7 @@ export default function App() {
               ]}
             />
             <RoutinePicker
-              routines={routines}
+              routines={shownRoutines}
               activeId={activeRoutine?.id ?? null}
               shift={shift}
               onPick={pickRoutine}
@@ -471,6 +478,8 @@ export default function App() {
                   handled={handled}
                   today={now}
                   onFinish={finishLaunch}
+                  preset={timedPreset}
+                  onPresetUsed={() => setTimedPreset(null)}
                 />
               }
               week={
@@ -574,6 +583,21 @@ export default function App() {
         onClose={() => setEditor({ open: false, routine: null })}
         onSave={handleSaveRoutine}
         onDelete={handleDeleteRoutine}
+        baseline={() => readNonNegs().map((n) => n.label)}
+        onTimed={(title, time) => {
+          const r = editor.routine;
+          const at = time
+            ? (() => {
+                const m = shiftMinutes(time, shift, !!r?.flips);
+                return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+              })()
+            : '09:00';
+          setPage('launch');
+          setTimedPreset({ title, atTime: at, n: Date.now() });
+        }}
+        onNonNeg={(label) => {
+          addNonNeg(label);
+        }}
       />
       <SettingsPanel
         open={settingsOpen}
