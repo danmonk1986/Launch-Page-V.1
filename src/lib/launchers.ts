@@ -270,10 +270,47 @@ function ordinal(n: number) {
 
 // ---------- Opening tabs ----------
 
+/**
+ * Desktop and phone apps that open from a link. The browser asks "Open this app?" the
+ * first time; tick "Always allow" and it opens straight away after that.
+ */
+export const APP_LINKS: { name: string; url: string }[] = [
+  { name: 'Claude', url: 'claude://' },
+  { name: 'Slack', url: 'slack://open' },
+  { name: 'Spotify', url: 'spotify:' },
+  { name: 'Notion', url: 'notion://' },
+  { name: 'Figma', url: 'figma://' },
+  { name: 'Zoom', url: 'zoommtg://' },
+  { name: 'Teams', url: 'msteams:' },
+  { name: 'Discord', url: 'discord://' },
+  { name: 'VS Code', url: 'vscode://' },
+  { name: 'Obsidian', url: 'obsidian://open' }
+];
+
+const UNSAFE_SCHEMES = /^(javascript|data|vbscript|file|blob|about):/i;
+
+/** An app link like claude:// or spotify: (anything with a scheme that isn't a web page). */
+export function isAppLink(raw: string) {
+  const u = raw.trim();
+  return /^[a-z][a-z0-9+.-]*:/i.test(u) && !/^https?:/i.test(u) && !UNSAFE_SCHEMES.test(u) && !/^[^:]+:\d/.test(u);
+}
+
 export function normalizeUrl(raw: string) {
   const u = raw.trim();
-  if (!u) return '';
+  if (!u || UNSAFE_SCHEMES.test(u)) return '';
+  if (isAppLink(u)) return u;
   return /^https?:\/\//i.test(u) ? u : `https://${u}`;
+}
+
+/** Hands an app link to the computer without opening an empty tab. */
+function openApp(url: string) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 /**
@@ -285,6 +322,10 @@ export function openTabs(urls: string[]) {
   for (const raw of urls) {
     const url = normalizeUrl(raw);
     if (!url) continue;
+    if (isAppLink(url)) {
+      openApp(url);
+      continue;
+    }
     const w = window.open(url, '_blank');
     if (w) w.opener = null;
     else blocked += 1;

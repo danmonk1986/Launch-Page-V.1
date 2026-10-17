@@ -357,7 +357,7 @@ export default function App() {
     // Opening the tabs is not finishing: it stays open until checked off.
     setHandled(markHandled(l.id, new Date(), 'launched'));
     setReminder(null);
-    setStatus(blocked ? BLOCKED_HELP : `Launched ${l.title}: ${l.urls.length} tabs.`);
+    setStatus(blocked ? BLOCKED_HELP : `Launched ${l.title}.`);
   }
 
   async function handleDeleteRoutine(id: string) {

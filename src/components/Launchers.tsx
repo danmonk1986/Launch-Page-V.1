@@ -8,6 +8,8 @@ import {
   orderLaunches,
   type HandledHow,
   normalizeUrl,
+  APP_LINKS,
+  isAppLink,
   openTabs,
   type Launch,
   type Launcher,
@@ -278,7 +280,7 @@ export function LaunchersPanel(p: Props) {
                     <span className="timed-time">{formatMinutes(toMinutes(l.atTime))}</span>
                     <span className="timed-name">{l.title}</span>
                     <span className="timed-meta">
-                      {describeSchedule(l)} · {l.minutes} min · {l.urls.length} {l.urls.length === 1 ? 'tab' : 'tabs'}
+                      {describeSchedule(l)} · {l.minutes} min · {describeOpens(l.urls)}
                       {l.sound && ' · 🔊'}
                       {l.notify && ' · 🔔'}
                       {!l.active && ' · off'}
@@ -563,7 +565,9 @@ function TimedForm({
       }
   );
   const [extra, setExtra] = useState(() =>
-    (launch?.urls ?? []).filter((u) => !launchers.some((l) => l.url && l.url === u)).join('\n')
+    (launch?.urls ?? [])
+      .filter((u) => !launchers.some((l) => l.url && l.url === u) && !APP_LINKS.some((a) => a.url === u))
+      .join('\n')
   );
   const set = <K extends keyof Launch>(k: K, v: Launch[K]) => setD((x) => ({ ...x, [k]: v }));
   const [notifyBlocked, setNotifyBlocked] = useState(false);
@@ -579,7 +583,7 @@ function TimedForm({
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.title.trim()) return;
-        const tileUrls = d.urls.filter((u) => launchers.some((l) => l.url === u));
+        const tileUrls = d.urls.filter((u) => launchers.some((l) => l.url === u) || APP_LINKS.some((a) => a.url === u));
         const extras = extra
           .split(/\s+/)
           .map((u) => u.trim())
@@ -706,8 +710,20 @@ function TimedForm({
             ))}
         </div>
       </fieldset>
+      <fieldset className="field">
+        <legend>Apps to open</legend>
+        <div className="tab-picks">
+          {APP_LINKS.map((a) => (
+            <label key={a.url} className="choice">
+              <input type="checkbox" checked={picked.has(a.url)} onChange={() => toggleUrl(a.url)} />
+              <span>{a.name}</span>
+            </label>
+          ))}
+        </div>
+        <p className="field-hint">The first time, your browser asks to open the app. Tick “Always allow” and it opens straight away after that. Other apps: paste their link (like <code>todoist://</code>) below.</p>
+      </fieldset>
       <label className="field">
-        <span>Other links, one per line</span>
+        <span>Other links or app links, one per line</span>
         <textarea
           rows={3}
           value={extra}
@@ -731,4 +747,14 @@ function TimedForm({
       <FormActions formId={formId} saveDisabled={!d.title.trim()} onDelete={launch ? () => onDelete(launch.id) : undefined} deleteLabel={launch?.title} />
     </form>
   );
+}
+
+/** "2 tabs + Claude" */
+function describeOpens(urls: string[]) {
+  const apps = urls.filter(isAppLink).map((u) => APP_LINKS.find((a) => a.url === u)?.name ?? 'app');
+  const tabs = urls.length - apps.length;
+  const parts: string[] = [];
+  if (tabs || !apps.length) parts.push(`${tabs} ${tabs === 1 ? 'tab' : 'tabs'}`);
+  if (apps.length) parts.push(apps.join(', '));
+  return parts.join(' + ');
 }
