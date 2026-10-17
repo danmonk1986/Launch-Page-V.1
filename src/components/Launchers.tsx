@@ -48,6 +48,8 @@ type Props = {
   /** Runs of each launch: today's +10 minutes show on the row. */
   log?: LaunchLog[];
   onPresetUsed?: () => void;
+  /** Rituals a timed launch can open (26 Days). */
+  rituals?: { id: string; name: string }[];
 };
 
 /** What fits on one line of a fixed-width tile. */
@@ -325,7 +327,7 @@ export function LaunchersPanel(p: Props) {
                         className="quick-btn quick-launch"
                         aria-label={`Launch ${l.title} now`}
                         title="Launch now"
-                        disabled={!l.urls.length}
+                        disabled={!l.urls.length && !l.ritualId}
                         onClick={() => p.onLaunchNow(l)}
                       >
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -433,6 +435,7 @@ export function LaunchersPanel(p: Props) {
           today={p.today}
           fill={timed ? null : fill?.fill ?? null}
           launchers={p.launchers}
+          rituals={p.rituals ?? []}
           nextSort={p.launches.length}
           onCancel={() => setTimedOpen(false)}
           onSave={async (l) => {
@@ -575,6 +578,7 @@ function TimedForm({
   today,
   fill,
   launchers,
+  rituals,
   nextSort,
   onSave,
   onDelete
@@ -583,6 +587,7 @@ function TimedForm({
   today: Date;
   fill?: Partial<Launch> | null;
   launchers: Launcher[];
+  rituals: { id: string; name: string }[];
   nextSort: number;
   onCancel?: () => void;
   onSave: (l: Launch) => Promise<void>;
@@ -680,6 +685,25 @@ function TimedForm({
         <span>What</span>
         <input required value={d.title} onChange={(e) => set('title', e.target.value)} placeholder="Pay bills" />
       </label>
+      {rituals.length > 0 && (
+        <label className="field">
+          <span>Ritual · LAUNCH opens it to work through</span>
+          <select
+            value={d.ritualId ?? ''}
+            onChange={(e) => {
+              const id = e.target.value || null;
+              setD((x) => ({ ...x, ritualId: id, title: x.title.trim() ? x.title : rituals.find((r) => r.id === id)?.name ?? '' }));
+            }}
+          >
+            <option value="">None</option>
+            {rituals.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <div className="time-grid">
         <label className="field">

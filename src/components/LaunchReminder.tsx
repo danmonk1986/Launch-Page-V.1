@@ -17,9 +17,11 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip }: Props) {
         <div className="reminder">
           <p className="reminder-time">{formatMinutes(toMinutes(timeFor(launch, new Date())))} · Launch time</p>
           <p className="panel-empty">
-            {launch.urls.length
-              ? `Opens ${describeOpens(launch.urls)}. Time allotted: ${launch.minutes} minutes.`
-              : 'Nothing to open yet. Edit this timed launch to add tabs or apps.'}
+            {launch.ritualId
+              ? `Opens your ritual${launch.urls.length ? ` and ${describeOpens(launch.urls)}` : ''}. Time allotted: ${launch.minutes} minutes.`
+              : launch.urls.length
+                ? `Opens ${describeOpens(launch.urls)}. Time allotted: ${launch.minutes} minutes.`
+                : 'Nothing to open yet. Edit this timed launch to add tabs or apps.'}
           </p>
           <div className="reminder-actions">
             <button type="button" className="btn btn-quiet" title="Skip today: back tomorrow, same time" onClick={() => onSkip(launch)}>
@@ -28,7 +30,7 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip }: Props) {
             <button type="button" className="btn btn-quiet" title="Snooze 10 minutes" onClick={() => onSnooze(launch)}>
               Snooze
             </button>
-            <button type="button" className="btn" disabled={!launch.urls.length} title={`Open ${describeOpens(launch.urls)}`} onClick={() => onLaunch(launch)}>
+            <button type="button" className="btn" disabled={!launch.urls.length && !launch.ritualId} title={launch.ritualId ? 'Open the ritual' : `Open ${describeOpens(launch.urls)}`} onClick={() => onLaunch(launch)}>
               Launch
             </button>
           </div>

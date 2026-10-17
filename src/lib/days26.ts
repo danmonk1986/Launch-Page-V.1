@@ -473,3 +473,32 @@ export function shuffleFrom(list: Quote[], current: string | null) {
   if (!others.length) return current;
   return others[Math.floor(Math.random() * others.length)].id;
 }
+
+// ---------- Rituals ----------
+
+/** A ritual step's tick for today lives in the day record as "r:<ritual>:<step>". */
+export const ritualKey = (ritualId: string, i: number) => `r:${ritualId}:${i}`;
+
+/** The Non-Negotiable a ritual stands for: same name, or a name that contains it ("Rise to Shine Ritual"). */
+export function nonNegForRitual(list: NonNeg[], r: { id: string; name: string }) {
+  const name = r.name.trim().toLowerCase();
+  if (!name) return null;
+  return activeNonNegs(list).find((n) => !n.log && (n.label.trim().toLowerCase() === name || n.label.toLowerCase().includes(name))) ?? null;
+}
+
+/** The ritual shown on the Rituals card, per device. */
+const RITUAL_KEY = 'launchpage.d26.ritualShown';
+export function readShownRitual(): string | null {
+  try {
+    return localStorage.getItem(RITUAL_KEY);
+  } catch {
+    return null;
+  }
+}
+export function writeShownRitual(id: string) {
+  try {
+    localStorage.setItem(RITUAL_KEY, id);
+  } catch {
+    /* ignore */
+  }
+}

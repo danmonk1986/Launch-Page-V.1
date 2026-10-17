@@ -20,7 +20,9 @@ import {
   flipsNow,
   logStore,
   modeOf,
+  nonNegForRitual,
   nonNegStore,
+  ritualKey,
   quoteStore,
   routineDay,
   snapshot,
@@ -39,8 +41,10 @@ import { WeekCalendar } from './components/WeekCalendar';
 import { TasksPage, TasksPanel } from './components/Tasks';
 import { ProjectsSheet } from './components/Projects';
 import { matchCalendar, projectStore, type Project } from './lib/projects';
-import { buildJournalImport, byNewest, journalStore, newEntry, type JournalEntry } from './lib/journal';
+import { buildJournalImport, byNewest, checkinsOf, journalStore, newEntry, withCheckins, type JournalEntry } from './lib/journal';
 import { JournalPanel } from './components/Journal';
+import { Sheet } from './components/Sheet';
+import { RitualRunner } from './components/Rituals';
 import { buildImport, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
 import { addTaskToGoogle, googleConfigured, knownCalendars, wasConnected } from './lib/google';
 import {
@@ -400,6 +404,33 @@ export default function App() {
     setStatus('Daily goal saved. It’s today’s journal theme too.');
   }
 
+  /** Ticks (or unticks) something for today: a Non-Negotiable or a ritual step. */
+  function tickToday(key: string, on?: boolean) {
+    const cur = daysRef.current.find((d) => d.day === d26Today) ?? { id: dayId(d26Today), day: d26Today, mode: d26Mode, shift: d26Shift, ticks: [], items: snapshot(nonnegs), sort: 0 };
+    const has = cur.ticks.includes(key);
+    const want = on ?? !has;
+    if (want === has) return;
+    saveDay({ ...cur, ticks: want ? [...cur.ticks, key] : cur.ticks.filter((x) => x !== key) });
+  }
+  const isTickedToday = (key: string) => !!d26Days.find((d) => d.day === d26Today)?.ticks.includes(key);
+
+  /** A ritual's check-in step writes today's journal check-in #n (the Journal shows the same text). */
+  const checkinText = (n: number) => {
+    const e = journal.find((x) => x.date === journalDay);
+    return e ? checkinsOf(e)[n - 1]?.text ?? '' : '';
+  };
+  function setCheckin(n: number, text: string) {
+    const cur = journalRef.current.find((e) => e.date === journalDay) ?? newEntry(journalDay, lastTheme);
+    const list = [...checkinsOf(cur)];
+    while (list.length < n) list.push({ at: new Date().toISOString(), text: '' });
+    list[n - 1] = { at: list[n - 1].at ?? new Date().toISOString(), text };
+    saveJournal(withCheckins(cur, list));
+  }
+
+  // A timed launch with a ritual opens it here, over any page.
+  const [ritualPop, setRitualPop] = useState<{ ritualId: string; launch: Launch | null } | null>(null);
+  const popRitual = ritualPop ? routines.find((r) => r.id === ritualPop.ritualId) ?? null : null;
+
   // Link areas to Google calendars with the same name, once, the first time Google's list is seen.
   useEffect(() => {
     if (!projects.length) return;
@@ -549,6 +580,8 @@ export default function App() {
    * same launch off again updates it instead of adding a second one.
    */
   async function logLaunchBlocks(l: Launch): Promise<number> {
+    // A ritual isn't a work block.
+    if (l.ritualId) return 0;
     const run = logFor(logRef.current, l, new Date());
     const allowed = (run.planned || l.minutes) + run.extra;
     const spent = run.launchedAt ? (Date.now() - new Date(run.launchedAt).getTime()) / 60_000 : allowed;
@@ -570,7 +603,9 @@ export default function App() {
   }
 
   function launchNow(l: Launch) {
-    const blocked = openTabs(l.urls);
+    const ritual = l.ritualId ? routines.find((r) => r.id === l.ritualId && r.kind === 'ritual') : null;
+    if (ritual) setRitualPop({ ritualId: ritual.id, launch: l });
+    const blocked = l.urls.length ? openTabs(l.urls) : false;
     // Opening the tabs is not finishing: it stays open until checked off.
     setHandled(markHandled(l.id, new Date(), 'launched'));
     logLaunch(l, (g) => ({ outcome: 'launched', launchedAt: g.launchedAt ?? new Date().toISOString(), planned: l.minutes }));
@@ -698,6 +733,7 @@ export default function App() {
             <LaunchPageHome
               launchers={
                 <LaunchersPanel
+                  rituals={routines.filter((r) => r.kind === 'ritual').map((r) => ({ id: r.id, name: r.name }))}
                   routineName={activeRoutine ? routineLabel(activeRoutine, shift) : null}
                   launchers={launchersFor(launchers, activeRoutine?.id ?? null)}
                   routineId={activeRoutine?.id ?? null}
@@ -799,6 +835,9 @@ export default function App() {
               onSaveConfig={saveD26Config}
               onSaveRitual={saveRitual}
               onDeleteRitual={handleDeleteRoutine}
+              onTick={tickToday}
+              checkinText={checkinText}
+              onCheckin={setCheckin}
             />
           ) : (
             <ComingSoon page={page} />
@@ -819,6 +858,31 @@ export default function App() {
           </p>
         </footer>
       </div>
+      <Sheet open={!!popRitual} title={popRitual?.name ?? 'Ritual'} wide onClose={() => setRitualPop(null)}>
+        {popRitual && (
+          <RitualRunner
+            ritual={popRitual}
+            isTicked={(i) => isTickedToday(ritualKey(popRitual.id, i))}
+            onTick={(i, on) => tickToday(ritualKey(popRitual.id, i), on)}
+            onSaveRitual={(r) => void saveRitual(r)}
+            checkinText={checkinText}
+            onCheckin={setCheckin}
+            linked={nonNegForRitual(nonnegs, popRitual)}
+            linkedDone={(() => {
+              const n = nonNegForRitual(nonnegs, popRitual);
+              return !!n && isTickedToday(n.id);
+            })()}
+            onDone={() => {
+              const n = nonNegForRitual(nonnegs, popRitual);
+              if (n) tickToday(n.id, true);
+              const l = ritualPop?.launch;
+              setRitualPop(null);
+              if (l) void finishLaunch(l, 'done');
+              else setStatus(`${popRitual.name} done.`);
+            }}
+          />
+        )}
+      </Sheet>
       <LaunchReminder
         launch={reminder}
         onLaunch={launchNow}

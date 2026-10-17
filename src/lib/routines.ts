@@ -7,6 +7,14 @@ export type Shift = 'days' | 'nights';
 export interface RoutineItem {
   time: string | null; // "HH:MM", 24-hour, as written for Days
   label: string;
+  /** Ritual steps only. step = tick it; meditation = plays its script; checkin = a journal check-in. */
+  type?: 'step' | 'meditation' | 'checkin';
+  /** Tapping the step's name opens this (a site or an app link). */
+  url?: string;
+  /** Meditation: the words that play up the screen. */
+  script?: string;
+  /** Check-in: which of today's journal check-ins (1 = ✓ Check in #1). */
+  checkin?: number;
 }
 
 export interface Routine {

@@ -1,6 +1,7 @@
-import { useEffect, useId, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
+import { RitualForm, RitualPicker, RitualRunner } from './Rituals';
 import type { Routine, Shift } from '../lib/routines';
 import {
   H2O_SIZES,
@@ -12,8 +13,6 @@ import {
   checkInTime,
   currentRun,
   currentSection,
-  dayId,
-  effShift,
   finished,
   flipsNow,
   isDone,
@@ -21,6 +20,9 @@ import {
   loggedFor,
   logsOn,
   modeOf,
+  nonNegForRitual,
+  readShownRitual,
+  ritualKey,
   modeRow,
   readShownQuote,
   resetMinutes,
@@ -33,6 +35,7 @@ import {
   total,
   viceLimit,
   writeShownQuote,
+  writeShownRitual,
   type Config,
   type DayRecord,
   type LogEntry,
@@ -106,6 +109,11 @@ type Props = {
   onSaveConfig: (c: Config) => void;
   onSaveRitual: (r: Routine) => void;
   onDeleteRitual: (id: string) => void;
+  /** Ticks something for today: a Non-Negotiable's id or a ritual step's key. */
+  onTick: (key: string, on?: boolean) => void;
+  /** Today's journal check-ins, for a ritual's check-in step. */
+  checkinText: (n: number) => string;
+  onCheckin: (n: number, text: string) => void;
 };
 
 /** 26 Days: quote + daily goal, Non-Negotiables, Rituals, Logging, Summary. */
@@ -118,18 +126,16 @@ export function Days26Page(p: Props) {
   const rec = records.find((r) => r.day === today) ?? null;
   const items = activeNonNegs(nonnegs);
   const [log, setLog] = useState<{ entry: LogEntry; isNew: boolean } | null>(null);
-  const [ritual, setRitual] = useState<{ r: Routine; edit: boolean } | null>(null);
-  const [editList, setEditList] = useState(false);
-
-  const baseRecord = (): DayRecord =>
-    rec ?? { id: dayId(today), day: today, mode, shift: effShift(mode, shift), ticks: [], items: snapshot(nonnegs), sort: 0 };
-  const toggle = (id: string, on?: boolean) => {
-    const r = baseRecord();
-    const has = r.ticks.includes(id);
-    const want = on ?? !has;
-    if (want === has) return;
-    p.onSaveDay({ ...r, ticks: want ? [...r.ticks, id] : r.ticks.filter((x) => x !== id) });
+  const [ritualEdit, setRitualEdit] = useState<{ r: Routine; isNew: boolean } | null>(null);
+  const [shownRitual, setShownRitual] = useState<string | null>(readShownRitual);
+  const activeRitual = p.rituals.find((r) => r.id === shownRitual) ?? p.rituals[0] ?? null;
+  const ritualCard = useRef<HTMLElement>(null);
+  const showRitual = (id: string) => {
+    setShownRitual(id);
+    writeShownRitual(id);
   };
+  const [editList, setEditList] = useState(false);
+  const toggle = (id: string, on?: boolean) => p.onTick(id, on);
 
   const newLog = (kind: LogKind, fill?: Partial<LogEntry>): LogEntry => {
     const d = {
@@ -146,7 +152,6 @@ export function Days26Page(p: Props) {
     const l = label.trim().toLowerCase();
     return p.rituals.find((r) => r.name.trim() && (l === r.name.trim().toLowerCase() || l.includes(r.name.trim().toLowerCase()))) ?? null;
   };
-  const nonNegFor = (r: Routine) => items.find((n) => !n.log && ritualFor(n.label)?.id === r.id) ?? null;
 
   return (
     <div className="d26">
@@ -171,42 +176,54 @@ export function Days26Page(p: Props) {
         onToggle={(n) => toggle(n.id)}
         onLog={(n) => setLog({ entry: newLog(n.log!), isNew: true })}
         ritualFor={ritualFor}
-        onOpenRitual={(r) => setRitual({ r, edit: false })}
+        onOpenRitual={(r) => {
+          showRitual(r.id);
+          ritualCard.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }}
         onEdit={() => setEditList(true)}
       />
 
-      <section className="panel d26-rituals" aria-labelledby="h-rituals">
+      <section ref={ritualCard} className="panel d26-rituals" aria-labelledby="h-rituals">
         <div className="panel-head">
           <h2 id="h-rituals" className="panel-title">
             Rituals
           </h2>
           <div className="panel-actions">
-            <button
-              type="button"
-              className="icon-btn tool-btn"
-              aria-label="Add a ritual"
-              title="Add a ritual"
-              onClick={() =>
-                setRitual({
+            <RitualPicker
+              rituals={p.rituals}
+              activeId={activeRitual?.id ?? null}
+              onPick={showRitual}
+              onEdit={() => activeRitual && setRitualEdit({ r: activeRitual, isNew: false })}
+              onAdd={() =>
+                setRitualEdit({
                   r: { id: crypto.randomUUID(), name: '', kind: 'ritual', flips: false, shiftStart: null, shiftEnd: null, wake: null, bed: null, items: [], sort: 100 + p.rituals.length },
-                  edit: true
+                  isNew: true
                 })
               }
-            >
-              <Icon d={PLUS} />
-            </button>
+            />
           </div>
         </div>
-        {p.rituals.length ? (
-          <div className="d26-ritual-row">
-            {p.rituals.map((r) => (
-              <button key={r.id} type="button" className="d26-ritual-btn" onClick={() => setRitual({ r, edit: false })}>
-                {r.name || 'Untitled'}
-              </button>
-            ))}
-          </div>
+        {activeRitual ? (
+          <RitualRunner
+            key={activeRitual.id}
+            ritual={activeRitual}
+            isTicked={(i) => !!rec?.ticks.includes(ritualKey(activeRitual.id, i))}
+            onTick={(i, on) => toggle(ritualKey(activeRitual.id, i), on)}
+            onSaveRitual={p.onSaveRitual}
+            checkinText={p.checkinText}
+            onCheckin={p.onCheckin}
+            linked={nonNegForRitual(nonnegs, activeRitual)}
+            linkedDone={(() => {
+              const n = nonNegForRitual(nonnegs, activeRitual);
+              return !!n && !!rec?.ticks.includes(n.id);
+            })()}
+            onDone={() => {
+              const n = nonNegForRitual(nonnegs, activeRitual);
+              if (n) toggle(n.id, true);
+            }}
+          />
         ) : (
-          <p className="panel-empty">No rituals yet. A ritual has steps but no set time: Rise to Shine, Gratitude, Recover. Add one with +, then tap it to run through it.</p>
+          <p className="panel-empty">No rituals yet. A ritual has steps but no set time: Rise to Shine, Gratitude, Recover. Add one from the menu at the top right.</p>
         )}
       </section>
 
@@ -257,37 +274,22 @@ export function Days26Page(p: Props) {
         )}
       </Sheet>
 
-      <Sheet open={!!ritual} title={ritual ? (ritual.edit ? (p.rituals.some((x) => x.id === ritual.r.id) ? 'Edit ritual' : 'Add ritual') : ritual.r.name) : 'Ritual'} onClose={() => setRitual(null)}>
-        {ritual &&
-          (ritual.edit ? (
-            <RitualForm
-              ritual={ritual.r}
-              isNew={!p.rituals.some((x) => x.id === ritual.r.id)}
-              onSave={(r) => {
-                p.onSaveRitual(r);
-                setRitual({ r, edit: false });
-              }}
-              onDelete={() => {
-                p.onDeleteRitual(ritual.r.id);
-                setRitual(null);
-              }}
-            />
-          ) : (
-            <RitualRun
-              ritual={ritual.r}
-              linked={nonNegFor(ritual.r)}
-              linkedDone={(() => {
-                const n = nonNegFor(ritual.r);
-                return !!n && !!rec?.ticks.includes(n.id);
-              })()}
-              onEdit={() => setRitual({ r: ritual.r, edit: true })}
-              onDone={() => {
-                const n = nonNegFor(ritual.r);
-                if (n) toggle(n.id, true);
-                setRitual(null);
-              }}
-            />
-          ))}
+      <Sheet open={!!ritualEdit} title={ritualEdit?.isNew ? 'Add ritual' : 'Edit ritual'} wide onClose={() => setRitualEdit(null)}>
+        {ritualEdit && (
+          <RitualForm
+            ritual={ritualEdit.r}
+            isNew={ritualEdit.isNew}
+            onSave={(r) => {
+              p.onSaveRitual(r);
+              showRitual(r.id);
+              setRitualEdit(null);
+            }}
+            onDelete={() => {
+              p.onDeleteRitual(ritualEdit.r.id);
+              setRitualEdit(null);
+            }}
+          />
+        )}
       </Sheet>
 
       <Sheet open={editList} title="Non-Negotiables" wide onClose={() => setEditList(false)}>
@@ -715,74 +717,6 @@ function NonNegEditor({ list, config, onSave }: { list: NonNeg[]; config: Config
         </label>
       </fieldset>
       <FormActions formId={formId} />
-    </form>
-  );
-}
-
-// ---------- Rituals ----------
-
-function RitualRun({ ritual, linked, linkedDone, onEdit, onDone }: { ritual: Routine; linked: NonNeg | null; linkedDone: boolean; onEdit: () => void; onDone: () => void }) {
-  const steps = ritual.items.map((s) => s.label).filter((s) => s.trim());
-  const [ticked, setTicked] = useState<number[]>([]);
-  return (
-    <div className="d26-ritual-run">
-      <div className="sheet-actions d26-ritual-tools">
-        <button type="button" className="icon-btn tool-btn" aria-label="Edit this ritual" title="Edit this ritual" onClick={onEdit}>
-          <Icon d={PEN} />
-        </button>
-      </div>
-      {steps.length ? (
-        <ul className="d26-list">
-          {steps.map((s, i) => {
-            const ok = ticked.includes(i);
-            return (
-              <li key={i} className={`d26-item${ok ? ' is-done' : ''}`}>
-                <button type="button" role="checkbox" aria-checked={ok} className="d26-check" aria-label={s} onClick={() => setTicked((t) => (ok ? t.filter((x) => x !== i) : [...t, i]))}>
-                  {ok && <Icon d={CHECK} size={14} />}
-                </button>
-                <span className="d26-item-label">{s}</span>
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <p className="panel-empty">No steps yet. Tap the pencil to add them.</p>
-      )}
-      <button type="button" className="btn d26-ritual-done" onClick={onDone}>
-        {linked ? (linkedDone ? `Done · ${linked.label} is ticked` : `Done · tick ${linked.label}`) : 'Done'}
-      </button>
-    </div>
-  );
-}
-
-function RitualForm({ ritual, isNew, onSave, onDelete }: { ritual: Routine; isNew: boolean; onSave: (r: Routine) => void; onDelete: () => void }) {
-  const [name, setName] = useState(ritual.name);
-  const [steps, setSteps] = useState(ritual.items.map((s) => s.label).join('\n'));
-  const formId = useId();
-  return (
-    <form
-      id={formId}
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!name.trim()) return;
-        const items = steps
-          .split('\n')
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .map((label) => ({ time: null, label }));
-        onSave({ ...ritual, kind: 'ritual', name: name.trim(), items });
-      }}
-    >
-      <label className="field">
-        <span>Name</span>
-        <input value={name} autoFocus onChange={(e) => setName(e.target.value)} placeholder="Rise to Shine" />
-      </label>
-      <label className="field">
-        <span>Steps, one per line</span>
-        <textarea value={steps} rows={7} onChange={(e) => setSteps(e.target.value)} placeholder={'H2O\nHeadspace ×3\nStretch'} />
-      </label>
-      <p className="field-hint">A Non-Negotiable with the same name (like “Rise to Shine Ritual”) opens this ritual, and Done ticks it.</p>
-      <FormActions formId={formId} saveDisabled={!name.trim()} onDelete={isNew ? undefined : onDelete} deleteLabel="this ritual" />
     </form>
   );
 }

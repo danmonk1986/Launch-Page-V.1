@@ -39,6 +39,8 @@ export interface Launch {
   tone?: Tone;
   /** A different time for one date only ("just this one"). */
   onceTime?: { date: string; atTime: string } | null;
+  /** LAUNCH opens this ritual to work through (26 Days). */
+  ritualId?: string | null;
   sort: number;
 }
 
@@ -187,6 +189,7 @@ type LaunchRow = {
   notify?: boolean;
   tone?: string;
   once_time?: { date: string; atTime: string } | null;
+  ritual_id?: string | null;
   sort: number;
 };
 
@@ -208,10 +211,11 @@ export const launchStore = makeStore<Launch, LaunchRow>({
   localKey: 'launchpage.launches.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0003_launchers_events.sql',
-  latestScript: 'supabase/migrations/0016_launch_once_time_and_log.sql',
-  // Before 0004/0005/0013/0016 are run: save without moved_to, sound, notify, tone and once_time.
+  latestScript: 'supabase/migrations/0019_launch_ritual.sql',
+  // Before 0004/0005/0013/0016/0019 are run: save without moved_to, sound, notify, tone, once_time and ritual_id.
   legacyRow: (r) => {
     const x = { ...r };
+    delete x.ritual_id;
     delete x.once_time;
     delete x.tone;
     delete x.moved_to;
@@ -236,6 +240,8 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     notify: l.notify,
     tone: l.tone ?? 'chime',
     once_time: l.onceTime ?? null,
+    // Only sent once the column exists (0019) or a ritual is picked, so older setups keep saving cleanly.
+    ...('ritualId' in l ? { ritual_id: l.ritualId ?? null } : {}),
     sort: l.sort
   }),
   fromRow: (r) => ({
@@ -254,6 +260,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     notify: r.notify ?? false,
     tone: isTone(r.tone) ? r.tone : 'chime',
     onceTime: r.once_time ?? null,
+    ...(r.ritual_id !== undefined ? { ritualId: r.ritual_id } : {}),
     sort: r.sort
   })
 });

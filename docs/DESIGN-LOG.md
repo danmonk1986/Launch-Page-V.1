@@ -160,3 +160,15 @@ Dan laid the DM26 Planner prototype over LaunchPage as a mockup and set the orde
 - Oct 17, 2:45 AM: log amounts (kcal, minutes, hours, steps) and the editor's targets and vice limits take any number; the browser was rejecting values like 700 kcal or a 22-minute break that didn't land on a step.
 - Oct 17, 2:55 AM: every timed launch checked off Done logs Productivity (Dan's call: all launches, time actually spent). Blocks = time from Launch to Done, capped at planned + any +10s, in quarter blocks (90 min = 1); done without launching logs the planned time; under ~11 minutes logs nothing. The log carries the launch's name as its note and shares the launch log's id, so re-checking updates instead of doubling.
 - Oct 17, 3:05 AM: × quantity now saves one line per item (2 × Bottle = two Bottle lines; Productivity stays one line in quarter blocks). Every log has a Time box, filled with now and editable; the time picked decides which routine day it lands on (an earlier time means earlier, e.g. 11 PM picked at 1 AM).
+
+## Rituals, round 2 (Oct 17, 3:20–4 AM)
+
+Dan's story: Rise to Shine as a timed launch. When busy he pushes it (Snooze / Skip); once settled at MWD, LAUNCH opens the ritual as a pop-out and he works through the steps in a row.
+
+- **Timed launch → ritual:** the timed launch form has a Ritual choice. LAUNCH (reminder or 🚀) opens the ritual over any page, plus any tabs. Done ticks the ritual's Non-Negotiable and checks the launch off. Ritual launches don't log Productivity. Needs `0019_launch_ritual.sql`.
+- **Runner:** steps sit side by side as cards (scroll sideways), numbered, ticked one at a time, ticks kept for the routine day (synced in the day record), progress "4/9 done".
+- **Step kinds:** Step (optional link: tap the name to open it, e.g. Headway), Meditation (script editable under the step; tap the name to play), Journal check-in (#n: writes today's journal ✓ Check in #n, also editable in the Journal; writing in it ticks the step). Older rituals are read by name: "Meditation"/"Meidation" and "Check In #1".
+- **Meditation crawl:** full screen, the script rolls up and away in teal, film-opening style, on synthwave (dark themes) or a snowy day (light themes). Top buttons: ✓ (check it off), pause/play, replay, ✕. Reduced motion shows it still.
+- **Rituals card:** a picker at the top right like the routine picker (every ritual, plus edit and add); the chosen ritual fills the card. A Non-Negotiable named like a ritual brings that ritual up on the card.
+- **Editor:** one row per step with its kind, link, script or check-in number; reorder and remove.
+- **Fixed:** a timed launch with a ritual and no tabs couldn't be launched (button was disabled).
