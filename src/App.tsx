@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type BrandSettings } from './lib/settings';
@@ -16,6 +16,8 @@ import { WeekCalendar } from './components/WeekCalendar';
 import { TasksPage, TasksPanel } from './components/Tasks';
 import { ProjectsSheet } from './components/Projects';
 import { matchCalendar, projectStore, type Project } from './lib/projects';
+import { journalStore, type JournalEntry } from './lib/journal';
+import { JournalPanel } from './components/Journal';
 import { buildImport, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
 import { addTaskToGoogle, googleConfigured, knownCalendars } from './lib/google';
 import {
@@ -65,6 +67,7 @@ export default function App() {
   const [launches, setLaunches] = useState<Launch[]>([]);
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [journal, setJournal] = useState<JournalEntry[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [calVersion, setCalVersion] = useState(0);
@@ -130,15 +133,16 @@ export default function App() {
       setLaunchers(tiles);
       setLaunches(l2.items);
       setEvents(l3.items);
-      const [p1, t1] = await Promise.all([projectStore.load(userId), taskStore.load(userId)]);
+      const [p1, t1, j1] = await Promise.all([projectStore.load(userId), taskStore.load(userId), journalStore.load(userId)]);
       if (!live) return;
       setProjects(p1.items);
+      setJournal(j1.items);
       // Recently deleted keeps tasks for 30 days, then they go for good.
       const expired = t1.items.filter((t) => trashExpired(t));
       const kept = t1.items.filter((t) => !trashExpired(t));
       setTasks(kept);
       for (const t of expired) await taskStore.remove(userId, t.id, kept);
-      setStoreProblem(l1.problem ?? l2.problem ?? l3.problem ?? p1.problem ?? t1.problem);
+      setStoreProblem(l1.problem ?? l2.problem ?? l3.problem ?? p1.problem ?? t1.problem ?? j1.problem);
     })();
     return () => {
       live = false;
@@ -193,6 +197,24 @@ export default function App() {
   const eventOps = ops(eventStore, events, setEvents, (e) => e.title);
   const projectOps = ops(projectStore, projects, setProjects, (p) => p.name);
   const taskOps = ops(taskStore, tasks, setTasks, (t) => t.task);
+
+  // The Journal saves itself while you type, so it saves quietly and from the newest list.
+  const journalRef = useRef(journal);
+  journalRef.current = journal;
+  function saveJournal(e: JournalEntry) {
+    const list = journalRef.current;
+    const next = list.some((x) => x.id === e.id) ? list.map((x) => (x.id === e.id ? e : x)) : [...list, e];
+    journalRef.current = next;
+    setJournal(next);
+    void journalStore.save(userId, e, next);
+  }
+  function deleteJournal(id: string) {
+    const next = journalRef.current.filter((x) => x.id !== id);
+    journalRef.current = next;
+    setJournal(next);
+    void journalStore.remove(userId, id, next);
+    setStatus('Journal entry deleted.');
+  }
 
   // Link areas to Google calendars with the same name, once, the first time Google's list is seen.
   useEffect(() => {
@@ -353,11 +375,14 @@ export default function App() {
     setStatus(synced ? 'Settings saved and synced.' : 'Settings saved on this device.');
   }
 
+  // On the light Damascus theme the neons are deepened a little so they read on white.
+  const light = settings.background === 'damascus';
+  const ink = (c: string, pct: number) => (light ? `color-mix(in srgb, ${c} ${pct}%, #2b2a2a)` : c);
   const theme = {
-    '--accent-purple': settings.accentPurple,
-    '--accent-teal': settings.accentTeal,
-    '--accent-green': settings.accentGreen,
-    '--accent-pink': settings.accentPink
+    '--accent-purple': ink(settings.accentPurple, 85),
+    '--accent-teal': ink(settings.accentTeal, 62),
+    '--accent-green': ink(settings.accentGreen, 70),
+    '--accent-pink': ink(settings.accentPink, 80)
   } as CSSProperties;
 
   if (!authReady) return <div className="app" style={theme} data-bg={settings.background} />;
@@ -375,6 +400,7 @@ export default function App() {
         <div className="sky-lines" />
         <div className="sky-horizon" />
         <div className="sky-floor" />
+        <div className="sky-damascus" />
       </div>
       <Header
         settings={settings}
@@ -463,6 +489,7 @@ export default function App() {
                   onOpenAll={() => setPage('tasks')}
                 />
               }
+              journal={<JournalPanel entries={journal} today={now} onSave={saveJournal} onDelete={deleteJournal} />}
               today={
                 <TodayPanel
                   routine={activeRoutine}

@@ -122,3 +122,9 @@ Dan's setup (10–15 min):
 1. Run `0009_task_steps.sql` and `0010_task_trash.sql` if not done.
 2. Dan's notes from testing; tie it all together (launches ↔ tasks ↔ calendar).
 3. Start the Planner.
+
+## Themes + Journal (Oct 16, evening)
+- Background options are now five: Synthwave, Night sky, Plain, **Navy** (solid #0b0820) and **Damascus (light)**.
+- Damascus: white with a grey #989696 Damascus-steel pattern drawn in code (no images), rolling slowly upward and fading out towards the top. Beige text becomes #444242; the neons are deepened slightly so they read on white. Reduced motion stops the roll.
+- Journal (L6) on the Launch Page: today's headline, theme line and an optional page, typed in place and saved automatically. Past days are listed underneath (5, then "Show all"); tap one to edit or delete it. + adds an entry for another day; one entry per day.
+- Run `supabase/migrations/0011_journal.sql` to sync the Journal; until then it saves on this device.

@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import type { Background, BrandSettings } from '../lib/settings';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON } from './Sheet';
 
+const BG_LABEL: Record<Background, string> = {
+  synthwave: 'Synthwave',
+  night: 'Night sky',
+  plain: 'Plain',
+  navy: 'Navy',
+  damascus: 'Damascus (light)'
+};
+
 type Props = {
   open: boolean;
   settings: BrandSettings;
@@ -96,7 +104,7 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword }
         <fieldset className="field">
           <legend>Background</legend>
           <div className="choice-row">
-            {(['synthwave', 'night', 'plain'] as Background[]).map((b) => (
+            {(['synthwave', 'night', 'plain', 'navy', 'damascus'] as Background[]).map((b) => (
               <label key={b} className="choice">
                 <input
                   type="radio"
@@ -104,7 +112,7 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword }
                   checked={draft.background === b}
                   onChange={() => set('background', b)}
                 />
-                <span>{b === 'synthwave' ? 'Synthwave' : b === 'night' ? 'Night sky' : 'Plain'}</span>
+                <span>{BG_LABEL[b]}</span>
               </label>
             ))}
           </div>

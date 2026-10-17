@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-export type Background = 'synthwave' | 'night' | 'plain';
+export type Background = 'synthwave' | 'night' | 'plain' | 'navy' | 'damascus';
 
 export interface BrandSettings {
   displayName: string;
