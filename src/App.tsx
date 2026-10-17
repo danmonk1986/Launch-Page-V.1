@@ -20,7 +20,7 @@ import { matchCalendar, projectStore, type Project } from './lib/projects';
 import { journalStore, type JournalEntry } from './lib/journal';
 import { JournalPanel } from './components/Journal';
 import { buildImport, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
-import { addTaskToGoogle, googleConfigured, knownCalendars } from './lib/google';
+import { addTaskToGoogle, googleConfigured, knownCalendars, wasConnected } from './lib/google';
 import {
   isDue,
   isoDate,
@@ -79,6 +79,7 @@ export default function App() {
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
+  const [gcalOff, setGcalOff] = useState(0);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [calVersion, setCalVersion] = useState(0);
@@ -427,6 +428,17 @@ export default function App() {
               items={[
                 { label: 'Brand settings', onClick: () => setSettingsOpen(true) },
                 { label: 'Export my data', onClick: () => downloadExport(settings) },
+                ...(googleConfigured() && wasConnected()
+                  ? [
+                      {
+                        label: 'Disconnect Google Calendar',
+                        onClick: () => {
+                          setPage('launch');
+                          setGcalOff((n) => n + 1);
+                        }
+                      }
+                    ]
+                  : []),
                 ...(supabase && session
                   ? [
                       {
@@ -484,6 +496,9 @@ export default function App() {
               }
               week={
                 <WeekCalendar
+                  userId={userId}
+                  disconnectTick={gcalOff}
+                  onDisconnected={() => setGcalOff(0)}
                   events={events}
                   projects={projects}
                   onCalendars={() => setCalVersion((v) => v + 1)}

@@ -1482,3 +1482,6 @@ input:-webkit-autofill:focus {
 }
 .app[data-tone='light'] .row-menu-list { background: #ffffff; }
 .step-rows.has-menu { padding-bottom: 190px; }
+.gcal-sync.is-syncing svg { animation: gcal-spin 0.9s linear infinite; }
+@keyframes gcal-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .gcal-sync.is-syncing svg { animation: none; } }

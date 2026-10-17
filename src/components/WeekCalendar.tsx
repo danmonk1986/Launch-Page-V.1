@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useId } from 'react';
+import { useCallback, useEffect, useRef, useState, useId } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { addDays, layoutWeek, weekStart, type CalEvent, type EventColor } from '../lib/events';
 import { isoDate } from '../lib/launchers';
@@ -16,8 +16,14 @@ import {
   updateGoogleEvent,
   wasConnected
 } from '../lib/google';
+import { clearCached, dropCached, lastSynced, loadCached, putCached, syncRange } from '../lib/gcalCache';
 
 type Props = {
+  /** Signed-in user, for the kept copy of Google events. */
+  userId: string | null;
+  /** Bumped by the gear menu's "Disconnect Google Calendar". */
+  disconnectTick?: number;
+  onDisconnected?: () => void;
   events: CalEvent[];
   /** Areas and projects: a linked calendar's events take its colour. */
   projects?: Project[];
@@ -49,7 +55,7 @@ function writeThemes(t: Set<string>) {
 }
 
 /** Sunday to Saturday. Multi-day events span their days; click a day to add, an event to edit. */
-export function WeekCalendar({ events, projects = [], onCalendars, onSave, onDelete, onStatus }: Props) {
+export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, events, projects = [], onCalendars, onSave, onDelete, onStatus }: Props) {
   const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<CalEvent | null>(null);
   const [newDate, setNewDate] = useState<string | null>(null);
@@ -66,25 +72,47 @@ export function WeekCalendar({ events, projects = [], onCalendars, onSave, onDel
 
   useEffect(preloadGoogle, []);
 
-  const refresh = useCallback(async () => {
-    if (!hasToken()) {
-      setG(wasConnected() ? 'reconnect' : 'off');
-      return;
-    }
-    setG('loading');
-    try {
-      setGEvents(await listGoogleEvents(from, to));
-      onCalendars?.();
-      setGError(null);
-      setG('on');
-    } catch (err) {
-      if (err instanceof GoogleAuthError) setG('reconnect');
-      else {
-        setGError((err as Error).message);
-        setG('on');
+  // Google events kept in LaunchPage show straight away; syncing refreshes them.
+  const kept = useRef<CalEvent[]>([]);
+  const keep = (list: CalEvent[]) => {
+    kept.current = list;
+    setGEvents(list);
+  };
+  useEffect(() => {
+    let live = true;
+    loadCached(userId).then((list) => live && keep(list));
+    return () => {
+      live = false;
+    };
+  }, [userId]);
+
+  /** Reads Google and updates the kept copy. wide = 2 weeks back to 8 weeks ahead; otherwise just this week. */
+  const refresh = useCallback(
+    async (wide = false) => {
+      if (!hasToken()) {
+        setG(wasConnected() ? 'reconnect' : 'off');
+        return;
       }
-    }
-  }, [from, to]);
+      setG('loading');
+      const a = wide ? isoDate(addDays(start, -14)) : from;
+      const b = wide ? isoDate(addDays(start, 7 * 8 + 6)) : to;
+      try {
+        const fresh = await listGoogleEvents(a, b);
+        keep(await syncRange(userId, kept.current, a, b, fresh));
+        onCalendars?.();
+        setGError(null);
+        setG('on');
+      } catch (err) {
+        if (err instanceof GoogleAuthError) setG('reconnect');
+        else {
+          setGError((err as Error).message);
+          setG('on');
+        }
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [from, to, userId]
+  );
 
   useEffect(() => {
     refresh();
@@ -93,7 +121,7 @@ export function WeekCalendar({ events, projects = [], onCalendars, onSave, onDel
   // Pick up changes made in Google while LaunchPage stays open.
   useEffect(() => {
     if (g !== 'on') return;
-    const t = window.setInterval(refresh, 5 * 60_000);
+    const t = window.setInterval(() => refresh(true), 5 * 60_000);
     const onFocus = () => refresh();
     window.addEventListener('focus', onFocus);
     return () => {
@@ -102,11 +130,15 @@ export function WeekCalendar({ events, projects = [], onCalendars, onSave, onDel
     };
   }, [g, refresh]);
 
-  async function connect() {
+  /** The calendar button: sync now (signing in to Google first if the hour-long pass ran out). */
+  async function sync() {
     try {
-      await connectGoogle();
-      onStatus?.('Google Calendar connected.');
-      await refresh();
+      if (!hasToken()) {
+        await connectGoogle();
+        onStatus?.('Google Calendar connected.');
+      }
+      await refresh(true);
+      onStatus?.('Calendar synced with Google.');
     } catch (err) {
       onStatus?.((err as Error).message);
     }
@@ -114,10 +146,16 @@ export function WeekCalendar({ events, projects = [], onCalendars, onSave, onDel
 
   async function disconnect() {
     await disconnectGoogle();
-    setGEvents([]);
+    await clearCached(userId);
+    keep([]);
     setG('off');
+    onDisconnected?.();
     onStatus?.('Google Calendar disconnected.');
   }
+  useEffect(() => {
+    if (disconnectTick > 0) disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disconnectTick]);
 
   /** Runs a Google change; if the hour-long pass ran out, renews it (this is a click) and tries once more. */
   async function withGoogle<T>(fn: () => Promise<T>): Promise<T> {
@@ -185,13 +223,17 @@ export function WeekCalendar({ events, projects = [], onCalendars, onSave, onDel
           {googleConfigured() && (
             <button
               type="button"
-              className={`icon-btn tool-btn ${g === 'on' || g === 'loading' ? 'gcal-on' : 'gcal-off'}`}
-              aria-pressed={g === 'on' || g === 'loading'}
-              aria-label={g === 'off' ? 'Connect Google Calendar' : g === 'reconnect' ? 'Reconnect Google Calendar' : 'Disconnect Google Calendar'}
-              title={g === 'off' ? 'Connect Google Calendar' : g === 'reconnect' ? 'Reconnect Google (the pass lasts an hour)' : 'Google Calendar connected · tap to disconnect'}
-              onClick={g === 'on' || g === 'loading' ? disconnect : connect}
+              className={`icon-btn tool-btn gcal-sync ${g === 'on' || g === 'loading' ? 'gcal-on' : 'gcal-off'}${g === 'loading' ? ' is-syncing' : ''}`}
+              aria-label="Sync with Google Calendar"
+              title={
+                g === 'loading'
+                  ? 'Syncing…'
+                  : `Sync with Google Calendar${lastSynced() ? ` · last synced ${lastSynced()!.toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : ''}`
+              }
+              disabled={g === 'loading'}
+              onClick={sync}
             >
-              <Icon d="M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" />
+              <Icon d="M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18.5 3v4h-4M5.5 21v-4h4" />
             </button>
           )}
           <button
@@ -274,11 +316,11 @@ export function WeekCalendar({ events, projects = [], onCalendars, onSave, onDel
             try {
               if (e.google) {
                 const saved = await withGoogle(() => updateGoogleEvent(e));
-                setGEvents((list) => list.map((x) => (x.id === saved.id ? saved : x)));
+                keep(await putCached(userId, kept.current, saved));
                 onStatus?.(`${saved.title} updated in Google Calendar.`);
               } else if (toGoogle) {
                 const saved = await withGoogle(() => createGoogleEvent(e));
-                setGEvents((list) => [...list, saved]);
+                keep(await putCached(userId, kept.current, saved));
                 onStatus?.(`${saved.title} added to Google Calendar.`);
               } else {
                 await onSave(e);
@@ -292,7 +334,7 @@ export function WeekCalendar({ events, projects = [], onCalendars, onSave, onDel
             try {
               if (ev.google) {
                 await withGoogle(() => deleteGoogleEvent(ev));
-                setGEvents((list) => list.filter((x) => x.id !== ev.id));
+                keep(await dropCached(userId, kept.current, ev));
                 onStatus?.(`${ev.title} deleted from Google Calendar.`);
               } else {
                 await onDelete(ev.id);

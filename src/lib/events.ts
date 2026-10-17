@@ -10,7 +10,7 @@ export interface CalEvent {
   endDate: string; // "YYYY-MM-DD", same as start for one day
   color: EventColor;
   sort: number;
-  /** Set on events that live in Google Calendar (never saved to Supabase). */
+  /** Set on events that live in Google Calendar (kept in gcal_events, not the events table). */
   google?: {
     id: string;
     calendarId: string;
