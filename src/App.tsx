@@ -10,7 +10,7 @@ import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
 import { addNonNeg, readNonNegs } from './lib/nonneg';
 import { TodayPanel, useNow } from './components/TodayPanel';
-import { BLOCKED_HELP, LaunchersPanel } from './components/Launchers';
+import { BLOCKED_HELP, LaunchersPanel, type TimedPreset } from './components/Launchers';
 import { LaunchReminder, TimeUpReminder } from './components/LaunchReminder';
 import { chime, unlockAudioOnFirstGesture } from './lib/alerts';
 import { WeekCalendar } from './components/WeekCalendar';
@@ -79,8 +79,13 @@ export default function App() {
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
+  const tasksRef = useRef<Task[]>([]);
   const [gcalOff, setGcalOff] = useState(0);
+  const [focusTask, setFocusTask] = useState<string | null>(null);
+  const importInput = useRef<HTMLInputElement>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  // eslint-disable-next-line react-hooks/refs
+  tasksRef.current = tasks;
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [calVersion, setCalVersion] = useState(0);
   const [storeProblem, setStoreProblem] = useState<string | null>(null);
@@ -165,7 +170,7 @@ export default function App() {
   const shownRoutines = routinesOnly(routines);
   const activeRoutine = shownRoutines.find((r) => r.id === activeId) ?? shownRoutines[0] ?? null;
   // "+ Timed launch" from a routine step: opens Add timed launch on the Launch Page, filled in.
-  const [timedPreset, setTimedPreset] = useState<{ title: string; atTime: string; n: number } | null>(null);
+  const [timedPreset, setTimedPreset] = useState<TimedPreset | null>(null);
 
   function pickRoutine(id: string, s: Shift) {
     setActiveId(id);
@@ -287,30 +292,35 @@ export default function App() {
   }
 
   /** ⋯ → Create launch: a timed launch from the task, opening its link at its time. */
-  async function createLaunchFromTask(t: Task) {
+  /** Create launch from a task: opens Add timed launch filled in, so it can be checked before saving. */
+  function createLaunchFromTask(t: Task) {
     const monthly = t.status === 'MTH RCR' && /^\d{1,2}$/.test(t.repeatRule ?? '');
     // No time: 9:30 AM, the first work block. No date: today if 9:30 hasn't passed, else tomorrow.
     const now = new Date();
     const firstBlock = now.getHours() * 60 + now.getMinutes() < 9 * 60 + 30 ? now : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12);
-    const launch: Launch = {
-      id: crypto.randomUUID(),
-      title: t.task,
-      atTime: t.atTime ?? '09:30',
-      repeat: monthly ? 'monthly' : 'once',
-      weekdays: [],
-      monthDay: monthly ? Number(t.repeatRule) : null,
-      onDate: monthly ? null : t.endDate ?? t.startDate ?? isoDate(firstBlock),
-      minutes: 30,
-      urls: t.link ? [t.link] : [],
-      active: true,
-      movedTo: null,
-      sound: true,
-      notify: false,
-      sort: launches.length
-    };
-    await launchOps.save(launch);
-    await taskOps.save({ ...t, launchId: launch.id });
-    setStatus(`Timed launch made for ${t.task}${t.atTime ? '' : ' at 9:30 AM. Change the time in Timed launches'}.`);
+    setPage('launch');
+    setTimedPreset({
+      fill: {
+        title: t.task,
+        atTime: t.atTime ?? '09:30',
+        repeat: monthly ? 'monthly' : 'once',
+        weekdays: [],
+        monthDay: monthly ? Number(t.repeatRule) : null,
+        onDate: monthly ? null : t.endDate ?? t.startDate ?? isoDate(firstBlock),
+        urls: t.link ? [t.link] : []
+      },
+      n: Date.now(),
+      onSaved: (l) => {
+        // Read the newest copy of the task: it may have changed while the form was open.
+        const list = tasksRef.current;
+        const cur = list.find((x) => x.id === t.id) ?? t;
+        const item = { ...cur, launchId: l.id };
+        const next = list.map((x) => (x.id === item.id ? item : x));
+        tasksRef.current = next;
+        setTasks(next);
+        void taskStore.save(userId, item, next);
+      }
+    });
   }
 
   async function deleteProject(p: Project) {
@@ -420,13 +430,30 @@ export default function App() {
       <Header
         settings={settings}
         page={page}
-        onPage={setPage}
+        onPage={(pg) => {
+          setFocusTask(null);
+          setPage(pg);
+        }}
         right={
           <>
             <div className="topbar-controls">
+            <input
+              ref={importInput}
+              type="file"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  setPage('tasks');
+                  importTasks(f);
+                }
+                e.target.value = '';
+              }}
+            />
             <GearMenu
               items={[
                 { label: 'Brand settings', onClick: () => setSettingsOpen(true) },
+                { label: 'Import tasks', onClick: () => importInput.current?.click() },
                 { label: 'Export my data', onClick: () => downloadExport(settings) },
                 ...(googleConfigured() && wasConnected()
                   ? [
@@ -517,7 +544,14 @@ export default function App() {
                   onSaveMany={taskOps.saveMany}
                   onAddToCalendar={addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
-                  onOpenAll={() => setPage('tasks')}
+                  onOpenAll={() => {
+                    setFocusTask(null);
+                    setPage('tasks');
+                  }}
+                  onOpenTask={(t) => {
+                    setFocusTask(t.id);
+                    setPage('tasks');
+                  }}
                 />
               }
               journal={<JournalPanel entries={journal} today={now} onSave={saveJournal} onDelete={deleteJournal} />}
@@ -540,7 +574,8 @@ export default function App() {
                   onAddToCalendar={addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
               onOpenProjects={() => setProjectsOpen(true)}
-              onImport={importTasks}
+              onClose={() => setPage('launch')}
+              focusId={focusTask}
             />
           ) : (
             <ComingSoon page={page} />
@@ -608,7 +643,7 @@ export default function App() {
               })()
             : '09:00';
           setPage('launch');
-          setTimedPreset({ title, atTime: at, n: Date.now() });
+          setTimedPreset({ fill: { title, atTime: at }, n: Date.now() });
         }}
         onNonNeg={(label) => {
           addNonNeg(label);

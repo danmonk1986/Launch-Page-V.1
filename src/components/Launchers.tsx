@@ -19,6 +19,9 @@ import {
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, TONES } from '../lib/alerts';
 
+/** What "+ Timed launch" hands over: the fields to fill in, and who to tell once it's saved. */
+export type TimedPreset = { fill: Partial<Launch>; n: number; onSaved?: (l: Launch) => void };
+
 type Props = {
   routineName: string | null;
   /** New tiles belong to this routine only. */
@@ -35,8 +38,8 @@ type Props = {
   handled: Record<string, HandledHow | true>;
   today: Date;
   onFinish: (l: Launch, how: 'done' | 'skipped') => void;
-  /** Opens Add timed launch filled in (from a routine step). */
-  preset?: { title: string; atTime: string; n: number } | null;
+  /** Opens Add timed launch filled in (from a routine step or a task) to check before saving. */
+  preset?: TimedPreset | null;
   onPresetUsed?: () => void;
 };
 
@@ -80,11 +83,11 @@ export function LaunchersPanel(p: Props) {
   const [tileOpen, setTileOpen] = useState(false);
   const [timed, setTimed] = useState<Launch | null>(null);
   const [timedOpen, setTimedOpen] = useState(false);
-  const [fill, setFill] = useState<{ title: string; atTime: string } | null>(null);
+  const [fill, setFill] = useState<TimedPreset | null>(null);
   useEffect(() => {
     if (!p.preset) return;
     setTimed(null);
-    setFill({ title: p.preset.title, atTime: p.preset.atTime });
+    setFill(p.preset);
     setTimedOpen(true);
     p.onPresetUsed?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -401,12 +404,14 @@ export function LaunchersPanel(p: Props) {
       >
         <TimedForm
           launch={timed}
-          fill={timed ? null : fill}
+          fill={timed ? null : fill?.fill ?? null}
           launchers={p.launchers}
           nextSort={p.launches.length}
           onCancel={() => setTimedOpen(false)}
           onSave={async (l) => {
             await p.onSaveLaunch(l);
+            if (!timed) fill?.onSaved?.(l);
+            setFill(null);
             setTimedOpen(false);
           }}
           onDelete={async (id) => {
@@ -548,7 +553,7 @@ function TimedForm({
   onDelete
 }: {
   launch: Launch | null;
-  fill?: { title: string; atTime: string } | null;
+  fill?: Partial<Launch> | null;
   launchers: Launcher[];
   nextSort: number;
   onCancel?: () => void;
@@ -559,8 +564,8 @@ function TimedForm({
     () =>
       launch ?? {
         id: crypto.randomUUID(),
-        title: fill?.title ?? '',
-        atTime: fill?.atTime ?? '10:00',
+        title: '',
+        atTime: '10:00',
         repeat: 'weekly',
         weekdays: [1, 2, 3, 4, 5],
         monthDay: 1,
@@ -571,11 +576,12 @@ function TimedForm({
         movedTo: null,
         sound: true,
         notify: false,
+        ...fill,
         sort: nextSort
       }
   );
   const [extra, setExtra] = useState(() =>
-    (launch?.urls ?? [])
+    (launch?.urls ?? fill?.urls ?? [])
       .filter((u) => !launchers.some((l) => l.url && l.url === u) && !APP_LINKS.some((a) => a.url === u))
       .join('\n')
   );

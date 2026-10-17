@@ -1,4 +1,4 @@
-import { Fragment, useState, useId } from 'react';
+import { Fragment, useEffect, useState, useId } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { normalizeUrl } from '../lib/launchers';
@@ -35,6 +35,9 @@ export function Icon({ d, size = 16 }: { d: string; size?: number }) {
 }
 
 const PLUS = 'M12 5v14M5 12h14';
+const CLOSE = 'M6 6l12 12M18 6L6 18';
+/** The Launch Page shows tasks without their steps. */
+const NO_STEPS = new Map<string, Task[]>();
 const FOLDER = 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z';
 
 const shortDate = (iso: string | null) =>
@@ -69,6 +72,8 @@ function ProjectChip({ projects, id }: { projects: Project[]; id: string | null 
 type Actions = {
   toggle: (t: Task) => void;
   edit: (t: Task) => void;
+  /** Tapping a task's name: edit it here, or (on the Launch Page) go to it on the Tasks page. */
+  open: (t: Task) => void;
   addStep: (parent: Task) => void;
   moveTo: (t: Task, iso: string) => void;
   remove: (t: Task) => void;
@@ -197,12 +202,12 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
   const badge = dueBadge(t, today);
   const checked = isRecurring(t) ? doneToday(t, today) : t.done;
   return (
-    <tr className={`task-row${checked ? ' is-done' : ''}${step ? ' is-step' : ''}${alt ? ' is-alt' : ''}`}>
+    <tr id={`task-${t.id}`} className={`task-row${checked ? ' is-done' : ''}${step ? ' is-step' : ''}${alt ? ' is-alt' : ''}`}>
       <td className="col-project">{step ? <span className="step-mark" aria-hidden="true">↳</span> : <ProjectChip projects={projects} id={t.projectId} />}</td>
       <td className="col-desc">{step ? '' : t.description}</td>
       <td className="col-task">
         <span className="task-cell">
-          <button type="button" className="task-name" onClick={() => act.edit(t)}>
+          <button type="button" className="task-name" onClick={() => act.open(t)}>
             {t.task}
           </button>
           {!step && (
@@ -248,8 +253,10 @@ function TaskTable({
   projects,
   today,
   act,
-  collapsible
+  collapsible,
+  focusId
 }: {
+  focusId?: string | null;
   sections: Section[];
   grouped: Record<Section, Task[]>;
   steps: Map<string, Task[]>;
@@ -259,6 +266,13 @@ function TaskTable({
   collapsible?: boolean;
 }) {
   const [closed, setClosed] = useState<Record<string, boolean>>({ done: true, monthly: true, annual: true, deleted: true });
+  // Open the group holding a task you jumped to.
+  useEffect(() => {
+    if (!focusId) return;
+    const sec = (Object.keys(grouped) as Section[]).find((k) => grouped[k].some((t) => t.id === focusId));
+    if (sec && closed[sec]) setClosed((c) => ({ ...c, [sec]: false }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId]);
   return (
     <div className="task-scroll">
       <table className="task-table">
@@ -330,9 +344,51 @@ type EditorProps = Common & { onSaveMany: (t: Task[]) => Promise<void> };
 function useTaskEditor(p: EditorProps) {
   const [editing, setEditing] = useState<Task | null>(null);
   const [open, setOpen] = useState(false);
+  // Checking off a task that still has open steps asks first.
+  const [ask, setAsk] = useState<{ task: Task; open: Task[] } | null>(null);
   const isNew = !!editing && !p.tasks.some((t) => t.id === editing.id);
   const parent = editing?.parentId ? p.tasks.find((t) => t.id === editing.parentId) ?? null : null;
+  const askSheet = (
+    <Sheet open={!!ask} title="Steps still open" onClose={() => setAsk(null)}>
+      {ask && (
+        <div className="reminder">
+          <p className="panel-empty">
+            <strong>{ask.task.task}</strong> has {ask.open.length} open {ask.open.length === 1 ? 'step' : 'steps'}: {ask.open.map((x) => x.task).join(', ')}. Are they done too?
+          </p>
+          <div className="reminder-actions">
+            <button type="button" className="btn btn-quiet" onClick={() => setAsk(null)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-quiet"
+              onClick={async () => {
+                const t = ask.task;
+                setAsk(null);
+                await p.onSave(toggleDone(t));
+              }}
+            >
+              Just the task
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={async () => {
+                const { task, open: steps } = ask;
+                setAsk(null);
+                await p.onSaveMany([toggleDone(task), ...steps.map(toggleDone)]);
+              }}
+            >
+              All done
+            </button>
+          </div>
+        </div>
+      )}
+    </Sheet>
+  );
   const sheet = (
+    <>
+    {askSheet}
     <Sheet open={open} title={parent ? (isNew ? `Add a step to ${parent.task}` : 'Edit step') : isNew ? 'Add task' : 'Edit task'} onClose={() => setOpen(false)} wide>
       {editing && (
         <TaskForm
@@ -360,6 +416,7 @@ function useTaskEditor(p: EditorProps) {
         />
       )}
     </Sheet>
+    </>
   );
   return {
     sheet,
@@ -371,10 +428,13 @@ function useTaskEditor(p: EditorProps) {
       setEditing(newTask(p.tasks.length));
       setOpen(true);
     },
-    addStep: (parentTask: Task) => {
+    addStep: (picked: Task) => {
+      // "Add a step" on a step adds another step to the same task (steps don't nest).
+      const parentTask = picked.parentId ? p.tasks.find((x) => x.id === picked.parentId) ?? picked : picked;
       setEditing(newStep(parentTask, '', p.tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0)));
       setOpen(true);
-    }
+    },
+    askDone: setAsk
   };
 }
 
@@ -383,10 +443,15 @@ type PageProps = EditorProps & {
   onCreateLaunch: (t: Task) => void;
 };
 
-function useActions(p: PageProps, editor: ReturnType<typeof useTaskEditor>): Actions {
+function useActions(p: PageProps, editor: ReturnType<typeof useTaskEditor>, open?: (t: Task) => void): Actions {
   return {
-    toggle: (t) => p.onSave(toggleDone(t)),
+    toggle: (t) => {
+      const openSteps = !t.done && !t.parentId && !isRecurring(t) ? (stepsByParent(p.tasks).get(t.id) ?? []).filter((x) => !x.done && !x.deletedAt) : [];
+      if (openSteps.length) editor.askDone({ task: t, open: openSteps });
+      else p.onSave(toggleDone(t));
+    },
     edit: editor.edit,
+    open: open ?? editor.edit,
     addStep: editor.addStep,
     moveTo: (t, iso) => p.onSave({ ...t, endDate: iso, startDate: t.startDate && t.startDate > iso ? iso : t.startDate }),
     remove: (t) => p.onSave({ ...t, deletedAt: new Date().toISOString() }),
@@ -399,9 +464,9 @@ function useActions(p: PageProps, editor: ReturnType<typeof useTaskEditor>): Act
 }
 
 /** Launch Page: just Due today and the 3 key tasks. */
-export function TasksPanel(p: PageProps & { onOpenAll: () => void }) {
+export function TasksPanel(p: PageProps & { onOpenAll: () => void; onOpenTask: (t: Task) => void }) {
   const editor = useTaskEditor(p);
-  const act = useActions(p, editor);
+  const act = useActions(p, editor, p.onOpenTask);
   const grouped = groupTasks(p.tasks, p.today);
   return (
     <section className="panel panel-tasks" aria-labelledby="h-tasks">
@@ -417,19 +482,32 @@ export function TasksPanel(p: PageProps & { onOpenAll: () => void }) {
           </button>
         </div>
       </div>
-      <TaskTable sections={['due', 'key']} grouped={grouped} steps={stepsByParent(p.tasks)} projects={p.projects} today={p.today} act={act} />
+      <TaskTable sections={['due', 'key']} grouped={grouped} steps={NO_STEPS} projects={p.projects} today={p.today} act={act} />
       {editor.sheet}
     </section>
   );
 }
 
 /** The Tasks page: the whole list, in the Launch Sheet's sections. */
-export function TasksPage(p: PageProps & { onOpenProjects: () => void; onImport: (file: File) => void }) {
+export function TasksPage(p: PageProps & { onOpenProjects: () => void; onClose: () => void; focusId?: string | null }) {
   const editor = useTaskEditor(p);
   const act = useActions(p, editor);
   const [view, setView] = useState<Section | null>(null);
   const grouped = groupTasks(p.tasks, p.today);
-  const topLevel = Object.entries(grouped).reduce((n, [k, l]) => (k === 'deleted' ? n : n + l.length), 0);
+  // ALL counts what's still outstanding: not done, not deleted.
+  const outstanding = Object.entries(grouped).reduce((n, [k, l]) => (k === 'deleted' || k === 'done' ? n : n + l.length), 0);
+  // Arriving from the Launch Page: scroll to the task and light it up.
+  useEffect(() => {
+    if (!p.focusId) return;
+    const t = window.setTimeout(() => {
+      const row = document.getElementById(`task-${p.focusId}`);
+      if (!row) return;
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.classList.add('is-focus');
+      window.setTimeout(() => row.classList.remove('is-focus'), 2600);
+    }, 60);
+    return () => window.clearTimeout(t);
+  }, [p.focusId]);
   return (
     <section className="panel panel-tasks-page" aria-labelledby="h-tasks-page">
       <div className="panel-head">
@@ -437,30 +515,20 @@ export function TasksPage(p: PageProps & { onOpenProjects: () => void; onImport:
           Tasks
         </h2>
         <div className="panel-actions">
-          <label className="icon-btn tool-btn import-btn" title="Import tasks (Launch Sheet file)">
-            <Icon d="M12 3v12M7 10l5 5 5-5M5 21h14" />
-            <span className="sr-only">Import tasks</span>
-            <input
-              type="file"
-              hidden
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) p.onImport(f);
-                e.target.value = '';
-              }}
-            />
-          </label>
+          <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={editor.add}>
+            <Icon d={PLUS} />
+          </button>
           <button type="button" className="icon-btn tool-btn" aria-label="Projects" title="Areas and projects" onClick={p.onOpenProjects}>
             <Icon d={FOLDER} />
           </button>
-          <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={editor.add}>
-            <Icon d={PLUS} />
+          <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
+            <Icon d={CLOSE} />
           </button>
         </div>
       </div>
       <div className="area-filter" role="group" aria-label="Show">
         <button type="button" className="area-pill" aria-pressed={view === null} onClick={() => setView(null)}>
-          All <span className="pill-count">{topLevel}</span>
+          All <span className="pill-count">{outstanding}</span>
         </button>
         {SECTIONS.map((sec) => (
           <button
@@ -484,6 +552,7 @@ export function TasksPage(p: PageProps & { onOpenProjects: () => void; onImport:
         today={p.today}
         act={act}
         collapsible={!view}
+        focusId={p.focusId ?? null}
       />
       {editor.sheet}
     </section>
@@ -556,8 +625,8 @@ function TaskForm({
         </label>
       </div>
       <label className="field">
-        <span>Task</span>
-        <input required value={d.task} onChange={(e) => set('task', e.target.value)} placeholder="Relocate Brand Shop" />
+        <span>{isStep ? 'Step' : 'Task'}</span>
+        <input required value={d.task} onChange={(e) => set('task', e.target.value)} placeholder={isStep ? 'Next step' : 'Relocate Brand Shop'} />
       </label>
       {!isStep && (
         <div className="field steps-field">
