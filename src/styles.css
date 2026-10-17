@@ -1429,3 +1429,29 @@ input:-webkit-autofill:focus {
   .app.is-scrolled .topbar .header-clock time { display: none; }
   .app.is-scrolled .topbar .topbar-logo { height: 32px; }
 }
+
+/* ---------- Name combobox (Add rocket) ---------- */
+.combo { position: relative; }
+.combo input { width: 100%; padding-right: 48px !important; }
+.combo-caret {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 36px; height: 36px; display: grid; place-items: center;
+  background: none; border: 0; border-radius: 8px; color: var(--accent-teal); cursor: pointer;
+}
+.combo-caret:hover { background: color-mix(in srgb, var(--accent-teal) 14%, transparent); }
+.combo-list {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 30;
+  list-style: none; margin: 0; padding: 6px; max-height: 280px; overflow-y: auto;
+  border: 1px solid var(--accent-purple); border-radius: 12px;
+  background: var(--surface-solid); box-shadow: 0 12px 32px rgb(8 6 20 / 0.6);
+}
+.combo-opt {
+  width: 100%; display: grid; grid-template-columns: 12px auto 1fr auto; align-items: center; gap: 10px;
+  padding: 9px 10px; border: 0; border-radius: 8px; background: none; color: var(--beige); font: inherit; text-align: left; cursor: pointer;
+}
+.combo-opt.is-hi { background: color-mix(in srgb, var(--accent-purple) 22%, transparent); }
+.combo-dot { width: 10px; height: 10px; border-radius: 50%; }
+.combo-name { font-weight: 600; }
+.combo-note { color: var(--dim); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.combo-kind { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-teal); }
+.app[data-tone='light'] .combo-list { background: #ffffff; box-shadow: 0 12px 32px rgb(68 66 66 / 0.18); }

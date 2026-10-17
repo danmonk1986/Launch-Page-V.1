@@ -1,4 +1,4 @@
-import { useState, useId } from 'react';
+import { useState, useId, useRef } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import {
   describeSchedule,
@@ -130,7 +130,7 @@ export function LaunchersPanel(p: Props) {
       <div className="panel-head">
         <div>
           <h2 id="h-launchers" className="panel-title">
-            Launchers
+            Rockets
           </h2>
         </div>
         <div className="panel-actions">
@@ -138,7 +138,7 @@ export function LaunchersPanel(p: Props) {
             type="button"
             className="icon-btn tool-btn"
             aria-pressed={editing}
-            aria-label={editing ? 'Done editing launchers' : 'Edit launchers'}
+            aria-label={editing ? 'Done editing rockets' : 'Edit rockets'}
             title={editing ? 'Done' : 'Edit'}
             onClick={() => setEditing((e) => !e)}
           >
@@ -147,7 +147,7 @@ export function LaunchersPanel(p: Props) {
           <button
             type="button"
             className="icon-btn tool-btn"
-            aria-label="Add a launcher"
+            aria-label="Add a rocket"
             title="Add"
             onClick={() => {
               setTile(null);
@@ -350,7 +350,7 @@ export function LaunchersPanel(p: Props) {
         )}
       </div>
 
-      <Sheet open={tileOpen} title={tile ? `Edit ${tile.name}` : 'Add launch'} onClose={() => setTileOpen(false)}>
+      <Sheet open={tileOpen} title={tile ? `Edit ${tile.name}` : 'Add rocket'} onClose={() => setTileOpen(false)}>
         <TileForm
           tile={tile}
           nextSort={p.launchers.length}
@@ -460,28 +460,16 @@ function TileForm({
         <span>
           Name <span className="char-count">{d.name.length}/{NAME_MAX}</span>
         </span>
-        <input
-          required
-          maxLength={NAME_MAX}
-          list={open.length ? 'launcher-originals' : undefined}
-          autoComplete="off"
+        <NameCombo
           value={d.name}
-          onChange={(e) => {
-            const name = e.target.value;
-            const p = open.find((x) => x.name.toLowerCase() === name.trim().toLowerCase());
-            setD((x) => (p ? { ...x, name: p.name, note: p.note, url: p.url, color: p.color } : { ...x, name }));
-          }}
-          placeholder={!open.length ? 'Online bank' : 'New, or pick an original'}
+          options={[
+            ...open.map((p) => ({ name: p.name, note: p.note, url: p.url, color: p.color, kind: 'Original' })),
+            ...APP_LINKS.filter((a) => !taken.includes(a.name)).map((a) => ({ name: a.name, note: 'App', url: a.url, color: 'purple' as TileColor, kind: 'App' }))
+          ]}
+          onType={(name) => setD((x) => ({ ...x, name }))}
+          onPick={(o) => setD((x) => ({ ...x, name: o.name, note: o.note, url: o.url, color: o.color }))}
+          placeholder="New, or pick from the list"
         />
-        {open.length > 0 && (
-          <datalist id="launcher-originals">
-            {open.map((p) => (
-              <option key={p.name} value={p.name}>
-                {p.note}
-              </option>
-            ))}
-          </datalist>
-        )}
       </label>
       <label className="field">
         <span>Link</span>
@@ -749,3 +737,99 @@ function TimedForm({
   );
 }
 
+type ComboOption = { name: string; note: string; url: string; color: TileColor; kind: string };
+
+/** Type a new name, or open the list with the ⌄ (or by typing) and pick an original or an app. */
+function NameCombo({ value, options, onType, onPick, placeholder }: { value: string; options: ComboOption[]; onType: (v: string) => void; onPick: (o: ComboOption) => void; placeholder: string }) {
+  const [open, setOpen] = useState(false);
+  const [hi, setHi] = useState(0);
+  const [filtering, setFiltering] = useState(false);
+  const listId = useId();
+  const wrap = useRef<HTMLDivElement>(null);
+  const q = value.trim().toLowerCase();
+  const shown = filtering && q ? options.filter((o) => o.name.toLowerCase().includes(q) || o.note.toLowerCase().includes(q)) : options;
+  const pick = (o: ComboOption) => {
+    onPick(o);
+    setOpen(false);
+    setFiltering(false);
+  };
+  return (
+    <div
+      className="combo"
+      ref={wrap}
+      onBlur={(e) => {
+        if (!wrap.current?.contains(e.relatedTarget as Node)) setOpen(false);
+      }}
+    >
+      <input
+        required
+        maxLength={NAME_MAX}
+        autoComplete="off"
+        role="combobox"
+        aria-expanded={open && shown.length > 0}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => {
+          const v = e.target.value;
+          const exact = options.find((o) => o.name.toLowerCase() === v.trim().toLowerCase());
+          if (exact) return pick(exact);
+          onType(v);
+          setFiltering(true);
+          setOpen(v.trim().length > 0);
+          setHi(0);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (!open) setOpen(true);
+            else setHi((h) => Math.min(h + 1, shown.length - 1));
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHi((h) => Math.max(h - 1, 0));
+          } else if (e.key === 'Enter' && open && shown[hi]) {
+            e.preventDefault();
+            pick(shown[hi]);
+          } else if (e.key === 'Escape' && open) {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(false);
+          }
+        }}
+      />
+      {options.length > 0 && (
+        <button
+          type="button"
+          className="combo-caret"
+          aria-label={open ? 'Hide the list' : 'Show the list'}
+          title="Pick from the list"
+          tabIndex={-1}
+          onClick={() => {
+            setFiltering(false);
+            setHi(0);
+            setOpen((x) => !x);
+          }}
+        >
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d={open ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} />
+          </svg>
+        </button>
+      )}
+      {open && shown.length > 0 && (
+        <ul className="combo-list" role="listbox" id={listId}>
+          {shown.map((o, i) => (
+            <li key={`${o.kind}-${o.name}`} role="option" aria-selected={i === hi}>
+              <button type="button" className={`combo-opt ${i === hi ? 'is-hi' : ''}`} onMouseEnter={() => setHi(i)} onClick={() => pick(o)}>
+                <span className={`combo-dot tile-${o.color}`} aria-hidden="true" />
+                <span className="combo-name">{o.name}</span>
+                <span className="combo-note">{o.note === o.kind ? '' : o.note}</span>
+                <span className="combo-kind">{o.kind}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

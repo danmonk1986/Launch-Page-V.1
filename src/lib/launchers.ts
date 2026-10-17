@@ -277,14 +277,12 @@ function ordinal(n: number) {
 export const APP_LINKS: { name: string; url: string }[] = [
   { name: 'Claude', url: 'claude://' },
   { name: 'Slack', url: 'slack://open' },
-  { name: 'Spotify', url: 'spotify:' },
   { name: 'Notion', url: 'notion://' },
   { name: 'Figma', url: 'figma://' },
   { name: 'Zoom', url: 'zoommtg://' },
   { name: 'Teams', url: 'msteams:' },
   { name: 'Discord', url: 'discord://' },
-  { name: 'VS Code', url: 'vscode://' },
-  { name: 'Obsidian', url: 'obsidian://open' }
+  { name: 'VS Code', url: 'vscode://' }
 ];
 
 const UNSAFE_SCHEMES = /^(javascript|data|vbscript|file|blob|about):/i;
