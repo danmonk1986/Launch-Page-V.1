@@ -1,14 +1,13 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { BrandSettings } from '../lib/settings';
 
-export type PageId = 'launch' | 'tasks' | 'days26' | 'summary' | 'planner';
+export type PageId = 'launch' | 'tasks' | 'days26' | 'budget';
 
 const PAGES: { id: PageId; label: string }[] = [
   { id: 'launch', label: 'Launch Page' },
   { id: 'tasks', label: 'Tasks' },
   { id: 'days26', label: '26 Days' },
-  { id: 'summary', label: 'Summary' },
-  { id: 'planner', label: 'Planner' }
+  { id: 'budget', label: 'Budget' }
 ];
 
 type Props = {

@@ -1408,3 +1408,24 @@ input:-webkit-autofill:focus {
 .app[data-bg='white'] .sky > * { display: none; }
 .reminder-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 4px; }
 .reminder-actions .btn { width: 100%; min-width: 0; }
+
+/* ---------- Fixed header: stays at the top while the page scrolls ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  background: rgb(15 11 34 / 0.86);
+}
+.app[data-tone='light'] .topbar { background: rgb(255 255 255 / 0.88); }
+/* Phones: the headline and mantra fold away once you scroll, so the header stays slim. */
+@media (max-width: 700px) {
+  .topbar .topbar-words { transition: opacity 0.2s ease; }
+  .app.is-scrolled .topbar .topbar-words { display: none; }
+}
+@media (max-width: 700px) {
+  .app.is-scrolled .topbar { padding-top: 10px; padding-bottom: 6px; row-gap: 4px; }
+  .app.is-scrolled .topbar .header-clock time { display: none; }
+  .app.is-scrolled .topbar .topbar-logo { height: 32px; }
+}

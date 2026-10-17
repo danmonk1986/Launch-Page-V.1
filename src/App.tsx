@@ -59,6 +59,14 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [status, setStatus] = useState('');
   const [page, setPage] = useState<PageId>('launch');
+  // Phones fold the headline out of the fixed header once the page scrolls.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [shift, setShift] = useState<Shift>('nights');
@@ -396,7 +404,7 @@ export default function App() {
   }
 
   return (
-    <div className="app" style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'}>
+    <div className={scrolled ? 'app is-scrolled' : 'app'} style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'}>
       <div className="sky" aria-hidden="true">
         <div className="sky-lines" />
         <div className="sky-horizon" />

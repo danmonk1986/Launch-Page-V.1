@@ -18,8 +18,7 @@ export function LaunchPageHome({ launchers, week, tasks, journal, today }: Slots
 
 const LATER: Record<string, { title: string; empty: string }> = {
   days26: { title: '26 Days', empty: 'Mode, Non-Negotiables, logging, baseline and bounce-back. Built after the Launch Page.' },
-  summary: { title: 'Summary', empty: 'Hit rate, vice load and HQ vs MWD, with a plain-words takeaway.' },
-  planner: { title: 'Planner', empty: 'The bigger plan: weeks and months ahead.' }
+  budget: { title: 'Budget', empty: 'Money in, money out and what’s left, alongside your expense tasks. Coming soon.' }
 };
 
 export function ComingSoon({ page }: { page: string }) {
