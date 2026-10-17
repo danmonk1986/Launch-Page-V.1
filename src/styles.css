@@ -1850,22 +1850,27 @@ dialog.crawl::backdrop { background: #000000; }
 .app[data-tone='light'] .crawl-tools .tool-btn:not(.tool-btn-go) { background: rgb(255 255 255 / 0.8); }
 .crawl-stage {
   position: absolute; inset: 0; overflow: hidden; perspective: 420px;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000000 32%); mask-image: linear-gradient(to bottom, transparent 0%, #000000 32%);
+  /* Words fade in at the top and only show once they're a line clear of the horizon (71%). */
+  --crawl-row: calc(clamp(22px, 3.2vw, 36px) * 1.55);
+  --crawl-mask: linear-gradient(to bottom, transparent 0%, #000000 30%, #000000 calc(71% - var(--crawl-row) - 18px), transparent calc(71% - var(--crawl-row)));
+  -webkit-mask-image: var(--crawl-mask); mask-image: var(--crawl-mask);
 }
 .crawl-plane { position: absolute; left: 50%; bottom: 0; width: min(760px, 88vw); height: 180vh; transform: translateX(-50%) rotateX(24deg); transform-origin: 50% 100%; }
 .crawl-text {
-  position: absolute; left: 0; right: 0; top: 100%;
-  animation: crawl-up var(--crawl-dur, 40s) linear forwards;
+  position: absolute; left: 0; right: 0; top: 100%; will-change: transform;
   font-family: var(--font-head); font-weight: 700; font-size: clamp(22px, 3.2vw, 36px); line-height: 1.55; letter-spacing: 0.04em;
   text-align: center; white-space: pre-wrap; color: var(--accent-teal);
   text-shadow: 0 0 16px color-mix(in srgb, var(--accent-teal) 40%, transparent);
 }
 .crawl-title { margin: 0 0 1.2em; letter-spacing: 0.2em; text-transform: uppercase; }
 @keyframes crawl-up { to { transform: translateY(calc(-100% - 180vh)); } }
+.crawl-line { margin: 0; }
+.crawl-pause { opacity: 0.55; letter-spacing: 0.4em; }
+.crawl-hold { align-self: center; margin-right: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-teal); }
 @media (prefers-reduced-motion: reduce) {
   .crawl-stage { perspective: none; overflow: auto; -webkit-mask-image: none; mask-image: none; }
   .crawl-plane { position: static; transform: none; height: auto; margin: 90px auto 40px; }
-  .crawl-text { position: static; animation: none; }
+  .crawl-text { position: static; animation: none; transform: none !important; }
   .crawl-floor, .crawl-snow { animation: none; }
 }
 .rit-step.is-done .d26-check { background: var(--accent-teal); border-color: var(--accent-teal); color: #120c2a; }

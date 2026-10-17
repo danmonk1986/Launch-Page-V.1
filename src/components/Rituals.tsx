@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { FormActions } from './Sheet';
 import { Icon } from './Tasks';
 import type { Routine, RoutineItem } from '../lib/routines';
@@ -155,18 +155,95 @@ function SaveOnBlur({ value, onSave, placeholder, label, className }: { value: s
   );
 }
 
-/** The meditation plays up the screen, like a film's opening crawl. ✓ checks it off. */
+const WORD_NUMS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, fifteen: 15, twenty: 20, thirty: 30 };
+/** "[Pause for five seconds]", "[pause 10]", "[Pause]" (5 s): seconds to hold, or null for a normal line. */
+export function pauseSeconds(line: string): number | null {
+  const m = /^\s*\[\s*pause\b([^\]]*)\]\s*$/i.exec(line);
+  if (!m) return null;
+  const n = /(\d+(?:\.\d+)?)|\b([a-z]+)\b/gi;
+  let hit: RegExpExecArray | null;
+  while ((hit = n.exec(m[1]))) {
+    if (hit[1]) return Math.min(120, Number(hit[1]));
+    const w = WORD_NUMS[hit[2].toLowerCase()];
+    if (w) return w;
+  }
+  return 5;
+}
+
+/** Plane pixels a second: an unhurried reading pace. */
+const CRAWL_SPEED = 24;
+
+/**
+ * The meditation plays up the screen, like a film's opening crawl. Words show only once they've
+ * cleared the horizon (with a line of space). A [Pause …] line holds the crawl that long.
+ * ✓ checks it off.
+ */
 export function MeditationCrawl({ title, script, onClose, onCheck }: { title: string; script: string; onClose: () => void; onCheck: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
   const [run, setRun] = useState(0);
   const [ended, setEnded] = useState(false);
-  const words = script.trim().split(/\s+/).filter(Boolean).length;
-  const seconds = Math.max(30, Math.round(words * 0.6));
+  const [holding, setHolding] = useState(0);
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  const still = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const lines = (script.trim() || 'No words yet. Close this, write the meditation under the step, and play it again.').split('\n');
+
   useEffect(() => {
     const d = ref.current;
     if (d && !d.open) d.showModal();
   }, []);
+
+  // Move the words frame by frame so pauses can hold them in place.
+  useEffect(() => {
+    if (still) return;
+    const text = textRef.current;
+    const stage = stageRef.current;
+    if (!text || !stage) return;
+    let y = 0;
+    let last = performance.now();
+    let holdUntil = 0;
+    const done = new Set<Element>();
+    let frame = 0;
+    const tick = (t: number) => {
+      const dt = Math.min(0.1, (t - last) / 1000);
+      last = t;
+      if (!pausedRef.current) {
+        if (holdUntil) {
+          holdUntil -= dt * 1000;
+          setHolding(Math.max(0, Math.ceil(holdUntil / 1000)));
+          if (holdUntil <= 0) holdUntil = 0;
+        } else {
+          y -= CRAWL_SPEED * dt;
+          text.style.transform = `translateY(${y}px)`;
+          // A pause line holds the crawl once it reaches the reveal line.
+          // Positions are only trusted once a line has risen onto the screen (below it, the tilt
+          // throws the projection off), so each check first asks whether it has come up past the bottom.
+          const h = stage.getBoundingClientRect().height;
+          const onScreen = (el: HTMLElement) => y + el.offsetTop + el.offsetHeight < 0;
+          text.querySelectorAll<HTMLElement>('[data-pause]').forEach((el) => {
+            if (done.has(el) || !onScreen(el)) return;
+            if (el.getBoundingClientRect().top <= h * 0.71 - 80) {
+              done.add(el);
+              holdUntil = Number(el.dataset.pause) * 1000;
+            }
+          });
+          const last = text.lastElementChild as HTMLElement | null;
+          if (last && onScreen(last) && last.getBoundingClientRect().bottom < h * 0.12) {
+            setEnded(true);
+            return;
+          }
+        }
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    text.style.transform = 'translateY(0px)';
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [run, still]);
+
   return (
     <dialog ref={ref} className="crawl" onClose={onClose} aria-label={title}>
       <div className="crawl-sky" aria-hidden="true">
@@ -174,6 +251,7 @@ export function MeditationCrawl({ title, script, onClose, onCheck }: { title: st
         <div className="crawl-snow" />
       </div>
       <div className="crawl-tools">
+        {holding > 0 && !paused && <span className="crawl-hold">Pause · {holding}</span>}
         <button type="button" className={`icon-btn tool-btn${ended ? ' tool-btn-go' : ''}`} aria-label="Check it off" title="Check it off" onClick={onCheck}>
           <Icon d={CHECK} />
         </button>
@@ -189,6 +267,7 @@ export function MeditationCrawl({ title, script, onClose, onCheck }: { title: st
             setRun((n) => n + 1);
             setPaused(false);
             setEnded(false);
+            setHolding(0);
           }}
         >
           <Icon d={REPLAY} />
@@ -197,16 +276,22 @@ export function MeditationCrawl({ title, script, onClose, onCheck }: { title: st
           <Icon d={CLOSE} />
         </button>
       </div>
-      <div className="crawl-stage">
+      <div className="crawl-stage" ref={stageRef}>
         <div className="crawl-plane">
-          <div
-            key={run}
-            className="crawl-text"
-            style={{ '--crawl-dur': `${seconds}s`, animationPlayState: paused ? 'paused' : 'running' } as CSSProperties}
-            onAnimationEnd={() => setEnded(true)}
-          >
+          <div key={run} ref={textRef} className="crawl-text">
             <p className="crawl-title">{title}</p>
-            {script.trim() ? script : 'No words yet. Close this, write the meditation under the step, and play it again.'}
+            {lines.map((line, i) => {
+              const hold = pauseSeconds(line);
+              return hold !== null ? (
+                <p key={i} className="crawl-line crawl-pause" data-pause={hold}>
+                  · · ·
+                </p>
+              ) : (
+                <p key={i} className="crawl-line">
+                  {line || '\u00a0'}
+                </p>
+              );
+            })}
           </div>
         </div>
       </div>
