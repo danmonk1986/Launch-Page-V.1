@@ -37,7 +37,23 @@ export interface Launch {
   notify: boolean;
   /** Which alarm sound plays. */
   tone?: Tone;
+  /** A different time for one date only ("just this one"). */
+  onceTime?: { date: string; atTime: string } | null;
   sort: number;
+}
+
+/** The launch's time on a given day: its one-day change if there is one. */
+export function timeFor(l: Launch, day: Date) {
+  return l.onceTime && l.onceTime.date === isoDate(day) ? l.onceTime.atTime : l.atTime;
+}
+
+/** The next date a launch happens, from today (looks up to two months ahead). */
+export function nextDate(l: Launch, from: Date): string | null {
+  for (let i = 0; i < 62; i++) {
+    const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + i, 12);
+    if (happensOn(l, d)) return isoDate(d);
+  }
+  return null;
 }
 
 const LAUNCH_SHEET = 'https://docs.google.com/spreadsheets/d/1rH_8_qYR592YNtbU0oEeByxpmkLm6R4bgVltUr8KABw/edit';
@@ -170,6 +186,7 @@ type LaunchRow = {
   sound?: boolean;
   notify?: boolean;
   tone?: string;
+  once_time?: { date: string; atTime: string } | null;
   sort: number;
 };
 
@@ -191,10 +208,11 @@ export const launchStore = makeStore<Launch, LaunchRow>({
   localKey: 'launchpage.launches.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0003_launchers_events.sql',
-  latestScript: 'supabase/migrations/0013_launch_tone.sql',
-  // Before 0004/0005/0013 are run: save without moved_to, sound, notify and tone.
+  latestScript: 'supabase/migrations/0016_launch_once_time_and_log.sql',
+  // Before 0004/0005/0013/0016 are run: save without moved_to, sound, notify, tone and once_time.
   legacyRow: (r) => {
     const x = { ...r };
+    delete x.once_time;
     delete x.tone;
     delete x.moved_to;
     delete x.sound;
@@ -217,6 +235,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     sound: l.sound,
     notify: l.notify,
     tone: l.tone ?? 'chime',
+    once_time: l.onceTime ?? null,
     sort: l.sort
   }),
   fromRow: (r) => ({
@@ -234,6 +253,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     sound: r.sound ?? true,
     notify: r.notify ?? false,
     tone: isTone(r.tone) ? r.tone : 'chime',
+    onceTime: r.once_time ?? null,
     sort: r.sort
   })
 });
@@ -253,7 +273,7 @@ export function happensOn(l: Launch, day: Date) {
 /** Due from its start time until its time allotted runs out. */
 export function isDue(l: Launch, now: Date) {
   if (!l.active || !happensOn(l, now)) return false;
-  const start = toMinutes(l.atTime);
+  const start = toMinutes(timeFor(l, now));
   const nowMin = now.getHours() * 60 + now.getMinutes();
   return nowMin >= start && nowMin < start + Math.max(l.minutes, 15);
 }
@@ -381,7 +401,7 @@ export function orderLaunches(list: Launch[], today: Date, handled: Record<strin
     if (todays) return 1;
     return l.active ? 2 : 3;
   };
-  return [...list].sort((a, b) => rank(a) - rank(b) || a.atTime.localeCompare(b.atTime));
+  return [...list].sort((a, b) => rank(a) - rank(b) || timeFor(a, today).localeCompare(timeFor(b, today)));
 }
 
 /** "2 tabs + Claude" */
@@ -392,4 +412,61 @@ export function describeOpens(urls: string[]) {
   if (tabs || !apps.length) parts.push(`${tabs} ${tabs === 1 ? 'tab' : 'tabs'}`);
   if (apps.length) parts.push(apps.join(', '));
   return parts.join(' + ');
+}
+
+// ---------- Launch log: each run of a timed launch, kept for 26 Days ----------
+
+export interface LaunchLog {
+  id: string;
+  launchId: string;
+  day: string; // YYYY-MM-DD
+  title: string;
+  planned: number; // minutes allotted
+  extra: number; // minutes added with +10
+  outcome: 'launched' | 'done' | 'skipped';
+  launchedAt: string | null;
+  finishedAt: string | null;
+  sort: number;
+}
+
+type LogRow = {
+  id: string;
+  launch_id: string;
+  day: string;
+  title: string;
+  planned: number;
+  extra: number;
+  outcome: LaunchLog['outcome'];
+  launched_at: string | null;
+  finished_at: string | null;
+  sort: number;
+};
+
+export const launchLogStore = makeStore<LaunchLog, LogRow>({
+  table: 'launch_log',
+  localKey: 'launchpage.launchlog.v1',
+  orderBy: 'day',
+  script: 'supabase/migrations/0016_launch_once_time_and_log.sql',
+  seed: () => [],
+  toRow: (g) => ({ id: g.id, launch_id: g.launchId, day: g.day, title: g.title, planned: g.planned, extra: g.extra, outcome: g.outcome, launched_at: g.launchedAt, finished_at: g.finishedAt, sort: g.sort }),
+  fromRow: (r) => ({ id: r.id, launchId: r.launch_id, day: r.day, title: r.title, planned: r.planned, extra: r.extra, outcome: r.outcome, launchedAt: r.launched_at, finishedAt: r.finished_at, sort: r.sort })
+});
+
+/** Today's log row for a launch, made if missing. */
+export function logFor(list: LaunchLog[], l: Launch, day: Date): LaunchLog {
+  const iso = isoDate(day);
+  return (
+    list.find((g) => g.launchId === l.id && g.day === iso) ?? {
+      id: crypto.randomUUID(),
+      launchId: l.id,
+      day: iso,
+      title: l.title,
+      planned: l.minutes,
+      extra: 0,
+      outcome: 'launched',
+      launchedAt: null,
+      finishedAt: null,
+      sort: 0
+    }
+  );
 }

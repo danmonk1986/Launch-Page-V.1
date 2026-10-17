@@ -1,6 +1,6 @@
 import { Sheet } from './Sheet';
 import { formatMinutes, toMinutes } from '../lib/routines';
-import { describeOpens, type Launch } from '../lib/launchers';
+import { describeOpens, timeFor, type Launch } from '../lib/launchers';
 
 type Props = {
   launch: Launch | null;
@@ -15,7 +15,7 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip }: Props) {
     <Sheet open={!!launch} title={launch ? launch.title : 'Launch'} onClose={() => launch && onSnooze(launch)}>
       {launch && (
         <div className="reminder">
-          <p className="reminder-time">{formatMinutes(toMinutes(launch.atTime))} · Launch time</p>
+          <p className="reminder-time">{formatMinutes(toMinutes(timeFor(launch, new Date())))} · Launch time</p>
           <p className="panel-empty">
             {launch.urls.length
               ? `Opens ${describeOpens(launch.urls)}. Time allotted: ${launch.minutes} minutes.`
@@ -52,7 +52,7 @@ export function TimeUpReminder({ launch, onDone, onMore, onTomorrow }: TimeUpPro
       {launch && (
         <div className="reminder">
           <p className="reminder-time">
-            {formatMinutes((toMinutes(launch.atTime) + launch.minutes) % 1440)} · {launch.minutes} minutes are up
+            {formatMinutes((toMinutes(timeFor(launch, new Date())) + launch.minutes) % 1440)} · {launch.minutes} minutes are up
           </p>
           <p className="panel-empty">Did you finish? Check it off, take 10 more minutes, or move it to tomorrow.</p>
           <div className="sheet-actions">

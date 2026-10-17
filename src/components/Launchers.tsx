@@ -10,6 +10,9 @@ import {
   normalizeUrl,
   APP_LINKS,
   describeOpens,
+  nextDate,
+  timeFor,
+  type LaunchLog,
   openTabs,
   type Launch,
   type Launcher,
@@ -40,6 +43,8 @@ type Props = {
   onFinish: (l: Launch, how: 'done' | 'skipped') => void;
   /** Opens Add timed launch filled in (from a routine step or a task) to check before saving. */
   preset?: TimedPreset | null;
+  /** Runs of each launch: today's +10 minutes show on the row. */
+  log?: LaunchLog[];
   onPresetUsed?: () => void;
 };
 
@@ -295,10 +300,15 @@ export function LaunchersPanel(p: Props) {
                       setTimedOpen(true);
                     }}
                   >
-                    <span className="timed-time">{formatMinutes(toMinutes(l.atTime))}</span>
+                    <span className="timed-time">{formatMinutes(toMinutes(ahead ? timeFor(l, tomorrow) : timeFor(l, p.today)))}</span>
                     <span className="timed-name">{l.title}</span>
                     <span className="timed-meta">
-                      {describeSchedule(l)} · {l.minutes} min · {describeOpens(l.urls)}
+                      {describeSchedule(l)} · {l.minutes} min
+                      {(() => {
+                        const g = !ahead && p.log?.find((x) => x.launchId === l.id && x.day === isoDate(p.today));
+                        return g && g.extra > 0 ? ` (+${g.extra} → ${g.planned + g.extra} min)` : '';
+                      })()}{' '}
+                      · {describeOpens(l.urls)}
                       {l.sound && ' · 🔊'}
                       {!l.active && ' · off'}
                       {how === 'launched' && ' · launched, check it off when done'}
@@ -406,6 +416,7 @@ export function LaunchersPanel(p: Props) {
       >
         <TimedForm
           launch={timed}
+          today={p.today}
           fill={timed ? null : fill?.fill ?? null}
           launchers={p.launchers}
           nextSort={p.launches.length}
@@ -435,7 +446,6 @@ function Icon({ d }: { d: string }) {
   );
 }
 
-const SOUND_ICON = 'M4 9v6h4l5 4V5L8 9H4zM16 9a4 4 0 0 1 0 6';
 
 
 function TileForm({
@@ -548,6 +558,7 @@ function TileForm({
 
 function TimedForm({
   launch,
+  today,
   fill,
   launchers,
   nextSort,
@@ -555,6 +566,7 @@ function TimedForm({
   onDelete
 }: {
   launch: Launch | null;
+  today: Date;
   fill?: Partial<Launch> | null;
   launchers: Launcher[];
   nextSort: number;
@@ -562,6 +574,8 @@ function TimedForm({
   onSave: (l: Launch) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
+  const [ask, setAsk] = useState<Launch | null>(null);
+  const [scope, setScope] = useState<string | null>(null);
   const [d, setD] = useState<Launch>(
     () =>
       launch ?? {
@@ -605,9 +619,49 @@ function TimedForm({
           .split(/\s+/)
           .map((u) => u.trim())
           .filter((u) => u && !isBarePrefix(u));
-        await onSave({ ...d, active: true, notify: false, title: d.title.trim(), urls: [...tileUrls, ...extras] });
+        const next = { ...d, active: true, notify: false, title: d.title.trim(), urls: [...tileUrls, ...extras] };
+        // A repeating launch whose time changed: ask whether it's just the next one or every time.
+        if (launch && launch.repeat !== 'once' && d.atTime !== launch.atTime && !scope) {
+          setAsk(next);
+          return;
+        }
+        await onSave(next);
       }}
     >
+      {ask && launch && (
+        <div className="scope-ask" role="group" aria-label="Which ones move">
+          <p>
+            Move <strong>{launch.title}</strong> to {formatMinutes(toMinutes(ask.atTime))} for…
+          </p>
+          <div className="reminder-actions scope-actions">
+            <button type="button" className="btn btn-quiet" onClick={() => setAsk(null)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-quiet"
+              onClick={async () => {
+                const day = nextDate(launch, today) ?? isoDate(today);
+                const label = day === isoDate(today) ? 'today' : day;
+                setScope(label);
+                await onSave({ ...ask, atTime: launch.atTime, onceTime: { date: day, atTime: ask.atTime } });
+              }}
+            >
+              {nextDate(launch, today) === isoDate(today) ? 'Today only' : 'Next one only'}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={async () => {
+                setScope('all');
+                await onSave({ ...ask, onceTime: null });
+              }}
+            >
+              Every time
+            </button>
+          </div>
+        </div>
+      )}
       <label className="field">
         <span>What</span>
         <input required value={d.title} onChange={(e) => set('title', e.target.value)} placeholder="Pay bills" />
@@ -633,39 +687,27 @@ function TimedForm({
 
       <fieldset className="field">
         <legend>Alarm</legend>
-        <div className="choice-row">
-          <button
-            type="button"
-            className="alert-chip"
-            aria-pressed={d.sound}
-            onClick={() => {
-              if (!d.sound) chime('start', d.tone);
-              set('sound', !d.sound);
-            }}
-          >
-            <Icon d={d.sound ? SOUND_ICON : 'M4 9v6h4l5 4V5L8 9H4zM17 9l5 6M22 9l-5 6'} />
-            <span>{d.sound ? 'Alarm on' : 'Alarm off'}</span>
-          </button>
+        <div className="choice-row tone-row" role="radiogroup" aria-label="Alarm sound">
+          {TONES.map((t) => (
+            <label key={t.id} className="choice">
+              <input
+                type="radio"
+                name="tone"
+                checked={d.sound && (d.tone ?? 'chime') === t.id}
+                onChange={() => {
+                  setD((x) => ({ ...x, sound: true, tone: t.id }));
+                  chime('start', t.id);
+                }}
+                onClick={() => d.sound && (d.tone ?? 'chime') === t.id && chime('start', t.id)}
+              />
+              <span>{t.label}</span>
+            </label>
+          ))}
+          <label className="choice">
+            <input type="radio" name="tone" checked={!d.sound} onChange={() => set('sound', false)} />
+            <span>None</span>
+          </label>
         </div>
-        {d.sound && (
-          <div className="choice-row tone-row" role="radiogroup" aria-label="Alarm sound">
-            {TONES.map((t) => (
-              <label key={t.id} className="choice">
-                <input
-                  type="radio"
-                  name="tone"
-                  checked={(d.tone ?? 'chime') === t.id}
-                  onChange={() => {
-                    set('tone', t.id);
-                    chime('start', t.id);
-                  }}
-                  onClick={() => (d.tone ?? 'chime') === t.id && chime('start', t.id)}
-                />
-                <span>{t.label}</span>
-              </label>
-            ))}
-          </div>
-        )}
         <p className="field-hint">Tap a sound to hear it. It plays at launch time, and twice when the time allotted runs out.</p>
       </fieldset>
 

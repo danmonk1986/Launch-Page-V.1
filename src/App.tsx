@@ -34,6 +34,10 @@ import {
   splitShared,
   dedupeRoutines,
   type Launch,
+  type LaunchLog,
+  launchLogStore,
+  logFor,
+  timeFor,
   type Launcher
 } from './lib/launchers';
 import { eventStore, type CalEvent } from './lib/events';
@@ -94,7 +98,20 @@ export default function App() {
   const [snoozed, setSnoozed] = useState<Record<string, number>>({});
   const [handled, setHandled] = useState(() => readHandled());
   const [timeUp, setTimeUp] = useState<Launch | null>(null);
-  const [extraMinutes, setExtraMinutes] = useState<Record<string, number>>({});
+  // Each run of a timed launch (launched, +10s, done or skipped), kept for 26 Days.
+  const [launchLog, setLaunchLog] = useState<LaunchLog[]>([]);
+  const logRef = useRef<LaunchLog[]>([]);
+  logRef.current = launchLog;
+  function logLaunch(l: Launch, patch: (g: LaunchLog) => Partial<LaunchLog>) {
+    const list = logRef.current;
+    const cur = logFor(list, l, new Date());
+    const item = { ...cur, ...patch(cur), title: l.title };
+    const next = list.some((g) => g.id === item.id) ? list.map((g) => (g.id === item.id ? item : g)) : [...list, item];
+    logRef.current = next;
+    setLaunchLog(next);
+    void launchLogStore.save(userId, item, next);
+  }
+  const extraToday = (id: string) => launchLog.find((g) => g.launchId === id && g.day === isoDate(now))?.extra ?? 0;
   const [endAlerted, setEndAlerted] = useState<Record<string, true>>({});
 
   useEffect(() => unlockAudioOnFirstGesture(), []);
@@ -151,8 +168,9 @@ export default function App() {
       setLaunchers(tiles);
       setLaunches(l2.items);
       setEvents(l3.items);
-      const [p1, t1, j1] = await Promise.all([projectStore.load(userId), taskStore.load(userId), journalStore.load(userId)]);
+      const [p1, t1, j1, g1] = await Promise.all([projectStore.load(userId), taskStore.load(userId), journalStore.load(userId), launchLogStore.load(userId)]);
       if (!live) return;
+      setLaunchLog(g1.items);
       setProjects(p1.items);
       setJournal(j1.items);
       // Recently deleted keeps tasks for 30 days, then they go for good.
@@ -355,18 +373,20 @@ export default function App() {
     const over = launches.find((l) => {
       const key = `${l.id}:${today}`;
       if (handled[key] !== 'launched' || endAlerted[key]) return false;
-      const [h, m] = l.atTime.split(':').map(Number);
-      const end = h * 60 + m + l.minutes + (extraMinutes[l.id] ?? 0);
+      const [h, m] = timeFor(l, now).split(':').map(Number);
+      const end = h * 60 + m + l.minutes + extraToday(l.id);
       return nowMin >= end;
     });
     if (!over) return;
     setEndAlerted((m) => ({ ...m, [`${over.id}:${today}`]: true }));
     setTimeUp(over);
     if (over.sound !== false) chime('end', over.tone);
-  }, [now, launches, handled, endAlerted, extraMinutes, timeUp, reminder]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, launches, handled, endAlerted, launchLog, timeUp, reminder]);
 
   async function finishLaunch(l: Launch, how: 'done' | 'skipped') {
     setHandled(markHandled(l.id, new Date(), how));
+    logLaunch(l, () => ({ outcome: how, finishedAt: new Date().toISOString() }));
     if (reminder?.id === l.id) setReminder(null);
     if (how === 'skipped') {
       // Skip today = same time tomorrow.
@@ -381,6 +401,7 @@ export default function App() {
     const blocked = openTabs(l.urls);
     // Opening the tabs is not finishing: it stays open until checked off.
     setHandled(markHandled(l.id, new Date(), 'launched'));
+    logLaunch(l, (g) => ({ outcome: 'launched', launchedAt: g.launchedAt ?? new Date().toISOString(), planned: l.minutes }));
     setReminder(null);
     setStatus(blocked ? BLOCKED_HELP : `Launched ${l.title}.`);
   }
@@ -541,6 +562,7 @@ export default function App() {
                   handled={handled}
                   today={now}
                   onFinish={finishLaunch}
+                  log={launchLog}
                   preset={timedPreset}
                   onPresetUsed={() => setTimedPreset(null)}
                 />
@@ -637,7 +659,7 @@ export default function App() {
         }}
         onMore={(l) => {
           setTimeUp(null);
-          setExtraMinutes((m) => ({ ...m, [l.id]: (m[l.id] ?? 0) + 10 }));
+          logLaunch(l, (g) => ({ extra: g.extra + 10 }));
           setEndAlerted((m) => {
             const next = { ...m };
             delete next[`${l.id}:${isoDate(new Date())}`];
