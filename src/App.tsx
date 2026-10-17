@@ -537,8 +537,36 @@ export default function App() {
       await launchOps.save(skipToTomorrow(l, new Date()));
       setStatus(`${l.title} moved to tomorrow, same time.`);
     } else {
-      setStatus(`${l.title} checked off for today.`);
+      const blocks = await logLaunchBlocks(l);
+      setStatus(blocks ? `${l.title} checked off: ${blocks} block${blocks === 1 ? '' : 's'} logged to Productivity.` : `${l.title} checked off for today.`);
     }
+  }
+
+  /**
+   * A timed launch checked off Done logs Productivity: the time from Launch to Done, capped at
+   * the planned minutes plus any +10s, in quarter blocks (90 min = 1). Checked off without
+   * launching, it logs the planned time. The log shares the launch log's id, so checking the
+   * same launch off again updates it instead of adding a second one.
+   */
+  async function logLaunchBlocks(l: Launch): Promise<number> {
+    const run = logFor(logRef.current, l, new Date());
+    const allowed = (run.planned || l.minutes) + run.extra;
+    const spent = run.launchedAt ? (Date.now() - new Date(run.launchedAt).getTime()) / 60_000 : allowed;
+    const blocks = Math.round((Math.min(spent, allowed) / 90) * 4) / 4;
+    if (blocks <= 0) return 0;
+    await saveLog({
+      id: run.id,
+      day: d26Today,
+      at: new Date().toISOString(),
+      kind: 'productivity',
+      amount: 1,
+      qty: blocks,
+      unit: 'blocks',
+      note: l.title,
+      mode: d26Mode,
+      sort: 0
+    });
+    return blocks;
   }
 
   function launchNow(l: Launch) {
