@@ -87,7 +87,6 @@ export default function App() {
   const [gcalOff, setGcalOff] = useState(0);
   const [focusTask, setFocusTask] = useState<string | null>(null);
   const importInput = useRef<HTMLInputElement>(null);
-  const journalInput = useRef<HTMLInputElement>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   // eslint-disable-next-line react-hooks/refs
   tasksRef.current = tasks;
@@ -247,6 +246,20 @@ export default function App() {
     journalRef.current = next;
     setJournal(next);
     void journalStore.save(userId, e, next);
+  }
+  /** Journal import (a LaunchPage journal file): days already written are skipped. */
+  async function importJournal(f: File) {
+    try {
+      const add = buildJournalImport(JSON.parse(await f.text()), journalRef.current);
+      if (!add.length) return setStatus('Nothing new to import: those days are already in your journal.');
+      const next = [...journalRef.current, ...add];
+      journalRef.current = next;
+      setJournal(next);
+      for (const j of add) await journalStore.save(userId, j, next);
+      setStatus(`Imported ${add.length} journal ${add.length === 1 ? 'entry' : 'entries'}.`);
+    } catch (err) {
+      setStatus((err as Error).message);
+    }
   }
   function deleteJournal(id: string) {
     const next = journalRef.current.filter((x) => x.id !== id);
@@ -472,33 +485,10 @@ export default function App() {
                 e.target.value = '';
               }}
             />
-            <input
-              ref={journalInput}
-              type="file"
-              hidden
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                e.target.value = '';
-                if (!f) return;
-                try {
-                  const add = buildJournalImport(JSON.parse(await f.text()), journalRef.current);
-                  if (!add.length) return setStatus('Nothing new to import: those days are already in your journal.');
-                  const next = [...journalRef.current, ...add];
-                  journalRef.current = next;
-                  setJournal(next);
-                  setPage('launch');
-                  for (const j of add) await journalStore.save(userId, j, next);
-                  setStatus(`Imported ${add.length} journal ${add.length === 1 ? 'entry' : 'entries'}.`);
-                } catch (err) {
-                  setStatus((err as Error).message);
-                }
-              }}
-            />
             <GearMenu
               items={[
                 { label: 'Brand settings', onClick: () => setSettingsOpen(true) },
                 { label: 'Import tasks', onClick: () => importInput.current?.click() },
-                { label: 'Import journal', onClick: () => journalInput.current?.click() },
                 { label: 'Export my data', onClick: () => downloadExport(settings) },
                 ...(googleConfigured() && wasConnected()
                   ? [
@@ -600,7 +590,7 @@ export default function App() {
                   }}
                 />
               }
-              journal={<JournalPanel entries={journal} today={now} onSave={saveJournal} onDelete={deleteJournal} />}
+              journal={<JournalPanel entries={journal} today={now} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} />}
               today={
                 <TodayPanel
                   routine={activeRoutine}

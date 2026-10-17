@@ -13,10 +13,12 @@ type Props = {
   /** Quiet save, used while typing. */
   onSave: (e: JournalEntry) => void;
   onDelete: (id: string) => void;
+  /** Upload a journal file (.json) from the Launch Sheet. */
+  onImport: (f: File) => void;
 };
 
 /** Launch Page: today's headline written in place, past days underneath. */
-export function JournalPanel({ entries, today, onSave, onDelete }: Props) {
+export function JournalPanel({ entries, today, onSave, onDelete, onImport }: Props) {
   const todayIso = isoDate(today);
   const sorted = byNewest(entries);
   const saved = sorted.find((e) => e.date === todayIso) ?? null;
@@ -40,6 +42,19 @@ export function JournalPanel({ entries, today, onSave, onDelete }: Props) {
           )}
         </h2>
         <div className="panel-actions">
+          <label className="icon-btn tool-btn import-btn" title="Upload journal entries (.json)">
+            <Icon d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+            <span className="sr-only">Upload journal entries</span>
+            <input
+              type="file"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) onImport(f);
+                e.target.value = '';
+              }}
+            />
+          </label>
           <button
             type="button"
             className="icon-btn tool-btn"
