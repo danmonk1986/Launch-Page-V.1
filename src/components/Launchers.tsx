@@ -17,7 +17,7 @@ import {
   type TileColor
 } from '../lib/launchers';
 import { formatMinutes, toMinutes } from '../lib/routines';
-import { askNotificationPermission, chime, notificationsSupported } from '../lib/alerts';
+import { chime, TONES } from '../lib/alerts';
 
 type Props = {
   routineName: string | null;
@@ -282,7 +282,6 @@ export function LaunchersPanel(p: Props) {
                     <span className="timed-meta">
                       {describeSchedule(l)} · {l.minutes} min · {describeOpens(l.urls)}
                       {l.sound && ' · 🔊'}
-                      {l.notify && ' · 🔔'}
                       {!l.active && ' · off'}
                       {how === 'launched' && ' · launched, check it off when done'}
                       {how === 'done' && ' · done today'}
@@ -408,7 +407,6 @@ function Icon({ d }: { d: string }) {
 }
 
 const SOUND_ICON = 'M4 9v6h4l5 4V5L8 9H4zM16 9a4 4 0 0 1 0 6';
-const BELL_ICON = 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2zM10 21h4';
 
 
 function TileForm({
@@ -558,7 +556,6 @@ function TimedForm({
       .join('\n')
   );
   const set = <K extends keyof Launch>(k: K, v: Launch[K]) => setD((x) => ({ ...x, [k]: v }));
-  const [notifyBlocked, setNotifyBlocked] = useState(false);
   const picked = new Set(d.urls);
   const toggleUrl = (url: string) =>
     set('urls', picked.has(url) ? d.urls.filter((u) => u !== url) : [...d.urls, url]);
@@ -576,7 +573,7 @@ function TimedForm({
           .split(/\s+/)
           .map((u) => u.trim())
           .filter((u) => u && !isBarePrefix(u));
-        await onSave({ ...d, title: d.title.trim(), urls: [...tileUrls, ...extras] });
+        await onSave({ ...d, active: true, notify: false, title: d.title.trim(), urls: [...tileUrls, ...extras] });
       }}
     >
       <label className="field">
@@ -603,42 +600,41 @@ function TimedForm({
       </div>
 
       <fieldset className="field">
-        <legend>Alerts for this launch</legend>
+        <legend>Alarm</legend>
         <div className="choice-row">
           <button
             type="button"
             className="alert-chip"
             aria-pressed={d.sound}
             onClick={() => {
-              if (!d.sound) chime('start');
+              if (!d.sound) chime('start', d.tone);
               set('sound', !d.sound);
             }}
           >
             <Icon d={d.sound ? SOUND_ICON : 'M4 9v6h4l5 4V5L8 9H4zM17 9l5 6M22 9l-5 6'} />
             <span>{d.sound ? 'Alarm on' : 'Alarm off'}</span>
           </button>
-          {notificationsSupported() && (
-            <button
-              type="button"
-              className="alert-chip"
-              aria-pressed={d.notify}
-              onClick={async () => {
-                if (d.notify) return set('notify', false);
-                const ok = await askNotificationPermission();
-                setNotifyBlocked(!ok);
-                if (ok) set('notify', true);
-              }}
-            >
-              <Icon d={d.notify ? BELL_ICON : BELL_ICON + 'M3 3l18 18'} />
-              <span>{d.notify ? 'Notification on' : 'Notification off'}</span>
-            </button>
-          )}
         </div>
-        <p className="field-hint">
-          {notifyBlocked
-            ? 'Notifications are blocked for this site. Allow them in the browser’s site settings, then try again.'
-            : 'The alarm chimes at the start and when the time allotted runs out.'}
-        </p>
+        {d.sound && (
+          <div className="choice-row tone-row" role="radiogroup" aria-label="Alarm sound">
+            {TONES.map((t) => (
+              <label key={t.id} className="choice">
+                <input
+                  type="radio"
+                  name="tone"
+                  checked={(d.tone ?? 'chime') === t.id}
+                  onChange={() => {
+                    set('tone', t.id);
+                    chime('start', t.id);
+                  }}
+                  onClick={() => (d.tone ?? 'chime') === t.id && chime('start', t.id)}
+                />
+                <span>{t.label}</span>
+              </label>
+            ))}
+          </div>
+        )}
+        <p className="field-hint">Tap a sound to hear it. It plays at launch time, and twice when the time allotted runs out.</p>
       </fieldset>
 
       <fieldset className="field">
@@ -725,11 +721,6 @@ function TimedForm({
           onChange={(e) => setExtra(e.target.value)}
           placeholder="https://www.atb.com"
         />
-      </label>
-
-      <label className="choice choice-wide">
-        <input type="checkbox" checked={d.active} onChange={(e) => set('active', e.target.checked)} />
-        <span>On: remind me at this time</span>
       </label>
 
       <FormActions formId={formId} saveDisabled={!d.title.trim()} onDelete={launch ? () => onDelete(launch.id) : undefined} deleteLabel={launch?.title} />

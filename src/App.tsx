@@ -11,7 +11,7 @@ import { RoutineEditor } from './components/RoutineEditor';
 import { TodayPanel, useNow } from './components/TodayPanel';
 import { BLOCKED_HELP, LaunchersPanel } from './components/Launchers';
 import { LaunchReminder, TimeUpReminder } from './components/LaunchReminder';
-import { chime, notify, unlockAudioOnFirstGesture } from './lib/alerts';
+import { chime, unlockAudioOnFirstGesture } from './lib/alerts';
 import { WeekCalendar } from './components/WeekCalendar';
 import { TasksPage, TasksPanel } from './components/Tasks';
 import { ProjectsSheet } from './components/Projects';
@@ -325,8 +325,7 @@ export default function App() {
   // Start alert: chime + desktop notification when a reminder pops.
   useEffect(() => {
     if (!reminder) return;
-    if (reminder.sound !== false) chime('start');
-    if (reminder.notify) notify(`Launch time: ${reminder.title}`, `${describeOpens(reminder.urls)} · ${reminder.minutes} min`);
+    if (reminder.sound !== false) chime('start', reminder.tone);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reminder?.id]);
 
@@ -345,8 +344,7 @@ export default function App() {
     if (!over) return;
     setEndAlerted((m) => ({ ...m, [`${over.id}:${today}`]: true }));
     setTimeUp(over);
-    if (over.sound !== false) chime('end');
-    if (over.notify) notify(`Time's up: ${over.title}`, `${over.minutes} minutes are done. Check it off or take 10 more.`);
+    if (over.sound !== false) chime('end', over.tone);
   }, [now, launches, handled, endAlerted, extraMinutes, timeUp, reminder]);
 
   async function finishLaunch(l: Launch, how: 'done' | 'skipped') {

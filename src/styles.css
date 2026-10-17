@@ -1455,3 +1455,4 @@ input:-webkit-autofill:focus {
 .combo-note { color: var(--dim); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .combo-kind { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-teal); }
 .app[data-tone='light'] .combo-list { background: #ffffff; box-shadow: 0 12px 32px rgb(68 66 66 / 0.18); }
+.tone-row { margin-top: 10px; }

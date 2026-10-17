@@ -1,3 +1,4 @@
+import { isTone, type Tone } from './alerts';
 import { makeStore } from './store';
 import { toMinutes } from './routines';
 
@@ -32,8 +33,10 @@ export interface Launch {
   movedTo: string | null;
   /** Chime at the start and when the time allotted runs out. */
   sound: boolean;
-  /** Desktop notification at the start and the end. */
+  /** Desktop notification at the start and the end (retired from the form Oct 16). */
   notify: boolean;
+  /** Which alarm sound plays. */
+  tone?: Tone;
   sort: number;
 }
 
@@ -166,6 +169,7 @@ type LaunchRow = {
   moved_to?: string | null;
   sound?: boolean;
   notify?: boolean;
+  tone?: string;
   sort: number;
 };
 
@@ -187,10 +191,11 @@ export const launchStore = makeStore<Launch, LaunchRow>({
   localKey: 'launchpage.launches.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0003_launchers_events.sql',
-  latestScript: 'supabase/migrations/0005_launch_alerts.sql',
-  // Before 0004/0005 are run: save without moved_to, sound and notify.
+  latestScript: 'supabase/migrations/0013_launch_tone.sql',
+  // Before 0004/0005/0013 are run: save without moved_to, sound, notify and tone.
   legacyRow: (r) => {
     const x = { ...r };
+    delete x.tone;
     delete x.moved_to;
     delete x.sound;
     delete x.notify;
@@ -211,6 +216,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     ...(l.movedTo ? { moved_to: l.movedTo } : {}),
     sound: l.sound,
     notify: l.notify,
+    tone: l.tone ?? 'chime',
     sort: l.sort
   }),
   fromRow: (r) => ({
@@ -227,6 +233,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     movedTo: r.moved_to ?? null,
     sound: r.sound ?? true,
     notify: r.notify ?? false,
+    tone: isTone(r.tone) ? r.tone : 'chime',
     sort: r.sort
   })
 });
