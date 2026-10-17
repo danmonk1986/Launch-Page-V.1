@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
-import { DEFAULT_SETTINGS, loadSettings, saveSettings, type BrandSettings } from './lib/settings';
+import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettings, type BrandSettings } from './lib/settings';
 import { downloadExport } from './lib/exportData';
 import { Header, type PageId } from './components/Header';
 import { HeaderClock } from './components/Clock';
@@ -376,7 +376,7 @@ export default function App() {
   }
 
   // On the light Damascus theme the neons are deepened a little so they read on white.
-  const light = settings.background === 'damascus';
+  const light = LIGHT_BACKGROUNDS.includes(settings.background);
   const ink = (c: string, pct: number) => (light ? `color-mix(in srgb, ${c} ${pct}%, #2b2a2a)` : c);
   const theme = {
     '--accent-purple': ink(settings.accentPurple, 85),
@@ -385,7 +385,7 @@ export default function App() {
     '--accent-pink': ink(settings.accentPink, 80)
   } as CSSProperties;
 
-  if (!authReady) return <div className="app" style={theme} data-bg={settings.background} />;
+  if (!authReady) return <div className="app" style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'} />;
   if (supabase && !session) {
     return (
       <div className="app app-light" style={theme}>
@@ -395,12 +395,13 @@ export default function App() {
   }
 
   return (
-    <div className="app" style={theme} data-bg={settings.background}>
+    <div className="app" style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'}>
       <div className="sky" aria-hidden="true">
         <div className="sky-lines" />
         <div className="sky-horizon" />
         <div className="sky-floor" />
         <div className="sky-damascus" />
+        <div className="sky-snow" />
       </div>
       <Header
         settings={settings}

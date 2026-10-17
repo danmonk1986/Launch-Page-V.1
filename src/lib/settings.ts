@@ -1,6 +1,18 @@
 import { supabase } from './supabase';
 
-export type Background = 'synthwave' | 'night' | 'plain' | 'navy' | 'damascus';
+/** In order: three dark, then three light. */
+export const BACKGROUNDS = ['synthwave', 'night', 'navy', 'damascus', 'snow', 'white'] as const;
+export type Background = (typeof BACKGROUNDS)[number];
+export const LIGHT_BACKGROUNDS: readonly Background[] = ['damascus', 'snow', 'white'];
+/** The backgrounds Supabase accepted before 0012_backgrounds.sql. */
+const LEGACY_BACKGROUNDS = ['synthwave', 'night', 'plain'];
+const BG_LOCAL_KEY = 'launchpage.settings.bgLocal';
+
+/** Plain was retired for Navy (Oct 16); anything unknown falls back to Synthwave. */
+function normalizeBackground(b: string): Background {
+  if (b === 'plain') return 'navy';
+  return (BACKGROUNDS as readonly string[]).includes(b) ? (b as Background) : 'synthwave';
+}
 
 export interface BrandSettings {
   displayName: string;
@@ -43,7 +55,9 @@ const LOCAL_KEY = 'launchpage.settings.v1';
 function readLocal(): BrandSettings {
   try {
     const raw = localStorage.getItem(LOCAL_KEY);
-    return raw ? upgradePalette({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) }) : DEFAULT_SETTINGS;
+    if (!raw) return DEFAULT_SETTINGS;
+    const s = upgradePalette({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) });
+    return { ...s, background: normalizeBackground(s.background) };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -63,12 +77,28 @@ type Row = {
   logo_url: string | null;
   goal: string;
   mantra: string;
-  background: Background;
+  background: string;
   accent_purple: string;
   accent_teal: string;
   accent_green?: string;
   accent_pink?: string;
 };
+
+function hasLocalBg() {
+  try {
+    return localStorage.getItem(BG_LOCAL_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function setLocalBg(on: boolean) {
+  try {
+    if (on) localStorage.setItem(BG_LOCAL_KEY, '1');
+    else localStorage.removeItem(BG_LOCAL_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 const toRow = (s: BrandSettings): Row => ({
   display_name: s.displayName,
@@ -89,7 +119,8 @@ const fromRow = (r: Row): BrandSettings => ({
   logoUrl: r.logo_url,
   goal: r.goal,
   mantra: r.mantra,
-  background: r.background,
+  // Until 0012 is run, a newer background lives on this device only.
+  background: hasLocalBg() ? readLocal().background : normalizeBackground(r.background),
   accentPurple: r.accent_purple,
   accentTeal: r.accent_teal,
   // Before 0007 is run these columns are missing: keep this device's choice.
@@ -127,10 +158,22 @@ export async function saveSettings(
   if (!supabase || !userId) return { synced: false };
   const row = toRow(s);
   const { error } = await supabase.from('settings').upsert({ user_id: userId, ...row });
-  if (!error) return { synced: true };
-  // 0007 not run yet: save everything else; the two new colours stay on this device.
+  if (!error) {
+    setLocalBg(false);
+    return { synced: true };
+  }
+  // 0007 or 0012 not run yet: save everything else; what's new stays on this device.
   delete row.accent_green;
   delete row.accent_pink;
-  await supabase.from('settings').upsert({ user_id: userId, ...row });
+  const keepLocalBg = !LEGACY_BACKGROUNDS.includes(row.background);
+  if (keepLocalBg) row.background = 'synthwave';
+  const { error: e2 } = await supabase.from('settings').upsert({ user_id: userId, ...row });
+  setLocalBg(keepLocalBg);
+  if (e2 && keepLocalBg) {
+    // The legacy shape failed too: try again with just the old columns minus the background.
+    const rest: Partial<Row> = { ...row };
+    delete rest.background;
+    await supabase.from('settings').upsert({ user_id: userId, ...rest });
+  }
   return { synced: false };
 }
