@@ -1,12 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
-import { byNewest, isBlank, newEntry, shortDate, streak, type JournalEntry } from '../lib/journal';
+import { byNewest, checkinsOf, isBlank, newEntry, shortDate, streak, withCheckins, type CheckIn, type JournalEntry } from '../lib/journal';
 import { isoDate } from '../lib/launchers';
 
 const PLUS = 'M12 5v14M5 12h14';
 const PEN = 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4';
-const CHEVRON = 'M6 9l6 6 6-6';
 
 type Props = {
   entries: JournalEntry[];
@@ -78,7 +77,7 @@ export function JournalPanel({ entries, today, onSave, onDelete }: Props) {
                     <span className="journal-item-head">{e.headline || 'Untitled'}</span>
                     {e.theme && <span className="journal-item-theme">{e.theme}</span>}
                   </span>
-                  {e.body.trim() && <span className="journal-item-more" aria-label="Has a check in" title="Has a check in">¶</span>}
+                  {checkinsOf(e).length > 0 && <span className="journal-item-more" aria-label="Has a check in" title="Has a check in">¶</span>}
                 </button>
               </li>
             ))}
@@ -112,13 +111,42 @@ export function JournalPanel({ entries, today, onSave, onDelete }: Props) {
   );
 }
 
+const checkTime = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+
+/** Check-ins for a day: "✓ CHECK IN #1", "✓ CHECK IN #2"… each with its own short reflection. */
+function CheckIns({ list, onChange, onBlur, focusLast }: { list: CheckIn[]; onChange: (l: CheckIn[]) => void; onBlur?: () => void; focusLast?: boolean }) {
+  return (
+    <>
+      {list.map((c, i) => (
+        <div key={i} className="checkin">
+          <span className="checkin-label">
+            ✓ Check in #{i + 1}
+            {c.at && <span className="checkin-time">{checkTime(c.at)}</span>}
+          </span>
+          <textarea
+            className="journal-body"
+            value={c.text}
+            autoFocus={focusLast && i === list.length - 1 && !c.text}
+            onChange={(e) => onChange(list.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
+            onBlur={onBlur}
+            rows={3}
+            placeholder="A short reflection"
+            aria-label={`Check in ${i + 1}`}
+          />
+        </div>
+      ))}
+    </>
+  );
+}
+
 /** Today's entry, typed straight into the panel. Saves itself a moment after you stop typing. */
 function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: JournalEntry | null; lastTheme: string; onSave: (e: JournalEntry) => void }) {
   // The theme carries on from the last entry until you change it.
   const [d, setD] = useState<JournalEntry>(() => saved ?? newEntry(date, lastTheme));
-  const [open, setOpen] = useState(() => !!saved?.body.trim());
+  const [cks, setCks] = useState<CheckIn[]>(() => (saved ? checkinsOf(saved) : []));
   const [state, setState] = useState<'idle' | 'typing' | 'saved'>('idle');
-  const latest = useRef(d);
+  const latest = useRef(withCheckins(d, cks));
   const timer = useRef<number | undefined>(undefined);
   const save = useRef(onSave);
   save.current = onSave;
@@ -131,19 +159,30 @@ function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: J
     save.current(e);
     setState('saved');
   };
+  const queue = (next: JournalEntry, list: CheckIn[]) => {
+    latest.current = withCheckins(next, list);
+    setState('typing');
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(flush, 900);
+  };
   // Today's entry arrived after the panel opened (loaded from the cloud, or saved on another device).
   useEffect(() => {
     if (!saved || saved.id === latest.current.id) return;
-    const next = isBlank(latest.current) ? saved : { ...latest.current, id: saved.id };
-    latest.current = next;
+    const mine = latest.current;
+    const next = isBlank(mine) ? saved : { ...mine, id: saved.id };
+    const list = isBlank(mine) ? checkinsOf(saved) : cks;
+    latest.current = withCheckins(next, list);
     setD(next);
-    if (next.body.trim()) setOpen(true);
+    setCks(list);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saved]);
   // A theme from an imported or older entry that loaded after the panel opened.
   useEffect(() => {
-    if (saved || latest.current.theme || !lastTheme) return;
-    latest.current = { ...latest.current, theme: lastTheme };
-    setD(latest.current);
+    if (saved || d.theme || !lastTheme) return;
+    const next = { ...d, theme: lastTheme };
+    setD(next);
+    latest.current = withCheckins(next, cks);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastTheme, saved]);
 
   // Save what's typed if the page closes or the panel goes away mid-sentence.
@@ -151,13 +190,14 @@ function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: J
     if (timer.current !== undefined) flush();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const set = (k: 'headline' | 'theme' | 'body', v: string) => {
-    const next = { ...latest.current, [k]: v };
-    latest.current = next;
+  const set = (k: 'headline' | 'theme', v: string) => {
+    const next = { ...d, [k]: v };
     setD(next);
-    setState('typing');
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(flush, 900);
+    queue(next, cks);
+  };
+  const setList = (list: CheckIn[]) => {
+    setCks(list);
+    queue(d, list);
   };
 
   return (
@@ -171,6 +211,7 @@ function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: J
         aria-label="Today's headline"
       />
       <div className="journal-theme-row">
+        <span className="journal-date">{shortDate(date)}</span>
         <input
           className="journal-theme"
           value={d.theme}
@@ -179,43 +220,39 @@ function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: J
           placeholder="Theme"
           aria-label="Theme"
         />
-        <span className="journal-date">{shortDate(date)}</span>
       </div>
+      <CheckIns list={cks} onChange={setList} onBlur={flush} focusLast />
       <div className="journal-foot">
-        <button type="button" className={`journal-toggle ${open ? 'is-open' : ''}`} aria-expanded={open} onClick={() => setOpen((x) => !x)}>
-          <Icon d={open ? CHEVRON : PEN} size={14} />
-          {open ? 'Hide check in' : d.body.trim() ? 'Open check in' : 'Add check in'}
+        <button
+          type="button"
+          className="journal-toggle"
+          onClick={() => setCks((l) => [...l.filter((c) => c.text.trim()), { at: new Date().toISOString(), text: '' }])}
+          disabled={cks.some((c) => !c.text.trim())}
+        >
+          <Icon d={PEN} size={14} />
+          Add check in
         </button>
         <span className="journal-state" aria-live="polite">
           {state === 'typing' ? 'Saving…' : state === 'saved' ? 'Saved' : ''}
         </span>
       </div>
-      {open && (
-        <textarea
-          className="journal-body"
-          value={d.body}
-          onChange={(e) => set('body', e.target.value)}
-          onBlur={flush}
-          rows={6}
-          placeholder="How did today go?"
-          aria-label="Today's check in"
-        />
-      )}
     </div>
   );
 }
 
 function EntryForm({ entry, isNew, taken, onSave, onDelete }: { entry: JournalEntry; isNew: boolean; taken: (date: string) => boolean; onSave: (e: JournalEntry) => void; onDelete: () => void }) {
   const [d, setD] = useState(entry);
+  const [cks, setCks] = useState<CheckIn[]>(() => checkinsOf(entry));
   const formId = useId();
   const clash = taken(d.date);
+  const hasText = !!d.headline.trim() || cks.some((c) => c.text.trim());
   return (
     <form
       id={formId}
       onSubmit={(e) => {
         e.preventDefault();
         if (clash || !d.date) return;
-        onSave({ ...d, headline: d.headline.trim(), theme: d.theme.trim() });
+        onSave(withCheckins({ ...d, headline: d.headline.trim(), theme: d.theme.trim() }, cks));
       }}
     >
       <label className="field">
@@ -231,11 +268,19 @@ function EntryForm({ entry, isNew, taken, onSave, onDelete }: { entry: JournalEn
         <span>Theme</span>
         <input value={d.theme} onChange={(e) => setD({ ...d, theme: e.target.value })} placeholder="Theme for the day" />
       </label>
-      <label className="field">
-        <span>Check in</span>
-        <textarea value={d.body} onChange={(e) => setD({ ...d, body: e.target.value })} rows={10} />
-      </label>
-      <FormActions formId={formId} saveDisabled={clash || !d.date || (!d.headline.trim() && !d.body.trim())} onDelete={isNew ? undefined : onDelete} deleteLabel="this entry" />
+      <div className="field">
+        <CheckIns list={cks} onChange={setCks} focusLast />
+        <button
+          type="button"
+          className="journal-toggle"
+          disabled={cks.some((c) => !c.text.trim())}
+          onClick={() => setCks((l) => [...l, { at: null, text: '' }])}
+        >
+          <Icon d={PEN} size={14} />
+          Add check in
+        </button>
+      </div>
+      <FormActions formId={formId} saveDisabled={clash || !d.date || !hasText} onDelete={isNew ? undefined : onDelete} deleteLabel="this entry" />
     </form>
   );
 }

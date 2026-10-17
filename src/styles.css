@@ -1513,3 +1513,16 @@ input:-webkit-autofill:focus {
 }
 /* Headline in the header mantra's purple and weight (the "I GOT IN" line). */
 .journal-headline { color: var(--accent-purple); font-weight: 600; letter-spacing: 0.02em; }
+/* Journal (Oct 16, 11:40 PM): brighter headline, theme right-aligned in the TIMED LAUNCHES style, check-ins. */
+.journal-headline { color: color-mix(in srgb, var(--accent-purple) 72%, #ffffff); }
+.app[data-tone='light'] .journal-headline { color: var(--accent-purple); }
+.journal-theme-row { justify-content: space-between; align-items: center; }
+.journal-theme-row .journal-theme {
+  text-align: right; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-teal);
+}
+.journal-theme-row .journal-theme::placeholder { text-align: right; }
+.checkin { display: grid; gap: 4px; margin-top: 8px; }
+.checkin-label { font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-teal); display: flex; gap: 10px; align-items: baseline; }
+.checkin-time { font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; letter-spacing: 0.04em; color: var(--beige); font-weight: 500; text-transform: none; }
+.checkin .journal-body { min-height: 72px; }
+.journal-toggle:disabled { opacity: 0.45; cursor: default; }
