@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { nowBlockIndex, toBlocks, type Routine, type Shift } from '../lib/routines';
 
 export function useNow(everyMs = 30_000) {
@@ -10,17 +10,28 @@ export function useNow(everyMs = 30_000) {
   return now;
 }
 
-type Props = { routine: Routine | null; shift: Shift; onEdit: () => void };
+type Props = { routine: Routine | null; shift: Shift; onEdit: () => void; /** Card by card mode: keep the step happening now in view. */ follow?: boolean };
 
 /** The active routine as a timeline. Steps sit under their time block; now is highlighted. */
-export function TodayPanel({ routine, shift, onEdit }: Props) {
+export function TodayPanel({ routine, shift, onEdit, follow }: Props) {
   const now = useNow();
   const blocks = routine ? toBlocks(routine, shift) : [];
   const current = nowBlockIndex(blocks, now);
   const nowBlock = current >= 0 ? blocks[current] : null;
+  const panel = useRef<HTMLElement>(null);
+  // Follow the time: scroll the routine so the step happening now sits near the top.
+  useEffect(() => {
+    const el = panel.current;
+    if (!follow || !el) return;
+    const row = el.querySelector<HTMLElement>('.tl-block.is-now');
+    if (!row) return;
+    const card = el.querySelector<HTMLElement>('.now-card');
+    const top = row.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop - (card?.offsetHeight ?? 0) - 24;
+    el.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }, [follow, current, routine?.id, shift]);
 
   return (
-    <section className="panel panel-today" aria-label="Today's routine">
+    <section ref={panel} className="panel panel-today" aria-label="Today's routine">
       {blocks.length === 0 ? (
         <div className="today-empty">
           <p className="panel-empty">No steps yet. Add them and they show here as today's timeline.</p>

@@ -9,6 +9,7 @@ import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
 import { addNonNeg, readNonNegs } from './lib/nonneg';
+import { readScrollMode, writeScrollMode, type ScrollMode } from './lib/view';
 import { TodayPanel, useNow } from './components/TodayPanel';
 import { BLOCKED_HELP, LaunchersPanel, type TimedPreset } from './components/Launchers';
 import { LaunchReminder, TimeUpReminder } from './components/LaunchReminder';
@@ -86,6 +87,17 @@ export default function App() {
   const tasksRef = useRef<Task[]>([]);
   const [gcalOff, setGcalOff] = useState(0);
   const [focusTask, setFocusTask] = useState<string | null>(null);
+  const [scrollMode, setScrollMode] = useState<ScrollMode>(readScrollMode);
+  // Card by card: the page snaps to each card; the header's height keeps cards clear of it.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('snap-scroll', scrollMode === 'cards');
+    const bar = document.querySelector<HTMLElement>('.topbar');
+    if (!bar) return;
+    const ro = new ResizeObserver(() => root.style.setProperty('--header-h', `${bar.offsetHeight}px`));
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, [scrollMode, authReady, session]);
   const importInput = useRef<HTMLInputElement>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   // eslint-disable-next-line react-hooks/refs
@@ -454,7 +466,7 @@ export default function App() {
   }
 
   return (
-    <div className={scrolled ? 'app is-scrolled' : 'app'} style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'}>
+    <div className={scrolled ? 'app is-scrolled' : 'app'} style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'} data-scroll={scrollMode}>
       <div className="sky" aria-hidden="true">
         <div className="sky-lines" />
         <div className="sky-horizon" />
@@ -552,6 +564,7 @@ export default function App() {
                   handled={handled}
                   today={now}
                   onFinish={finishLaunch}
+                  onLaunchNow={launchNow}
                   log={launchLog}
                   preset={timedPreset}
                   onPresetUsed={() => setTimedPreset(null)}
@@ -590,9 +603,10 @@ export default function App() {
                   }}
                 />
               }
-              journal={<JournalPanel entries={journal} today={now} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} />}
+              journal={<JournalPanel entries={journal} today={now} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={
                 <TodayPanel
+                  follow={scrollMode === 'cards'}
                   routine={activeRoutine}
                   shift={shift}
                   onEdit={() => setEditor({ open: true, routine: activeRoutine })}
@@ -613,6 +627,8 @@ export default function App() {
               onClose={() => setPage('launch')}
               focusId={focusTask}
             />
+          ) : page === 'journal' ? (
+            <JournalPanel entries={journal} today={now} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} full onClose={() => setPage('launch')} />
           ) : (
             <ComingSoon page={page} />
           )}
@@ -690,6 +706,11 @@ export default function App() {
         settings={settings}
         onClose={() => setSettingsOpen(false)}
         onSave={handleSave}
+        scrollMode={scrollMode}
+        onScrollMode={(m) => {
+          setScrollMode(m);
+          writeScrollMode(m);
+        }}
         onSetPassword={
           supabase && session
             ? async (password) => {

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
-import { byNewest, checkinsOf, isBlank, newEntry, shortDate, streak, withCheckins, type CheckIn, type JournalEntry } from '../lib/journal';
+import { byNewest, checkinsOf, isBlank, MOODS, newEntry, shortDate, streak, withCheckins, type CheckIn, type JournalEntry } from '../lib/journal';
 import { isoDate } from '../lib/launchers';
 
 const PLUS = 'M12 5v14M5 12h14';
@@ -15,10 +15,14 @@ type Props = {
   onDelete: (id: string) => void;
   /** Upload a journal file (.json) from the Launch Sheet. */
   onImport: (f: File) => void;
+  /** Full page: every day open with its check-ins, and × to go back. */
+  full?: boolean;
+  onOpen?: () => void;
+  onClose?: () => void;
 };
 
 /** Launch Page: today's headline written in place, past days underneath. */
-export function JournalPanel({ entries, today, onSave, onDelete, onImport }: Props) {
+export function JournalPanel({ entries, today, onSave, onDelete, onImport, full, onOpen, onClose }: Props) {
   const todayIso = isoDate(today);
   const sorted = byNewest(entries);
   const saved = sorted.find((e) => e.date === todayIso) ?? null;
@@ -27,18 +31,19 @@ export function JournalPanel({ entries, today, onSave, onDelete, onImport }: Pro
   const [all, setAll] = useState(false);
   const [editing, setEditing] = useState<JournalEntry | null>(null);
   const [isNew, setIsNew] = useState(false);
-  const shown = all ? past : past.slice(0, 5);
+  const shown = all || full ? past : past.slice(0, 5);
   const run = streak(entries, todayIso);
 
   return (
-    <section className="panel panel-journal" aria-labelledby="h-journal">
+    <section className={`panel panel-journal${full ? ' is-full' : ''}`} aria-labelledby="h-journal">
       <div className="panel-head">
         <h2 id="h-journal" className="panel-title">
-          Journal
-          {run > 0 && (
-            <span className="journal-streak" title={`${run} day${run === 1 ? '' : 's'} in a row`}>
-              {run} day{run === 1 ? '' : 's'} in a row
-            </span>
+          {onOpen ? (
+            <button type="button" className="title-btn" onClick={onOpen} title="Open the whole journal">
+              Journal
+            </button>
+          ) : (
+            'Journal'
           )}
         </h2>
         <div className="panel-actions">
@@ -67,6 +72,11 @@ export function JournalPanel({ entries, today, onSave, onDelete, onImport }: Pro
           >
             <Icon d={PLUS} />
           </button>
+          {onClose && (
+            <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={onClose}>
+              <Icon d="M6 6l12 12M18 6L6 18" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -74,7 +84,14 @@ export function JournalPanel({ entries, today, onSave, onDelete, onImport }: Pro
 
       {past.length > 0 && (
         <>
-          <h3 className="journal-sub">Past days</h3>
+          <div className="journal-sub-row">
+            <h3 className="journal-sub">Past days</h3>
+            {run > 0 && (
+              <span className="journal-streak" title={`${run} day${run === 1 ? '' : 's'} in a row`}>
+                {run} day{run === 1 ? '' : 's'} in a row
+              </span>
+            )}
+          </div>
           <ul className="journal-list">
             {shown.map((e) => (
               <li key={e.id}>
@@ -87,17 +104,27 @@ export function JournalPanel({ entries, today, onSave, onDelete, onImport }: Pro
                   }}
                   title="Open this entry"
                 >
-                  <span className="journal-item-date">{shortDate(e.date)}</span>
+                  <span className="journal-item-date">
+                    <span className="journal-mood-mark" aria-label={e.mood ? `Mood ${e.mood}` : undefined}>{e.mood || ''}</span>
+                    {shortDate(e.date)}
+                  </span>
                   <span className="journal-item-text">
                     <span className="journal-item-head">{e.headline || 'Untitled'}</span>
                     {e.theme && <span className="journal-item-theme">{e.theme}</span>}
+                    {full &&
+                      checkinsOf(e).map((c, i) => (
+                        <span key={i} className="journal-item-check">
+                          <span className="checkin-label">✓ Check in #{i + 1}</span>
+                          {c.text}
+                        </span>
+                      ))}
                   </span>
                   {checkinsOf(e).length > 0 && <span className="journal-item-more" aria-label="Has a check in" title="Has a check in">¶</span>}
                 </button>
               </li>
             ))}
           </ul>
-          {past.length > 5 && (
+          {!full && past.length > 5 && (
             <button type="button" className="link-btn journal-all" onClick={() => setAll((x) => !x)}>
               {all ? 'Show fewer' : `Show all ${past.length}`}
             </button>
@@ -123,6 +150,42 @@ export function JournalPanel({ entries, today, onSave, onDelete, onImport }: Pro
         )}
       </Sheet>
     </section>
+  );
+}
+
+/** One emoji for the day's mood: tap to choose, tap the same one again to clear. */
+function MoodPicker({ value, onChange }: { value: string; onChange: (m: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span
+      className="mood"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
+      <button type="button" className={`mood-btn${value ? '' : ' is-empty'}`} aria-label={value ? `Mood ${value}: change` : 'Pick a mood'} title="Mood" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        {value || '☺'}
+      </button>
+      {open && (
+        <span className="mood-list" role="listbox" aria-label="Mood">
+          {MOODS.map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="option"
+              aria-selected={m === value}
+              className="mood-opt"
+              onClick={() => {
+                onChange(m === value ? '' : m);
+                setOpen(false);
+              }}
+            >
+              {m}
+            </button>
+          ))}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -205,7 +268,7 @@ function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: J
     if (timer.current !== undefined) flush();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const set = (k: 'headline' | 'theme', v: string) => {
+  const set = (k: 'headline' | 'theme' | 'mood', v: string) => {
     const next = { ...d, [k]: v };
     setD(next);
     queue(next, cks);
@@ -217,25 +280,36 @@ function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: J
 
   return (
     <div className="journal-today">
-      <input
-        className="journal-headline"
-        value={d.headline}
-        onChange={(e) => set('headline', e.target.value)}
-        onBlur={flush}
-        placeholder="One headline for the day"
-        aria-label="Today's headline"
-      />
-      <div className="journal-theme-row">
-        <span className="journal-date">{shortDate(date)}</span>
+      <div className="journal-top-row">
         <input
-          className="journal-theme"
-          value={d.theme}
-          onChange={(e) => set('theme', e.target.value)}
+          className="journal-headline"
+          value={d.headline}
+          onChange={(e) => set('headline', e.target.value)}
           onBlur={flush}
-          placeholder="Theme"
-          aria-label="Theme"
+          placeholder="One headline for the day"
+          aria-label="Today's headline"
         />
+        <span className="journal-when">
+          <MoodPicker
+            value={d.mood ?? ''}
+            onChange={(m) => {
+              const next = { ...d, mood: m };
+              setD(next);
+              latest.current = withCheckins(next, cks);
+              flush();
+            }}
+          />
+          <span className="journal-date">{shortDate(date)}</span>
+        </span>
       </div>
+      <input
+        className="journal-theme"
+        value={d.theme}
+        onChange={(e) => set('theme', e.target.value)}
+        onBlur={flush}
+        placeholder="Theme"
+        aria-label="Theme"
+      />
       <CheckIns list={cks} onChange={setList} onBlur={flush} focusLast />
       <div className="journal-foot">
         <button
@@ -283,6 +357,16 @@ function EntryForm({ entry, isNew, taken, onSave, onDelete }: { entry: JournalEn
         <span>Theme</span>
         <input value={d.theme} onChange={(e) => setD({ ...d, theme: e.target.value })} placeholder="Theme for the day" />
       </label>
+      <div className="field">
+        <span>Mood</span>
+        <div className="mood-row">
+          {MOODS.map((m) => (
+            <button key={m} type="button" className="mood-opt" aria-pressed={d.mood === m} onClick={() => setD({ ...d, mood: d.mood === m ? '' : m })}>
+              {m}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="field">
         <CheckIns list={cks} onChange={setCks} focusLast />
         <button

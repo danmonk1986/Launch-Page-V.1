@@ -15,10 +15,15 @@ export interface JournalEntry {
   /** All check-ins as plain text (what older copies and the import use). */
   body: string;
   checkins?: CheckIn[];
+  /** The day's mood, one emoji ('' = not set). */
+  mood?: string;
   sort: number;
 }
 
-type Row = { id: string; entry_date: string; headline: string; theme: string; body: string; checkins?: CheckIn[]; sort: number };
+type Row = { id: string; entry_date: string; headline: string; theme: string; body: string; checkins?: CheckIn[]; mood?: string; sort: number };
+
+/** Moods to pick from, best to worst. */
+export const MOODS = ['🔥', '😄', '🙂', '😐', '😕', '😫'];
 
 /** The day's check-ins; an older entry's text counts as check-in #1. */
 export function checkinsOf(e: JournalEntry): CheckIn[] {
@@ -37,16 +42,17 @@ export const journalStore = makeStore<JournalEntry, Row>({
   localKey: 'launchpage.journal.v1',
   orderBy: 'entry_date',
   script: 'supabase/migrations/0011_journal.sql',
-  latestScript: 'supabase/migrations/0015_journal_checkins.sql',
-  // Before 0015: save without the check-ins column (body still holds their text).
+  latestScript: 'supabase/migrations/0017_journal_mood.sql',
+  // Before 0015/0017: save without the check-ins and mood columns (body still holds the check-ins' text).
   legacyRow: (r) => {
     const x = { ...r };
     delete x.checkins;
+    delete x.mood;
     return x;
   },
   seed: () => [],
-  toRow: (j) => ({ id: j.id, entry_date: j.date, headline: j.headline, theme: j.theme, body: j.body, checkins: j.checkins ?? checkinsOf(j), sort: j.sort }),
-  fromRow: (r) => ({ id: r.id, date: r.entry_date, headline: r.headline, theme: r.theme, body: r.body, checkins: Array.isArray(r.checkins) ? r.checkins : undefined, sort: r.sort })
+  toRow: (j) => ({ id: j.id, entry_date: j.date, headline: j.headline, theme: j.theme, body: j.body, checkins: j.checkins ?? checkinsOf(j), mood: j.mood ?? '', sort: j.sort }),
+  fromRow: (r) => ({ id: r.id, date: r.entry_date, headline: r.headline, theme: r.theme, body: r.body, checkins: Array.isArray(r.checkins) ? r.checkins : undefined, mood: r.mood ?? '', sort: r.sort })
 });
 
 export function newEntry(date: string, theme = ''): JournalEntry {
@@ -98,4 +104,4 @@ export function journalDate(iso: string) {
   return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase().replace(',', ' ·');
 }
 
-export const isBlank = (j: JournalEntry) => !j.headline.trim() && !j.body.trim() && !checkinsOf(j).some((c) => c.text.trim());
+export const isBlank = (j: JournalEntry) => !j.headline.trim() && !j.body.trim() && !j.mood && !checkinsOf(j).some((c) => c.text.trim());

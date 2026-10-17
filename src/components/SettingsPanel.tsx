@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { BACKGROUNDS, type Background, type BrandSettings } from '../lib/settings';
+import type { ScrollMode } from '../lib/view';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON } from './Sheet';
 
 const BG_LABEL: Record<Background, string> = {
@@ -16,11 +17,14 @@ type Props = {
   settings: BrandSettings;
   onClose: () => void;
   onSave: (s: BrandSettings) => Promise<void>;
+  /** Scrolling style for this device; changes straight away. */
+  scrollMode: ScrollMode;
+  onScrollMode: (m: ScrollMode) => void;
   /** Present only when signed in to the cloud. Returns an error message, or null on success. */
   onSetPassword?: (password: string) => Promise<string | null>;
 };
 
-export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword }: Props) {
+export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword, scrollMode, onScrollMode }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState(settings);
   const [saving, setSaving] = useState(false);
@@ -117,6 +121,21 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword }
               </label>
             ))}
           </div>
+        </fieldset>
+
+        <fieldset className="field">
+          <legend>Scrolling (this device)</legend>
+          <div className="choice-row">
+            <label className="choice">
+              <input type="radio" name="scroll" checked={scrollMode === 'free'} onChange={() => onScrollMode('free')} />
+              <span>Free</span>
+            </label>
+            <label className="choice">
+              <input type="radio" name="scroll" checked={scrollMode === 'cards'} onChange={() => onScrollMode('cards')} />
+              <span>Card by card</span>
+            </label>
+          </div>
+          <p className="field-hint">Card by card: each scroll lands on the next card, and the routine stays fixed beside them, following the time.</p>
         </fieldset>
 
         <fieldset className="field">

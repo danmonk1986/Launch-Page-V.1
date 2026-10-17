@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { BrandSettings } from '../lib/settings';
 
-export type PageId = 'launch' | 'tasks' | 'days26' | 'budget';
+/** journal is opened from the Journal panel, not the menu. */
+export type PageId = 'launch' | 'tasks' | 'days26' | 'budget' | 'journal';
 
 const PAGES: { id: PageId; label: string }[] = [
   { id: 'launch', label: 'Launch Page' },
