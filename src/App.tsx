@@ -8,7 +8,28 @@ import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
-import { addNonNeg, readNonNegs } from './lib/nonneg';
+import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
+import { Days26Page } from './components/Days26';
+import {
+  DEFAULT_CONFIG,
+  activeNonNegs,
+  configStore,
+  dayId,
+  dayStore,
+  effShift,
+  flipsNow,
+  logStore,
+  modeOf,
+  nonNegStore,
+  quoteStore,
+  routineDay,
+  snapshot,
+  type Config,
+  type DayRecord,
+  type LogEntry,
+  type NonNeg,
+  type Quote
+} from './lib/days26';
 import { readScrollMode, writeScrollMode, type ScrollMode } from './lib/view';
 import { TodayPanel, useNow } from './components/TodayPanel';
 import { BLOCKED_HELP, LaunchersPanel, type TimedPreset } from './components/Launchers';
@@ -18,7 +39,7 @@ import { WeekCalendar } from './components/WeekCalendar';
 import { TasksPage, TasksPanel } from './components/Tasks';
 import { ProjectsSheet } from './components/Projects';
 import { matchCalendar, projectStore, type Project } from './lib/projects';
-import { buildJournalImport, journalStore, type JournalEntry } from './lib/journal';
+import { buildJournalImport, byNewest, journalStore, newEntry, type JournalEntry } from './lib/journal';
 import { JournalPanel } from './components/Journal';
 import { buildImport, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
 import { addTaskToGoogle, googleConfigured, knownCalendars, wasConnected } from './lib/google';
@@ -84,6 +105,13 @@ export default function App() {
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
+  // 26 Days
+  const [nonnegs, setNonnegs] = useState<NonNeg[]>([]);
+  const [d26Days, setD26Days] = useState<DayRecord[]>([]);
+  const [d26Logs, setD26Logs] = useState<LogEntry[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [d26Config, setD26Config] = useState<Config>(DEFAULT_CONFIG);
+  const [d26Ready, setD26Ready] = useState(false);
   const tasksRef = useRef<Task[]>([]);
   const [gcalOff, setGcalOff] = useState(0);
   const [focusTask, setFocusTask] = useState<string | null>(null);
@@ -189,7 +217,25 @@ export default function App() {
       const kept = t1.items.filter((t) => !trashExpired(t));
       setTasks(kept);
       for (const t of expired) await taskStore.remove(userId, t.id, kept);
-      setStoreProblem(l1.problem ?? l2.problem ?? l3.problem ?? p1.problem ?? t1.problem ?? j1.problem);
+      // 26 Days
+      const [n1, dd, lg, q1, c1] = await Promise.all([nonNegStore.load(userId), dayStore.load(userId), logStore.load(userId), quoteStore.load(userId), configStore.load(userId)]);
+      if (!live) return;
+      let nn = n1.items;
+      // Anything added with "Add non-negotiable" before 26 Days existed moves into the list once.
+      const legacy = readLegacyNonNegs().filter((l) => !nn.some((n) => !n.archived && n.label.toLowerCase() === l.toLowerCase()));
+      for (const label of legacy) {
+        const item: NonNeg = { id: crypto.randomUUID(), label, section: 'morning', time: null, timeFrom: null, log: null, target: 0, perWeek: null, archived: false, sort: nn.length };
+        nn = [...nn, item];
+        await nonNegStore.save(userId, item, nn);
+      }
+      clearLegacyNonNegs();
+      setNonnegs(nn);
+      setD26Days(dd.items);
+      setD26Logs(lg.items);
+      setQuotes(q1.items);
+      setD26Config(c1.items[0] ?? DEFAULT_CONFIG);
+      setD26Ready(true);
+      setStoreProblem(l1.problem ?? l2.problem ?? l3.problem ?? p1.problem ?? t1.problem ?? j1.problem ?? n1.problem ?? dd.problem ?? lg.problem);
     })();
     return () => {
       live = false;
@@ -248,6 +294,55 @@ export default function App() {
   const eventOps = ops(eventStore, events, setEvents, (e) => e.title);
   const projectOps = ops(projectStore, projects, setProjects, (p) => p.name);
   const taskOps = ops(taskStore, tasks, setTasks, (t) => t.task);
+  const nonNegOps = ops(nonNegStore, nonnegs, setNonnegs, (n) => n.label);
+  const quoteOps = ops(quoteStore, quotes, setQuotes, () => 'Quote');
+
+  // 26 Days lists that change often (ticks, logs) save quietly from the newest copy.
+  const daysRef = useRef(d26Days);
+  daysRef.current = d26Days;
+  function saveDay(d: DayRecord) {
+    const list = daysRef.current;
+    const next = list.some((x) => x.day === d.day) ? list.map((x) => (x.day === d.day ? d : x)) : [...list, d];
+    daysRef.current = next;
+    setD26Days(next);
+    void dayStore.save(userId, d, next);
+  }
+  const logsRef = useRef(d26Logs);
+  logsRef.current = d26Logs;
+  async function saveLog(l: LogEntry) {
+    const list = logsRef.current;
+    const isNew = !list.some((x) => x.id === l.id);
+    const next = isNew ? [...list, l] : list.map((x) => (x.id === l.id ? l : x));
+    logsRef.current = next;
+    setD26Logs(next);
+    const ok = await logStore.save(userId, l, next);
+    setStatus(`${isNew ? 'Logged' : 'Log updated'}${ok ? '.' : ' on this device only.'}`);
+  }
+  function deleteLog(id: string) {
+    const next = logsRef.current.filter((x) => x.id !== id);
+    logsRef.current = next;
+    setD26Logs(next);
+    void logStore.remove(userId, id, next);
+    setStatus('Log deleted.');
+  }
+  async function saveD26Config(c: Config) {
+    setD26Config(c);
+    const ok = await configStore.save(userId, c, [c]);
+    if (!ok) setStatus('Saved on this device only.');
+  }
+  /** Adds a Non-Negotiable to the 26 Days list (routine editor ⋯ → Add non-negotiable). */
+  function addNonNeg(label: string) {
+    const clean = label.trim();
+    if (!clean || activeNonNegs(nonnegs).some((n) => n.label.toLowerCase() === clean.toLowerCase())) return;
+    void nonNegOps.save({ id: crypto.randomUUID(), label: clean, section: 'morning', time: null, timeFrom: null, log: null, target: 0, perWeek: null, archived: false, sort: nonnegs.length });
+  }
+  async function saveRitual(r: Routine) {
+    const exists = routines.some((x) => x.id === r.id);
+    const next = exists ? routines.map((x) => (x.id === r.id ? r : x)) : [...routines, r];
+    setRoutines(next);
+    const ok = await saveRoutine(userId, r, next);
+    setStatus(ok ? `${r.name} saved.` : `${r.name} saved on this device only.`);
+  }
 
   // The Journal saves itself while you type, so it saves quietly and from the newest list.
   const journalRef = useRef(journal);
@@ -279,6 +374,30 @@ export default function App() {
     setJournal(next);
     void journalStore.remove(userId, id, next);
     setStatus('Journal entry deleted.');
+  }
+
+  // 26 Days: today's record remembers the mode it's lived in and the list as it is today.
+  const d26Mode = modeOf(activeRoutine);
+  const d26Shift = effShift(d26Mode, shift);
+  const d26Today = routineDay(now, flipsNow(d26Mode, shift));
+  useEffect(() => {
+    if (!d26Ready || !activeRoutine) return;
+    const items = snapshot(nonnegs);
+    if (!items.length) return;
+    const cur = daysRef.current.find((d) => d.day === d26Today);
+    if (cur && cur.mode === d26Mode && cur.shift === d26Shift && JSON.stringify(cur.items) === JSON.stringify(items)) return;
+    saveDay(cur ? { ...cur, mode: d26Mode, shift: d26Shift, items } : { id: dayId(d26Today), day: d26Today, mode: d26Mode, shift: d26Shift, ticks: [], items, sort: 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d26Ready, d26Today, d26Mode, d26Shift, nonnegs, activeRoutine?.id]);
+
+  // The daily goal is today's journal theme (it carries over from the last entry until changed).
+  const journalDay = isoDate(now);
+  const lastTheme = byNewest(journal).find((e) => e.date < journalDay && e.theme.trim())?.theme ?? '';
+  const dailyGoal = journal.find((e) => e.date === journalDay)?.theme.trim() || lastTheme;
+  function setDailyGoal(g: string) {
+    const cur = journalRef.current.find((e) => e.date === journalDay) ?? newEntry(journalDay, '');
+    saveJournal({ ...cur, theme: g });
+    setStatus('Daily goal saved. It’s today’s journal theme too.');
   }
 
   // Link areas to Google calendars with the same name, once, the first time Google's list is seen.
@@ -629,6 +748,30 @@ export default function App() {
             />
           ) : page === 'journal' ? (
             <JournalPanel entries={journal} today={now} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} full onClose={() => setPage('launch')} />
+          ) : page === 'days26' ? (
+            <Days26Page
+              now={now}
+              displayName={settings.displayName}
+              routine={activeRoutine}
+              shift={shift}
+              nonnegs={nonnegs}
+              records={d26Days}
+              logs={d26Logs}
+              quotes={quotes}
+              config={d26Config}
+              rituals={routines.filter((r) => r.kind === 'ritual').sort((a, b) => a.sort - b.sort)}
+              goal={dailyGoal}
+              onGoal={setDailyGoal}
+              onSaveNonNegs={nonNegOps.saveMany}
+              onSaveDay={saveDay}
+              onSaveLog={saveLog}
+              onDeleteLog={deleteLog}
+              onSaveQuote={quoteOps.save}
+              onDeleteQuote={quoteOps.remove}
+              onSaveConfig={saveD26Config}
+              onSaveRitual={saveRitual}
+              onDeleteRitual={handleDeleteRoutine}
+            />
           ) : (
             <ComingSoon page={page} />
           )}
@@ -685,7 +828,7 @@ export default function App() {
         onClose={() => setEditor({ open: false, routine: null })}
         onSave={handleSaveRoutine}
         onDelete={handleDeleteRoutine}
-        baseline={() => readNonNegs().map((n) => n.label)}
+        baseline={() => activeNonNegs(nonnegs).map((n) => n.label)}
         onTimed={(title, time) => {
           const r = editor.routine;
           const at = time

@@ -1,35 +1,24 @@
 /**
- * The 26 Days non-negotiables template. 26 Days (next module) reads and edits this list;
- * until then it lives on this device, fed by "+ Non-negotiable" in the routine editor.
- * New routines start with these as their baseline steps.
+ * The old on-device Non-Negotiables template (Oct 16), fed by "Add non-negotiable" in the
+ * routine editor before 26 Days existed. 26 Days moves anything in it into its own synced
+ * list once, then clears it.
  */
-export interface NonNeg {
-  id: string;
-  label: string;
-}
-
 const KEY = 'launchpage.nonnegs.v1';
 
-export function readNonNegs(): NonNeg[] {
+export function readLegacyNonNegs(): string[] {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as NonNeg[]) : [];
+    const list = raw ? (JSON.parse(raw) as { label?: string }[]) : [];
+    return list.map((n) => (n.label ?? '').trim()).filter(Boolean);
   } catch {
     return [];
   }
 }
 
-/** Adds a non-negotiable to the template; false if it's already there. */
-export function addNonNeg(label: string): boolean {
-  const clean = label.trim();
-  if (!clean) return false;
-  const list = readNonNegs();
-  if (list.some((n) => n.label.toLowerCase() === clean.toLowerCase())) return false;
-  list.push({ id: crypto.randomUUID(), label: clean });
+export function clearLegacyNonNegs() {
   try {
-    localStorage.setItem(KEY, JSON.stringify(list));
+    localStorage.removeItem(KEY);
   } catch {
-    return false;
+    /* ignore */
   }
-  return true;
 }

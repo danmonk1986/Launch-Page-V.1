@@ -27,7 +27,8 @@ export function JournalPanel({ entries, today, onSave, onDelete, onImport, full,
   const sorted = byNewest(entries);
   const saved = sorted.find((e) => e.date === todayIso) ?? null;
   const lastTheme = sorted.find((e) => e.date < todayIso && e.theme.trim())?.theme ?? '';
-  const past = sorted.filter((e) => e.date !== todayIso);
+  // A day with only a theme (the 26 Days daily goal) isn't listed as an entry.
+  const past = sorted.filter((e) => e.date !== todayIso && !isBlank(e));
   const [all, setAll] = useState(false);
   const [editing, setEditing] = useState<JournalEntry | null>(null);
   const [isNew, setIsNew] = useState(false);

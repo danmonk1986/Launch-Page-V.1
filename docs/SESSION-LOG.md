@@ -4,6 +4,12 @@ The overall story of each work session. Item-by-item detail lives in [DESIGN-LOG
 
 ---
 
+## Session 2 · Oct 17, 2026 · Module 1: 26 Days page
+
+**Where it ended:** the 26 Days page is built from Dan's overlay of the DM26 Planner (clean-room, new code): quote + daily goal (= journal theme), Non-Negotiables, Rituals, Logging, Summary. Run `0018_26_days.sql` in Supabase so it syncs. Details in [DESIGN-LOG.md](DESIGN-LOG.md#26-days-page-oct-17-13-am).
+
+---
+
 ## Session 1 · Oct 15–16, 2026 · Module 1: the Launch Page
 
 **Where it ended:** Module 1 (the Launch Page) is built, reviewed section by section with Dan, and live at launch-page-v-1.danmonk1986.workers.dev. Next session starts **26 Days** in a new chat.
