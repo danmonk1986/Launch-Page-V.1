@@ -34,6 +34,25 @@ const safeUrl = (u?: string) => {
   return /^[a-z][\w+.-]*:/i.test(v) ? v : `https://${v}`;
 };
 
+type Step = { s: RoutineItem; i: number };
+/**
+ * Splits the steps for layout: each run of plain steps ends at the next meditation or check-in
+ * (its "big" step). Works for any ritual: no big steps means just tiles.
+ */
+function groups(steps: Step[]): { tiles: Step[]; big: Step | null }[] {
+  const out: { tiles: Step[]; big: Step | null }[] = [];
+  let tiles: Step[] = [];
+  for (const st of steps) {
+    if (stepType(st.s).type === 'step') tiles.push(st);
+    else {
+      out.push({ tiles, big: st });
+      tiles = [];
+    }
+  }
+  if (tiles.length) out.push({ tiles, big: null });
+  return out;
+}
+
 type RunnerProps = {
   ritual: Routine;
   isTicked: (i: number) => boolean;
@@ -54,21 +73,15 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
   const all = steps.length > 0 && done === steps.length;
   const setScript = (i: number, script: string) => onSaveRitual({ ...ritual, items: ritual.items.map((x, j) => (j === i ? { ...x, script } : x)) });
 
-  if (!steps.length) return <p className="panel-empty">No steps yet. Tap the pencil to add them.</p>;
-  return (
-    <div className="rit">
-      <p className="rit-progress">
-        {done}/{steps.length} done
-      </p>
-      <ol className="rit-steps">
-        {steps.map(({ s, i }, n) => {
+  const number = new Map(steps.map(({ i }, n) => [i, n + 1]));
+  const renderStep = ({ s, i }: { s: RoutineItem; i: number }) => {
           const { type, checkin } = stepType(s);
           const ok = isTicked(i);
           const url = safeUrl(s.url);
           return (
             <li key={i} className={`rit-step is-${type}${ok ? ' is-done' : ''}`}>
               <div className="rit-step-top">
-                <span className="rit-num">{n + 1}</span>
+                <span className="rit-num">{number.get(i)}</span>
                 <button type="button" role="checkbox" aria-checked={ok} className="d26-check" aria-label={s.label} onClick={() => onTick(i)}>
                   {ok && <Icon d={CHECK} size={14} />}
                 </button>
@@ -99,8 +112,28 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
               )}
             </li>
           );
-        })}
-      </ol>
+  };
+
+  if (!steps.length) return <p className="panel-empty">No steps yet. Tap the pencil to add them.</p>;
+  return (
+    <div className="rit">
+      <p className="rit-progress">
+        {done}/{steps.length} done
+      </p>
+      {groups(steps).map((g, k) =>
+        g.big && stepType(g.big.s).type === 'meditation' && g.tiles.length ? (
+          // Plain steps before a meditation sit as tiles on its left.
+          <div key={k} className="rit-pair">
+            <ol className="rit-steps">{g.tiles.map(renderStep)}</ol>
+            <ol className="rit-steps rit-big">{renderStep(g.big)}</ol>
+          </div>
+        ) : (
+          <ol key={k} className="rit-steps">
+            {g.tiles.map(renderStep)}
+            {g.big && renderStep(g.big)}
+          </ol>
+        )
+      )}
       <button type="button" className={`btn rit-done${all ? '' : ' btn-quiet'}`} onClick={onDone}>
         {linked ? (linkedDone ? `Done · ${linked.label} is ticked` : `Done · tick ${linked.label}`) : 'Done'}
       </button>

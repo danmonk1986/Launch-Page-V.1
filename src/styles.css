@@ -1905,3 +1905,12 @@ dialog.crawl::backdrop { background: #000000; }
   text-transform: uppercase; text-align: center; color: var(--accent-teal);
 }
 .rit-step.is-meditation .rit-script::placeholder { text-transform: none; letter-spacing: normal; font-weight: 400; color: var(--dim); }
+
+/* Rituals (Oct 17, 4:10 AM): plain steps before a meditation sit as tiles on its left; the meditation on the right. */
+.rit-pair { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+.rit-pair > .rit-steps:first-child { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rit-pair > .rit-big { grid-template-columns: minmax(0, 1fr); }
+.rit-pair .rit-step.is-meditation { height: 100%; }
+@media (max-width: 1000px) {
+  .rit-pair { grid-template-columns: minmax(0, 1fr); }
+}
