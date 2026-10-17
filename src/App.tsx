@@ -27,7 +27,6 @@ import {
   launcherStore,
   markHandled,
   openTabs,
-  describeOpens,
   readHandled,
   skipToTomorrow,
   launchersFor,
