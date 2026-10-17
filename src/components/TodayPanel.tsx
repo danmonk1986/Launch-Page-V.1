@@ -19,15 +19,10 @@ export function TodayPanel({ routine, shift, onEdit, follow }: Props) {
   const current = nowBlockIndex(blocks, now);
   const nowBlock = current >= 0 ? blocks[current] : null;
   const panel = useRef<HTMLElement>(null);
-  // Follow the time: scroll the routine so the step happening now sits near the top.
+  // Card by card: NOW stays on top and the list starts at what's next; earlier steps follow, dimmed.
+  const order = follow && current >= 0 ? [...blocks.keys()].filter((i) => i > current).concat([...blocks.keys()].filter((i) => i < current)) : [...blocks.keys()];
   useEffect(() => {
-    const el = panel.current;
-    if (!follow || !el) return;
-    const row = el.querySelector<HTMLElement>('.tl-block.is-now');
-    if (!row) return;
-    const card = el.querySelector<HTMLElement>('.now-card');
-    const top = row.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop - (card?.offsetHeight ?? 0) - 24;
-    el.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    if (follow) panel.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [follow, current, routine?.id, shift]);
 
   return (
@@ -52,8 +47,11 @@ export function TodayPanel({ routine, shift, onEdit, follow }: Props) {
           </div>
         )}
         <ol className="timeline">
-          {blocks.map((b, i) => (
-            <li key={i} className={`tl-block${i === current ? ' is-now' : ''}`} aria-current={i === current ? 'time' : undefined}>
+          {order.map((i, n) => {
+            const b = blocks[i];
+            const earlier = follow && current >= 0 && i < current;
+            return (
+            <li key={i} className={`tl-block${i === current ? ' is-now' : ''}${earlier ? ' is-earlier' : ''}${earlier && (n === 0 || order[n - 1] > current) ? ' is-first-earlier' : ''}`} aria-current={i === current ? 'time' : undefined}>
               <span className="tl-time">{b.time ?? ''}</span>
               <span className="tl-dot" aria-hidden="true" />
               <div className="tl-body">
@@ -64,7 +62,8 @@ export function TodayPanel({ routine, shift, onEdit, follow }: Props) {
                 {b.steps.length > 0 && <span className="tl-steps">{b.steps.join(' · ')}</span>}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ol>
         </>
       )}

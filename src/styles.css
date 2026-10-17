@@ -1576,3 +1576,7 @@ html.snap-scroll { scroll-snap-type: y mandatory; scroll-padding-top: calc(var(-
 .quick-launch:disabled { opacity: 0.35; cursor: default; }
 .journal-sub-row .journal-streak { text-transform: uppercase; font-weight: 700; }
 .app[data-scroll='cards'] .panel-today .now-card { box-shadow: 0 10px 14px -8px var(--surface-solid); }
+/* Card by card: what's next sits under NOW; earlier steps follow, dimmed. */
+.app[data-scroll='cards'] .panel-today .now-card { margin-bottom: 14px; }
+.tl-block.is-earlier { opacity: 0.45; }
+.tl-block.is-first-earlier { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--edge-strong); }
