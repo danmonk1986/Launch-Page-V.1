@@ -272,7 +272,7 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
                           onTimed(it.label.trim(), it.time);
                         }}
                       >
-                        + Timed launch
+                        Add timed launch
                       </button>
                       <button
                         type="button"
@@ -284,7 +284,7 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
                           setNote(`${it.label.trim()} added to your 26 Days non-negotiables.`);
                         }}
                       >
-                        + Non-negotiable
+                        Add non-negotiable
                       </button>
                       <button type="button" role="menuitem" className="menu-danger" onClick={() => { removeItem(i); setMenu(null); }}>
                         Remove

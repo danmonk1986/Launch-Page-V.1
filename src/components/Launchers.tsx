@@ -130,7 +130,9 @@ export function LaunchersPanel(p: Props) {
     all: [...p.launches].sort((a, b) => a.atTime.localeCompare(b.atTime))
   };
   const list = views[view];
-  const visible = showAllTimed ? list : list.slice(0, 3);
+  // Active keeps to the next 3 (Show all for the rest); the other tabs show their whole list.
+  const capped = view === 'active' && !showAllTimed;
+  const visible = capped ? list.slice(0, 3) : list;
 
   function launchAll() {
     const urls = p.launchers.map((l) => l.url).filter(Boolean);
@@ -350,7 +352,7 @@ export function LaunchersPanel(p: Props) {
             })}
           </ul>
         )}
-        {list.length > 3 && (
+        {view === 'active' && list.length > 3 && (
           <button
             type="button"
             className="timed-more"
