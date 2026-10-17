@@ -17,7 +17,7 @@ import { WeekCalendar } from './components/WeekCalendar';
 import { TasksPage, TasksPanel } from './components/Tasks';
 import { ProjectsSheet } from './components/Projects';
 import { matchCalendar, projectStore, type Project } from './lib/projects';
-import { journalStore, type JournalEntry } from './lib/journal';
+import { buildJournalImport, journalStore, type JournalEntry } from './lib/journal';
 import { JournalPanel } from './components/Journal';
 import { buildImport, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
 import { addTaskToGoogle, googleConfigured, knownCalendars, wasConnected } from './lib/google';
@@ -83,6 +83,7 @@ export default function App() {
   const [gcalOff, setGcalOff] = useState(0);
   const [focusTask, setFocusTask] = useState<string | null>(null);
   const importInput = useRef<HTMLInputElement>(null);
+  const journalInput = useRef<HTMLInputElement>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   // eslint-disable-next-line react-hooks/refs
   tasksRef.current = tasks;
@@ -450,10 +451,33 @@ export default function App() {
                 e.target.value = '';
               }}
             />
+            <input
+              ref={journalInput}
+              type="file"
+              hidden
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                if (!f) return;
+                try {
+                  const add = buildJournalImport(JSON.parse(await f.text()), journalRef.current);
+                  if (!add.length) return setStatus('Nothing new to import: those days are already in your journal.');
+                  const next = [...journalRef.current, ...add];
+                  journalRef.current = next;
+                  setJournal(next);
+                  setPage('launch');
+                  for (const j of add) await journalStore.save(userId, j, next);
+                  setStatus(`Imported ${add.length} journal ${add.length === 1 ? 'entry' : 'entries'}.`);
+                } catch (err) {
+                  setStatus((err as Error).message);
+                }
+              }}
+            />
             <GearMenu
               items={[
                 { label: 'Brand settings', onClick: () => setSettingsOpen(true) },
                 { label: 'Import tasks', onClick: () => importInput.current?.click() },
+                { label: 'Import journal', onClick: () => journalInput.current?.click() },
                 { label: 'Export my data', onClick: () => downloadExport(settings) },
                 ...(googleConfigured() && wasConnected()
                   ? [

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
-import { byNewest, isBlank, journalDate, newEntry, type JournalEntry } from '../lib/journal';
+import { byNewest, isBlank, newEntry, shortDate, streak, type JournalEntry } from '../lib/journal';
 import { isoDate } from '../lib/launchers';
 
 const PLUS = 'M12 5v14M5 12h14';
@@ -27,12 +27,18 @@ export function JournalPanel({ entries, today, onSave, onDelete }: Props) {
   const [editing, setEditing] = useState<JournalEntry | null>(null);
   const [isNew, setIsNew] = useState(false);
   const shown = all ? past : past.slice(0, 5);
+  const run = streak(entries, todayIso);
 
   return (
     <section className="panel panel-journal" aria-labelledby="h-journal">
       <div className="panel-head">
         <h2 id="h-journal" className="panel-title">
           Journal
+          {run > 0 && (
+            <span className="journal-streak" title={`${run} day${run === 1 ? '' : 's'} in a row`}>
+              {run} day{run === 1 ? '' : 's'} in a row
+            </span>
+          )}
         </h2>
         <div className="panel-actions">
           <button
@@ -67,12 +73,12 @@ export function JournalPanel({ entries, today, onSave, onDelete }: Props) {
                   }}
                   title="Open this entry"
                 >
-                  <span className="journal-item-date">{journalDate(e.date)}</span>
+                  <span className="journal-item-date">{shortDate(e.date)}</span>
                   <span className="journal-item-text">
                     <span className="journal-item-head">{e.headline || 'Untitled'}</span>
                     {e.theme && <span className="journal-item-theme">{e.theme}</span>}
                   </span>
-                  {e.body.trim() && <span className="journal-item-more" aria-label="Has a page" title="Has a page">¶</span>}
+                  {e.body.trim() && <span className="journal-item-more" aria-label="Has a check in" title="Has a check in">¶</span>}
                 </button>
               </li>
             ))}
@@ -108,7 +114,8 @@ export function JournalPanel({ entries, today, onSave, onDelete }: Props) {
 
 /** Today's entry, typed straight into the panel. Saves itself a moment after you stop typing. */
 function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: JournalEntry | null; lastTheme: string; onSave: (e: JournalEntry) => void }) {
-  const [d, setD] = useState<JournalEntry>(() => saved ?? newEntry(date));
+  // The theme carries on from the last entry until you change it.
+  const [d, setD] = useState<JournalEntry>(() => saved ?? newEntry(date, lastTheme));
   const [open, setOpen] = useState(() => !!saved?.body.trim());
   const [state, setState] = useState<'idle' | 'typing' | 'saved'>('idle');
   const latest = useRef(d);
@@ -132,6 +139,12 @@ function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: J
     setD(next);
     if (next.body.trim()) setOpen(true);
   }, [saved]);
+  // A theme from an imported or older entry that loaded after the panel opened.
+  useEffect(() => {
+    if (saved || latest.current.theme || !lastTheme) return;
+    latest.current = { ...latest.current, theme: lastTheme };
+    setD(latest.current);
+  }, [lastTheme, saved]);
 
   // Save what's typed if the page closes or the panel goes away mid-sentence.
   useEffect(() => () => {
@@ -149,14 +162,6 @@ function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: J
 
   return (
     <div className="journal-today">
-      <div className="journal-today-top">
-        <span className="journal-today-date">
-          <span className="now-pill">TODAY</span> {journalDate(date)}
-        </span>
-        <span className="journal-state" aria-live="polite">
-          {state === 'typing' ? 'Saving…' : state === 'saved' ? 'Saved' : ''}
-        </span>
-      </div>
       <input
         className="journal-headline"
         value={d.headline}
@@ -165,18 +170,26 @@ function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: J
         placeholder="One headline for the day"
         aria-label="Today's headline"
       />
-      <input
-        className="journal-theme"
-        value={d.theme}
-        onChange={(e) => set('theme', e.target.value)}
-        onBlur={flush}
-        placeholder={lastTheme ? `Theme · last: ${lastTheme}` : 'Theme for the day'}
-        aria-label="Today's theme"
-      />
-      <button type="button" className={`journal-toggle ${open ? 'is-open' : ''}`} aria-expanded={open} onClick={() => setOpen((x) => !x)}>
-        <Icon d={open ? CHEVRON : PEN} size={14} />
-        {open ? 'Hide the page' : d.body.trim() ? 'Open the page' : 'Write more'}
-      </button>
+      <div className="journal-theme-row">
+        <input
+          className="journal-theme"
+          value={d.theme}
+          onChange={(e) => set('theme', e.target.value)}
+          onBlur={flush}
+          placeholder="Theme"
+          aria-label="Theme"
+        />
+        <span className="journal-date">{shortDate(date)}</span>
+      </div>
+      <div className="journal-foot">
+        <button type="button" className={`journal-toggle ${open ? 'is-open' : ''}`} aria-expanded={open} onClick={() => setOpen((x) => !x)}>
+          <Icon d={open ? CHEVRON : PEN} size={14} />
+          {open ? 'Hide check in' : d.body.trim() ? 'Open check in' : 'Add check in'}
+        </button>
+        <span className="journal-state" aria-live="polite">
+          {state === 'typing' ? 'Saving…' : state === 'saved' ? 'Saved' : ''}
+        </span>
+      </div>
       {open && (
         <textarea
           className="journal-body"
@@ -184,8 +197,8 @@ function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: J
           onChange={(e) => set('body', e.target.value)}
           onBlur={flush}
           rows={6}
-          placeholder="What happened, what you learned, what's next…"
-          aria-label="Today's page"
+          placeholder="How did today go?"
+          aria-label="Today's check in"
         />
       )}
     </div>
@@ -219,7 +232,7 @@ function EntryForm({ entry, isNew, taken, onSave, onDelete }: { entry: JournalEn
         <input value={d.theme} onChange={(e) => setD({ ...d, theme: e.target.value })} placeholder="Theme for the day" />
       </label>
       <label className="field">
-        <span>Page</span>
+        <span>Check in</span>
         <textarea value={d.body} onChange={(e) => setD({ ...d, body: e.target.value })} rows={10} />
       </label>
       <FormActions formId={formId} saveDisabled={clash || !d.date || (!d.headline.trim() && !d.body.trim())} onDelete={isNew ? undefined : onDelete} deleteLabel="this entry" />

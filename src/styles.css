@@ -1492,3 +1492,24 @@ input:-webkit-autofill:focus {
 .task-row.is-step .task-quick svg { width: 14px; height: 14px; }
 .task-row.is-step .task-name { font-size: 14px; padding-top: 2px; padding-bottom: 2px; }
 .task-row.is-focus td { background: color-mix(in srgb, var(--accent-teal) 16%, transparent) !important; transition: background 0.4s ease; }
+
+/* ---------- Journal look (Oct 16, 11:30 PM) ---------- */
+.journal-today { gap: 4px; }
+.journal-headline { color: var(--accent-purple); text-align: left; font-size: 21px; }
+.journal-theme-row { display: flex; align-items: baseline; gap: 12px; }
+.journal-theme-row .journal-theme { flex: 1; min-width: 0; color: var(--accent-teal); font-weight: 600; }
+.journal-date { font-family: var(--font-mono, ui-monospace, monospace); font-size: 13px; color: var(--beige); white-space: nowrap; }
+.journal-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.journal-toggle { text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; font-size: 12px; }
+.journal-body { font-size: 14px; line-height: 1.65; color: var(--mist); }
+.journal-item-theme { color: var(--accent-teal); }
+.journal-item-head { color: var(--accent-purple); }
+.journal-item-date { color: var(--beige); }
+.journal-streak {
+  margin-left: 12px; padding: 3px 10px; border-radius: 999px; vertical-align: middle;
+  font-size: 11px; letter-spacing: 0.12em; color: var(--accent-teal);
+  border: 1px solid color-mix(in srgb, var(--accent-teal) 55%, transparent);
+  background: color-mix(in srgb, var(--accent-teal) 10%, transparent);
+}
+/* Headline in the header mantra's purple and weight (the "I GOT IN" line). */
+.journal-headline { color: var(--accent-purple); font-weight: 600; letter-spacing: 0.02em; }
