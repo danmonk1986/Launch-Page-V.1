@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
-import { RitualForm, RitualPicker, RitualRunner } from './Rituals';
+import { RitualForm, RitualPicker, RitualRunner, duplicateRitual } from './Rituals';
 import type { Routine, Shift } from '../lib/routines';
 import {
   H2O_SIZES,
@@ -194,6 +194,7 @@ export function Days26Page(p: Props) {
               activeId={activeRitual?.id ?? null}
               onPick={showRitual}
               onEdit={() => activeRitual && setRitualEdit({ r: activeRitual, isNew: false })}
+              onDuplicate={() => activeRitual && setRitualEdit({ r: duplicateRitual(activeRitual, 100 + p.rituals.length), isNew: true })}
               onAdd={() =>
                 setRitualEdit({
                   r: { id: crypto.randomUUID(), name: '', kind: 'ritual', flips: false, shiftStart: null, shiftEnd: null, wake: null, bed: null, items: [], sort: 100 + p.rituals.length },

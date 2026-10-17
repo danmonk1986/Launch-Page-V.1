@@ -342,7 +342,7 @@ export function MeditationCrawl({ title, script, onClose, onCheck }: { title: st
 }
 
 /** The ritual on the card: its name, with every ritual in the list (like the routine picker). */
-export function RitualPicker({ rituals, activeId, onPick, onAdd, onEdit }: { rituals: Routine[]; activeId: string | null; onPick: (id: string) => void; onAdd: () => void; onEdit: () => void }) {
+export function RitualPicker({ rituals, activeId, onPick, onAdd, onEdit, onDuplicate }: { rituals: Routine[]; activeId: string | null; onPick: (id: string) => void; onAdd: () => void; onEdit: () => void; onDuplicate: () => void }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const active = rituals.find((r) => r.id === activeId) ?? null;
@@ -403,6 +403,21 @@ export function RitualPicker({ rituals, activeId, onPick, onAdd, onEdit }: { rit
                 }}
               >
                 <Icon d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
+              </button>
+            )}
+            {active && (
+              <button
+                type="button"
+                role="menuitem"
+                className="icon-btn tool-btn"
+                aria-label={`Duplicate ${active.name}`}
+                title={`Duplicate ${active.name} (its check-in moves to the next number)`}
+                onClick={() => {
+                  onDuplicate();
+                  setOpen(false);
+                }}
+              >
+                <Icon d="M9 9h11v11H9zM5 15H4V4h11v1" />
               </button>
             )}
             <button
@@ -515,4 +530,24 @@ export function RitualForm({ ritual, isNew, onSave, onDelete }: { ritual: Routin
       <FormActions formId={formId} saveDisabled={!name.trim()} onDelete={isNew ? undefined : onDelete} deleteLabel="this ritual" />
     </form>
   );
+}
+
+/**
+ * A copy of a ritual, ready to rename and save: same steps, links and meditation, with each
+ * journal check-in moved to the next number (Rise to Shine's #1 → #2), labels included.
+ */
+export function duplicateRitual(r: Routine, sort: number): Routine {
+  const bump = (label: string, n: number) => label.replace(/#\s*\d+/, `#${n}`);
+  return {
+    ...r,
+    id: crypto.randomUUID(),
+    name: /#\s*\d+/.test(r.name) ? r.name.replace(/#\s*(\d+)/, (_m, d: string) => `#${Number(d) + 1}`) : `${r.name} (copy)`,
+    sort,
+    items: r.items.map((s) => {
+      const t = stepType(s);
+      if (t.type !== 'checkin') return { ...s };
+      const n = t.checkin + 1;
+      return { ...s, type: 'checkin', checkin: n, label: /#\s*\d+/.test(s.label) ? bump(s.label, n) : s.label };
+    })
+  };
 }
