@@ -1894,3 +1894,4 @@ dialog.crawl::backdrop { background: #000000; }
 .rit-step.is-meditation .rit-label, .rit-step.is-checkin .rit-label { grid-column: 2; grid-row: 1; }
 .rit-step.is-meditation .d26-check, .rit-step.is-checkin .d26-check { grid-column: 3; grid-row: 1; }
 .rit-step.is-meditation .rit-text, .rit-step.is-checkin .rit-text { grid-column: 1 / -1; }
+.crawl-text { text-transform: uppercase; letter-spacing: 0.06em; }
