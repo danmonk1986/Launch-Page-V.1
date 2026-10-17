@@ -1876,3 +1876,21 @@ dialog.crawl::backdrop { background: #000000; }
 .rit-step.is-done .d26-check { background: var(--accent-teal); border-color: var(--accent-teal); color: #120c2a; }
 .app[data-tone='light'] .rit-step.is-done .d26-check { color: #ffffff; }
 .sheet:has(.rit) { width: min(1180px, calc(100vw - 32px)); }
+
+/* Rituals (Oct 17, 3:50 AM): small step tiles wrap four to a row; meditation and check-in take full rows. */
+.rit-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; overflow: visible; padding: 0; scroll-snap-type: none; }
+.rit-step { flex: none; }
+.rit-step.is-step { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 12px; min-height: 54px; }
+.rit-step.is-step .rit-step-top { display: contents; }
+.rit-step.is-step .rit-num { grid-column: 1; grid-row: 1; }
+.rit-step.is-step .rit-label { grid-column: 2; grid-row: 1; font-size: 15px; }
+.rit-step.is-step .d26-check { grid-column: 3; grid-row: 1; }
+.rit-step.is-meditation, .rit-step.is-checkin { grid-column: 1 / -1; }
+@media (max-width: 1000px) { .rit-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .rit-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rit-step.is-meditation, .rit-step.is-checkin { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px 10px; }
+.rit-step.is-meditation .rit-step-top, .rit-step.is-checkin .rit-step-top { display: contents; }
+.rit-step.is-meditation .rit-num, .rit-step.is-checkin .rit-num { grid-column: 1; grid-row: 1; }
+.rit-step.is-meditation .rit-label, .rit-step.is-checkin .rit-label { grid-column: 2; grid-row: 1; }
+.rit-step.is-meditation .d26-check, .rit-step.is-checkin .d26-check { grid-column: 3; grid-row: 1; }
+.rit-step.is-meditation .rit-text, .rit-step.is-checkin .rit-text { grid-column: 1 / -1; }
