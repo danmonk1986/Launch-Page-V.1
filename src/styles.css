@@ -1406,3 +1406,5 @@ input:-webkit-autofill:focus {
 /* ---------- White (light): solid ---------- */
 .app[data-bg='white'] .sky { background: #ffffff; }
 .app[data-bg='white'] .sky > * { display: none; }
+.reminder-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 4px; }
+.reminder-actions .btn { width: 100%; min-width: 0; }

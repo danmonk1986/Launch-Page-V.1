@@ -378,3 +378,13 @@ export function orderLaunches(list: Launch[], today: Date, handled: Record<strin
   };
   return [...list].sort((a, b) => rank(a) - rank(b) || a.atTime.localeCompare(b.atTime));
 }
+
+/** "2 tabs + Claude" */
+export function describeOpens(urls: string[]) {
+  const apps = urls.filter(isAppLink).map((u) => APP_LINKS.find((a) => a.url === u)?.name ?? 'app');
+  const tabs = urls.length - apps.length;
+  const parts: string[] = [];
+  if (tabs || !apps.length) parts.push(`${tabs} ${tabs === 1 ? 'tab' : 'tabs'}`);
+  if (apps.length) parts.push(apps.join(', '));
+  return parts.join(' + ');
+}

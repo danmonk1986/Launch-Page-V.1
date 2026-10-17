@@ -27,6 +27,7 @@ import {
   launcherStore,
   markHandled,
   openTabs,
+  describeOpens,
   readHandled,
   skipToTomorrow,
   launchersFor,
@@ -317,7 +318,7 @@ export default function App() {
   useEffect(() => {
     if (!reminder) return;
     if (reminder.sound !== false) chime('start');
-    if (reminder.notify) notify(`Launch time: ${reminder.title}`, `${reminder.urls.length} tabs · ${reminder.minutes} min`);
+    if (reminder.notify) notify(`Launch time: ${reminder.title}`, `${describeOpens(reminder.urls)} · ${reminder.minutes} min`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reminder?.id]);
 

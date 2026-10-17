@@ -1,6 +1,6 @@
 import { Sheet } from './Sheet';
 import { formatMinutes, toMinutes } from '../lib/routines';
-import type { Launch } from '../lib/launchers';
+import { describeOpens, type Launch } from '../lib/launchers';
 
 type Props = {
   launch: Launch | null;
@@ -18,18 +18,18 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip }: Props) {
           <p className="reminder-time">{formatMinutes(toMinutes(launch.atTime))} · Launch time</p>
           <p className="panel-empty">
             {launch.urls.length
-              ? `Opens ${launch.urls.length} ${launch.urls.length === 1 ? 'tab' : 'tabs'}. Time allotted: ${launch.minutes} minutes.`
-              : 'No tabs added yet. Edit this timed launch to add them.'}
+              ? `Opens ${describeOpens(launch.urls)}. Time allotted: ${launch.minutes} minutes.`
+              : 'Nothing to open yet. Edit this timed launch to add tabs or apps.'}
           </p>
-          <div className="sheet-actions">
-            <button type="button" className="btn btn-quiet" onClick={() => onSkip(launch)}>
-              Skip today
+          <div className="reminder-actions">
+            <button type="button" className="btn btn-quiet" title="Skip today: back tomorrow, same time" onClick={() => onSkip(launch)}>
+              Skip
             </button>
-            <button type="button" className="btn btn-quiet" onClick={() => onSnooze(launch)}>
-              Snooze 10 min
+            <button type="button" className="btn btn-quiet" title="Snooze 10 minutes" onClick={() => onSnooze(launch)}>
+              Snooze
             </button>
-            <button type="button" className="btn" disabled={!launch.urls.length} onClick={() => onLaunch(launch)}>
-              Launch {launch.urls.length} {launch.urls.length === 1 ? 'tab' : 'tabs'}
+            <button type="button" className="btn" disabled={!launch.urls.length} title={`Open ${describeOpens(launch.urls)}`} onClick={() => onLaunch(launch)}>
+              Launch
             </button>
           </div>
         </div>
