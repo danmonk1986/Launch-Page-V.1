@@ -66,6 +66,21 @@ const kindLabel = (k: LogKind) => KINDS.find((x) => x.kind === k)!.label;
 const r2 = (x: number) => Math.round(x * 100) / 100;
 const num = (x: number) => (Number.isInteger(r2(x)) ? String(r2(x)) : r2(x).toFixed(r2(x * 10) === Math.round(x * 10) ? 1 : 2));
 const plural = (n: number, one: string, many = `${one}s`) => `${num(n)} ${n === 1 ? one : many}`;
+const hhmm = (iso: string) => {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+/** The picked clock time nearest the original moment (so 11 PM picked at 1 AM means last night). */
+function withTime(refIso: string, t: string) {
+  const ref = new Date(refIso);
+  const [h, m] = t.split(':').map(Number);
+  const c = new Date(ref);
+  c.setHours(h, m, 0, 0);
+  const diff = c.getTime() - ref.getTime();
+  if (diff > 12 * 3_600_000) c.setDate(c.getDate() - 1);
+  if (diff < -12 * 3_600_000) c.setDate(c.getDate() + 1);
+  return c.toISOString();
+}
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
 type Props = {
@@ -222,7 +237,12 @@ export function Days26Page(p: Props) {
             config={config}
             pastVices={[...new Set(logs.filter((l) => l.kind === 'vices' && l.note.trim()).map((l) => l.note.trim()))]}
             onSave={(e) => {
-              p.onSaveLog(e);
+              // The chosen time decides the day; × quantity saves one line each (Productivity stays one line).
+              const day = routineDay(new Date(e.at), routine, shift, flip);
+              const n = e.kind !== 'productivity' && Number.isInteger(e.qty) && e.qty > 1 ? e.qty : 1;
+              for (let i = 0; i < n; i += 1) {
+                p.onSaveLog({ ...e, day, qty: n > 1 ? 1 : e.qty, id: i === 0 ? e.id : crypto.randomUUID(), at: new Date(new Date(e.at).getTime() + i * 1000).toISOString() });
+              }
               if (e.kind === 'vices' && e.note.trim()) {
                 const key = e.note.trim().toLowerCase();
                 if (config.viceWeights[key] !== e.amount) p.onSaveConfig({ ...config, viceWeights: { ...config.viceWeights, [key]: e.amount } });
@@ -890,6 +910,7 @@ function Pills<T extends string | number>({ value, options, onChange, label }: {
 
 function LogForm({ entry, isNew, config, pastVices, onSave, onDelete }: { entry: LogEntry; isNew: boolean; config: Config; pastVices: string[]; onSave: (e: LogEntry) => void; onDelete: () => void }) {
   const [d, setD] = useState(entry);
+  const [when, setWhen] = useState(() => hhmm(entry.at));
   const formId = useId();
   const listId = useId();
   const set = (patch: Partial<LogEntry>) => setD((x) => ({ ...x, ...patch }));
@@ -907,7 +928,7 @@ function LogForm({ entry, isNew, config, pastVices, onSave, onDelete }: { entry:
       className="d26-log-form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (valid) onSave({ ...d, note: d.note.trim() });
+        if (valid && when) onSave({ ...d, at: withTime(entry.at, when), note: d.note.trim() });
       }}
     >
       {d.kind === 'productivity' && (
@@ -964,7 +985,7 @@ function LogForm({ entry, isNew, config, pastVices, onSave, onDelete }: { entry:
 
       {d.kind !== 'productivity' && (
         <div className="field">
-          <span>How many</span>
+          <span>How many · each one is its own line</span>
           <Stepper value={d.qty} step={1} min={1} onChange={(v) => set({ qty: v })} label="Quantity" />
         </div>
       )}
@@ -976,9 +997,13 @@ function LogForm({ entry, isNew, config, pastVices, onSave, onDelete }: { entry:
         </label>
       )}
 
+      <label className="field d26-log-time">
+        <span>Time</span>
+        <input type="time" value={when} onChange={(e) => setWhen(e.target.value)} required />
+      </label>
       <p className="d26-log-total" aria-live="polite">
         = {valid || d.kind === 'productivity' ? describe(d) : '…'}
-        {!isNew && <span className="d26-log-when"> · logged {clock(d.at)}</span>}
+        {d.kind !== 'productivity' && Number.isInteger(d.qty) && d.qty > 1 && <span className="d26-log-when"> · {d.qty} lines</span>}
       </p>
       <FormActions formId={formId} saveDisabled={!valid} onDelete={isNew ? undefined : onDelete} deleteLabel="this log" />
     </form>
