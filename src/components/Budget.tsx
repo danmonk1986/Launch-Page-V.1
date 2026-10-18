@@ -6,6 +6,7 @@ import type { Project } from '../lib/projects';
 import {
   BUDGET_CATEGORIES,
   BUDGET_SECTIONS,
+  GROUP_BY,
   PMT_TYPES,
   download,
   linesFromFile,
@@ -14,6 +15,7 @@ import {
   monthlyByCategory,
   newBudgetLine,
   sumLines,
+  type BudgetGroupBy,
   type BudgetLine,
   type BudgetSection
 } from '../lib/budget';
@@ -54,9 +56,31 @@ export function BudgetPage(p: Props) {
     for (const s of BUDGET_SECTIONS) g[s.id] = p.lines.filter((l) => l.section === s.id).sort((a, b) => a.sort - b.sort);
     return g;
   }, [p.lines]);
-  const perCat = monthlyByCategory(p.lines);
+  const [groupBy, setGroupByState] = useState<BudgetGroupBy>(() => {
+    try {
+      const v = localStorage.getItem('launchpage.budget.groupBy');
+      return GROUP_BY.some((g) => g.id === v) ? (v as BudgetGroupBy) : 'pmtCategory';
+    } catch {
+      return 'pmtCategory';
+    }
+  });
+  const setGroupBy = (g: BudgetGroupBy) => {
+    setGroupByState(g);
+    try {
+      localStorage.setItem('launchpage.budget.groupBy', g);
+    } catch {
+      /* ignore */
+    }
+  };
+  const perCat = monthlyByCategory(p.lines, groupBy);
   const monthly = Object.values(perCat).reduce((a, x) => a + x, 0);
-  const cats = [...BUDGET_CATEGORIES.filter((c) => perCat[c]), ...Object.keys(perCat).filter((c) => !BUDGET_CATEGORIES.includes(c) && perCat[c])];
+  // Budget categories keep the sheet's column order; the others go biggest first.
+  const cats =
+    groupBy === 'category'
+      ? [...BUDGET_CATEGORIES.filter((c) => perCat[c]), ...Object.keys(perCat).filter((c) => !BUDGET_CATEGORIES.includes(c) && perCat[c])]
+      : Object.keys(perCat)
+          .filter((c) => perCat[c])
+          .sort((a, b) => perCat[b] - perCat[a]);
 
   const chipColour = (name: string) => p.projects.find((x) => norm(x.name) === norm(name))?.color;
   const picks = (f: (l: BudgetLine) => string) => [...new Set(p.lines.map(f).map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -115,6 +139,15 @@ export function BudgetPage(p: Props) {
         </div>
       </div>
 
+      {p.lines.length > 0 && (
+        <div className="d26-range budget-groupby" role="group" aria-label="Monthly totals by">
+          {GROUP_BY.map((g) => (
+            <button key={g.id} type="button" aria-pressed={groupBy === g.id} onClick={() => setGroupBy(g.id)}>
+              {g.label}
+            </button>
+          ))}
+        </div>
+      )}
       {p.lines.length > 0 && (
         <div className="budget-stats" aria-label="A month of spending">
           <div className="budget-stat budget-stat-total">

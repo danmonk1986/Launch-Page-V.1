@@ -82,13 +82,20 @@ export const budgetStore = makeStore<BudgetLine, Row>({
 export const lineTotal = (l: BudgetLine) => l.amount ?? 0;
 export const sumLines = (list: BudgetLine[]) => list.reduce((a, l) => a + lineTotal(l), 0);
 
+export type BudgetGroupBy = 'pmtCategory' | 'project' | 'category';
+export const GROUP_BY: { id: BudgetGroupBy; label: string }[] = [
+  { id: 'pmtCategory', label: 'Pmt category' },
+  { id: 'project', label: 'Project' },
+  { id: 'category', label: 'Budget category' }
+];
+
 /** A month of spending: fixed + variable lines, plus annual lines spread over 12 months. */
-export function monthlyByCategory(lines: BudgetLine[]) {
+export function monthlyByCategory(lines: BudgetLine[], by: BudgetGroupBy = 'category') {
   const out: Record<string, number> = {};
   for (const l of lines) {
     if (l.section === 'planned') continue;
     const per = l.section === 'annual' ? lineTotal(l) / 12 : lineTotal(l);
-    const k = l.category || 'OTHER';
+    const k = (l[by] || '').trim().toUpperCase() || 'OTHER';
     out[k] = (out[k] ?? 0) + per;
   }
   return out;

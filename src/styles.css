@@ -2140,3 +2140,4 @@ select:not([multiple]) {
 .budget-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
 .budget-grid .budget-wide { grid-column: 1 / -1; }
 @media (max-width: 560px) { .budget-grid { grid-template-columns: 1fr; } }
+.budget-groupby { margin: 0 0 10px; }
