@@ -254,12 +254,7 @@ export function Days26Page(p: Props) {
             entry={log.entry}
             isNew={log.isNew}
             config={config}
-            pastNotes={[
-              ...new Set([
-                ...logs.filter((l) => l.kind === log.entry.kind && l.note.trim()).map((l) => l.note.trim()),
-                ...(log.entry.kind === 'vices' ? [] : items.filter((n) => !n.log).map((n) => n.label))
-              ])
-            ].sort((a, b) => a.localeCompare(b))}
+            pastNotes={[...new Set(logs.filter((l) => l.kind === log.entry.kind && l.note.trim()).map((l) => l.note.trim()))].sort((a, b) => a.localeCompare(b))}
             onSave={(e) => {
               // The chosen time decides the day; × quantity saves one line each (Productivity stays one line).
               const day = routineDay(new Date(e.at), routine, shift, flip);
