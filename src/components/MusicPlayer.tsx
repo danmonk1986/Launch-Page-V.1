@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const KEY = 'launchpage.music.url';
 const read = () => {
@@ -29,7 +30,7 @@ export function cleanLink(link: string): string | null {
 export function soundcloudEmbed(link: string): string | null {
   const v = cleanLink(link);
   if (!v) return null;
-  const q = new URLSearchParams({ url: v, color: '#06f9c2', auto_play: 'false', hide_related: 'true', show_comments: 'false', show_user: 'true', show_reposts: 'false', visual: 'false' });
+  const q = new URLSearchParams({ url: v, color: '#06f9c2', auto_play: 'false', hide_related: 'true', show_comments: 'false', show_user: 'true', show_reposts: 'false', visual: 'true' });
   return `https://w.soundcloud.com/player/?${q.toString()}`;
 }
 
@@ -86,12 +87,13 @@ const NEXT = 'M5 4l10 8-10 8zM19 5v14';
 const EDIT = 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4';
 
 /**
- * 🎧 beside ⚙: a mini player (artwork, title, ⏮ ▶ ⏭) slides out to the left in the header.
- * SoundCloud's own player runs hidden behind it, so music keeps playing when it's closed.
- * The link is kept per device.
+ * 🎧 beside ⚙ shows a music dock in the bottom-right corner. It expands up into SoundCloud's own
+ * player (browsers only let music start from a press inside it) and folds down to a mini bar
+ * whose ⏮ ▶ ⏭ drive that player. Hiding the dock keeps the music playing. Link kept per device.
  */
 export function MusicPlayer() {
   const [open, setOpen] = useState(false);
+  const [big, setBig] = useState(true);
   const [link, setLink] = useState(read);
   const [editing, setEditing] = useState(() => !read());
   const [draft, setDraft] = useState(link);
@@ -102,6 +104,8 @@ export function MusicPlayer() {
   const frame = useRef<HTMLIFrameElement>(null);
   const widget = useRef<ScWidget | null>(null);
   const src = soundcloudEmbed(link);
+  const [host, setHost] = useState<Element | null>(null);
+  useEffect(() => setHost(document.querySelector('.app') ?? document.body), []);
 
   useEffect(() => {
     setReady(false);
@@ -142,7 +146,7 @@ export function MusicPlayer() {
     return () => {
       live = false;
     };
-  }, [src]);
+  }, [src, host]);
 
   const save = () => {
     const raw = draft.trim();
@@ -158,82 +162,102 @@ export function MusicPlayer() {
   };
   const tab = open ? 0 : -1;
   const art = sound?.artwork_url || sound?.user?.avatar_url || '';
-  const title = sound?.title ?? (failed ? 'SoundCloud can’t play this link · ✎ to change it' : ready ? linkName(link) : 'Loading…');
+  const title = sound?.title ?? (failed ? 'SoundCloud can’t play this link' : ready ? linkName(link) : 'Loading…');
   const who = sound?.user?.username ?? '';
+  const clean = cleanLink(link);
 
-  return (
-    <div className={`music${open ? ' is-open' : ''}${playing ? ' is-playing' : ''}`}>
-      <div className="music-panel" aria-hidden={!open}>
-        {editing || !src ? (
-          <form
-            className="music-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              save();
+  const dock = (
+    <aside className={`music-dock${open ? ' is-open' : ''}${big && src && !editing ? ' is-big' : ''}`} aria-label="Music" aria-hidden={!open}>
+      {/* SoundCloud's own player: always loaded, so music survives folding or hiding the dock. */}
+      <div className="music-stage">
+        {src && <iframe key={src} ref={frame} title="SoundCloud player" src={src} allow="autoplay; encrypted-media" tabIndex={open && big ? 0 : -1} />}
+      </div>
+      {failed && !editing && (
+        <p className="music-fail">
+          SoundCloud says it can’t play this link.{' '}
+          {src && (
+            <a href={src} target="_blank" rel="noreferrer" tabIndex={tab}>
+              Test the link ↗
+            </a>
+          )}{' '}
+          {clean && (
+            <a href={clean} target="_blank" rel="noreferrer" tabIndex={tab}>
+              Open on SoundCloud ↗
+            </a>
+          )}
+        </p>
+      )}
+      {editing || !src ? (
+        <form
+          className="music-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+        >
+          <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Paste the soundcloud.com link (or Share → Embed code)" aria-label="SoundCloud link" tabIndex={tab} />
+          <button type="submit" className="icon-btn tool-btn tool-btn-go" aria-label="Use this link" title="Use this link" tabIndex={tab} disabled={!!draft.trim() && !soundcloudEmbed(draft)}>
+            <Svg d={PLAY} />
+          </button>
+          {src && (
+            <button type="button" className="icon-btn tool-btn" aria-label="Keep the current link" title="Keep the current link" tabIndex={tab} onClick={() => setEditing(false)}>
+              <Svg d="M6 6l12 12M18 6L6 18" size={14} />
+            </button>
+          )}
+        </form>
+      ) : (
+        <div className="music-mini">
+          <span className="music-art" aria-hidden="true">
+            {art ? <img src={art.replace('-large', '-t67x67')} alt="" /> : <Svg d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />}
+          </span>
+          <span className="music-meta" title={who ? `${title} · ${who}` : title}>
+            <span className="music-title">{title}</span>
+            {who ? <span className="music-who">{who}</span> : !playing && ready && <span className="music-who">{big ? 'First play: press ▶ in the player above' : 'Open ⌃ to start it'}</span>}
+          </span>
+          <span className="music-controls">
+            <button type="button" className="music-ctl" aria-label="Previous" title="Previous" tabIndex={tab} disabled={!ready} onClick={() => widget.current?.prev()}>
+              <Svg d={PREV} size={14} fill />
+            </button>
+            <button type="button" className="music-ctl music-play" aria-label={playing ? 'Pause' : 'Play'} title={playing ? 'Pause' : 'Play'} tabIndex={tab} disabled={!ready} onClick={() => (playing ? widget.current?.pause() : widget.current?.play())}>
+              <Svg d={playing ? PAUSE : PLAY} size={14} fill />
+            </button>
+            <button type="button" className="music-ctl" aria-label="Next" title="Next" tabIndex={tab} disabled={!ready} onClick={() => widget.current?.next()}>
+              <Svg d={NEXT} size={14} fill />
+            </button>
+          </span>
+          <button type="button" className="music-ctl" aria-label={big ? 'Fold the player down' : 'Open the player up'} aria-expanded={big} title={big ? 'Fold down' : 'Open up'} tabIndex={tab} onClick={() => setBig((b) => !b)}>
+            <Svg d={big ? 'M6 9l6 6 6-6' : 'M6 15l6-6 6 6'} size={16} />
+          </button>
+          <button
+            type="button"
+            className="music-ctl"
+            aria-label="Change the music link"
+            title="Change the music link"
+            tabIndex={tab}
+            onClick={() => {
+              setDraft(link);
+              setEditing(true);
             }}
           >
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Paste the soundcloud.com link (or Share → Embed code)" aria-label="SoundCloud link" tabIndex={tab} />
-            <button type="submit" className="icon-btn tool-btn tool-btn-go" aria-label="Use this link" title="Use this link" tabIndex={tab} disabled={!!draft.trim() && !soundcloudEmbed(draft)}>
-              <Svg d={PLAY} />
-            </button>
-          </form>
-        ) : (
-          <div className="music-mini">
-            <span className="music-art" aria-hidden="true">
-              {art ? <img src={art.replace('-large', '-t67x67')} alt="" /> : <Svg d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />}
-            </span>
-            <span className="music-meta" title={who ? `${title} · ${who}` : title}>
-              <span className="music-title">{title}</span>
-              {who && <span className="music-who">{who}</span>}
-            </span>
-            <span className="music-controls">
-              <button type="button" className="music-ctl" aria-label="Previous" title="Previous" tabIndex={tab} disabled={!ready} onClick={() => widget.current?.prev()}>
-                <Svg d={PREV} size={14} fill />
-              </button>
-              <button type="button" className="music-ctl music-play" aria-label={playing ? 'Pause' : 'Play'} title={playing ? 'Pause' : 'Play'} tabIndex={tab} disabled={!ready} onClick={() => (playing ? widget.current?.pause() : widget.current?.play())}>
-                <Svg d={playing ? PAUSE : PLAY} size={14} fill />
-              </button>
-              <button type="button" className="music-ctl" aria-label="Next" title="Next" tabIndex={tab} disabled={!ready} onClick={() => widget.current?.next()}>
-                <Svg d={NEXT} size={14} fill />
-              </button>
-            </span>
-            <button
-              type="button"
-              className="icon-btn tool-btn music-change"
-              aria-label="Change the music link"
-              title="Change the music link"
-              tabIndex={tab}
-              onClick={() => {
-                setDraft(link);
-                setEditing(true);
-              }}
-            >
-              <Svg d={EDIT} size={14} />
-            </button>
-          </div>
-        )}
-      </div>
-      {/* SoundCloud's own player: always loaded, so music survives closing the panel. Shown under 🎧
-          while the panel is open: browsers only let music start from a press inside it, and after
-          that the mini player's buttons drive it. */}
-      {src && (
-        <iframe
-          key={src}
-          ref={frame}
-          className={`music-engine${open && !editing ? ' is-shown' : ''}`}
-          title="SoundCloud player"
-          src={src}
-          allow="autoplay; encrypted-media"
-          tabIndex={open && !editing ? 0 : -1}
-          aria-hidden={!(open && !editing)}
-        />
+            <Svg d={EDIT} size={14} />
+          </button>
+          <button type="button" className="music-ctl" aria-label="Hide the music dock (it keeps playing)" title="Hide (keeps playing)" tabIndex={tab} onClick={() => setOpen(false)}>
+            <Svg d="M6 6l12 12M18 6L6 18" size={14} />
+          </button>
+        </div>
       )}
+    </aside>
+  );
+
+  return (
+    <div className={`music${playing ? ' is-playing' : ''}`}>
+      {host && createPortal(dock, host)}
       <button
         type="button"
         className={`icon-btn tool-btn gear-btn music-btn${open ? ' is-on' : ''}`}
-        aria-label={open ? 'Hide the music player' : 'Music'}
+        aria-label={open ? 'Hide the music dock' : 'Music'}
         aria-expanded={open}
-        title={open ? 'Hide the music player (it keeps playing)' : playing ? 'Music · playing' : 'Music'}
+        title={open ? 'Hide the music dock (it keeps playing)' : playing ? 'Music · playing' : 'Music'}
         onClick={() => setOpen((o) => !o)}
       >
         <Svg d="M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />

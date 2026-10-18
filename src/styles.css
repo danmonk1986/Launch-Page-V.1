@@ -1974,17 +1974,8 @@ dialog.crawl::backdrop { background: #000000; }
 
 /* 🎧 Music: a SoundCloud player that slides out to the left of the headphones; stays loaded when hidden. */
 .music { position: relative; display: flex; align-items: center; }
-.music-panel {
-  position: absolute; right: calc(100% + 8px); top: 0; height: 40px; width: 0; overflow: hidden; opacity: 0;
-  display: flex; align-items: center; gap: 6px; transition: width 0.25s ease, opacity 0.2s ease; pointer-events: none;
-  background: var(--surface-solid); border: 1px solid transparent; border-radius: 10px;
-}
-.music.is-open .music-panel { width: min(440px, calc(100vw - 140px)); opacity: 1; pointer-events: auto; border-color: var(--edge-strong); padding: 0 6px 0 10px; }
-.music-engine { position: fixed; right: 0; bottom: 0; z-index: -1; width: 320px; height: 400px; border: 0; opacity: 0; pointer-events: none; }
-.music-engine.is-shown {
-  position: absolute; right: 0; bottom: auto; top: calc(100% + 8px); z-index: 70; width: min(440px, calc(100vw - 32px)); height: 166px;
-  opacity: 1; pointer-events: auto; border-radius: 12px; border: 1px solid var(--edge-strong); background: #ffffff; box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
-}
+.music-form { flex: 1; display: flex; align-items: center; gap: 6px; }
+.music-form input { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--edge-strong); background: rgb(15 11 34 / 0.85); color: var(--beige); font: inherit; font-size: 13px; }
 .music-mini { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
 .music-art { flex: none; width: 30px; height: 30px; border-radius: 8px; overflow: hidden; display: grid; place-items: center; background: rgb(6 249 194 / 0.1); color: var(--accent-teal); }
 .music-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -2000,13 +1991,9 @@ dialog.crawl::backdrop { background: #000000; }
 .music.is-playing .music-btn:not(.is-on) { color: var(--accent-teal); }
 .app[data-tone='light'] .music-title { color: #444242; }
 .app[data-tone='light'] .music-ctl:not(.music-play) { color: #444242; }
-.music-form { flex: 1; display: flex; align-items: center; gap: 6px; }
-.music-form input { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--edge-strong); background: rgb(15 11 34 / 0.85); color: var(--beige); font: inherit; font-size: 13px; }
-.music-panel .tool-btn { width: 30px; height: 30px; border-radius: 8px; flex: none; }
+.music-dock .tool-btn { width: 32px; height: 32px; border-radius: 8px; flex: none; }
 .music-btn.is-on { border-color: var(--accent-teal); color: var(--accent-teal); }
 .app[data-tone='light'] .music-form input { background: #ffffff; color: #444242; }
-@media (prefers-reduced-motion: reduce) { .music-panel { transition: none; } }
-@media (max-width: 560px) { .music-panel { right: auto; left: 0; top: calc(100% + 6px); } .music.is-open .music-panel { width: calc(100vw - 32px); } }
 
 /* Colour settings: picker + hex box per colour */
 .colour-row { display: flex; align-items: center; gap: 6px; }
@@ -2121,3 +2108,20 @@ select:not([multiple]) {
   box-shadow: 0 12px 30px rgb(0 0 0 / 0.4);
 }
 .pill-menu .area-pill { text-align: left; white-space: nowrap; }
+
+/* Music dock: bottom-right, opens up into SoundCloud's player, folds to the mini bar */
+.music-dock {
+  position: fixed; right: 16px; bottom: 16px; z-index: 80; width: min(420px, calc(100vw - 32px));
+  display: grid; background: var(--surface-solid); border: 1px solid var(--accent-purple); border-radius: 16px;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.45); overflow: hidden;
+  transform: translateY(calc(100% + 32px)); opacity: 0; pointer-events: none; transition: transform 0.25s ease, opacity 0.2s ease;
+}
+.music-dock.is-open { transform: none; opacity: 1; pointer-events: auto; }
+.music-stage { height: 0; overflow: hidden; transition: height 0.25s ease; }
+.music-dock.is-big .music-stage { height: 300px; }
+.music-stage iframe { display: block; width: 100%; height: 300px; border: 0; }
+.music-mini { padding: 10px 10px 10px 12px; }
+.music-form { padding: 10px; }
+.music-fail { margin: 0; padding: 10px 12px 0; font-size: 12px; color: var(--accent-pink); }
+.music-fail a { color: var(--accent-teal); margin-left: 6px; }
+@media (prefers-reduced-motion: reduce) { .music-dock, .music-stage { transition: none; } }
