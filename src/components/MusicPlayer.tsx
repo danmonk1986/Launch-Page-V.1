@@ -47,6 +47,10 @@ interface ScWidget {
   prev(): void;
   getCurrentSound(cb: (s: ScSound | null) => void): void;
   getSounds(cb: (s: ScSound[] | null) => void): void;
+  getPosition(cb: (ms: number) => void): void;
+  getCurrentSoundIndex(cb: (i: number) => void): void;
+  seekTo(ms: number): void;
+  skip(index: number): void;
 }
 type ScGlobal = { Widget: ((el: HTMLIFrameElement) => ScWidget) & { Events: Record<string, string> } };
 let apiLoad: Promise<ScGlobal> | null = null;
@@ -65,6 +69,27 @@ function loadApi(): Promise<ScGlobal> {
     document.head.appendChild(s);
   });
   return apiLoad;
+}
+
+// Saved playlists (per device) and where each one was left off.
+type Saved = { name: string; link: string };
+const SAVED_KEY = 'launchpage.music.saved';
+const SPOT_KEY = 'launchpage.music.spot';
+type Spot = { link: string; index: number; ms: number };
+function readJson<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function writeJson(key: string, v: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(v));
+  } catch {
+    /* ignore */
+  }
 }
 
 /** "…/sets/2026-you-can-change-this-is" → "2026 you can change this is". */
@@ -99,6 +124,9 @@ export function MusicPlayer() {
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [sound, setSound] = useState<ScSound | null>(null);
+  const [saved, setSaved] = useState<Saved[]>(() => readJson<Saved[]>(SAVED_KEY, []));
+  const [listOpen, setListOpen] = useState<false | { top: number; right: number }>(false);
+  const [resumed, setResumed] = useState('');
   const frame = useRef<HTMLIFrameElement>(null);
   const widget = useRef<ScWidget | null>(null);
   const src = soundcloudEmbed(link);
@@ -129,14 +157,39 @@ export function MusicPlayer() {
           setReady(true);
           refresh();
         });
+        // Pick up where this playlist was left off: on the first ▶ (browsers only allow sound
+        // after a press), jump to the saved track, then to the saved spot in it.
+        const spot = readJson<Spot | null>(SPOT_KEY, null);
+        let resume: Spot | null = spot && spot.link === link && (spot.index > 0 || spot.ms > 5000) ? spot : null;
+        let lastSave = 0;
         w.bind(E.PLAY, () => {
           if (!live) return;
           setPlaying(true);
           refresh();
+          if (!resume) return;
+          const r = resume;
+          w.getCurrentSoundIndex((i) => {
+            if (i !== r.index) {
+              w.skip(r.index); // plays the saved track; its own PLAY then seeks
+              return;
+            }
+            resume = null;
+            if (r.ms > 5000) w.seekTo(r.ms);
+            setResumed(`Picked up where you left off`);
+            setTimeout(() => live && setResumed(''), 4000);
+          });
         });
+        if (E.PLAY_PROGRESS)
+          w.bind(E.PLAY_PROGRESS, () => {
+            const now = Date.now();
+            if (!live || now - lastSave < 5000) return;
+            lastSave = now;
+            w.getCurrentSoundIndex((index) => w.getPosition((ms) => writeJson(SPOT_KEY, { link, index, ms })));
+          });
         w.bind(E.PAUSE, () => live && setPlaying(false));
         w.bind(E.ERROR, () => live && setFailed(true));
         w.bind(E.FINISH, () => live && setPlaying(false));
+        w.bind(E.PAUSE, () => w.getCurrentSoundIndex((index) => w.getPosition((ms) => writeJson(SPOT_KEY, { link, index, ms }))));
       })
       .catch(() => live && setFailed(true));
     return () => {
@@ -155,6 +208,45 @@ export function MusicPlayer() {
       /* ignore */
     }
     setEditing(false);
+  };
+  // The playlists menu closes on a click anywhere else, or when the page scrolls.
+  useEffect(() => {
+    if (!listOpen) return;
+    const off = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.closest('.music-list') && !t.closest('[aria-label="Your playlists"]')) setListOpen(false);
+    };
+    const shut = () => setListOpen(false);
+    document.addEventListener('mousedown', off);
+    window.addEventListener('resize', shut);
+    return () => {
+      document.removeEventListener('mousedown', off);
+      window.removeEventListener('resize', shut);
+    };
+  }, [listOpen]);
+  const useLink = (v: string) => {
+    setLink(v);
+    setDraft(v);
+    try {
+      localStorage.setItem(KEY, v);
+    } catch {
+      /* ignore */
+    }
+    setEditing(false);
+    setListOpen(false);
+  };
+  const isSaved = saved.some((x) => x.link === link);
+  const saveCurrent = () => {
+    if (!link || isSaved) return;
+    const name = linkName(link);
+    const next = [...saved, { name: name.replace(/\b\w/g, (c) => c.toUpperCase()), link }];
+    setSaved(next);
+    writeJson(SAVED_KEY, next);
+  };
+  const forget = (l: string) => {
+    const next = saved.filter((x) => x.link !== l);
+    setSaved(next);
+    writeJson(SAVED_KEY, next);
   };
   const tab = open ? 0 : -1;
   const art = sound?.artwork_url || sound?.user?.avatar_url || '';
@@ -184,7 +276,7 @@ export function MusicPlayer() {
             </span>
             <span className="music-meta" title={who ? `${title} · ${who}` : title}>
               <span className="music-title">{title}</span>
-              {who && <span className="music-who">{who}</span>}
+              {resumed ? <span className="music-who music-resumed">{resumed}</span> : who && <span className="music-who">{who}</span>}
             </span>
             <span className="music-controls">
               <button type="button" className="music-ctl" aria-label="Previous" title="Previous" tabIndex={tab} disabled={!ready} onClick={() => widget.current?.prev()}>
@@ -197,6 +289,31 @@ export function MusicPlayer() {
                 <Svg d={NEXT} size={14} fill />
               </button>
             </span>
+            <button
+              type="button"
+              className={`music-ctl music-save${isSaved ? ' is-on' : ''}`}
+              aria-label={isSaved ? 'Saved to your playlists' : 'Save this playlist'}
+              title={isSaved ? 'Saved to your playlists' : 'Save this playlist'}
+              tabIndex={tab}
+              aria-pressed={isSaved}
+              onClick={saveCurrent}
+            >
+              <Svg d="M6 3h12v18l-6-4-6 4z" size={14} fill={isSaved} />
+            </button>
+            <button
+              type="button"
+              className="music-ctl"
+              aria-label="Your playlists"
+              title="Your playlists"
+              aria-expanded={!!listOpen}
+              tabIndex={tab}
+              onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                setListOpen((o) => (o ? false : { top: r.bottom + 8, right: window.innerWidth - r.right - 60 }));
+              }}
+            >
+              <Svg d="M4 6h11M4 12h11M4 18h7M19 9v9M15.5 14.5 19 18l3.5-3.5" size={15} />
+            </button>
             <button
               type="button"
               className="icon-btn tool-btn music-change"
@@ -213,6 +330,32 @@ export function MusicPlayer() {
           </div>
         )}
       </div>
+      {open && listOpen && (
+        <div className="music-list" role="menu" aria-label="Your playlists" style={{ top: listOpen.top, right: listOpen.right }}>
+          {saved.length === 0 && <p className="music-list-empty">No saved playlists yet. Play one and press the bookmark to save it.</p>}
+          {saved.map((x) => (
+            <div key={x.link} className={`music-list-row${x.link === link ? ' is-current' : ''}`}>
+              <button type="button" role="menuitem" className="music-list-pick" onClick={() => useLink(x.link)} title={x.link}>
+                {x.name}
+              </button>
+              <button type="button" className="music-ctl" aria-label={`Remove ${x.name}`} title="Remove from your playlists" onClick={() => forget(x.link)}>
+                <Svg d="M6 6l12 12M18 6L6 18" size={12} />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="music-list-new"
+            onClick={() => {
+              setListOpen(false);
+              setDraft('');
+              setEditing(true);
+            }}
+          >
+            + Add a playlist link
+          </button>
+        </div>
+      )}
       {/* SoundCloud's own player: always loaded, so music survives closing the panel. Shown under 🎧
           while the panel is open: browsers only let music start from a press inside it, and after
           that the mini player's buttons drive it. */}

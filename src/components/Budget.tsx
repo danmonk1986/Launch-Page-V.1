@@ -287,7 +287,7 @@ export function BudgetPage(p: Props) {
             key={editing.id}
             line={editing}
             isNew={!p.lines.some((l) => l.id === editing.id)}
-            projects={picks((l) => l.project)}
+            projects={[...new Set([...picks((l) => l.project), ...p.projects.map((x) => x.name.replace(/^STARDVST\s+/i, ''))])].sort((a, b) => a.localeCompare(b))}
             methods={picks((l) => l.method)}
             pmtCategories={picks((l) => l.pmtCategory)}
             onSave={async (l) => {

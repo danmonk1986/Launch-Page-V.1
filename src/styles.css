@@ -1874,7 +1874,7 @@ dialog.crawl::backdrop { background: #000000; }
   display: flex; align-items: center; gap: 6px; transition: width 0.25s ease, opacity 0.2s ease; pointer-events: none;
   background: var(--surface-solid); border: 1px solid transparent; border-radius: 10px;
 }
-.music.is-open .music-panel { width: min(440px, calc(100vw - 140px)); opacity: 1; pointer-events: auto; border-color: var(--edge-strong); padding: 0 6px 0 10px; }
+.music.is-open .music-panel { width: min(520px, calc(100vw - 140px)); opacity: 1; pointer-events: auto; border-color: var(--edge-strong); padding: 0 6px 0 10px; }
 .music-engine { position: fixed; right: 0; bottom: 0; z-index: -1; width: 320px; height: 400px; border: 0; opacity: 0; pointer-events: none; }
 .music-engine.is-shown {
   position: absolute; right: 0; bottom: auto; top: calc(100% + 8px); z-index: 70; width: min(440px, calc(100vw - 32px)); height: 166px;
@@ -2071,3 +2071,20 @@ select:not([multiple]) {
 .budget-stat-value { font-size: 14px; }
 .budget-stat-total .budget-stat-value { font-size: 16px; }
 .budget-groupby.icon-btn { width: 46px; height: auto; min-height: 46px; flex: none; border-radius: 10px; }
+
+/* Music: saved playlists */
+.music-save.is-on { color: var(--accent-teal); }
+.music-resumed { color: var(--accent-teal); }
+.music-list {
+  position: fixed; z-index: 90; width: 300px; max-height: 360px; overflow-y: auto; display: grid; gap: 4px; padding: 8px;
+  border: 1px solid var(--accent-purple); border-radius: 12px; background: var(--surface-solid); box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+}
+.music-list-row { display: flex; align-items: center; gap: 4px; border-radius: 8px; }
+.music-list-row.is-current { background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
+.music-list-pick { flex: 1; min-width: 0; text-align: left; padding: 8px 10px; border: 0; background: none; color: var(--beige); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 8px; }
+.music-list-pick:hover { color: var(--accent-teal); }
+.music-list-row.is-current .music-list-pick { color: var(--accent-teal); font-weight: 600; }
+.music-list-empty { margin: 4px 6px; font-size: 12px; color: var(--mist); }
+.music-list-new { margin-top: 4px; padding: 8px 10px; border: 1px dashed var(--edge-strong); border-radius: 8px; background: none; color: var(--mist); font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
+.music-list-new:hover { color: var(--accent-teal); border-color: var(--accent-teal); }
+.app[data-tone='light'] .music-list-pick { color: #444242; }
