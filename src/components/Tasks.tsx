@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, useId } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { normalizeUrl } from '../lib/launchers';
@@ -526,23 +526,14 @@ export function TasksPage(p: PageProps & { onOpenProjects: () => void; onClose: 
           </button>
         </div>
       </div>
-      <div className="area-filter" role="group" aria-label="Show">
-        <button type="button" className="area-pill" aria-pressed={view === null} onClick={() => setView(null)}>
-          All <span className="pill-count">{outstanding}</span>
-        </button>
-        {SECTIONS.map((sec) => (
-          <button
-            key={sec.id}
-            type="button"
-            className="area-pill"
-            aria-pressed={view === sec.id}
-            title={sec.hint}
-            onClick={() => setView(view === sec.id ? null : sec.id)}
-          >
-            {sec.pill ?? sec.title} <span className="pill-count">{grouped[sec.id].length}</span>
-          </button>
-        ))}
-      </div>
+      <PillRow
+        pills={[
+          { id: null, label: 'All', count: outstanding },
+          ...SECTIONS.map((sec) => ({ id: sec.id, label: sec.pill ?? sec.title, count: grouped[sec.id].length, hint: sec.hint }))
+        ]}
+        value={view}
+        onPick={(id) => setView(id === null || view === id ? null : id)}
+      />
       <TaskTable
         key={view ?? 'all'}
         sections={view ? [view] : SECTIONS.map((s) => s.id)}
@@ -835,5 +826,99 @@ function RepeatPicker({ annual, rule, onChange }: { annual: boolean; rule: strin
       )}
       <p className="field-hint">Days past the end of a short month land on its last day.</p>
     </fieldset>
+  );
+}
+
+/**
+ * One row of filter pills. Pills that don't fit move into a ⌄ menu at the end of the row
+ * instead of wrapping to a second line.
+ */
+function PillRow<T extends string | null>({ pills, value, onPick }: { pills: { id: T; label: string; count: number; hint?: string }[]; value: T | null; onPick: (id: T) => void }) {
+  const row = useRef<HTMLDivElement>(null);
+  const widths = useRef<number[]>([]);
+  const [fit, setFit] = useState(pills.length);
+  const [open, setOpen] = useState<{ top: number; right: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = row.current;
+    if (!el) return;
+    const measure = () => {
+      const kids = Array.from(el.querySelectorAll<HTMLElement>(':scope > .area-pill'));
+      kids.forEach((k, i) => {
+        if (k.offsetWidth) widths.current[i] = k.offsetWidth;
+      });
+      const gap = parseFloat(getComputedStyle(el).columnGap) || 4;
+      const avail = el.clientWidth;
+      const w = pills.map((_, i) => widths.current[i] ?? 90);
+      const all = w.reduce((a, x) => a + x + gap, -gap);
+      if (all <= avail) return setFit(pills.length);
+      const more = 44 + gap;
+      let used = 0;
+      let n = 0;
+      while (n < w.length && used + w[n] + (n ? gap : 0) + more <= avail) {
+        used += w[n] + (n ? gap : 0);
+        n += 1;
+      }
+      setFit(Math.max(1, n));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [pills.length, pills.map((p) => p.count).join()]);
+  useEffect(() => {
+    if (!open) return;
+    const off = (e: MouseEvent) => {
+      if (!row.current?.contains(e.target as Node)) setOpen(null);
+    };
+    const shut = () => setOpen(null);
+    document.addEventListener('mousedown', off);
+    window.addEventListener('scroll', shut, true);
+    window.addEventListener('resize', shut);
+    return () => {
+      document.removeEventListener('mousedown', off);
+      window.removeEventListener('scroll', shut, true);
+      window.removeEventListener('resize', shut);
+    };
+  }, [open]);
+  const hidden = pills.slice(fit);
+  const pill = (p: (typeof pills)[number], i: number, inMenu = false) => (
+    <button
+      key={String(p.id)}
+      type="button"
+      className="area-pill"
+      aria-pressed={value === p.id}
+      title={p.hint}
+      hidden={!inMenu && i >= fit}
+      onClick={() => {
+        onPick(p.id);
+        setOpen(null);
+      }}
+    >
+      {p.label} <span className="pill-count">{p.count}</span>
+    </button>
+  );
+  return (
+    <div className="area-filter pill-row" role="group" aria-label="Show" ref={row}>
+      {pills.map((p, i) => pill(p, i))}
+      {hidden.length > 0 && (
+        <div className="pill-more">
+          <button
+            type="button"
+            className="area-pill pill-more-btn"
+            aria-expanded={!!open}
+            aria-pressed={hidden.some((p) => p.id === value)}
+            aria-label={`${hidden.length} more`}
+            title={`${hidden.length} more`}
+            onClick={(e) => {
+              const r = e.currentTarget.getBoundingClientRect();
+              setOpen((o) => (o ? null : { top: r.bottom + 6, right: window.innerWidth - r.right }));
+            }}
+          >
+            ⌄
+          </button>
+          {open && <div className="pill-menu" style={{ top: open.top, right: open.right }}>{hidden.map((p, i) => pill(p, fit + i, true))}</div>}
+        </div>
+      )}
+    </div>
   );
 }

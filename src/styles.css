@@ -2091,3 +2091,16 @@ select:not([multiple]) {
 .d26-kcal input { flex: 1; min-width: 0; }
 .d26-kcal-look { display: inline-flex; align-items: center; white-space: nowrap; text-decoration: none; }
 .d26-kcal-look[aria-disabled='true'] { opacity: 0.5; pointer-events: none; }
+
+/* Tasks filter: one row; what doesn't fit goes under ⌄ */
+.pill-row { flex-wrap: nowrap; position: relative; }
+.pill-row > .area-pill { flex: none; white-space: nowrap; }
+.pill-row > .area-pill[hidden] { display: none; }
+.pill-more { position: relative; flex: none; margin-left: auto; }
+.pill-more-btn { min-width: 40px; font-size: 14px; line-height: 1; }
+.pill-menu {
+  position: fixed; z-index: 60; display: grid; gap: 6px; padding: 8px;
+  min-width: 190px; border: 1px solid var(--accent-purple); border-radius: 12px; background: var(--surface-solid);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.4);
+}
+.pill-menu .area-pill { text-align: left; white-space: nowrap; }
