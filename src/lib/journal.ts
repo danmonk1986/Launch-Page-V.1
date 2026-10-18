@@ -22,8 +22,8 @@ export interface JournalEntry {
 
 type Row = { id: string; entry_date: string; headline: string; theme: string; body: string; checkins?: CheckIn[]; mood?: string; sort: number };
 
-/** Moods to pick from, best to worst. */
-export const MOODS = ['🔥', '😄', '🙂', '😐', '😕', '😫'];
+/** Moods to pick from: feelings best to worst, then what the day was about. */
+export const MOODS = ['🔥', '😄', '🥹', '🙂', '😐', '😬', '😵‍💫', '😫', '🤬', '🤒', '🏂', '❄️', '🌴', '🥃', '✈️'];
 
 /** The day's check-ins; an older entry's text counts as check-in #1. */
 export function checkinsOf(e: JournalEntry): CheckIn[] {

@@ -2052,3 +2052,6 @@ dialog.crawl::backdrop { background: #000000; }
 /* Tasks on the Launch Page (Oct 18): project, description, task, status, required and the buttons. The Tasks page shows every column. */
 .panel-tasks .task-table .col-info, .panel-tasks .task-table .col-start, .panel-tasks .task-table .col-time, .panel-tasks .task-table .col-expense { display: none; }
 .panel-tasks .task-table { min-width: 640px; }
+/* Journal moods (Oct 18): 14 now, so the picker wraps to two rows of seven. */
+.mood-list { flex-wrap: wrap; width: calc(34px * 5 + 4px * 4 + 18px); }
+.mood-row { max-width: calc(34px * 5 + 6px * 4); }

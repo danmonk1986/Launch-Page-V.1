@@ -204,3 +204,4 @@ Dan's story: Rise to Shine as a timed launch. When busy he pushes it (Snooze / S
 - Oct 18, 12:05 AM · This Week: every all-day event on the NORTH STAR calendar (the North Star area's linked calendar, or a Google calendar named North Star) is a theme, however many days are synced; the 7-day-run rule stays as a backup. New themes: make them on North Star.
 - Oct 18, 12:05 AM · Rockets hidden = their buttons (✎, +, Launch all) hidden too; only Timed launches' + shows. Menu order: Launch Page · 26 Days · Tasks · Budget. This Week: long blocks stay one bar (Dan's call).
 - Oct 18, 12:12 AM · Tasks on the Launch Page: Project, Description, Task, Status, Required and ✓ / ⋯ only (Info, Start, Time, Expense hidden), and the table fits the card so the buttons aren't cut off. The Tasks page keeps every column.
+- Oct 18, 12:20 AM · Journal moods: 😕 removed (past days keep it); added 🥹 😬 😵‍💫 🤬 🤒 🏂 ❄️ 🌴 🥃 ✈️. Now 15 in three rows of five: 🔥 😄 🥹 🙂 😐 · 😬 😵‍💫 😫 🤬 🤒 · 🏂 ❄️ 🌴 🥃 ✈️.
