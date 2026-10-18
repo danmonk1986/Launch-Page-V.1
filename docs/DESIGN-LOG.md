@@ -190,3 +190,4 @@ Dan's story: Rise to Shine as a timed launch. When busy he pushes it (Snooze / S
 - **LOG button:** a launch with nothing to open shows LOG instead of 🚀 (list and pop-up). One tap logs its preset and checks it off: no timer, no alarm. With nothing to open and nothing to log, the pop-up button is Done.
 - **Hourly repeat:** From / Until (can run past midnight), every day. Each hour is handled on its own (skip = this hour); each LOG adds its own line (e.g. H2O a glass an hour on shift).
 - Run `0020_launch_logging_hourly.sql` (adds log_kind, log_amount, until_time; allows hourly). Until then they keep working on this device.
+- Oct 17, 10:55 PM · Design pass, header: date 28→24px and time 24→20px (laptop); headline 17→21px and mantra 16→20px; logo 40→54px to match the taller text (phone: 44px). Restore point saved as branch restore/v1-pre-design-pass (tags can't be pushed from Claude's side).

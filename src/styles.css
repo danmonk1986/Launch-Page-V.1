@@ -1942,3 +1942,15 @@ dialog.crawl::backdrop { background: #000000; }
 .quick-btn.quick-log { width: auto; padding: 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; color: var(--accent-teal); border-color: var(--accent-teal); }
 .quick-btn.quick-log:hover { background: color-mix(in srgb, var(--accent-teal) 14%, transparent); }
 .timed-log-hint { margin: -6px 0 14px; }
+
+/* Header (Oct 17, 10:55 PM): date and time 4px smaller; headline and mantra 4px bigger; bigger logo. */
+.header-clock time { font-size: clamp(18px, 2.6vw, 24px); }
+.header-time { font-size: clamp(16px, 2.2vw, 20px); }
+.motto { font-size: 21px; }
+.mantra { font-size: 20px; }
+.topbar-logo { height: 54px; }
+@media (max-width: 560px) {
+  .motto { font-size: 17px; }
+  .mantra { font-size: 16px; }
+  .topbar-logo { height: 44px; }
+}
