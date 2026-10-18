@@ -1984,3 +1984,17 @@ dialog.crawl::backdrop { background: #000000; }
 .app[data-tone='light'] .music-form input { background: #ffffff; color: #444242; }
 @media (prefers-reduced-motion: reduce) { .music-panel { transition: none; } }
 @media (max-width: 560px) { .music-panel { right: auto; left: 0; top: calc(100% + 6px); } .music.is-open .music-panel { width: calc(100vw - 32px); } }
+
+/* Colour settings: picker + hex box per colour */
+.colour-row { display: flex; align-items: center; gap: 6px; }
+.colour-row input[type='color'] { flex: none; width: 44px; height: 38px; padding: 2px; border-radius: 8px; border: 1px solid var(--edge-strong); background: transparent; cursor: pointer; }
+.colour-hex { width: 100%; min-width: 0; height: 38px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--edge-strong); background: rgb(15 11 34 / 0.85); color: var(--beige); font-family: var(--font-mono); font-size: 13px; text-transform: lowercase; }
+.app[data-tone='light'] .colour-hex { background: #ffffff; color: #444242; }
+
+/* Card by card: a little room above the sticky NOW card so it isn't cut off at the top of the routine. */
+@media (min-width: 900px) {
+  .app[data-scroll='cards'] .panel-today .now-card { top: -12px; box-shadow: 0 -14px 0 0 var(--surface-solid), 0 10px 14px -8px var(--surface-solid); }
+}
+.swatches:has(.colour-field) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.colour-field { margin: 0; }
+.swatch.colour-field .colour-hex { width: 100%; height: 38px; padding: 0 10px; border-color: var(--edge-strong); }

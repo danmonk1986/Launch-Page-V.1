@@ -26,6 +26,11 @@ export interface BrandSettings {
   /** Launcher colours 3 and 4. Purple and Teal are 1 and 2 and also colour the whole app. */
   accentGreen: string;
   accentPink: string;
+  /** Day mode (the light backgrounds): its own four colours. The four above are night mode. */
+  dayPurple: string;
+  dayTeal: string;
+  dayGreen: string;
+  dayPink: string;
 }
 
 /** First user's brand. Every field is editable in Settings. */
@@ -39,7 +44,12 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   accentPurple: '#8869cb',
   accentTeal: '#06f9c2',
   accentGreen: '#98ee92',
-  accentPink: '#ff6ad5'
+  accentPink: '#ff6ad5',
+  // Day mode: the original, softer purple and teal from the brand palette, with a matching green and pink.
+  dayPurple: '#8169af',
+  dayTeal: '#76caba',
+  dayGreen: '#8fbf7f',
+  dayPink: '#c47aa8'
 };
 
 /** Oct 15: the neon pair from the logo became the master palette. Move the old defaults over. */
@@ -82,6 +92,10 @@ type Row = {
   accent_teal: string;
   accent_green?: string;
   accent_pink?: string;
+  day_purple?: string;
+  day_teal?: string;
+  day_green?: string;
+  day_pink?: string;
 };
 
 function hasLocalBg() {
@@ -110,7 +124,11 @@ const toRow = (s: BrandSettings): Row => ({
   accent_purple: s.accentPurple,
   accent_teal: s.accentTeal,
   accent_green: s.accentGreen,
-  accent_pink: s.accentPink
+  accent_pink: s.accentPink,
+  day_purple: s.dayPurple,
+  day_teal: s.dayTeal,
+  day_green: s.dayGreen,
+  day_pink: s.dayPink
 });
 
 const fromRow = (r: Row): BrandSettings => ({
@@ -125,7 +143,12 @@ const fromRow = (r: Row): BrandSettings => ({
   accentTeal: r.accent_teal,
   // Before 0007 is run these columns are missing: keep this device's choice.
   accentGreen: r.accent_green ?? readLocal().accentGreen,
-  accentPink: r.accent_pink ?? readLocal().accentPink
+  accentPink: r.accent_pink ?? readLocal().accentPink,
+  // Before 0021 is run the day colours live on this device.
+  dayPurple: r.day_purple ?? readLocal().dayPurple,
+  dayTeal: r.day_teal ?? readLocal().dayTeal,
+  dayGreen: r.day_green ?? readLocal().dayGreen,
+  dayPink: r.day_pink ?? readLocal().dayPink
 });
 
 /** Cloud copy wins when signed in; the local copy is the offline fallback. */
@@ -162,7 +185,20 @@ export async function saveSettings(
     setLocalBg(false);
     return { synced: true };
   }
-  // 0007 or 0012 not run yet: save everything else; what's new stays on this device.
+  // 0007, 0012 or 0021 not run yet: save everything else; what's new stays on this device.
+  const noDay = { ...row };
+  delete noDay.day_purple;
+  delete noDay.day_teal;
+  delete noDay.day_green;
+  delete noDay.day_pink;
+  if (!(await supabase.from('settings').upsert({ user_id: userId, ...noDay })).error) {
+    setLocalBg(false);
+    return { synced: false };
+  }
+  delete row.day_purple;
+  delete row.day_teal;
+  delete row.day_green;
+  delete row.day_pink;
   delete row.accent_green;
   delete row.accent_pink;
   const keepLocalBg = !LEGACY_BACKGROUNDS.includes(row.background);

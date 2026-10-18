@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BACKGROUNDS, type Background, type BrandSettings } from '../lib/settings';
 import type { ScrollMode } from '../lib/view';
-import { CLOSE_ICON, HeadIcon, SAVE_ICON } from './Sheet';
+import { CLOSE_ICON, HeadIcon, SAVE_ICON, useClickOff } from './Sheet';
 
 const BG_LABEL: Record<Background, string> = {
   synthwave: 'Synthwave',
@@ -14,6 +14,8 @@ const BG_LABEL: Record<Background, string> = {
 
 type Props = {
   open: boolean;
+  /** Brand settings (name, logo, headline, scrolling, password) or Colour settings (background, night and day colours). */
+  section: 'brand' | 'colours';
   settings: BrandSettings;
   onClose: () => void;
   onSave: (s: BrandSettings) => Promise<void>;
@@ -24,12 +26,13 @@ type Props = {
   onSetPassword?: (password: string) => Promise<string | null>;
 };
 
-export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword, scrollMode, onScrollMode }: Props) {
+export function SettingsPanel({ open, section, settings, onClose, onSave, onSetPassword, scrollMode, onScrollMode }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState(settings);
   const [saving, setSaving] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [pwStatus, setPwStatus] = useState('');
+  const clickOff = useClickOff(onClose);
 
   useEffect(() => setDraft(settings), [settings, open]);
 
@@ -65,10 +68,10 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword, 
   }
 
   return (
-    <dialog ref={ref} className="sheet" onClose={onClose} aria-labelledby="settings-title">
+    <dialog ref={ref} className="sheet" onClose={onClose} aria-labelledby="settings-title" {...clickOff}>
       <form onSubmit={submit}>
         <div className="sheet-head">
-          <h2 id="settings-title">Brand settings</h2>
+          <h2 id="settings-title">{section === 'brand' ? 'Brand settings' : 'Colour settings'}</h2>
           <div className="sheet-tools">
             <button type="submit" className="icon-btn tool-btn tool-btn-go" disabled={saving} aria-label="Save settings" title="Save">
               <HeadIcon d={SAVE_ICON} />
@@ -79,6 +82,8 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword, 
           </div>
         </div>
 
+        {section === 'brand' && (
+          <>
         <label className="field">
           <span>Your name</span>
           <input value={draft.displayName} onChange={(e) => set('displayName', e.target.value)} />
@@ -105,7 +110,28 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword, 
           <span>Mantra</span>
           <input value={draft.mantra} onChange={(e) => set('mantra', e.target.value)} />
         </label>
+          </>
+        )}
 
+        {section === 'brand' && (
+        <fieldset className="field">
+          <legend>Scrolling (this device)</legend>
+          <div className="choice-row">
+            <label className="choice">
+              <input type="radio" name="scroll" checked={scrollMode === 'free'} onChange={() => onScrollMode('free')} />
+              <span>Free</span>
+            </label>
+            <label className="choice">
+              <input type="radio" name="scroll" checked={scrollMode === 'cards'} onChange={() => onScrollMode('cards')} />
+              <span>Card by card</span>
+            </label>
+          </div>
+          <p className="field-hint">Card by card: each scroll lands on the next card, and the routine stays fixed beside them, following the time.</p>
+        </fieldset>
+
+        )}
+        {section === 'colours' && (
+          <>
         <fieldset className="field">
           <legend>Background</legend>
           <div className="choice-row">
@@ -124,46 +150,29 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword, 
         </fieldset>
 
         <fieldset className="field">
-          <legend>Scrolling (this device)</legend>
-          <div className="choice-row">
-            <label className="choice">
-              <input type="radio" name="scroll" checked={scrollMode === 'free'} onChange={() => onScrollMode('free')} />
-              <span>Free</span>
-            </label>
-            <label className="choice">
-              <input type="radio" name="scroll" checked={scrollMode === 'cards'} onChange={() => onScrollMode('cards')} />
-              <span>Card by card</span>
-            </label>
-          </div>
-          <p className="field-hint">Card by card: each scroll lands on the next card, and the routine stays fixed beside them, following the time.</p>
-        </fieldset>
-
-        <fieldset className="field">
-          <legend>Theme colours</legend>
+          <legend>Night mode colours · Synthwave, Starry night, Navy</legend>
           <div className="swatches">
-            <label className="field swatch">
-              <span>Teal</span>
-              <input type="color" value={draft.accentTeal} onChange={(e) => set('accentTeal', e.target.value)} />
-            </label>
-            <label className="field swatch">
-              <span>Purple</span>
-              <input type="color" value={draft.accentPurple} onChange={(e) => set('accentPurple', e.target.value)} />
-            </label>
-            <label className="field swatch">
-              <span>Green</span>
-              <input type="color" value={draft.accentGreen} onChange={(e) => set('accentGreen', e.target.value)} />
-            </label>
-            <label className="field swatch">
-              <span>Pink</span>
-              <input type="color" value={draft.accentPink} onChange={(e) => set('accentPink', e.target.value)} />
-            </label>
+            <ColourField label="Purple" value={draft.accentPurple} onChange={(v) => set('accentPurple', v)} />
+            <ColourField label="Teal" value={draft.accentTeal} onChange={(v) => set('accentTeal', v)} />
+            <ColourField label="Green" value={draft.accentGreen} onChange={(v) => set('accentGreen', v)} />
+            <ColourField label="Pink" value={draft.accentPink} onChange={(v) => set('accentPink', v)} />
           </div>
-          <p className="field-hint">Your four theme colours. Teal and Purple run the app today; all four are launcher colours, and Green and Pink are ready for other places.</p>
         </fieldset>
-
+        <fieldset className="field">
+          <legend>Day mode colours · Damascus, Snowy day, White</legend>
+          <div className="swatches">
+            <ColourField label="Purple" value={draft.dayPurple} onChange={(v) => set('dayPurple', v)} />
+            <ColourField label="Teal" value={draft.dayTeal} onChange={(v) => set('dayTeal', v)} />
+            <ColourField label="Green" value={draft.dayGreen} onChange={(v) => set('dayGreen', v)} />
+            <ColourField label="Pink" value={draft.dayPink} onChange={(v) => set('dayPink', v)} />
+          </div>
+          <p className="field-hint">Purple and Teal run the app; all four are rocket colours. Tap a swatch to pick (the dropper picks from the screen), or paste a hex code.</p>
+        </fieldset>
+          </>
+        )}
       </form>
 
-      {onSetPassword && (
+      {section === 'brand' && onSetPassword && (
         <form className="account" onSubmit={submitPassword}>
           <h3 className="account-title">Sign-in password</h3>
           <label className="field">
@@ -188,5 +197,38 @@ export function SettingsPanel({ open, settings, onClose, onSave, onSetPassword, 
         </form>
       )}
     </dialog>
+  );
+}
+
+/** One colour: the picker (gradient + dropper) and a box to paste a hex code. */
+function ColourField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const [hex, setHex] = useState(value);
+  useEffect(() => setHex(value), [value]);
+  const commit = (raw: string) => {
+    const v = raw.trim().replace(/^#?/, '#');
+    if (/^#[0-9a-f]{6}$/i.test(v)) onChange(v.toLowerCase());
+    else if (/^#[0-9a-f]{3}$/i.test(v)) onChange(`#${v.slice(1).split('').map((c) => c + c).join('')}`.toLowerCase());
+    else setHex(value);
+  };
+  return (
+    <div className="field swatch colour-field">
+      <span>{label}</span>
+      <div className="colour-row">
+        <input type="color" value={value} onChange={(e) => onChange(e.target.value)} aria-label={`${label} colour`} />
+        <input
+          className="colour-hex"
+          value={hex}
+          spellCheck={false}
+          maxLength={7}
+          onChange={(e) => {
+            setHex(e.target.value);
+            if (/^#?[0-9a-f]{6}$/i.test(e.target.value.trim())) commit(e.target.value);
+          }}
+          onBlur={(e) => commit(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), commit((e.target as HTMLInputElement).value))}
+          aria-label={`${label} hex code`}
+        />
+      </div>
+    </div>
   );
 }

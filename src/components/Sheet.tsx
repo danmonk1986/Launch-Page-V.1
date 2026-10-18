@@ -24,11 +24,34 @@ export const SAVE_ICON = 'M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0
 export const TRASH_ICON = 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3';
 export const CLOSE_ICON = 'M6 6l12 12M18 6L6 18';
 
-/** A modal dialog in the LaunchPage style. Escape and the × close it. */
+/**
+ * Clicking off a dialog (on the dimmed page around it) cancels it, like × or Escape. Only a
+ * press that starts and ends outside the box counts, so dragging out of a text box doesn't close it.
+ */
+export function useClickOff(onClose: () => void) {
+  const startedOff = useRef(false);
+  const off = (el: HTMLElement, x: number, y: number) => {
+    const r = el.getBoundingClientRect();
+    return x < r.left || x > r.right || y < r.top || y > r.bottom;
+  };
+  return {
+    onMouseDown: (e: React.MouseEvent<HTMLDialogElement>) => {
+      startedOff.current = e.target === e.currentTarget && off(e.currentTarget, e.clientX, e.clientY);
+    },
+    onClick: (e: React.MouseEvent<HTMLDialogElement>) => {
+      const was = startedOff.current;
+      startedOff.current = false;
+      if (was && e.target === e.currentTarget && off(e.currentTarget, e.clientX, e.clientY)) onClose();
+    }
+  };
+}
+
+/** A modal dialog in the LaunchPage style. Escape, the × and clicking off it close it. */
 export function Sheet({ open, title, onClose, wide, children }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const titleId = `sheet-${title.replace(/\W+/g, '-').toLowerCase()}`;
+  const clickOff = useClickOff(onClose);
 
   useEffect(() => {
     const d = ref.current;
@@ -38,7 +61,7 @@ export function Sheet({ open, title, onClose, wide, children }: Props) {
   }, [open]);
 
   return (
-    <dialog ref={ref} className={`sheet${wide ? ' sheet-wide' : ''}`} onClose={onClose} aria-labelledby={titleId}>
+    <dialog ref={ref} className={`sheet${wide ? ' sheet-wide' : ''}`} onClose={onClose} aria-labelledby={titleId} {...clickOff}>
       <div className="sheet-head">
         <h2 id={titleId}>{title}</h2>
         <div className="sheet-tools">

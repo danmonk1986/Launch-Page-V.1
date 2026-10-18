@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Routine, RoutineItem } from '../lib/routines';
-import { CLOSE_ICON, HeadIcon, SAVE_ICON, TRASH_ICON } from './Sheet';
+import { CLOSE_ICON, HeadIcon, SAVE_ICON, TRASH_ICON, useClickOff } from './Sheet';
 
 type Props = {
   open: boolean;
@@ -40,6 +40,7 @@ const toDraft = (r: Routine): Draft => ({ ...r, items: withKeys(r.items) });
 
 export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDelete, baseline, onTimed, onNonNeg }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
+  const clickOff = useClickOff(onClose);
   const [draft, setDraft] = useState<Draft>(() => (routine ? toDraft(routine) : blank(nextSort, [])));
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -123,7 +124,7 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
   }
 
   return (
-    <dialog ref={ref} className="sheet sheet-wide" onClose={onClose} aria-labelledby="routine-title">
+    <dialog ref={ref} className="sheet sheet-wide" onClose={onClose} aria-labelledby="routine-title" {...clickOff}>
       <form onSubmit={submit}>
         <div className="sheet-head">
           <h2 id="routine-title">{routine ? `Edit ${routine.name}` : 'New routine'}</h2>

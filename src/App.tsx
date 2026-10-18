@@ -92,7 +92,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(!supabase);
   const [settings, setSettings] = useState<BrandSettings>(DEFAULT_SETTINGS);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState<false | 'brand' | 'colours'>(false);
   const [status, setStatus] = useState('');
   const [page, setPage] = useState<PageId>('launch');
   // Phones fold the headline out of the fixed header once the page scrolls.
@@ -645,10 +645,11 @@ export default function App() {
   const light = LIGHT_BACKGROUNDS.includes(settings.background);
   const ink = (c: string, pct: number) => (light ? `color-mix(in srgb, ${c} ${pct}%, #2b2a2a)` : c);
   const theme = {
-    '--accent-purple': ink(settings.accentPurple, 85),
-    '--accent-teal': ink(settings.accentTeal, 62),
-    '--accent-green': ink(settings.accentGreen, 70),
-    '--accent-pink': ink(settings.accentPink, 80)
+    // Night mode (dark backgrounds) and day mode (light backgrounds) each have their own four colours.
+    '--accent-purple': light ? ink(settings.dayPurple, 92) : settings.accentPurple,
+    '--accent-teal': light ? ink(settings.dayTeal, 72) : settings.accentTeal,
+    '--accent-green': light ? ink(settings.dayGreen, 80) : settings.accentGreen,
+    '--accent-pink': light ? ink(settings.dayPink, 88) : settings.accentPink
   } as CSSProperties;
 
   if (!authReady) return <div className="app" style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'} />;
@@ -695,7 +696,8 @@ export default function App() {
             <MusicPlayer />
             <GearMenu
               items={[
-                { label: 'Brand settings', onClick: () => setSettingsOpen(true) },
+                { label: 'Brand settings', onClick: () => setSettingsOpen('brand') },
+                { label: 'Colour settings', onClick: () => setSettingsOpen('colours') },
                 { label: 'Import tasks', onClick: () => importInput.current?.click() },
                 { label: 'Export my data', onClick: () => downloadExport(settings) },
                 ...(googleConfigured() && wasConnected()
@@ -714,7 +716,7 @@ export default function App() {
                       {
                         label: 'Change password',
                         onClick: () => {
-                          setSettingsOpen(true);
+                          setSettingsOpen('brand');
                           setTimeout(() => document.querySelector<HTMLInputElement>('.account input[type=password]')?.focus(), 150);
                         }
                       },
@@ -952,7 +954,8 @@ export default function App() {
         }}
       />
       <SettingsPanel
-        open={settingsOpen}
+        open={!!settingsOpen}
+        section={settingsOpen || 'brand'}
         settings={settings}
         onClose={() => setSettingsOpen(false)}
         onSave={handleSave}
