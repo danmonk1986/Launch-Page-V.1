@@ -6,8 +6,8 @@ export type PageId = 'launch' | 'tasks' | 'days26' | 'budget' | 'journal';
 
 const PAGES: { id: PageId; label: string }[] = [
   { id: 'launch', label: 'Launch Page' },
-  { id: 'tasks', label: 'Tasks' },
   { id: 'days26', label: '26 Days' },
+  { id: 'tasks', label: 'Tasks' },
   { id: 'budget', label: 'Budget' }
 ];
 

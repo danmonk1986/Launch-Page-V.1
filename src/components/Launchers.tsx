@@ -191,7 +191,7 @@ export function LaunchersPanel(p: Props) {
             <Icon d="M6 9l6 6 6-6" />
           </button>
         </div>
-        <div className="panel-actions">
+        <div className="panel-actions" hidden={!showTiles}>
           <button
             type="button"
             className="icon-btn tool-btn"
