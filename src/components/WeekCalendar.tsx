@@ -172,7 +172,11 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
     for (let n = 1; n < sorted.length && run < 7; n++) run = sorted[n] === sorted[n - 1] + 1 ? run + 1 : 1;
     if (sorted.length >= 7 && run >= 7) themeTitles.add(k);
   }
-  const isTheme = (e: CalEvent) => !e.google?.time && e.startDate === e.endDate && themeTitles.has(e.title.trim().toLowerCase());
+  // NORTH STAR: every all-day event on that calendar is a theme, however many days are synced.
+  const northStarCals = new Set(projects.filter((p) => /^north\s*star$/i.test(p.name.trim()) && p.calendarId).map((p) => p.calendarId as string));
+  const onNorthStar = (e: CalEvent) => !!e.google && (northStarCals.has(e.google.calendarId) || /^north\s*star$/i.test((e.google.calendar ?? '').trim()));
+  const isTheme = (e: CalEvent) =>
+    !e.google?.time && (onNorthStar(e) || (e.startDate === e.endDate && themeTitles.has(e.title.trim().toLowerCase())));
   // Long all-day events (a week or more, like OPTIMIZE LAUNCH! SHEET) keep the bar look but sit with the rest.
   const isLong = (e: CalEvent) => !e.google?.time && dateNum(e.endDate) - dateNum(e.startDate) >= 6;
   const main = layoutWeek(all.filter((e) => !isTheme(e)), start).map((p) => (isLong(p.event) ? { ...p, theme: true } : p));
