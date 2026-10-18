@@ -472,6 +472,7 @@ export function LaunchersPanel(p: Props) {
           fill={timed ? null : fill?.fill ?? null}
           launchers={p.launchers}
           rituals={p.rituals ?? []}
+          titles={[...new Set(p.launches.map((l) => l.title.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
           nextSort={p.launches.length}
           onCancel={() => setTimedOpen(false)}
           onSave={async (l) => {
@@ -615,6 +616,7 @@ function TimedForm({
   fill,
   launchers,
   rituals,
+  titles,
   nextSort,
   onSave,
   onDelete
@@ -624,6 +626,8 @@ function TimedForm({
   fill?: Partial<Launch> | null;
   launchers: Launcher[];
   rituals: { id: string; name: string }[];
+  /** Names already used, so the same task keeps the same name. */
+  titles: string[];
   nextSort: number;
   onCancel?: () => void;
   onSave: (l: Launch) => Promise<void>;
@@ -722,7 +726,7 @@ function TimedForm({
       )}
       <label className="field">
         <span>What</span>
-        <input required value={d.title} onChange={(e) => set('title', e.target.value)} placeholder="Pay bills" />
+        <TitleCombo value={d.title} titles={titles} onChange={(v) => set('title', v)} />
       </label>
       {rituals.length > 0 && (
         <label className="field">
@@ -944,6 +948,87 @@ function TimedForm({
 
       <FormActions formId={formId} saveDisabled={!d.title.trim()} onDelete={launch ? () => onDelete(launch.id) : undefined} deleteLabel={launch?.title} />
     </form>
+  );
+}
+
+/** "What": type a new name, or open the list with ⌄ (or by typing) and pick one you've used before. */
+function TitleCombo({ value, titles, onChange }: { value: string; titles: string[]; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [filtering, setFiltering] = useState(false);
+  const [hi, setHi] = useState(0);
+  const listId = useId();
+  const wrap = useRef<HTMLDivElement>(null);
+  const q = value.trim().toLowerCase();
+  const shown = (filtering && q ? titles.filter((t) => t.toLowerCase().includes(q)) : titles).filter((t) => t !== value);
+  const pick = (t: string) => {
+    onChange(t);
+    setOpen(false);
+    setFiltering(false);
+  };
+  return (
+    <div className="combo" ref={wrap} onBlur={(e) => !wrap.current?.contains(e.relatedTarget as Node) && setOpen(false)}>
+      <input
+        required
+        autoComplete="off"
+        role="combobox"
+        aria-expanded={open && shown.length > 0}
+        aria-controls={listId}
+        value={value}
+        placeholder="Work Block #1 - Launch Page Construction"
+        onChange={(e) => {
+          onChange(e.target.value);
+          setFiltering(true);
+          setOpen(e.target.value.trim().length > 0);
+          setHi(0);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (!open) setOpen(true);
+            else setHi((h) => Math.min(h + 1, shown.length - 1));
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHi((h) => Math.max(h - 1, 0));
+          } else if (e.key === 'Enter' && open && shown[hi]) {
+            e.preventDefault();
+            pick(shown[hi]);
+          } else if (e.key === 'Escape' && open) {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(false);
+          }
+        }}
+      />
+      {titles.length > 0 && (
+        <button
+          type="button"
+          className="combo-caret"
+          aria-label={open ? 'Hide the list' : 'Pick a name used before'}
+          title="Pick a name used before"
+          tabIndex={-1}
+          onClick={() => {
+            setFiltering(false);
+            setHi(0);
+            setOpen((x) => !x);
+          }}
+        >
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d={open ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} />
+          </svg>
+        </button>
+      )}
+      {open && shown.length > 0 && (
+        <ul className="combo-list" role="listbox" id={listId}>
+          {shown.map((t, i) => (
+            <li key={t} role="option" aria-selected={i === hi}>
+              <button type="button" className={`combo-opt combo-opt-plain ${i === hi ? 'is-hi' : ''}`} onMouseEnter={() => setHi(i)} onClick={() => pick(t)}>
+                {t}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

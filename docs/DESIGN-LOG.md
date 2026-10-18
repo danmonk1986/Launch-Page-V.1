@@ -207,3 +207,4 @@ Dan's story: Rise to Shine as a timed launch. When busy he pushes it (Snooze / S
 - Oct 18, 12:20 AM · Journal moods: 😕 removed (past days keep it); added 🥹 😬 😵‍💫 🤬 🤒 🏂 ❄️ 🌴 🥃 ✈️. Now 15 in three rows of five: 🔥 😄 🥹 🙂 😐 · 😬 😵‍💫 😫 🤬 🤒 · 🏂 ❄️ 🌴 🥃 ✈️.
 - Oct 18, 12:50 AM · Card by card: routine card is solid (not see-through) so the fade band under NOW blends in instead of showing as a dark strip.
 - Oct 18, 3:50 AM · Timed launch, Once: the date assumes today when switching to Once, and when opening a Once launch whose date is empty or already past.
+- Oct 18, 4 AM · Timed launch What: type a new name or pick one used before (⌄ or by typing), so names keep the same format. Every dropdown uses our own ⌄, 16px in from the right edge (teal; deeper on light themes).
