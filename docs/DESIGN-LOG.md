@@ -224,3 +224,4 @@ Dan's story: Rise to Shine as a timed launch. When busy he pushes it (Snooze / S
 - Oct 18, 6:05 AM · Budget: monthly totals switch between Pmt category (default, biggest first) · Project · Budget category (sheet order); the choice is remembered per device. Budget merged to main.
 - Oct 18, 6:15 AM · Budget top tightened: one square switch (list = pmt category · folder = project · four boxes = budget category) cycles the totals; sum boxes one short row (Monthly · by …); filter pills under them.
 - Oct 18, 6:20 AM · Budget: fourth view 'by group' (Monthly fixed · Monthly variable · Annual ÷ 12 · Planned), first in the cycle (layers icon). Sum boxes are the filter now: click one to show only its lines, click again or Monthly for everything; pills row removed.
+- Oct 18, 6:25 AM · Budget project chips match Tasks: the sheet's project name shows as your Project's chip and colour (DAN MONK → DANMONK26).

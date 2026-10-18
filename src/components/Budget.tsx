@@ -98,7 +98,12 @@ export function BudgetPage(p: Props) {
           .filter((c) => perCat[c])
           .sort((a, b) => perCat[b] - perCat[a]);
 
-  const chipColour = (name: string) => p.projects.find((x) => norm(x.name) === norm(name))?.color;
+  // The sheet's project name as one of your Projects (exact first, then "DAN MONK" ≈ "DANMONK26"), like Tasks shows them.
+  const projectFor = (name: string) => {
+    const n = norm(name);
+    if (!n) return undefined;
+    return p.projects.find((x) => norm(x.name) === n) ?? p.projects.find((x) => norm(x.name).startsWith(n) || n.startsWith(norm(x.name)));
+  };
   const picks = (f: (l: BudgetLine) => string) => [...new Set(p.lines.map(f).map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
   const readFile = async (f: File) => {
@@ -241,9 +246,14 @@ export function BudgetPage(p: Props) {
                       <tr key={l.id} className={`task-row${i % 2 ? ' is-alt' : ''}`}>
                         <td className="col-project">
                           {l.project ? (
-                            <span className="chip" style={chipColour(l.project) ? { ['--chip' as string]: chipColour(l.project) } : undefined} title={l.project}>
-                              {l.project}
-                            </span>
+                            (() => {
+                              const pr = projectFor(l.project);
+                              return (
+                                <span className="chip" style={pr ? { ['--chip' as string]: pr.color } : undefined} title={l.project}>
+                                  {pr ? pr.name.replace(/^STARDVST\s+/i, '') : l.project}
+                                </span>
+                              );
+                            })()
                           ) : (
                             <span className="chip chip-empty">—</span>
                           )}
