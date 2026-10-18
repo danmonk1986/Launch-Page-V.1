@@ -6,6 +6,8 @@ import { downloadExport } from './lib/exportData';
 import { Header, type PageId } from './components/Header';
 import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
+import { BudgetPage } from './components/Budget';
+import { budgetStore, type BudgetLine } from './lib/budget';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
 import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
@@ -118,6 +120,7 @@ export default function App() {
   const [d26Days, setD26Days] = useState<DayRecord[]>([]);
   const [d26Logs, setD26Logs] = useState<LogEntry[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [budget, setBudget] = useState<BudgetLine[]>([]);
   const [d26Config, setD26Config] = useState<Config>(DEFAULT_CONFIG);
   const [d26Ready, setD26Ready] = useState(false);
   const tasksRef = useRef<Task[]>([]);
@@ -243,6 +246,9 @@ export default function App() {
       setQuotes(q1.items);
       setD26Config(c1.items[0] ?? DEFAULT_CONFIG);
       setD26Ready(true);
+      const b1 = await budgetStore.load(userId);
+      if (!live) return;
+      setBudget(b1.items);
       setStoreProblem(l1.problem ?? l2.problem ?? l3.problem ?? p1.problem ?? t1.problem ?? j1.problem ?? n1.problem ?? dd.problem ?? lg.problem);
     })();
     return () => {
@@ -304,6 +310,16 @@ export default function App() {
   const taskOps = ops(taskStore, tasks, setTasks, (t) => t.task);
   const nonNegOps = ops(nonNegStore, nonnegs, setNonnegs, (n) => n.label);
   const quoteOps = ops(quoteStore, quotes, setQuotes, () => 'Quote');
+  const budgetOps = ops(budgetStore, budget, setBudget, (l) => l.description);
+  /** An import: the budget becomes exactly this list. */
+  async function replaceBudget(next: BudgetLine[]) {
+    const old = budget;
+    setBudget(next);
+    for (const l of old) if (!next.some((n) => n.id === l.id)) await budgetStore.remove(userId, l.id, next);
+    let ok = true;
+    for (const l of next) ok = (await budgetStore.save(userId, l, next)) && ok;
+    setStatus(ok ? `Budget: ${next.length} lines saved.` : `Budget: ${next.length} lines saved on this device only.`);
+  }
 
   // 26 Days lists that change often (ticks, logs) save quietly from the newest copy.
   const daysRef = useRef(d26Days);
@@ -876,6 +892,8 @@ export default function App() {
               checkinText={checkinText}
               onCheckin={setCheckin}
             />
+          ) : page === 'budget' ? (
+            <BudgetPage lines={budget} projects={projects} onSave={budgetOps.save} onDelete={budgetOps.remove} onReplace={replaceBudget} onClose={() => setPage('launch')} />
           ) : (
             <ComingSoon page={page} />
           )}

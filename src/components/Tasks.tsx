@@ -833,7 +833,7 @@ function RepeatPicker({ annual, rule, onChange }: { annual: boolean; rule: strin
  * One row of filter pills. Pills that don't fit move into a ⌄ menu at the end of the row
  * instead of wrapping to a second line.
  */
-function PillRow<T extends string | null>({ pills, value, onPick }: { pills: { id: T; label: string; count: number; hint?: string }[]; value: T | null; onPick: (id: T) => void }) {
+export function PillRow<T extends string | null>({ pills, value, onPick }: { pills: { id: T; label: string; count: number; hint?: string }[]; value: T | null; onPick: (id: T) => void }) {
   const row = useRef<HTMLDivElement>(null);
   const widths = useRef<number[]>([]);
   const [fit, setFit] = useState(pills.length);
