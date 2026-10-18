@@ -631,9 +631,12 @@ function TimedForm({
 }) {
   const [ask, setAsk] = useState<Launch | null>(null);
   const [scope, setScope] = useState<string | null>(null);
+  // Once: the date assumes today (when it's empty or already past).
+  const todayIso = isoDate(today);
+  const onceDate = (x: string | null) => (!x || x < todayIso ? todayIso : x);
   const [d, setD] = useState<Launch>(
     () =>
-      launch ?? {
+      (launch && launch.repeat === 'once' ? { ...launch, onDate: onceDate(launch.onDate) } : launch) ?? {
         id: crypto.randomUUID(),
         title: '',
         atTime: '10:00',
@@ -857,7 +860,7 @@ function TimedForm({
                 type="radio"
                 name="repeat"
                 checked={d.repeat === r}
-                onChange={() => setD((x) => ({ ...x, repeat: r, untilTime: r === 'hourly' ? x.untilTime ?? '06:00' : x.untilTime }))}
+                onChange={() => setD((x) => ({ ...x, repeat: r, untilTime: r === 'hourly' ? x.untilTime ?? '06:00' : x.untilTime, onDate: r === 'once' ? onceDate(x.onDate) : x.onDate }))}
               />
               <span>{r === 'weekly' ? 'Weekly' : r === 'monthly' ? 'Monthly' : r === 'once' ? 'Once' : 'Hourly'}</span>
             </label>
