@@ -30,6 +30,7 @@ interface ScWidget {
   next(): void;
   prev(): void;
   getCurrentSound(cb: (s: ScSound | null) => void): void;
+  getSounds(cb: (s: ScSound[] | null) => void): void;
 }
 type ScGlobal = { Widget: ((el: HTMLIFrameElement) => ScWidget) & { Events: Record<string, string> } };
 let apiLoad: Promise<ScGlobal> | null = null;
@@ -48,6 +49,13 @@ function loadApi(): Promise<ScGlobal> {
     document.head.appendChild(s);
   });
   return apiLoad;
+}
+
+/** "…/sets/2026-you-can-change-this-is" → "2026 you can change this is". */
+function linkName(link: string) {
+  const parts = link.split('?')[0].split('/').filter(Boolean);
+  const last = parts[parts.length - 1] ?? '';
+  return decodeURIComponent(last).replace(/[-_]+/g, ' ').trim() || 'SoundCloud';
 }
 
 const Svg = ({ d, size = 16, fill = false }: { d: string; size?: number; fill?: boolean }) => (
@@ -92,7 +100,13 @@ export function MusicPlayer() {
         if (!live || !frame.current) return;
         const w = SC.Widget(frame.current);
         const E = SC.Widget.Events;
-        const refresh = () => w.getCurrentSound((s) => live && setSound(s));
+        // A playlist names its current track only once one plays: show its first track until then.
+        const refresh = () =>
+          w.getCurrentSound((s) => {
+            if (!live) return;
+            if (s?.title) return setSound(s);
+            w.getSounds((list) => live && setSound((list ?? []).find((x) => x?.title) ?? null));
+          });
         w.bind(E.READY, () => {
           if (!live) return;
           widget.current = w;
@@ -105,6 +119,7 @@ export function MusicPlayer() {
           refresh();
         });
         w.bind(E.PAUSE, () => live && setPlaying(false));
+        w.bind(E.ERROR, () => live && setFailed(true));
         w.bind(E.FINISH, () => live && setPlaying(false));
       })
       .catch(() => live && setFailed(true));
@@ -126,7 +141,7 @@ export function MusicPlayer() {
   };
   const tab = open ? 0 : -1;
   const art = sound?.artwork_url || sound?.user?.avatar_url || '';
-  const title = sound?.title ?? (failed ? 'SoundCloud didn’t load' : ready ? 'Ready' : 'Loading…');
+  const title = sound?.title ?? (failed ? 'SoundCloud didn’t load' : ready ? linkName(link) : 'Loading…');
   const who = sound?.user?.username ?? '';
 
   return (

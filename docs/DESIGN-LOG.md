@@ -216,3 +216,4 @@ Dan's story: Rise to Shine as a timed launch. When busy he pushes it (Snooze / S
 - Oct 18, 4:30 AM · Summary periods: 7 days · 26 days · All (was 30 days).
 - Oct 18, 4:45 AM · Tasks filter pills stay on one row at any width; the ones that don't fit move under a ⌄ button at the end of the row (lit when the chosen filter is in there). Menu closes on pick, click-off, scroll or resize.
 - Oct 18, 4:55 AM · Music: real mini player — artwork, track title + artist, ⏮ ▶/⏸ ⏭, ✎ to change the link. SoundCloud's own player runs hidden behind it (its 20px strip showed blank for playlists). 🎧 glows teal while music plays.
+- Oct 18, 5:00 AM · Music: hidden SoundCloud player made full size (behind the page) so playlists load their tracks; before play, the mini player shows the playlist's first track (or the playlist's name) instead of 'Ready'.
