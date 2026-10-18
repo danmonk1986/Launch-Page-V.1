@@ -346,6 +346,12 @@ p { margin: 0; }
 .signin-note { text-align: center; max-width: 36ch; }
 .signin-error { color: #ffb4a8; }
 
+/* Request beta test (sign-in page) */
+.beta-open { width: min(380px, 100%); justify-self: center; margin-top: 0; }
+.beta-form { border-top: 1px solid var(--edge); padding-top: 20px; }
+.beta-title { font-family: var(--font-head); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-teal); margin: 0 0 14px; }
+.beta-thanks { justify-self: center; color: var(--accent-teal); }
+
 .link-btn {
   margin-top: 14px;
   width: 100%;
