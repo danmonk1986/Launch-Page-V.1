@@ -196,8 +196,21 @@ export function MusicPlayer() {
           </div>
         )}
       </div>
-      {/* SoundCloud's own player: always loaded (so music survives closing the panel), never shown. */}
-      {src && <iframe key={src} ref={frame} className="music-engine" title="SoundCloud player" src={src} allow="autoplay; encrypted-media" tabIndex={-1} aria-hidden="true" />}
+      {/* SoundCloud's own player: always loaded, so music survives closing the panel. Shown under 🎧
+          while the panel is open: browsers only let music start from a press inside it, and after
+          that the mini player's buttons drive it. */}
+      {src && (
+        <iframe
+          key={src}
+          ref={frame}
+          className={`music-engine${open && !editing ? ' is-shown' : ''}`}
+          title="SoundCloud player"
+          src={src}
+          allow="autoplay; encrypted-media"
+          tabIndex={open && !editing ? 0 : -1}
+          aria-hidden={!(open && !editing)}
+        />
+      )}
       <button
         type="button"
         className={`icon-btn tool-btn gear-btn music-btn${open ? ' is-on' : ''}`}
