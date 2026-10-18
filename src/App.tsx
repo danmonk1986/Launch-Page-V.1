@@ -409,6 +409,22 @@ export default function App() {
     setStatus('Daily goal saved. It’s today’s journal theme too.');
   }
 
+  /**
+   * A timed launch checked off ticks the Non-Negotiable with the same name, as rituals do:
+   * either name can contain the other ("Work Block #1 - Launch Page Construction" ticks "Work Block #1").
+   * Logged Non-Negotiables tick from their logs, so only the tick kind is touched here.
+   */
+  function tickNonNegsFor(title: string): string[] {
+    const t = title.trim().toLowerCase();
+    if (t.length < 3) return [];
+    const hits = activeNonNegs(nonnegs).filter((n) => {
+      const label = n.label.trim().toLowerCase();
+      return !n.log && label.length >= 3 && (t.includes(label) || label.includes(t));
+    });
+    for (const n of hits) tickToday(n.id, true);
+    return hits.map((n) => n.label);
+  }
+
   /** Ticks (or unticks) something for today: a Non-Negotiable or a ritual step. */
   function tickToday(key: string, on?: boolean) {
     const cur = daysRef.current.find((d) => d.day === d26Today) ?? { id: dayId(d26Today), day: d26Today, mode: d26Mode, shift: d26Shift, ticks: [], items: snapshot(nonnegs), sort: 0 };
@@ -573,7 +589,9 @@ export default function App() {
       await launchOps.save(skipToTomorrow(l, new Date()));
       setStatus(`${l.title} moved to tomorrow, same time.`);
     } else {
+      const ticked = tickNonNegsFor(l.title);
       const logged = await logFromLaunch(l);
+      if (ticked.length && !logged) return setStatus(`${l.title} checked off: ${ticked.join(', ')} ticked.`);
       setStatus(logged ? `${l.title} checked off: ${logged} logged.` : `${l.title} checked off.`);
     }
   }
