@@ -652,6 +652,9 @@ export default function App() {
     '--accent-pink': light ? ink(settings.dayPink, 88) : settings.accentPink
   } as CSSProperties;
 
+  // Your own background image for this mode, if you've picked one.
+  const bgImage = light ? settings.dayBgImage : settings.nightBgImage;
+  if (bgImage) (theme as Record<string, string>)['--bg-image'] = `url("${bgImage}")`;
   if (!authReady) return <div className="app" style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'} />;
   if (supabase && !session) {
     return (
@@ -662,7 +665,7 @@ export default function App() {
   }
 
   return (
-    <div className={scrolled ? 'app is-scrolled' : 'app'} style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'} data-scroll={scrollMode}>
+    <div className={`${scrolled ? 'app is-scrolled' : 'app'}${bgImage ? ' has-bg-image' : ''}`} style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'} data-scroll={scrollMode}>
       <div className="sky" aria-hidden="true">
         <div className="sky-lines" />
         <div className="sky-horizon" />

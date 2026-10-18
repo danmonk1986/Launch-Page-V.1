@@ -1998,3 +1998,22 @@ dialog.crawl::backdrop { background: #000000; }
 .swatches:has(.colour-field) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
 .colour-field { margin: 0; }
 .swatch.colour-field .colour-hex { width: 100%; height: 38px; padding: 0 10px; border-color: var(--edge-strong); }
+
+/* Your own background image (Colour settings): covers the sky; the built-in art is hidden; a light veil keeps cards readable. */
+.app.has-bg-image .sky { background: var(--bg-image) center / cover no-repeat fixed; }
+.app.has-bg-image .sky > * { display: none; }
+.app.has-bg-image .sky::after { content: ''; position: absolute; inset: 0; background: rgb(12 9 28 / 0.28); }
+.app.has-bg-image[data-tone='light'] .sky::after { background: rgb(255 255 255 / 0.22); }
+
+.image-pick-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.image-pick-preview { width: 96px; height: 54px; border-radius: 8px; border: 1px solid var(--edge-strong); overflow: hidden; display: grid; place-items: center; font-size: 12px; color: var(--dim); background: rgb(15 11 34 / 0.6); }
+.image-pick.is-wide .image-pick-preview { width: 180px; padding: 6px; }
+.image-pick-preview img { width: 100%; height: 100%; object-fit: cover; }
+.image-pick.is-wide .image-pick-preview img { object-fit: contain; }
+.image-pick-btn { min-height: 38px; padding: 0 14px; }
+.image-pick .field-hint { margin-top: 2px; }
+.image-pick-error { color: #ffb4a8; }
+.bg-picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.bg-picks .image-pick { margin: 0; }
+.app[data-tone='light'] .image-pick-preview { background: #f4f4f4; }
+@media (max-width: 520px) { .bg-picks { grid-template-columns: minmax(0, 1fr); } }

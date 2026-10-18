@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { shrinkImage } from '../lib/images';
 import { BACKGROUNDS, type Background, type BrandSettings } from '../lib/settings';
 import type { ScrollMode } from '../lib/view';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, useClickOff } from './Sheet';
@@ -92,16 +93,14 @@ export function SettingsPanel({ open, section, settings, onClose, onSave, onSetP
           <span>Logo text</span>
           <input value={draft.logoText} onChange={(e) => set('logoText', e.target.value)} />
         </label>
-        <label className="field">
-          <span>Logo image link (optional, replaces the LaunchPage logo)</span>
-          <input
-            type="url"
-            inputMode="url"
-            placeholder="https://…"
-            value={draft.logoUrl ?? ''}
-            onChange={(e) => set('logoUrl', e.target.value)}
-          />
-        </label>
+        <ImagePick
+          label="Logo (optional, replaces the LaunchPage logo)"
+          hint="Ideal: 600 × 110 px. PNG keeps a see-through background; JPEG works too. Shown 54 px tall."
+          value={draft.logoUrl}
+          wide
+          shrink={{ maxW: 1200, maxH: 220, type: 'image/png' }}
+          onChange={(v) => set('logoUrl', v)}
+        />
         <label className="field">
           <span>Headline (top bar)</span>
           <input value={draft.goal} onChange={(e) => set('goal', e.target.value)} />
@@ -147,6 +146,15 @@ export function SettingsPanel({ open, section, settings, onClose, onSave, onSetP
               </label>
             ))}
           </div>
+        </fieldset>
+
+        <fieldset className="field">
+          <legend>Your own background (optional, replaces the one picked above)</legend>
+          <div className="bg-picks">
+            <ImagePick label="Night mode" value={draft.nightBgImage} shrink={{ maxW: 2560, maxH: 1600, type: 'image/jpeg', quality: 0.8 }} onChange={(v) => set('nightBgImage', v)} />
+            <ImagePick label="Day mode" value={draft.dayBgImage} shrink={{ maxW: 2560, maxH: 1600, type: 'image/jpeg', quality: 0.8 }} onChange={(v) => set('dayBgImage', v)} />
+          </div>
+          <p className="field-hint">Ideal: 2560 × 1440 px JPEG (16:9). Night mode shows on Synthwave, Starry night and Navy; Day mode on Damascus, Snowy day and White.</p>
         </fieldset>
 
         <fieldset className="field">
@@ -229,6 +237,64 @@ function ColourField({ label, value, onChange }: { label: string; value: string;
           aria-label={`${label} hex code`}
         />
       </div>
+    </div>
+  );
+}
+
+/** Pick an image from the computer: shrunk in the browser, previewed, and removable. */
+function ImagePick({
+  label,
+  hint,
+  value,
+  wide,
+  shrink,
+  onChange
+}: {
+  label: string;
+  hint?: string;
+  value: string | null;
+  wide?: boolean;
+  shrink: { maxW: number; maxH: number; type: 'image/jpeg' | 'image/png'; quality?: number };
+  onChange: (v: string | null) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  return (
+    <div className={`field image-pick${wide ? ' is-wide' : ''}`}>
+      <span>{label}</span>
+      <div className="image-pick-row">
+        <div className={`image-pick-preview${value ? '' : ' is-empty'}`}>{value ? <img src={value} alt="" /> : 'None'}</div>
+        <input
+          ref={input}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic"
+          hidden
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (!f) return;
+            setBusy(true);
+            setError('');
+            try {
+              onChange(await shrinkImage(f, shrink));
+            } catch (err) {
+              setError((err as Error).message);
+            }
+            setBusy(false);
+          }}
+        />
+        <button type="button" className="btn btn-quiet image-pick-btn" disabled={busy} onClick={() => input.current?.click()}>
+          {busy ? 'Reading…' : value ? 'Change' : 'Choose image'}
+        </button>
+        {value && (
+          <button type="button" className="btn btn-quiet image-pick-btn" onClick={() => onChange(null)}>
+            Remove
+          </button>
+        )}
+      </div>
+      {hint && <p className="field-hint">{hint}</p>}
+      {error && <p className="field-hint image-pick-error">{error}</p>}
     </div>
   );
 }

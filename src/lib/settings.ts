@@ -31,6 +31,9 @@ export interface BrandSettings {
   dayTeal: string;
   dayGreen: string;
   dayPink: string;
+  /** Your own background images (resized JPEG data), one per mode; null = the chosen background. */
+  nightBgImage: string | null;
+  dayBgImage: string | null;
 }
 
 /** First user's brand. Every field is editable in Settings. */
@@ -49,7 +52,9 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   dayPurple: '#8169af',
   dayTeal: '#76caba',
   dayGreen: '#8fbf7f',
-  dayPink: '#c47aa8'
+  dayPink: '#c47aa8',
+  nightBgImage: null,
+  dayBgImage: null
 };
 
 /** Oct 15: the neon pair from the logo became the master palette. Move the old defaults over. */
@@ -96,6 +101,8 @@ type Row = {
   day_teal?: string;
   day_green?: string;
   day_pink?: string;
+  night_bg_image?: string | null;
+  day_bg_image?: string | null;
 };
 
 function hasLocalBg() {
@@ -128,7 +135,9 @@ const toRow = (s: BrandSettings): Row => ({
   day_purple: s.dayPurple,
   day_teal: s.dayTeal,
   day_green: s.dayGreen,
-  day_pink: s.dayPink
+  day_pink: s.dayPink,
+  night_bg_image: s.nightBgImage,
+  day_bg_image: s.dayBgImage
 });
 
 const fromRow = (r: Row): BrandSettings => ({
@@ -148,7 +157,10 @@ const fromRow = (r: Row): BrandSettings => ({
   dayPurple: r.day_purple ?? readLocal().dayPurple,
   dayTeal: r.day_teal ?? readLocal().dayTeal,
   dayGreen: r.day_green ?? readLocal().dayGreen,
-  dayPink: r.day_pink ?? readLocal().dayPink
+  dayPink: r.day_pink ?? readLocal().dayPink,
+  // Before 0022 is run the background images live on this device.
+  nightBgImage: r.night_bg_image !== undefined ? r.night_bg_image : readLocal().nightBgImage,
+  dayBgImage: r.day_bg_image !== undefined ? r.day_bg_image : readLocal().dayBgImage
 });
 
 /** Cloud copy wins when signed in; the local copy is the offline fallback. */
@@ -186,7 +198,14 @@ export async function saveSettings(
     return { synced: true };
   }
   // 0007, 0012 or 0021 not run yet: save everything else; what's new stays on this device.
-  const noDay = { ...row };
+  const noImages = { ...row };
+  delete noImages.night_bg_image;
+  delete noImages.day_bg_image;
+  if (!(await supabase.from('settings').upsert({ user_id: userId, ...noImages })).error) {
+    setLocalBg(false);
+    return { synced: false };
+  }
+  const noDay = { ...noImages };
   delete noDay.day_purple;
   delete noDay.day_teal;
   delete noDay.day_green;
@@ -195,6 +214,8 @@ export async function saveSettings(
     setLocalBg(false);
     return { synced: false };
   }
+  delete row.night_bg_image;
+  delete row.day_bg_image;
   delete row.day_purple;
   delete row.day_teal;
   delete row.day_green;
