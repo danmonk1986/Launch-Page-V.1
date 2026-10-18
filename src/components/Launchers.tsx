@@ -107,6 +107,22 @@ export function LaunchersPanel(p: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.preset]);
   const [launched, setLaunched] = useState<{ count: number; blocked: number } | null>(null);
+  // The rocket tiles start hidden; ⌄ beside the title shows them (remembered on this device).
+  const [showTiles, setShowTiles] = useState(() => {
+    try {
+      return localStorage.getItem('launchpage.rockets.open') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleTiles = (on: boolean) => {
+    setShowTiles(on);
+    try {
+      localStorage.setItem('launchpage.rockets.open', on ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  };
   const [showAllTimed, setShowAllTimed] = useState(false);
   const [view, setView] = useState<TimedView>('active');
   const ordered = orderLaunches(p.launches, p.today, p.handled);
@@ -157,12 +173,23 @@ export function LaunchersPanel(p: Props) {
   }
 
   return (
-    <section className="panel panel-launchers" aria-labelledby="h-launchers">
+    <section className={`panel panel-launchers${showTiles ? '' : ' tiles-hidden'}`} aria-labelledby="h-launchers">
       <div className="panel-head">
-        <div>
+        <div className="rockets-title">
           <h2 id="h-launchers" className="panel-title">
             Rockets
           </h2>
+          <button
+            type="button"
+            className={`rockets-toggle${showTiles ? ' is-open' : ''}`}
+            aria-expanded={showTiles}
+            aria-controls="rocket-tiles"
+            aria-label={showTiles ? 'Hide the rockets' : 'Show the rockets'}
+            title={showTiles ? 'Hide the rockets' : 'Show the rockets'}
+            onClick={() => toggleTiles(!showTiles)}
+          >
+            <Icon d="M6 9l6 6 6-6" />
+          </button>
         </div>
         <div className="panel-actions">
           <button
@@ -171,7 +198,10 @@ export function LaunchersPanel(p: Props) {
             aria-pressed={editing}
             aria-label={editing ? 'Done editing rockets' : 'Edit rockets'}
             title={editing ? 'Done' : 'Edit'}
-            onClick={() => setEditing((e) => !e)}
+            onClick={() => {
+              if (!editing) toggleTiles(true);
+              setEditing((e) => !e);
+            }}
           >
             {editing ? <Icon d="M5 12l5 5L20 7" /> : <Icon d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />}
           </button>
@@ -218,7 +248,7 @@ export function LaunchersPanel(p: Props) {
         </div>
       )}
 
-      <ul className="tiles">
+      <ul className="tiles" id="rocket-tiles" hidden={!showTiles}>
         {p.launchers.map((l) => (
           <li key={l.id}>
             {editing || !l.url ? (

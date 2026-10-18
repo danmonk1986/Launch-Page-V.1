@@ -2031,3 +2031,16 @@ dialog.crawl::backdrop { background: #000000; }
   .app[data-scroll='cards'] .home > .panel-today { padding-bottom: 32px; }
   .app[data-scroll='cards'] .panel-today .timeline { padding-top: 6px; }
 }
+
+/* Rockets (Oct 17, 11:45 PM): ⌄ beside the title shows/hides the tiles; hidden by default. */
+.rockets-title { display: flex; align-items: center; gap: 6px; }
+.rockets-toggle {
+  width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;
+  border: 0; background: none; color: var(--accent-teal); cursor: pointer;
+}
+.rockets-toggle svg { transition: transform 0.2s ease; }
+.rockets-toggle.is-open svg { transform: rotate(180deg); }
+.rockets-toggle:hover { background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
+@media (prefers-reduced-motion: reduce) { .rockets-toggle svg { transition: none; } }
+.panel-launchers.tiles-hidden .timed { margin-top: 0; padding-top: 0; border-top: 0; }
+.panel-launchers .tiles[hidden] { display: none; }
