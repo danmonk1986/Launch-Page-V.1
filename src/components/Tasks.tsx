@@ -220,10 +220,10 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
       <td className="col-status col-center">
         {!step && <span className={`status status-${(badge ?? t.status).replace(/\s+/g, '-').toLowerCase()}`}>{badge ?? t.status}</span>}
       </td>
-      <td className="col-link col-center">
+      <td className="col-link col-info col-center">
         <InfoLink t={t} />
       </td>
-      <td className="col-date col-center">{isRecurring(t) ? describeRule(t) : shortDate(t.startDate)}</td>
+      <td className="col-date col-start col-center">{isRecurring(t) ? describeRule(t) : shortDate(t.startDate)}</td>
       <td className="col-date col-center">{isRecurring(t) ? '' : shortDate(t.endDate)}</td>
       <td className="col-time col-center">{t.atTime ? formatMinutes(toMinutes(t.atTime)) : ''}</td>
       <td className="col-expense col-center">{t.expense}</td>
@@ -282,11 +282,11 @@ function TaskTable({
             <th className="col-desc">Description</th>
             <th className="col-task">Task</th>
             <th className="col-center">Status</th>
-            <th className="col-center">Info</th>
-            <th className="col-center">Start</th>
+            <th className="col-info col-center">Info</th>
+            <th className="col-start col-center">Start</th>
             <th className="col-center">Required</th>
-            <th className="col-center">Time</th>
-            <th className="col-center">Expense</th>
+            <th className="col-time col-center">Time</th>
+            <th className="col-expense col-center">Expense</th>
             <th className="col-actions" aria-label="Done or more" />
           </tr>
         </thead>
