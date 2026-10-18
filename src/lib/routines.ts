@@ -31,11 +31,6 @@ export interface Routine {
   sort: number;
 }
 
-export interface ActiveRoutine {
-  routine: Routine;
-  shift: Shift;
-}
-
 const step = (time: string | null, label: string): RoutineItem => ({ time, label });
 
 /** Starter set. MWD (On Site) is the ROUTINE tab of the Launch Sheet; HQ is a draft to edit. */

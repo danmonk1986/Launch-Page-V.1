@@ -98,10 +98,4 @@ export function buildJournalImport(json: unknown, existing: JournalEntry[]): Jou
     .filter((e) => !isBlank(e));
 }
 
-/** "FRI · OCT 16" */
-export function journalDate(iso: string) {
-  const d = new Date(`${iso}T12:00:00`);
-  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase().replace(',', ' ·');
-}
-
 export const isBlank = (j: JournalEntry) => !j.headline.trim() && !j.body.trim() && !j.mood && !checkinsOf(j).some((c) => c.text.trim());

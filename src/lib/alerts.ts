@@ -4,31 +4,6 @@
  * so the audio unlocks on the first click or key press after the page opens.
  */
 
-const PREF_KEY = 'launchpage.alerts.v1';
-
-export interface AlertPrefs {
-  sound: boolean;
-  notify: boolean;
-}
-
-export function readAlertPrefs(): AlertPrefs {
-  try {
-    const raw = localStorage.getItem(PREF_KEY);
-    if (raw) return { sound: true, notify: false, ...JSON.parse(raw) };
-  } catch {
-    /* ignore */
-  }
-  return { sound: true, notify: false };
-}
-
-export function writeAlertPrefs(p: AlertPrefs) {
-  try {
-    localStorage.setItem(PREF_KEY, JSON.stringify(p));
-  } catch {
-    /* ignore */
-  }
-}
-
 let ctx: AudioContext | null = null;
 
 function audio() {

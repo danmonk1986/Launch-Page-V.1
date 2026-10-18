@@ -36,5 +36,5 @@ A mobile app concept fully designed in Dan's 2021 York University UX Design Cert
 ## How they connect
 **LaunchPage** proves the core: a system one person actually runs their life on → **LaunchPage Suite** carries it to a team → **Zaptor** carries the "launch" idea to the world nearby. Each step only happens if the one before earns it.
 
-## Where it stands (Oct 17, 2026)
-The Launch Page, Tasks, Journal and 26 Days (with rituals) are built and live, and in daily use on shift. Design closes for the test version at 6:20 AM, Oct 18; after that, changes are functional only. Budget waits for V.2. Code: danmonk1986/Launch-Page-V.1 · planned home: app.l4unchp4ge.com.
+## Where it stands (Oct 18, 2026)
+V.1 is the foundation: the Launch Page, Tasks, Journal, 26 Days (with rituals), a SoundCloud mini player and Budget V.1 (import the Launch Sheet's BUDGET tab, export it back as CSV, monthly totals four ways) are built and live, and in daily use on shift. Design closed at 6:20 AM, Oct 18 (restore point `restore/v1.0-design-freeze`); changes from here are functional only. Budget syncing with expenses, bank CSVs and draws is V.2. Code: danmonk1986/Launch-Page-V.1 · planned home: app.l4unchp4ge.com.

@@ -5,19 +5,17 @@ Module 1 of LaunchPage, built clean-room (no code from the PM textbook repo or i
 
 **Stack:** TypeScript · React + Vite · installable web app (PWA) · Supabase (database + login) · Cloudflare Workers · `app.l4unchp4ge.com`
 
-## Where Step 1 stands
+## Where V.1 stands (Oct 18, 2026 · design freeze)
 
-| # | Task | Status |
-| --- | --- | --- |
-| 1.1 | Starter app: brand theme, synthwave background, dashboard shell | Done |
-| 1.2 | GitHub repo, first push | Done |
-| 1.3 | Supabase project + `settings` table with Row Level Security | Done |
-| 1.4 | Login by email link | Built; turns on when Supabase keys are set |
-| 1.5 | Editable brand settings, synced | Built |
-| 1.6 | Cloudflare Workers hosting | Waiting on account |
-| 1.7 | `app.l4unchp4ge.com` via Wix DNS | Waiting on 1.6 |
-| 1.8 | Installable + opens offline | Built (vite-plugin-pwa) |
-| 1.9 | Export my data | Built (settings only so far) |
+| Page | What it does |
+| --- | --- |
+| Launch Page | Header (logo, mantra, clock, routine picker, 🎧 SoundCloud mini player, ⚙ settings), Rockets, timed launches (open links, run rituals, log, hourly repeats), today's routine (NOW card), week calendar with North Star themes, Due today + 3 key tasks, journal |
+| 26 Days | Quote, daily goal (= journal theme), Non-Negotiables, rituals (steps + meditation crawl + check-ins), logs (Productivity, Activity, Rest, Food, H2O, Vices), summary (7 / 26 days / all) |
+| Tasks | Launch Sheet TO-DO LIST as a table: groups, steps, recurring tasks, filters (one row, extras under ⌄), Recently deleted |
+| Budget | Launch Sheet BUDGET tab: import CSV/JSON, export CSV in the sheet's columns, monthly totals by group / pmt category / project / budget category (click a box to filter) |
+| Settings | Brand (name, logo, mantra) and colours (day/night themes, backgrounds) |
+
+Restore points are branches named `restore/…` (`restore/v1.0-design-freeze` = the V.1 design freeze). Every change is logged in `docs/DESIGN-LOG.md`.
 
 Without Supabase keys the app runs on this device only and saves settings in the browser.
 
@@ -35,7 +33,8 @@ npm run dev                  # http://localhost:5173
 
 ### Supabase (database + login)
 1. Create a free account at supabase.com and a project named `launchpage`, region Canada (Central).
-2. SQL Editor → paste `supabase/migrations/0001_foundation.sql` → Run.
+2. SQL Editor → run every script in `supabase/migrations/` in number order (0001 → 0023). Each is safe to run again.
+   Two scripts share the number 0007 (`0007_beta_requests.sql`, `0007_tile_colours.sql`): they don't depend on each other, run both. They keep their names because they have already been run.
 3. Authentication → URL Configuration: Site URL `https://app.l4unchp4ge.com`; add redirect URLs `http://localhost:5173` and `https://launch-page-v-1.danmonk1986.workers.dev` (exact addresses: Supabase's `*` only matches one part of a domain name).
 4. Project Settings → API: copy the Project URL and the `anon` public key into `.env.local`. Never use the `service_role` key in this app.
 
@@ -54,17 +53,29 @@ npm run dev                  # http://localhost:5173
 
 ```
 src/
-  App.tsx                 sign-in gate, theme, toolbar
+  App.tsx                 sign-in gate, theme, data loading, page switch
   components/
-    Header.tsx            logo, goal, mantra, clock
-    Dashboard.tsx         panels, filled in step by step
-    SettingsPanel.tsx     brand settings
-    SignIn.tsx            email sign-in link
+    Header.tsx            logo, mantra, page tabs
+    Clock.tsx             header date + time
+    MusicPlayer.tsx       🎧 SoundCloud mini player
+    GearMenu.tsx, SettingsPanel.tsx   brand + colour settings, import/export
+    Dashboard.tsx         Launch Page layout
+    Launchers.tsx         Rockets + timed launches
+    TodayPanel.tsx, RoutineEditor.tsx, RoutinePicker.tsx   routines
+    WeekCalendar.tsx      week view + North Star themes
+    Tasks.tsx, Projects.tsx           tasks + areas/projects
+    Journal.tsx           journal + check-ins
+    Days26.tsx, Rituals.tsx           26 Days + rituals
+    Budget.tsx            Budget
+    Sheet.tsx             dialogs (click off = cancel)
+    LaunchReminder.tsx    launch-time pop-up · SignIn.tsx email sign-in · BetaRequest.tsx beta form
   lib/
-    supabase.ts           client (null when no keys)
-    settings.ts           brand settings: local + cloud
-    exportData.ts         "Export my data"
-supabase/migrations/      database setup scripts, run in order
+    store.ts              local-first store: saves on this device, syncs to Supabase
+    supabase.ts, settings.ts, exportData.ts
+    routines.ts, launchers.ts, events.ts, google.ts, gcalCache.ts, alerts.ts
+    tasks.ts, projects.ts, journal.ts, days26.ts, budget.ts, images.ts, view.ts
+    nonneg.ts             one-time move of the old on-device Non-Negotiables into 26 Days
+supabase/migrations/      database setup scripts, run in number order
 public/                   LaunchPage logo and app icons
 ```
 

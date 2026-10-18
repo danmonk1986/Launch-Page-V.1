@@ -43,14 +43,6 @@ const FOLDER = 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0
 const shortDate = (iso: string | null) =>
   iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '';
 
-/** ✗ on an open task: date required becomes tomorrow (start too, if it was later). */
-export function toTomorrow(t: Task): Task {
-  const d = new Date();
-  const tm = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 12);
-  const iso = `${tm.getFullYear()}-${String(tm.getMonth() + 1).padStart(2, '0')}-${String(tm.getDate()).padStart(2, '0')}`;
-  return { ...t, endDate: iso, startDate: t.startDate && t.startDate > iso ? iso : t.startDate };
-}
-
 /** Check off: one-off tasks are done; recurring ones are done for today and come back next time. */
 export function toggleDone(t: Task): Task {
   const now = new Date().toISOString();
