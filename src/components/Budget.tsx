@@ -22,6 +22,12 @@ import {
 
 const PLUS = 'M12 5v14M5 12h14';
 const CLOSE = 'M6 6l12 12M18 6L6 18';
+// One square button cycles the totals: a list (pmt category), a folder (project), four boxes (budget category).
+const GROUP_ICON: Record<BudgetGroupBy, string> = {
+  pmtCategory: 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01',
+  project: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  category: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'
+};
 const IMPORT = 'M12 3v12M7 10l5 5 5-5M5 21h14';
 const EXPORT = 'M12 15V3M7 8l5-5 5 5M5 21h14';
 
@@ -72,6 +78,10 @@ export function BudgetPage(p: Props) {
       /* ignore */
     }
   };
+  const gi = GROUP_BY.findIndex((g) => g.id === groupBy);
+  const groupLabel = GROUP_BY[gi].label.toLowerCase();
+  const nextGroup = GROUP_BY[(gi + 1) % GROUP_BY.length].id;
+  const nextLabel = GROUP_BY[(gi + 1) % GROUP_BY.length].label.toLowerCase();
   const perCat = monthlyByCategory(p.lines, groupBy);
   const monthly = Object.values(perCat).reduce((a, x) => a + x, 0);
   // Budget categories keep the sheet's column order; the others go biggest first.
@@ -140,20 +150,19 @@ export function BudgetPage(p: Props) {
       </div>
 
       {p.lines.length > 0 && (
-        <div className="d26-range budget-groupby" role="group" aria-label="Monthly totals by">
-          {GROUP_BY.map((g) => (
-            <button key={g.id} type="button" aria-pressed={groupBy === g.id} onClick={() => setGroupBy(g.id)}>
-              {g.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {p.lines.length > 0 && (
         <div className="budget-stats" aria-label="A month of spending">
-          <div className="budget-stat budget-stat-total">
-            <span className="budget-stat-label">Monthly</span>
+          <button
+            type="button"
+            className="icon-btn tool-btn budget-groupby"
+            aria-label={`Monthly totals by ${groupLabel}. Switch to ${nextLabel}`}
+            title={`By ${groupLabel} · tap for ${nextLabel}`}
+            onClick={() => setGroupBy(nextGroup)}
+          >
+            <Icon d={GROUP_ICON[groupBy]} size={18} />
+          </button>
+          <div className="budget-stat budget-stat-total" title="Fixed + variable + annual ÷ 12">
+            <span className="budget-stat-label">Monthly · by {groupLabel}</span>
             <span className="budget-stat-value">{money(monthly)}</span>
-            <span className="budget-stat-note">fixed + variable + annual ÷ 12</span>
           </div>
           {cats.map((c) => (
             <div key={c} className="budget-stat">
