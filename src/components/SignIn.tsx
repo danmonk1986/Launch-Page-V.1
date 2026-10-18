@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { BetaRequest } from './BetaRequest';
 
 type Mode = 'password' | 'link';
 type State = 'idle' | 'working' | 'sent' | 'error';
@@ -90,6 +91,7 @@ export function SignIn() {
           </button>
         </form>
       )}
+      <BetaRequest />
     </main>
   );
 }
