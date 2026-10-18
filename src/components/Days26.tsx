@@ -1028,7 +1028,7 @@ function SummaryCard({
   rec: DayRecord | null;
   mode: Mode;
 }) {
-  const [range, setRange] = useState<7 | 30 | 0>(7);
+  const [range, setRange] = useState<7 | 26 | 0>(7);
   const rs = finished(records, logs, config, today, range || null);
   const run = currentRun(finished(records, logs, config, today, null));
   const on = rs.filter((r) => r.on).length;
@@ -1078,7 +1078,7 @@ function SummaryCard({
           <p className="panel-sub">What makes Work {displayName || 'Dan'} function, and what comes home to HQ?</p>
         </div>
         <div className="d26-range" role="group" aria-label="Period">
-          {([7, 30, 0] as const).map((n) => (
+          {([7, 26, 0] as const).map((n) => (
             <button key={n} type="button" aria-pressed={range === n} onClick={() => setRange(n)}>
               {n ? `${n} days` : 'All'}
             </button>

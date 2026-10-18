@@ -213,3 +213,4 @@ Dan's story: Rise to Shine as a timed launch. When busy he pushes it (Snooze / S
 - Oct 18, 4:15 AM · Log form: Note (and Vice 'What was it') is pick-or-type from notes used before + Non-Negotiables; saving a note that matches a tick-kind Non-Negotiable ticks it. Activity starts at × 1 (was × 3).
 - Oct 18, 4:20 AM · Log Note dropdowns are per card: each log kind only lists notes typed on that kind before (Non-Negotiables no longer pre-filled). A matching note still ticks its Non-Negotiable.
 - Oct 18, 4:35 AM · Food log: Meal dropdown (Breakfast/Lunch/Dinner/Snack) → Description (pick-or-type; picking one had before fills its calories) → How many → Calories each + Estimate ↗ (searches 'calories in …' in a new tab) → Time. Saved as 'Meal · Description', so a meal ticks its Non-Negotiable.
+- Oct 18, 4:30 AM · Summary periods: 7 days · 26 days · All (was 30 days).
