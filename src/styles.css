@@ -2078,3 +2078,10 @@ select:not([multiple]) {
 }
 .combo-caret { right: 10px; }
 .combo-opt.combo-opt-plain { display: block; text-align: left; font-weight: 500; }
+
+/* Oct 18, 4 AM: quotes keep their line breaks; the NOW card sticks flush at the top of the routine card so its top edge is never clipped. */
+.d26-quote-text { white-space: pre-line; }
+@media (min-width: 900px) {
+  .app[data-scroll='cards'] .panel-today .now-card { top: 0; }
+  .app[data-scroll='cards'] .panel-today .now-card::before { display: none; }
+}
