@@ -9,10 +9,19 @@ const read = () => {
   }
 };
 
+/**
+ * A SoundCloud link as the player accepts it: https://soundcloud.com/<artist>/<track or sets/name>,
+ * without the share junk (?si=…&utm_…) or a #hash. Short on.soundcloud.com links can't be played.
+ */
+export function cleanLink(link: string): string | null {
+  const m = link.trim().match(/^(?:https?:\/\/)?(?:www\.|m\.)?soundcloud\.com(\/[^?#\s]+)/i);
+  return m ? `https://soundcloud.com${m[1].replace(/\/+$/, '')}` : null;
+}
+
 /** A SoundCloud link (track, playlist or profile) as the embeddable player's address, or null. */
 export function soundcloudEmbed(link: string): string | null {
-  const v = link.trim();
-  if (!/^https?:\/\/(www\.|m\.|on\.)?soundcloud\.com\//i.test(v)) return null;
+  const v = cleanLink(link);
+  if (!v) return null;
   const q = new URLSearchParams({ url: v, color: '#06f9c2', auto_play: 'false', hide_related: 'true', show_comments: 'false', show_user: 'true', show_reposts: 'false', visual: 'false' });
   return `https://w.soundcloud.com/player/?${q.toString()}`;
 }
@@ -129,8 +138,9 @@ export function MusicPlayer() {
   }, [src]);
 
   const save = () => {
-    const v = draft.trim();
-    if (v && !soundcloudEmbed(v)) return;
+    const raw = draft.trim();
+    if (raw && !soundcloudEmbed(raw)) return;
+    const v = raw ? (cleanLink(raw) ?? '') : '';
     setLink(v);
     try {
       localStorage.setItem(KEY, v);
@@ -141,7 +151,7 @@ export function MusicPlayer() {
   };
   const tab = open ? 0 : -1;
   const art = sound?.artwork_url || sound?.user?.avatar_url || '';
-  const title = sound?.title ?? (failed ? 'SoundCloud didn’t load' : ready ? linkName(link) : 'Loading…');
+  const title = sound?.title ?? (failed ? 'SoundCloud can’t play this link · ✎ to change it' : ready ? linkName(link) : 'Loading…');
   const who = sound?.user?.username ?? '';
 
   return (
@@ -155,7 +165,7 @@ export function MusicPlayer() {
               save();
             }}
           >
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Paste a SoundCloud playlist or track link" aria-label="SoundCloud link" tabIndex={tab} />
+            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Paste the soundcloud.com link from your address bar" aria-label="SoundCloud link" tabIndex={tab} />
             <button type="submit" className="icon-btn tool-btn tool-btn-go" aria-label="Use this link" title="Use this link" tabIndex={tab} disabled={!!draft.trim() && !soundcloudEmbed(draft)}>
               <Svg d={PLAY} />
             </button>
