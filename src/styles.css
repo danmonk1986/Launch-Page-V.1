@@ -2044,3 +2044,6 @@ dialog.crawl::backdrop { background: #000000; }
 @media (prefers-reduced-motion: reduce) { .rockets-toggle svg { transition: none; } }
 .panel-launchers.tiles-hidden .timed { margin-top: 0; padding-top: 0; border-top: 0; }
 .panel-launchers .tiles[hidden] { display: none; }
+
+/* Week: the month's theme (AUDACITY…) is one bar across the bottom row (Oct 17). */
+.week-event.ev-theme { justify-content: center; text-align: center; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; }

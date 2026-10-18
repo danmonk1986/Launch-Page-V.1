@@ -188,10 +188,21 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
     }
   }
   if (learned) writeThemes(known);
-  const isTheme = (e: CalEvent) => !e.google?.time && e.startDate === e.endDate && known.has(e.title.trim().toLowerCase());
+  // A theme can also be one all-day event spanning the month (a week or longer).
+  const spanDays = (e: CalEvent) => (new Date(`${e.endDate}T12:00:00`).getTime() - new Date(`${e.startDate}T12:00:00`).getTime()) / 86_400_000 + 1;
+  const isTheme = (e: CalEvent) =>
+    !e.google?.time && ((e.startDate === e.endDate && known.has(e.title.trim().toLowerCase())) || spanDays(e) >= 7);
   const main = layoutWeek(all.filter((e) => !isTheme(e)), start);
   const mainLanes = main.reduce((m, p) => Math.max(m, p.lane + 1), 0);
-  const themes = layoutWeek(all.filter(isTheme), start).map((p) => ({ ...p, lane: p.lane + mainLanes }));
+  // Back-to-back days of the same theme become one bar across the bottom row.
+  const merged: CalEvent[] = [];
+  for (const e of all.filter(isTheme).sort((a, b) => a.title.localeCompare(b.title) || a.startDate.localeCompare(b.startDate))) {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.title.trim().toLowerCase() === e.title.trim().toLowerCase() && e.startDate <= isoDate(addDays(new Date(`${prev.endDate}T12:00:00`), 1))) {
+      if (e.endDate > prev.endDate) prev.endDate = e.endDate;
+    } else merged.push({ ...e });
+  }
+  const themes = layoutWeek(merged, start).map((p) => ({ ...p, lane: p.lane + mainLanes, theme: true }));
   const placed = [...main, ...themes];
   const lanes = placed.reduce((m, p) => Math.max(m, p.lane + 1), 0);
   const end = days[6];
@@ -279,11 +290,11 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
               </button>
             );
           })}
-          {placed.map(({ event, lane, from: f, to: t }) => (
+          {placed.map(({ event, lane, from: f, to: t, ...rest }) => (
             <button
               key={event.id}
               type="button"
-              className={`week-event ev-${event.google ? 'google' : event.color}`}
+              className={`week-event ev-${event.google ? 'google' : event.color}${'theme' in rest ? ' ev-theme' : ''}`}
               style={{
                 gridColumn: `${f} / ${t + 1}`,
                 gridRow: lane + 2,
