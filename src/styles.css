@@ -2125,10 +2125,13 @@ select:not([multiple]) {
 /* Budget V.1 */
 .budget-stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
 .budget-stat { display: grid; gap: 2px; padding: 10px 14px; border: 1px solid var(--edge); border-radius: 12px; min-width: 120px; }
-.budget-stat-total { border-color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 8%, transparent); }
+.budget-stat { font: inherit; text-align: left; background: transparent; color: inherit; cursor: pointer; }
+.budget-stat:hover { border-color: var(--edge-strong); }
+.budget-stat[aria-pressed='true'] { border-color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 8%, transparent); }
+.budget-stat[aria-pressed='true'] .budget-stat-value { color: var(--accent-teal); }
 .budget-stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mist); }
 .budget-stat-value { font-family: var(--font-mono); font-size: 17px; font-weight: 700; color: var(--beige); }
-.budget-stat-total .budget-stat-value { color: var(--accent-teal); font-size: 20px; }
+.budget-stat-total .budget-stat-value { font-size: 20px; }
 .app[data-tone='light'] .budget-stat-value { color: #444242; }
 .budget-table { min-width: 1080px; }
 .budget-table .col-amount { text-align: right; font-family: var(--font-mono); white-space: nowrap; padding-right: 16px; }

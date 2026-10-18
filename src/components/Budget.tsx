@@ -1,12 +1,13 @@
 import { useId, useMemo, useRef, useState } from 'react';
 import { FormActions, Sheet } from './Sheet';
-import { Icon, PillRow } from './Tasks';
+import { Icon } from './Tasks';
 import { TitleCombo } from './Launchers';
 import type { Project } from '../lib/projects';
 import {
   BUDGET_CATEGORIES,
   BUDGET_SECTIONS,
   GROUP_BY,
+  groupKey,
   PMT_TYPES,
   download,
   linesFromFile,
@@ -22,8 +23,9 @@ import {
 
 const PLUS = 'M12 5v14M5 12h14';
 const CLOSE = 'M6 6l12 12M18 6L6 18';
-// One square button cycles the totals: a list (pmt category), a folder (project), four boxes (budget category).
+// One square button cycles the totals: layers (group), a list (pmt category), a folder (project), four boxes (budget category).
 const GROUP_ICON: Record<BudgetGroupBy, string> = {
+  section: 'M12 3 2 8l10 5 10-5zM2 12l10 5 10-5M2 16l10 5 10-5',
   pmtCategory: 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01',
   project: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   category: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'
@@ -50,7 +52,8 @@ function shortDate(iso: string | null) {
 
 /** Budget V.1: the Launch Sheet's BUDGET tab, laid out like the task list. */
 export function BudgetPage(p: Props) {
-  const [view, setView] = useState<BudgetSection | null>(null);
+  // The box clicked: shows only its lines. null = everything.
+  const [pick, setPick] = useState<string | null>(null);
   const [closed, setClosed] = useState<Record<string, boolean>>({});
   const [editing, setEditing] = useState<BudgetLine | null>(null);
   const [incoming, setIncoming] = useState<{ name: string; lines: BudgetLine[] } | null>(null);
@@ -65,13 +68,14 @@ export function BudgetPage(p: Props) {
   const [groupBy, setGroupByState] = useState<BudgetGroupBy>(() => {
     try {
       const v = localStorage.getItem('launchpage.budget.groupBy');
-      return GROUP_BY.some((g) => g.id === v) ? (v as BudgetGroupBy) : 'pmtCategory';
+      return GROUP_BY.some((g) => g.id === v) ? (v as BudgetGroupBy) : 'section';
     } catch {
-      return 'pmtCategory';
+      return 'section';
     }
   });
   const setGroupBy = (g: BudgetGroupBy) => {
     setGroupByState(g);
+    setPick(null);
     try {
       localStorage.setItem('launchpage.budget.groupBy', g);
     } catch {
@@ -86,7 +90,9 @@ export function BudgetPage(p: Props) {
   const monthly = Object.values(perCat).reduce((a, x) => a + x, 0);
   // Budget categories keep the sheet's column order; the others go biggest first.
   const cats =
-    groupBy === 'category'
+    groupBy === 'section'
+      ? BUDGET_SECTIONS.map((x) => x.id as string).filter((id) => bySection[id as BudgetSection].length)
+      : groupBy === 'category'
       ? [...BUDGET_CATEGORIES.filter((c) => perCat[c]), ...Object.keys(perCat).filter((c) => !BUDGET_CATEGORIES.includes(c) && perCat[c])]
       : Object.keys(perCat)
           .filter((c) => perCat[c])
@@ -107,7 +113,14 @@ export function BudgetPage(p: Props) {
     }
   };
 
-  const sections = view ? [view] : BUDGET_SECTIONS.map((s) => s.id);
+  const shows = (l: BudgetLine) => pick === null || groupKey(l, groupBy) === pick;
+  const sections = BUDGET_SECTIONS.map((s) => s.id).filter((id) => pick === null || bySection[id].some(shows));
+  const boxLabel = (c: string) => {
+    if (groupBy !== 'section') return c;
+    const t = BUDGET_SECTIONS.find((x) => x.id === c)?.title ?? c;
+    return c === 'annual' ? `${t} ÷ 12` : c === 'planned' ? `${t} · not in monthly` : t;
+  };
+  const boxValue = (c: string) => (groupBy === 'section' && c === 'planned' ? sumLines(bySection.planned) : perCat[c] ?? 0);
 
   return (
     <section className="panel panel-tasks-page panel-budget" aria-labelledby="h-budget">
@@ -116,7 +129,7 @@ export function BudgetPage(p: Props) {
           Budget
         </h2>
         <div className="panel-actions">
-          <button type="button" className="icon-btn tool-btn" aria-label="Add a line" title="Add a line" onClick={() => setEditing(newBudgetLine(view ?? 'variable', p.lines.reduce((m, l) => Math.max(m, l.sort + 1), 0)))}>
+          <button type="button" className="icon-btn tool-btn" aria-label="Add a line" title="Add a line" onClick={() => setEditing(newBudgetLine(groupBy === 'section' && pick ? (pick as BudgetSection) : 'variable', p.lines.reduce((m, l) => Math.max(m, l.sort + 1), 0)))}>
             <Icon d={PLUS} />
           </button>
           <button type="button" className="icon-btn tool-btn" aria-label="Import" title="Import the BUDGET tab (CSV) or a JSON file" onClick={() => file.current?.click()}>
@@ -160,27 +173,18 @@ export function BudgetPage(p: Props) {
           >
             <Icon d={GROUP_ICON[groupBy]} size={18} />
           </button>
-          <div className="budget-stat budget-stat-total" title="Fixed + variable + annual ÷ 12">
+          <button type="button" className="budget-stat budget-stat-total" aria-pressed={pick === null} title="Everything · fixed + variable + annual ÷ 12" onClick={() => setPick(null)}>
             <span className="budget-stat-label">Monthly · by {groupLabel}</span>
             <span className="budget-stat-value">{money(monthly)}</span>
-          </div>
+          </button>
           {cats.map((c) => (
-            <div key={c} className="budget-stat">
-              <span className="budget-stat-label">{c}</span>
-              <span className="budget-stat-value">{money(perCat[c])}</span>
-            </div>
+            <button key={c} type="button" className="budget-stat" aria-pressed={pick === c} title={pick === c ? 'Show everything' : `Show only ${boxLabel(c)}`} onClick={() => setPick(pick === c ? null : c)}>
+              <span className="budget-stat-label">{boxLabel(c)}</span>
+              <span className="budget-stat-value">{money(boxValue(c))}</span>
+            </button>
           ))}
         </div>
       )}
-
-      <PillRow
-        pills={[
-          { id: null, label: 'All', count: p.lines.length },
-          ...BUDGET_SECTIONS.map((s) => ({ id: s.id, label: s.pill, count: bySection[s.id].length }))
-        ]}
-        value={view}
-        onPick={(id) => setView(id === null || view === id ? null : id)}
-      />
 
       {p.lines.length === 0 ? (
         <div className="budget-empty">
@@ -209,8 +213,8 @@ export function BudgetPage(p: Props) {
             </thead>
             {sections.map((id) => {
               const s = BUDGET_SECTIONS.find((x) => x.id === id)!;
-              const rows = bySection[id];
-              const shut = !view && closed[id];
+              const rows = bySection[id].filter(shows);
+              const shut = !(groupBy === 'section' && pick) && closed[id];
               return (
                 <tbody key={id}>
                   <tr className="task-section">
