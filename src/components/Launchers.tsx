@@ -952,7 +952,7 @@ function TimedForm({
 }
 
 /** "What": type a new name, or open the list with ⌄ (or by typing) and pick one you've used before. */
-function TitleCombo({ value, titles, onChange }: { value: string; titles: string[]; onChange: (v: string) => void }) {
+export function TitleCombo({ value, titles, onChange, placeholder = 'Work Block #1 - Launch Page Construction', required = true, autoFocus }: { value: string; titles: string[]; onChange: (v: string) => void; placeholder?: string; required?: boolean; autoFocus?: boolean }) {
   const [open, setOpen] = useState(false);
   const [filtering, setFiltering] = useState(false);
   const [hi, setHi] = useState(0);
@@ -968,13 +968,14 @@ function TitleCombo({ value, titles, onChange }: { value: string; titles: string
   return (
     <div className="combo" ref={wrap} onBlur={(e) => !wrap.current?.contains(e.relatedTarget as Node) && setOpen(false)}>
       <input
-        required
+        required={required}
+        autoFocus={autoFocus}
         autoComplete="off"
         role="combobox"
         aria-expanded={open && shown.length > 0}
         aria-controls={listId}
         value={value}
-        placeholder="Work Block #1 - Launch Page Construction"
+        placeholder={placeholder}
         onChange={(e) => {
           onChange(e.target.value);
           setFiltering(true);

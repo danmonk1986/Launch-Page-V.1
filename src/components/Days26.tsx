@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
 import { RitualForm, RitualPicker, RitualRunner, duplicateRitual } from './Rituals';
+import { TitleCombo } from './Launchers';
 import type { Routine, Shift } from '../lib/routines';
 import {
   H2O_SIZES,
@@ -140,7 +141,7 @@ export function Days26Page(p: Props) {
   const newLog = (kind: LogKind, fill?: Partial<LogEntry>): LogEntry => {
     const d = {
       productivity: { amount: 1, unit: 'blocks', qty: 1 },
-      activity: { amount: 10, unit: 'min', qty: 3 },
+      activity: { amount: 10, unit: 'min', qty: 1 },
       rest: { amount: 8, unit: 'h', qty: 1 },
       food: { amount: 0, unit: 'kcal', qty: 1 },
       h2o: { amount: 500, unit: 'ml', qty: 1 },
@@ -253,13 +254,26 @@ export function Days26Page(p: Props) {
             entry={log.entry}
             isNew={log.isNew}
             config={config}
-            pastVices={[...new Set(logs.filter((l) => l.kind === 'vices' && l.note.trim()).map((l) => l.note.trim()))]}
+            pastNotes={[
+              ...new Set([
+                ...logs.filter((l) => l.kind === log.entry.kind && l.note.trim()).map((l) => l.note.trim()),
+                ...(log.entry.kind === 'vices' ? [] : items.filter((n) => !n.log).map((n) => n.label))
+              ])
+            ].sort((a, b) => a.localeCompare(b))}
             onSave={(e) => {
               // The chosen time decides the day; × quantity saves one line each (Productivity stays one line).
               const day = routineDay(new Date(e.at), routine, shift, flip);
               const n = e.kind !== 'productivity' && Number.isInteger(e.qty) && e.qty > 1 ? e.qty : 1;
               for (let i = 0; i < n; i += 1) {
                 p.onSaveLog({ ...e, day, qty: n > 1 ? 1 : e.qty, id: i === 0 ? e.id : crypto.randomUUID(), at: new Date(new Date(e.at).getTime() + i * 1000).toISOString() });
+              }
+              // A note that matches a Non-Negotiable ticks it, as a timed launch does.
+              const note = e.note.trim().toLowerCase();
+              if (note.length >= 3 && day === today && e.kind !== 'vices') {
+                for (const n of items) {
+                  const label = n.label.trim().toLowerCase();
+                  if (!n.log && label.length >= 3 && (note.includes(label) || label.includes(note))) p.onTick(n.id, true);
+                }
               }
               if (e.kind === 'vices' && e.note.trim()) {
                 const key = e.note.trim().toLowerCase();
@@ -843,11 +857,10 @@ function Pills<T extends string | number>({ value, options, onChange, label }: {
   );
 }
 
-function LogForm({ entry, isNew, config, pastVices, onSave, onDelete }: { entry: LogEntry; isNew: boolean; config: Config; pastVices: string[]; onSave: (e: LogEntry) => void; onDelete: () => void }) {
+function LogForm({ entry, isNew, config, pastNotes, onSave, onDelete }: { entry: LogEntry; isNew: boolean; config: Config; pastNotes: string[]; onSave: (e: LogEntry) => void; onDelete: () => void }) {
   const [d, setD] = useState(entry);
   const [when, setWhen] = useState(() => hhmm(entry.at));
   const formId = useId();
-  const listId = useId();
   const set = (patch: Partial<LogEntry>) => setD((x) => ({ ...x, ...patch }));
   const valid = d.amount > 0 && d.qty > 0 && (d.kind !== 'vices' || !!d.note.trim());
   // Any amount is fine (700 kcal, a 22-minute break): no step rule for the browser to enforce.
@@ -895,25 +908,19 @@ function LogForm({ entry, isNew, config, pastVices, onSave, onDelete }: { entry:
 
       {d.kind === 'vices' && (
         <>
-          <label className="field">
+          <div className="field">
             <span>What was it</span>
-            <input
-              list={listId}
+            <TitleCombo
               value={d.note}
+              titles={pastNotes}
               autoFocus={isNew}
-              onChange={(e) => {
-                const note = e.target.value;
+              placeholder="A pack of gum, a heavy night…"
+              onChange={(note) => {
                 const w = config.viceWeights[note.trim().toLowerCase()];
                 set(w !== undefined ? { note, amount: w } : { note });
               }}
-              placeholder="A pack of gum, a heavy night…"
             />
-            <datalist id={listId}>
-              {pastVices.map((v) => (
-                <option key={v} value={v} />
-              ))}
-            </datalist>
-          </label>
+          </div>
           <Pills value={d.amount} label="Weight" options={VICE_WEIGHTS.map((w) => ({ v: w.weight, label: `${w.label} · ${w.weight}` }))} onChange={(w) => set({ amount: w })} />
         </>
       )}
@@ -926,10 +933,10 @@ function LogForm({ entry, isNew, config, pastVices, onSave, onDelete }: { entry:
       )}
 
       {d.kind !== 'vices' && (
-        <label className="field">
-          <span>Note</span>
-          <input value={d.note} onChange={(e) => set({ note: e.target.value })} placeholder="Optional" />
-        </label>
+        <div className="field">
+          <span>Note · matching a Non-Negotiable ticks it</span>
+          <TitleCombo value={d.note} titles={pastNotes} required={false} placeholder="Optional" onChange={(note) => set({ note })} />
+        </div>
       )}
 
       <label className="field d26-log-time">
