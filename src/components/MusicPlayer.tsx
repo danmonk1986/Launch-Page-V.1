@@ -14,6 +14,13 @@ const read = () => {
  * without the share junk (?si=…&utm_…) or a #hash. Short on.soundcloud.com links can't be played.
  */
 export function cleanLink(link: string): string | null {
+  // SoundCloud's Share → Embed code works too: take the player's url= out of it.
+  const embed = link.match(/w\.soundcloud\.com\/player\/\?[^"'\s>]*/i);
+  if (embed) {
+    const u = new URLSearchParams(embed[0].split('?')[1].replace(/&amp;/g, '&')).get('url');
+    if (u && /^https:\/\/api\.soundcloud\.com\/(tracks|playlists|users)\/[\w:%-]+/i.test(u)) return u.split('&')[0];
+    if (u) return cleanLink(u);
+  }
   const m = link.trim().match(/^(?:https?:\/\/)?(?:www\.|m\.)?soundcloud\.com(\/[^?#\s]+)/i);
   return m ? `https://soundcloud.com${m[1].replace(/\/+$/, '')}` : null;
 }
@@ -165,7 +172,7 @@ export function MusicPlayer() {
               save();
             }}
           >
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Paste the soundcloud.com link from your address bar" aria-label="SoundCloud link" tabIndex={tab} />
+            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Paste the soundcloud.com link (or Share → Embed code)" aria-label="SoundCloud link" tabIndex={tab} />
             <button type="submit" className="icon-btn tool-btn tool-btn-go" aria-label="Use this link" title="Use this link" tabIndex={tab} disabled={!!draft.trim() && !soundcloudEmbed(draft)}>
               <Svg d={PLAY} />
             </button>

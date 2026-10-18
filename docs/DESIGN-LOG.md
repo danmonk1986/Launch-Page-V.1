@@ -219,3 +219,4 @@ Dan's story: Rise to Shine as a timed launch. When busy he pushes it (Snooze / S
 - Oct 18, 5:00 AM · Music: hidden SoundCloud player made full size (behind the page) so playlists load their tracks; before play, the mini player shows the playlist's first track (or the playlist's name) instead of 'Ready'.
 - Oct 18, 5:05 AM · Music: browsers wouldn't let the hidden player start, so SoundCloud's own player now shows under 🎧 while the panel is open (first ▶ goes there); the mini bar's buttons drive it after that. Closing the panel hides it and the music keeps playing.
 - Oct 18, 5:10 AM · Music: links are cleaned before SoundCloud sees them (share junk ?si=…&utm_… and #hash dropped, m./www. removed); SoundCloud said the shared link wasn't valid. If SoundCloud still refuses, the mini bar says so with ✎ to change it.
+- Oct 18, 5:15 AM · Music: the link box also takes SoundCloud's Share → Embed code (uses the player's own api.soundcloud.com address, which always plays).
