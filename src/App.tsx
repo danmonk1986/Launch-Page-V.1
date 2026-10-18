@@ -395,7 +395,8 @@ export default function App() {
   }, [d26Ready, d26Today, d26Mode, d26Shift, nonnegs, activeRoutine?.id]);
 
   // The daily goal is today's journal theme (it carries over from the last entry until changed).
-  const journalDay = isoDate(now);
+  // The journal runs on the routine day too: it resets at bed time, not midnight.
+  const journalDay = d26Today;
   const lastTheme = byNewest(journal).find((e) => e.date < journalDay && e.theme.trim())?.theme ?? '';
   const dailyGoal = journal.find((e) => e.date === journalDay)?.theme.trim() || lastTheme;
   function setDailyGoal(g: string) {
@@ -786,7 +787,7 @@ export default function App() {
                   }}
                 />
               }
-              journal={<JournalPanel entries={journal} today={now} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
+              journal={<JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={
                 <TodayPanel
                   follow={scrollMode === 'cards'}
@@ -811,7 +812,7 @@ export default function App() {
               focusId={focusTask}
             />
           ) : page === 'journal' ? (
-            <JournalPanel entries={journal} today={now} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} full onClose={() => setPage('launch')} />
+            <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} full onClose={() => setPage('launch')} />
           ) : page === 'days26' ? (
             <Days26Page
               now={now}

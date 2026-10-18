@@ -35,24 +35,6 @@ const safeUrl = (u?: string) => {
 };
 
 type Step = { s: RoutineItem; i: number };
-/**
- * Splits the steps for layout: each run of plain steps ends at the next meditation or check-in
- * (its "big" step). Works for any ritual: no big steps means just tiles.
- */
-function groups(steps: Step[]): { tiles: Step[]; big: Step | null }[] {
-  const out: { tiles: Step[]; big: Step | null }[] = [];
-  let tiles: Step[] = [];
-  for (const st of steps) {
-    if (stepType(st.s).type === 'step') tiles.push(st);
-    else {
-      out.push({ tiles, big: st });
-      tiles = [];
-    }
-  }
-  if (tiles.length) out.push({ tiles, big: null });
-  return out;
-}
-
 type RunnerProps = {
   ritual: Routine;
   isTicked: (i: number) => boolean;
@@ -97,7 +79,7 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
               ) : (
                 <span className="rit-label">{s.label}</span>
               )}
-              {type === 'meditation' && <SaveOnBlur className="rit-text rit-script" grow value={s.script ?? ''} placeholder="The words that play up the screen" label={`${s.label} script`} onSave={(v) => setScript(i, v)} />}
+              {type === 'meditation' && <SaveOnBlur className="rit-text rit-script" value={s.script ?? ''} placeholder="The words that play up the screen" label={`${s.label} script`} onSave={(v) => setScript(i, v)} />}
               {type === 'checkin' && (
                 <SaveOnBlur
                   className="rit-text"
@@ -120,20 +102,29 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
       <p className="rit-progress">
         {done}/{steps.length} done
       </p>
-      {groups(steps).map((g, k) =>
-        g.big && stepType(g.big.s).type === 'meditation' && g.tiles.length ? (
-          // Plain steps before a meditation sit as tiles on its left.
-          <div key={k} className="rit-pair">
-            <ol className="rit-steps">{g.tiles.map(renderStep)}</ol>
-            <ol className="rit-steps rit-big">{renderStep(g.big)}</ol>
+      {(() => {
+        // Plain steps as tiles, then check-ins (and anything else) as rows; the meditation sits
+        // on the right at the same height and scrolls inside, so any number of steps fits.
+        const kind = (st: Step) => stepType(st.s).type;
+        const tiles = steps.filter((st) => kind(st) === 'step');
+        const rows = steps.filter((st) => kind(st) === 'checkin');
+        const meds = steps.filter((st) => kind(st) === 'meditation');
+        const left = (
+          <>
+            {tiles.length > 0 && <ol className="rit-steps rit-tiles">{tiles.map(renderStep)}</ol>}
+            {rows.length > 0 && <ol className="rit-steps rit-rows">{rows.map(renderStep)}</ol>}
+          </>
+        );
+        if (!meds.length) return left;
+        return (
+          <div className={`rit-split${tiles.length || rows.length ? '' : ' is-solo'}`}>
+            <div className="rit-left">{left}</div>
+            <div className="rit-right">
+              <ol className="rit-steps rit-med">{meds.map(renderStep)}</ol>
+            </div>
           </div>
-        ) : (
-          <ol key={k} className="rit-steps">
-            {g.tiles.map(renderStep)}
-            {g.big && renderStep(g.big)}
-          </ol>
-        )
-      )}
+        );
+      })()}
       <button type="button" className={`btn rit-done${all ? '' : ' btn-quiet'}`} onClick={onDone}>
         {linked ? (linkedDone ? `Done · ${linked.label} is ticked` : `Done · tick ${linked.label}`) : 'Done'}
       </button>

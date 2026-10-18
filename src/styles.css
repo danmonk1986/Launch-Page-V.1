@@ -1914,3 +1914,26 @@ dialog.crawl::backdrop { background: #000000; }
 @media (max-width: 1000px) {
   .rit-pair { grid-template-columns: minmax(0, 1fr); }
 }
+.journal-date-btn { background: none; border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 6px; cursor: pointer; text-decoration: underline dotted color-mix(in srgb, var(--accent-teal) 60%, transparent); text-underline-offset: 4px; }
+.journal-date-btn:hover { color: var(--accent-teal); }
+
+/* Rituals (Oct 17, 6:40 PM): tiles (two across) with check-ins below on the left; the meditation on the
+   right takes the left side's height and scrolls inside, so 10 or 15 steps fit without stretching it. */
+.rit-split { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 10px; min-height: 340px; }
+.rit-split.is-solo { grid-template-columns: minmax(0, 1fr); }
+.rit-left { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.rit-left .rit-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rit-rows { grid-template-columns: minmax(0, 1fr); }
+.rit-right { position: relative; min-width: 0; }
+.rit-med { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px; }
+.rit-med .rit-step.is-meditation { flex: 1 1 0; min-height: 0; grid-template-rows: auto minmax(0, 1fr); align-items: stretch; }
+.rit-med .rit-step.is-meditation > .rit-step-top > *, .rit-med .rit-step.is-meditation > .rit-label { align-self: center; }
+.rit-med .rit-step.is-meditation .rit-script { height: auto; min-height: 0; overflow-y: auto; resize: none; align-self: stretch; }
+.rit-split.is-solo .rit-right { min-height: 340px; }
+@media (max-width: 1000px) {
+  .rit-split { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .rit-right { position: static; }
+  .rit-med { position: static; }
+  .rit-med .rit-step.is-meditation .rit-script { flex: none; height: 320px; }
+}
+@media (max-width: 640px) { .rit-left .rit-tiles { grid-template-columns: minmax(0, 1fr); } }

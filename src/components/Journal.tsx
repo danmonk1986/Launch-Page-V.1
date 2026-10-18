@@ -10,6 +10,8 @@ const PEN = 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4';
 type Props = {
   entries: JournalEntry[];
   today: Date;
+  /** The routine day (resets at bed time, like 26 Days). Falls back to the calendar date. */
+  day?: string;
   /** Quiet save, used while typing. */
   onSave: (e: JournalEntry) => void;
   onDelete: (id: string) => void;
@@ -22,8 +24,10 @@ type Props = {
 };
 
 /** Launch Page: today's headline written in place, past days underneath. */
-export function JournalPanel({ entries, today, onSave, onDelete, onImport, full, onOpen, onClose }: Props) {
-  const todayIso = isoDate(today);
+export function JournalPanel({ entries, today, day, onSave, onDelete, onImport, full, onOpen, onClose }: Props) {
+  const todayIso = day ?? isoDate(today);
+  // Bumped when today's entry is moved to another date, so a fresh page opens for today.
+  const [moved, setMoved] = useState(0);
   const sorted = byNewest(entries);
   const saved = sorted.find((e) => e.date === todayIso) ?? null;
   const lastTheme = sorted.find((e) => e.date < todayIso && e.theme.trim())?.theme ?? '';
@@ -68,7 +72,7 @@ export function JournalPanel({ entries, today, onSave, onDelete, onImport, full,
             title="Add an entry for another day"
             onClick={() => {
               setIsNew(true);
-              setEditing(newEntry(isoDate(new Date(today.getTime() - 86400000)), lastTheme));
+              setEditing(newEntry(isoDate(new Date(new Date(`${todayIso}T12:00:00`).getTime() - 86400000)), lastTheme));
             }}
           >
             <Icon d={PLUS} />
@@ -81,7 +85,17 @@ export function JournalPanel({ entries, today, onSave, onDelete, onImport, full,
         </div>
       </div>
 
-      <TodayEntry key={todayIso} date={todayIso} saved={saved} lastTheme={lastTheme} onSave={onSave} />
+      <TodayEntry
+        key={`${todayIso}:${moved}`}
+        date={todayIso}
+        saved={saved}
+        lastTheme={lastTheme}
+        onSave={onSave}
+        onEditDate={(e) => {
+          setIsNew(false);
+          setEditing(e);
+        }}
+      />
 
       {past.length > 0 && (
         <>
@@ -141,6 +155,7 @@ export function JournalPanel({ entries, today, onSave, onDelete, onImport, full,
             taken={(d) => entries.some((x) => x.date === d && x.id !== editing.id)}
             onSave={(e) => {
               onSave(e);
+              if (editing.date === todayIso && e.date !== todayIso) setMoved((n) => n + 1);
               setEditing(null);
             }}
             onDelete={() => {
@@ -220,7 +235,7 @@ function CheckIns({ list, onChange, onBlur, focusLast }: { list: CheckIn[]; onCh
 }
 
 /** Today's entry, typed straight into the panel. Saves itself a moment after you stop typing. */
-function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: JournalEntry | null; lastTheme: string; onSave: (e: JournalEntry) => void }) {
+function TodayEntry({ date, saved, lastTheme, onSave, onEditDate }: { date: string; saved: JournalEntry | null; lastTheme: string; onSave: (e: JournalEntry) => void; onEditDate: (e: JournalEntry) => void }) {
   // The theme carries on from the last entry until you change it.
   const [d, setD] = useState<JournalEntry>(() => saved ?? newEntry(date, lastTheme));
   const [cks, setCks] = useState<CheckIn[]>(() => (saved ? checkinsOf(saved) : []));
@@ -300,7 +315,17 @@ function TodayEntry({ date, saved, lastTheme, onSave }: { date: string; saved: J
               flush();
             }}
           />
-          <span className="journal-date">{shortDate(date)}</span>
+          <button
+            type="button"
+            className="journal-date journal-date-btn"
+            title="Change the date (moves this entry to that day)"
+            onClick={() => {
+              flush();
+              onEditDate(latest.current);
+            }}
+          >
+            {shortDate(date)}
+          </button>
         </span>
       </div>
       <input
