@@ -2085,3 +2085,9 @@ select:not([multiple]) {
   .app[data-scroll='cards'] .panel-today .now-card { top: 0; }
   .app[data-scroll='cards'] .panel-today .now-card::before { display: none; }
 }
+
+/* Food log: calories + Estimate side by side */
+.d26-kcal { display: flex; gap: 10px; align-items: stretch; }
+.d26-kcal input { flex: 1; min-width: 0; }
+.d26-kcal-look { display: inline-flex; align-items: center; white-space: nowrap; text-decoration: none; }
+.d26-kcal-look[aria-disabled='true'] { opacity: 0.5; pointer-events: none; }

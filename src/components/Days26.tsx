@@ -254,7 +254,13 @@ export function Days26Page(p: Props) {
             entry={log.entry}
             isNew={log.isNew}
             config={config}
-            pastNotes={[...new Set(logs.filter((l) => l.kind === log.entry.kind && l.note.trim()).map((l) => l.note.trim()))].sort((a, b) => a.localeCompare(b))}
+            pastNotes={[...new Set(logs.filter((l) => l.kind === log.entry.kind && l.note.trim()).map((l) => (l.kind === 'food' ? splitMeal(l.note).desc : l.note.trim())).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
+            pastAmounts={Object.fromEntries(
+              logs
+                .filter((l) => l.kind === log.entry.kind && l.note.trim())
+                .sort((a, b) => a.at.localeCompare(b.at))
+                .map((l) => [(l.kind === 'food' ? splitMeal(l.note).desc : l.note.trim()).toLowerCase(), l.amount])
+            )}
             onSave={(e) => {
               // The chosen time decides the day; × quantity saves one line each (Productivity stays one line).
               const day = routineDay(new Date(e.at), routine, shift, flip);
@@ -852,8 +858,25 @@ function Pills<T extends string | number>({ value, options, onChange, label }: {
   );
 }
 
-function LogForm({ entry, isNew, config, pastNotes, onSave, onDelete }: { entry: LogEntry; isNew: boolean; config: Config; pastNotes: string[]; onSave: (e: LogEntry) => void; onDelete: () => void }) {
+const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+
+/** A food note is saved as "Meal · Description" (the meal is optional). */
+export function splitMeal(note: string): { meal: string; desc: string } {
+  const v = note.trim();
+  const m = MEALS.find((x) => v.toLowerCase() === x.toLowerCase() || v.toLowerCase().startsWith(`${x.toLowerCase()} · `));
+  return m ? { meal: m, desc: v.slice(m.length).replace(/^\s*·\s*/, '') } : { meal: '', desc: v };
+}
+const joinMeal = (meal: string, desc: string) => [meal, desc.trim()].filter(Boolean).join(' · ');
+
+function LogForm({ entry, isNew, config, pastNotes, pastAmounts, onSave, onDelete }: { entry: LogEntry; isNew: boolean; config: Config; pastNotes: string[]; pastAmounts: Record<string, number>; onSave: (e: LogEntry) => void; onDelete: () => void }) {
   const [d, setD] = useState(entry);
+  const [food, setFood] = useState(() => splitMeal(entry.note));
+  const setFoodPart = (patch: Partial<{ meal: string; desc: string }>) => {
+    const f = { ...food, ...patch };
+    setFood(f);
+    const known = patch.desc !== undefined ? pastAmounts[patch.desc.trim().toLowerCase()] : undefined;
+    set(known !== undefined ? { note: joinMeal(f.meal, f.desc), amount: known } : { note: joinMeal(f.meal, f.desc) });
+  };
   const [when, setWhen] = useState(() => hhmm(entry.at));
   const formId = useId();
   const set = (patch: Partial<LogEntry>) => setD((x) => ({ ...x, ...patch }));
@@ -862,7 +885,7 @@ function LogForm({ entry, isNew, config, pastNotes, onSave, onDelete }: { entry:
   const amountField = (label: string, min: number) => (
     <label className="field">
       <span>{label}</span>
-      <input type="number" inputMode="decimal" min={min} step="any" value={d.amount || ''} onChange={(e) => set({ amount: Number(e.target.value) || 0 })} autoFocus={isNew && d.kind === 'food'} />
+      <input type="number" inputMode="decimal" min={min} step="any" value={d.amount || ''} onChange={(e) => set({ amount: Number(e.target.value) || 0 })} />
     </label>
   );
   return (
@@ -895,7 +918,25 @@ function LogForm({ entry, isNew, config, pastNotes, onSave, onDelete }: { entry:
         </>
       )}
 
-      {d.kind === 'food' && amountField('Calories (kcal)', 1)}
+      {d.kind === 'food' && (
+        <>
+          <label className="field">
+            <span>Meal</span>
+            <select value={food.meal} onChange={(e) => setFoodPart({ meal: e.target.value })}>
+              <option value="">—</option>
+              {MEALS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="field">
+            <span>Description · picking one you've had before fills its calories</span>
+            <TitleCombo value={food.desc} titles={pastNotes} required={false} autoFocus={isNew} placeholder="Bowl of Special K Red Berries with Oat Milk" onChange={(desc) => setFoodPart({ desc })} />
+          </div>
+        </>
+      )}
 
       {d.kind === 'h2o' && (
         <Pills value={d.amount} label="Size" options={H2O_SIZES.map((s) => ({ v: s.ml, label: `${s.label} · ${s.ml} ml` }))} onChange={(ml) => set({ amount: ml })} />
@@ -927,7 +968,26 @@ function LogForm({ entry, isNew, config, pastNotes, onSave, onDelete }: { entry:
         </div>
       )}
 
-      {d.kind !== 'vices' && (
+      {d.kind === 'food' && (
+        <div className="field">
+          <span>Calories (kcal) · each</span>
+          <div className="d26-kcal">
+            <input type="number" inputMode="decimal" min={1} step="any" value={d.amount || ''} onChange={(e) => set({ amount: Number(e.target.value) || 0 })} aria-label="Calories each" />
+            <a
+              className="btn d26-kcal-look"
+              href={`https://www.google.com/search?q=${encodeURIComponent(`calories in ${food.desc.trim() || 'food'}`)}`}
+              target="_blank"
+              rel="noreferrer"
+              aria-disabled={!food.desc.trim()}
+              title="Search the calories for this description in a new tab"
+            >
+              Estimate ↗
+            </a>
+          </div>
+        </div>
+      )}
+
+      {d.kind !== 'vices' && d.kind !== 'food' && (
         <div className="field">
           <span>Note · matching a Non-Negotiable ticks it</span>
           <TitleCombo value={d.note} titles={pastNotes} required={false} placeholder="Optional" onChange={(note) => set({ note })} />
