@@ -1958,7 +1958,8 @@ dialog.crawl::backdrop { background: #000000; }
 /* Header (Oct 17, 11 PM): tabs sit on the header's bottom edge (active underline on the border);
    the buttons and date/time drop to the bottom with them; logo, headline and mantra centre in the space above. */
 @media (min-width: 1001px) {
-  .topbar { padding-bottom: 0; grid-template-rows: 1fr auto; row-gap: 4px; }
+  /* A little taller than the original 178px, so the logo and headline have room to breathe. */
+  .topbar { padding-bottom: 0; grid-template-rows: 1fr auto; row-gap: 4px; min-height: 190px; }
   .topbar-logo, .topbar-words { align-self: center; }
   .topbar .tabs { align-self: end; }
   .topbar .tab { min-height: 40px; }
