@@ -38,22 +38,6 @@ const COLORS: EventColor[] = ['teal', 'purple', 'blue'];
 
 type GState = 'off' | 'reconnect' | 'loading' | 'on';
 
-const THEMES_KEY = 'launchpage.week.themes.v1';
-function readThemes(): Set<string> {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(THEMES_KEY) ?? '[]') as string[]);
-  } catch {
-    return new Set();
-  }
-}
-function writeThemes(t: Set<string>) {
-  try {
-    localStorage.setItem(THEMES_KEY, JSON.stringify([...t].slice(-50)));
-  } catch {
-    /* ignore */
-  }
-}
-
 /** Sunday to Saturday. Multi-day events span their days; click a day to add, an event to edit. */
 export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, events, projects = [], onCalendars, onSave, onDelete, onStatus }: Props) {
   const [offset, setOffset] = useState(0);
@@ -170,35 +154,34 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
   }
 
   const all = [...events, ...gEvents];
-  // Themes (like CONSISTENCY or AUDACITY): one-day, all-day events whose name repeats on
-  // 3+ days this week. They sit in a line along the bottom instead of jumping between rows.
-  const dayCount = new Map<string, Set<string>>();
+  // Themes (like CONSISTENCY or AUDACITY): one-day, all-day events with the same name 7+ days in a row
+  // anywhere in what's synced. Worked out fresh each time, so a Sync never changes the answer and
+  // ordinary repeating tasks (a weekly download, a sprint) aren't mistaken for themes.
+  const dayMs = 86_400_000;
+  const dateNum = (d: string) => Math.round(new Date(`${d}T12:00:00`).getTime() / dayMs);
+  const byTitle = new Map<string, Set<number>>();
   for (const e of all) {
     if (e.google?.time || e.startDate !== e.endDate) continue;
     const k = e.title.trim().toLowerCase();
-    dayCount.set(k, (dayCount.get(k) ?? new Set()).add(e.startDate));
+    byTitle.set(k, (byTitle.get(k) ?? new Set()).add(dateNum(e.startDate)));
   }
-  // Remembered once seen, so a theme that only touches 1–2 days of a week (month change) still lines up.
-  const known = readThemes();
-  let learned = false;
-  for (const [k, days] of dayCount) {
-    if (days.size >= 3 && !known.has(k)) {
-      known.add(k);
-      learned = true;
-    }
+  const themeTitles = new Set<string>();
+  for (const [k, set] of byTitle) {
+    const sorted = [...set].sort((a, b) => a - b);
+    let run = 1;
+    for (let n = 1; n < sorted.length && run < 7; n++) run = sorted[n] === sorted[n - 1] + 1 ? run + 1 : 1;
+    if (sorted.length >= 7 && run >= 7) themeTitles.add(k);
   }
-  if (learned) writeThemes(known);
-  // A theme can also be one all-day event spanning the month (a week or longer).
-  const spanDays = (e: CalEvent) => (new Date(`${e.endDate}T12:00:00`).getTime() - new Date(`${e.startDate}T12:00:00`).getTime()) / 86_400_000 + 1;
-  const isTheme = (e: CalEvent) =>
-    !e.google?.time && ((e.startDate === e.endDate && known.has(e.title.trim().toLowerCase())) || spanDays(e) >= 7);
-  const main = layoutWeek(all.filter((e) => !isTheme(e)), start);
+  const isTheme = (e: CalEvent) => !e.google?.time && e.startDate === e.endDate && themeTitles.has(e.title.trim().toLowerCase());
+  // Long all-day events (a week or more, like OPTIMIZE LAUNCH! SHEET) keep the bar look but sit with the rest.
+  const isLong = (e: CalEvent) => !e.google?.time && dateNum(e.endDate) - dateNum(e.startDate) >= 6;
+  const main = layoutWeek(all.filter((e) => !isTheme(e)), start).map((p) => (isLong(p.event) ? { ...p, theme: true } : p));
   const mainLanes = main.reduce((m, p) => Math.max(m, p.lane + 1), 0);
-  // Back-to-back days of the same theme become one bar across the bottom row.
+  // Back-to-back days of the same theme become one bar, always on the last row.
   const merged: CalEvent[] = [];
-  for (const e of all.filter(isTheme).sort((a, b) => a.title.localeCompare(b.title) || a.startDate.localeCompare(b.startDate))) {
-    const prev = merged[merged.length - 1];
-    if (prev && prev.title.trim().toLowerCase() === e.title.trim().toLowerCase() && e.startDate <= isoDate(addDays(new Date(`${prev.endDate}T12:00:00`), 1))) {
+  for (const e of all.filter(isTheme).sort((a, b) => a.startDate.localeCompare(b.startDate))) {
+    const prev = merged.find((m) => m.title.trim().toLowerCase() === e.title.trim().toLowerCase() && dateNum(e.startDate) <= dateNum(m.endDate) + 1);
+    if (prev) {
       if (e.endDate > prev.endDate) prev.endDate = e.endDate;
     } else merged.push({ ...e });
   }
