@@ -2055,3 +2055,7 @@ dialog.crawl::backdrop { background: #000000; }
 /* Journal moods (Oct 18): 14 now, so the picker wraps to two rows of seven. */
 .mood-list { flex-wrap: wrap; width: calc(34px * 5 + 4px * 4 + 18px); }
 .mood-row { max-width: calc(34px * 5 + 6px * 4); }
+/* Card by card: the routine card is solid so the fade band under NOW blends into it instead of showing as a strip. */
+@media (min-width: 900px) {
+  .app[data-scroll='cards'] .home > .panel-today { background: var(--surface-solid); }
+}

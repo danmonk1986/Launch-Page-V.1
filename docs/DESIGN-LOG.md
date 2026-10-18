@@ -205,3 +205,4 @@ Dan's story: Rise to Shine as a timed launch. When busy he pushes it (Snooze / S
 - Oct 18, 12:05 AM · Rockets hidden = their buttons (✎, +, Launch all) hidden too; only Timed launches' + shows. Menu order: Launch Page · 26 Days · Tasks · Budget. This Week: long blocks stay one bar (Dan's call).
 - Oct 18, 12:12 AM · Tasks on the Launch Page: Project, Description, Task, Status, Required and ✓ / ⋯ only (Info, Start, Time, Expense hidden), and the table fits the card so the buttons aren't cut off. The Tasks page keeps every column.
 - Oct 18, 12:20 AM · Journal moods: 😕 removed (past days keep it); added 🥹 😬 😵‍💫 🤬 🤒 🏂 ❄️ 🌴 🥃 ✈️. Now 15 in three rows of five: 🔥 😄 🥹 🙂 😐 · 😬 😵‍💫 😫 🤬 🤒 · 🏂 ❄️ 🌴 🥃 ✈️.
+- Oct 18, 12:50 AM · Card by card: routine card is solid (not see-through) so the fade band under NOW blends in instead of showing as a dark strip.
