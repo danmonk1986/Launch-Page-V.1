@@ -215,3 +215,4 @@ Dan's story: Rise to Shine as a timed launch. When busy he pushes it (Snooze / S
 - Oct 18, 4:35 AM · Food log: Meal dropdown (Breakfast/Lunch/Dinner/Snack) → Description (pick-or-type; picking one had before fills its calories) → How many → Calories each + Estimate ↗ (searches 'calories in …' in a new tab) → Time. Saved as 'Meal · Description', so a meal ticks its Non-Negotiable.
 - Oct 18, 4:30 AM · Summary periods: 7 days · 26 days · All (was 30 days).
 - Oct 18, 4:45 AM · Tasks filter pills stay on one row at any width; the ones that don't fit move under a ⌄ button at the end of the row (lit when the chosen filter is in there). Menu closes on pick, click-off, scroll or resize.
+- Oct 18, 4:55 AM · Music: real mini player — artwork, track title + artist, ⏮ ▶/⏸ ⏭, ✎ to change the link. SoundCloud's own player runs hidden behind it (its 20px strip showed blank for playlists). 🎧 glows teal while music plays.

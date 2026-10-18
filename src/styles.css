@@ -1980,9 +1980,22 @@ dialog.crawl::backdrop { background: #000000; }
   background: var(--surface-solid); border: 1px solid transparent; border-radius: 10px;
 }
 .music.is-open .music-panel { width: min(440px, calc(100vw - 140px)); opacity: 1; pointer-events: auto; border-color: var(--edge-strong); padding: 0 6px 0 10px; }
-.music-frame { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
-.music-frame.is-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
-.music-frame iframe { flex: 1; min-width: 0; height: 20px; border: 0; }
+.music-engine { position: fixed; right: 0; bottom: 0; width: 2px; height: 2px; border: 0; opacity: 0; pointer-events: none; }
+.music-mini { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+.music-art { flex: none; width: 30px; height: 30px; border-radius: 8px; overflow: hidden; display: grid; place-items: center; background: rgb(6 249 194 / 0.1); color: var(--accent-teal); }
+.music-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.music-meta { flex: 1; min-width: 0; display: grid; line-height: 1.2; }
+.music-title { font-size: 13px; font-weight: 600; color: var(--beige); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-who { font-size: 11px; color: var(--mist); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-controls { flex: none; display: flex; align-items: center; gap: 2px; }
+.music-ctl { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--beige); cursor: pointer; }
+.music-ctl:hover:not(:disabled) { color: var(--accent-teal); }
+.music-ctl:disabled { opacity: 0.4; cursor: default; }
+.music-play { background: var(--accent-teal); color: #14102b; }
+.music-play:hover:not(:disabled) { color: #14102b; filter: brightness(1.1); }
+.music.is-playing .music-btn:not(.is-on) { color: var(--accent-teal); }
+.app[data-tone='light'] .music-title { color: #444242; }
+.app[data-tone='light'] .music-ctl:not(.music-play) { color: #444242; }
 .music-form { flex: 1; display: flex; align-items: center; gap: 6px; }
 .music-form input { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--edge-strong); background: rgb(15 11 34 / 0.85); color: var(--beige); font: inherit; font-size: 13px; }
 .music-panel .tool-btn { width: 30px; height: 30px; border-radius: 8px; flex: none; }
