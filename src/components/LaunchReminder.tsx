@@ -1,16 +1,18 @@
 import { Sheet } from './Sheet';
 import { formatMinutes, toMinutes } from '../lib/routines';
-import { describeOpens, timeFor, type Launch } from '../lib/launchers';
+import { describeLog, describeOpens, opensSomething, timeFor, type Launch } from '../lib/launchers';
 
 type Props = {
   launch: Launch | null;
   onLaunch: (l: Launch) => void;
   onSnooze: (l: Launch) => void;
   onSkip: (l: Launch) => void;
+  /** Nothing to open: LOG (or Done) logs it and checks it off. */
+  onDone: (l: Launch) => void;
 };
 
 /** The reminder that pops up at a timed launch. Launching from here is a tap, so the browser allows the tabs. */
-export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip }: Props) {
+export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone }: Props) {
   return (
     <Sheet open={!!launch} title={launch ? launch.title : 'Launch'} onClose={() => launch && onSnooze(launch)}>
       {launch && (
@@ -21,18 +23,26 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip }: Props) {
               ? `Opens your ritual${launch.urls.length ? ` and ${describeOpens(launch.urls)}` : ''}. Time allotted: ${launch.minutes} minutes.`
               : launch.urls.length
                 ? `Opens ${describeOpens(launch.urls)}. Time allotted: ${launch.minutes} minutes.`
-                : 'Nothing to open yet. Edit this timed launch to add tabs or apps.'}
+                : launch.logKind
+                  ? `Logs ${describeLog(launch)}.`
+                  : 'A reminder: nothing to open or log.'}
           </p>
           <div className="reminder-actions">
-            <button type="button" className="btn btn-quiet" title="Skip today: back tomorrow, same time" onClick={() => onSkip(launch)}>
+            <button type="button" className="btn btn-quiet" title={launch.repeat === 'hourly' ? 'Skip this hour' : 'Skip today: back tomorrow, same time'} onClick={() => onSkip(launch)}>
               Skip
             </button>
             <button type="button" className="btn btn-quiet" title="Snooze 10 minutes" onClick={() => onSnooze(launch)}>
               Snooze
             </button>
-            <button type="button" className="btn" disabled={!launch.urls.length && !launch.ritualId} title={launch.ritualId ? 'Open the ritual' : `Open ${describeOpens(launch.urls)}`} onClick={() => onLaunch(launch)}>
-              Launch
-            </button>
+            {opensSomething(launch) ? (
+              <button type="button" className="btn" title={launch.ritualId ? 'Open the ritual' : `Open ${describeOpens(launch.urls)}`} onClick={() => onLaunch(launch)}>
+                Launch
+              </button>
+            ) : (
+              <button type="button" className="btn" title={launch.logKind ? `Log ${describeLog(launch)} and check it off` : 'Check it off'} onClick={() => onDone(launch)}>
+                {launch.logKind ? 'Log' : 'Done'}
+              </button>
+            )}
           </div>
         </div>
       )}

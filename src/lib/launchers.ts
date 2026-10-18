@@ -15,7 +15,10 @@ export interface Launcher {
   sort: number;
 }
 
-export type Repeat = 'weekly' | 'monthly' | 'once';
+export type Repeat = 'weekly' | 'monthly' | 'once' | 'hourly';
+
+/** What checking off a timed launch logs in 26 Days. */
+export type LaunchLogKind = 'productivity' | 'activity' | 'rest' | 'food' | 'h2o' | 'vices';
 
 /** A timed launch: at its time a reminder pops up and one tap opens every tab. */
 export interface Launch {
@@ -41,13 +44,93 @@ export interface Launch {
   onceTime?: { date: string; atTime: string } | null;
   /** LAUNCH opens this ritual to work through (26 Days). */
   ritualId?: string | null;
+  /**
+   * What it logs when checked off. Unset: launches that open something log Productivity
+   * by time spent; launches with nothing to open log nothing.
+   */
+  logKind?: LaunchLogKind | null;
+  /** The fixed amount for H2O (ml), Food (kcal) and Vices (weight). Activity and Rest use the minutes. */
+  logAmount?: number | null;
+  /** Hourly: the last hour it pops up ("HH:MM"); from atTime to this, every hour. */
+  untilTime?: string | null;
   sort: number;
 }
 
 /** The launch's time on a given day: its one-day change if there is one. */
 export function timeFor(l: Launch, day: Date) {
+  if (l.repeat === 'hourly') return hhmm(slotStart(l, day));
   return l.onceTime && l.onceTime.date === isoDate(day) ? l.onceTime.atTime : l.atTime;
 }
+
+const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+/** Hourly: the hours it pops up, as minutes after midnight, from atTime to untilTime (can run past midnight). */
+function hourlySlots(l: Launch): number[] {
+  const from = toMinutes(l.atTime);
+  const to = toMinutes(l.untilTime || l.atTime);
+  const span = (to - from + 1440) % 1440;
+  const out: number[] = [];
+  for (let m = 0; m <= span; m += 60) out.push((from + m) % 1440);
+  return out;
+}
+
+/**
+ * Hourly: the slot happening now (the latest one that has started, within the last day),
+ * or the next one if none has. Other repeats: today at its time.
+ */
+export function slotStart(l: Launch, now: Date): Date {
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  let best: Date | null = null;
+  let bestAgo = Infinity;
+  for (const m of hourlySlots(l)) {
+    const ago = (nowMin - m + 1440) % 1440;
+    if (ago < bestAgo) {
+      bestAgo = ago;
+      best = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(m / 60), m % 60);
+      if (m > nowMin) best.setDate(best.getDate() - 1);
+    }
+  }
+  return best ?? now;
+}
+
+/** Hourly launches are handled per hour; everything else once a day. */
+export function runKey(l: Launch, now: Date) {
+  if (l.repeat !== 'hourly') return `${l.id}:${isoDate(now)}`;
+  const s = slotStart(l, now);
+  return `${l.id}:${isoDate(s)}@${hhmm(s)}`;
+}
+
+export const LOG_KINDS: { kind: LaunchLogKind; label: string }[] = [
+  { kind: 'productivity', label: 'Productivity' },
+  { kind: 'activity', label: 'Activity' },
+  { kind: 'rest', label: 'Rest (break)' },
+  { kind: 'food', label: 'Food' },
+  { kind: 'h2o', label: 'H2O' },
+  { kind: 'vices', label: 'Vice' }
+];
+
+/** "Activity · 10 min", "H2O · Glass" */
+export function describeLog(l: Launch) {
+  switch (l.logKind) {
+    case 'productivity':
+      return opensSomething(l) ? 'Productivity · time spent' : `Productivity · ${Math.round((l.minutes / 90) * 4) / 4} blocks`;
+    case 'activity':
+      return `Activity · ${l.minutes} min`;
+    case 'rest':
+      return `Break · ${l.minutes} min`;
+    case 'food':
+      return `Food · ${l.logAmount ?? 0} kcal`;
+    case 'h2o':
+      return `H2O · ${(l.logAmount ?? 500) === 750 ? 'Bottle' : (l.logAmount ?? 500) === 500 ? 'Glass' : `${l.logAmount} ml`}`;
+    case 'vices':
+      return `Vice · ${l.logAmount ?? 1}`;
+    default:
+      return 'nothing';
+  }
+}
+
+/** Opens tabs, apps or a ritual. Launches that don't just remind (and log). */
+export const opensSomething = (l: Launch) => l.urls.length > 0 || !!l.ritualId;
 
 /** The next date a launch happens, from today (looks up to two months ahead). */
 export function nextDate(l: Launch, from: Date): string | null {
@@ -190,6 +273,9 @@ type LaunchRow = {
   tone?: string;
   once_time?: { date: string; atTime: string } | null;
   ritual_id?: string | null;
+  log_kind?: string | null;
+  log_amount?: number | null;
+  until_time?: string | null;
   sort: number;
 };
 
@@ -211,11 +297,16 @@ export const launchStore = makeStore<Launch, LaunchRow>({
   localKey: 'launchpage.launches.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0003_launchers_events.sql',
-  latestScript: 'supabase/migrations/0019_launch_ritual.sql',
+  latestScript: 'supabase/migrations/0020_launch_logging_hourly.sql',
   // Before 0004/0005/0013/0016/0019 are run: save without moved_to, sound, notify, tone, once_time and ritual_id.
   legacyRow: (r) => {
     const x = { ...r };
     delete x.ritual_id;
+    delete x.log_kind;
+    delete x.log_amount;
+    delete x.until_time;
+    // Before 0020, hourly isn't allowed in the cloud: keep it as every day there (this device keeps hourly).
+    if (x.repeat === 'hourly') x.repeat = 'weekly';
     delete x.once_time;
     delete x.tone;
     delete x.moved_to;
@@ -242,6 +333,8 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     once_time: l.onceTime ?? null,
     // Only sent once the column exists (0019) or a ritual is picked, so older setups keep saving cleanly.
     ...('ritualId' in l ? { ritual_id: l.ritualId ?? null } : {}),
+    ...('logKind' in l ? { log_kind: l.logKind ?? null, log_amount: l.logAmount ?? null } : {}),
+    ...('untilTime' in l ? { until_time: l.untilTime ?? null } : {}),
     sort: l.sort
   }),
   fromRow: (r) => ({
@@ -261,6 +354,8 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     tone: isTone(r.tone) ? r.tone : 'chime',
     onceTime: r.once_time ?? null,
     ...(r.ritual_id !== undefined ? { ritualId: r.ritual_id } : {}),
+    ...(r.log_kind !== undefined ? { logKind: (r.log_kind as LaunchLogKind | null) ?? null, logAmount: r.log_amount == null ? null : Number(r.log_amount) } : {}),
+    ...(r.until_time !== undefined ? { untilTime: r.until_time } : {}),
     sort: r.sort
   })
 });
@@ -271,6 +366,7 @@ export const isoDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export function happensOn(l: Launch, day: Date) {
+  if (l.repeat === 'hourly') return true;
   if (l.movedTo && l.movedTo === isoDate(day)) return true;
   if (l.repeat === 'weekly') return l.weekdays.includes(day.getDay());
   if (l.repeat === 'monthly') return l.monthDay === day.getDate();
@@ -280,6 +376,10 @@ export function happensOn(l: Launch, day: Date) {
 /** Due from its start time until its time allotted runs out. */
 export function isDue(l: Launch, now: Date) {
   if (!l.active || !happensOn(l, now)) return false;
+  if (l.repeat === 'hourly') {
+    const ago = (now.getTime() - slotStart(l, now).getTime()) / 60_000;
+    return ago >= 0 && ago < Math.min(Math.max(l.minutes, 15), 59);
+  }
   const start = toMinutes(timeFor(l, now));
   const nowMin = now.getHours() * 60 + now.getMinutes();
   return nowMin >= start && nowMin < start + Math.max(l.minutes, 15);
@@ -288,12 +388,19 @@ export function isDue(l: Launch, now: Date) {
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function describeSchedule(l: Launch) {
+  if (l.repeat === 'hourly') return `Every hour, ${clock12(l.atTime)}–${clock12(l.untilTime || l.atTime)}`;
   if (l.repeat === 'weekly') {
     if (l.weekdays.length === 7) return 'Every day';
     return l.weekdays.length ? l.weekdays.map((d) => WEEKDAY[d]).join(', ') : 'No days picked';
   }
   if (l.repeat === 'monthly') return l.monthDay ? `Monthly on the ${ordinal(l.monthDay)}` : 'Monthly';
   return l.onDate ? new Date(`${l.onDate}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : 'One date';
+}
+
+function clock12(t: string) {
+  const m = toMinutes(t);
+  const h = Math.floor(m / 60) % 24;
+  return `${h % 12 === 0 ? 12 : h % 12}${m % 60 ? `:${String(m % 60).padStart(2, '0')}` : ''} ${h < 12 ? 'AM' : 'PM'}`;
 }
 
 function ordinal(n: number) {
@@ -380,9 +487,10 @@ export function readHandled(): Record<string, HandledHow | true> {
   }
 }
 
-export function markHandled(id: string, day: Date, how: HandledHow = 'done') {
+/** Records how today's run (or this hour's, for hourly) was handled. */
+export function markHandled(l: Launch, day: Date, how: HandledHow = 'done') {
   const all = readHandled();
-  all[`${id}:${isoDate(day)}`] = how;
+  all[runKey(l, day)] = how;
   try {
     localStorage.setItem(HANDLED_KEY, JSON.stringify(all));
   } catch {
@@ -393,6 +501,8 @@ export function markHandled(id: string, day: Date, how: HandledHow = 'done') {
 
 /** Skip today: a one-off moves to tomorrow; a repeating launch gets a make-up tomorrow, same time. */
 export function skipToTomorrow(l: Launch, today: Date): Launch {
+  // Hourly: skipping one hour just closes that hour.
+  if (l.repeat === 'hourly') return l;
   const t = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 12);
   const tomorrow = isoDate(t);
   return l.repeat === 'once' ? { ...l, onDate: tomorrow, movedTo: null } : { ...l, movedTo: tomorrow };
@@ -400,7 +510,7 @@ export function skipToTomorrow(l: Launch, today: Date): Launch {
 
 /** Today's open ones first (by time), then the rest by time. */
 export function orderLaunches(list: Launch[], today: Date, handled: Record<string, HandledHow | true>) {
-  const key = (l: Launch) => `${l.id}:${isoDate(today)}`;
+  const key = (l: Launch) => runKey(l, today);
   const rank = (l: Launch) => {
     const h = handled[key(l)];
     const todays = l.active && happensOn(l, today);

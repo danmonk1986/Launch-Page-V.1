@@ -17,7 +17,12 @@ import {
   type Launch,
   type Launcher,
   type Repeat,
-  type TileColor
+  type TileColor,
+  runKey,
+  opensSomething,
+  describeLog,
+  LOG_KINDS,
+  type LaunchLogKind
 } from '../lib/launchers';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, TONES } from '../lib/alerts';
@@ -107,7 +112,7 @@ export function LaunchersPanel(p: Props) {
   const ordered = orderLaunches(p.launches, p.today, p.handled);
   const tomorrow = new Date(p.today.getFullYear(), p.today.getMonth(), p.today.getDate() + 1, 12);
   const stateOf = (l: Launch) => {
-    const h = p.handled[`${l.id}:${isoDate(p.today)}`];
+    const h = p.handled[runKey(l, p.today)];
     return h === true ? 'done' : h;
   };
   // Rows cleared from today's Complete list (this device). The launch itself stays.
@@ -118,7 +123,7 @@ export function LaunchersPanel(p: Props) {
       return {};
     }
   });
-  const clearKey = (l: Launch) => `${l.id}:${isoDate(p.today)}`;
+  const clearKey = (l: Launch) => runKey(l, p.today);
   function clearFromComplete(l: Launch) {
     const next = { ...cleared, [clearKey(l)]: true as const };
     setCleared(next);
@@ -312,28 +317,29 @@ export function LaunchersPanel(p: Props) {
                         const g = !ahead && p.log?.find((x) => x.launchId === l.id && x.day === isoDate(p.today));
                         return g && g.extra > 0 ? ` (+${g.extra} → ${g.planned + g.extra} min)` : '';
                       })()}{' '}
-                      · {describeOpens(l.urls)}
+                      {opensSomething(l) ? ` · ${describeOpens(l.urls)}` : ''}
+                      {l.logKind ? ` · logs ${describeLog(l)}` : ''}
                       {l.sound && ' · 🔊'}
                       {!l.active && ' · off'}
                       {how === 'launched' && ' · launched, check it off when done'}
                       {how === 'done' && ' · done today'}
-                      {how === 'skipped' && ' · skipped, back tomorrow'}
+                      {how === 'skipped' && (l.repeat === 'hourly' ? ' · skipped this hour' : ' · skipped, back tomorrow')}
                     </span>
                   </button>
                   {todays && (!how || how === 'launched') && (
                     <div className="timed-quick">
-                      <button
-                        type="button"
-                        className="quick-btn quick-launch"
-                        aria-label={`Launch ${l.title} now`}
-                        title="Launch now"
-                        disabled={!l.urls.length && !l.ritualId}
-                        onClick={() => p.onLaunchNow(l)}
-                      >
-                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
-                        </svg>
-                      </button>
+                      {opensSomething(l) ? (
+                        <button type="button" className="quick-btn quick-launch" aria-label={`Launch ${l.title} now`} title="Launch now" onClick={() => p.onLaunchNow(l)}>
+                          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+                          </svg>
+                        </button>
+                      ) : l.logKind ? (
+                        // Nothing to open: one tap logs it (its preset) and checks it off.
+                        <button type="button" className="quick-btn quick-log" aria-label={`Log ${l.title}`} title={`Log: ${describeLog(l)}`} onClick={() => p.onFinish(l, 'done')}>
+                          LOG
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className="quick-btn quick-done"
@@ -640,7 +646,7 @@ function TimedForm({
           .filter((u) => u && !isBarePrefix(u));
         const next = { ...d, active: true, notify: false, title: d.title.trim(), urls: [...tileUrls, ...extras] };
         // A repeating launch whose time changed: ask whether it's just the next one or every time.
-        if (launch && launch.repeat !== 'once' && d.atTime !== launch.atTime && !scope) {
+        if (launch && launch.repeat !== 'once' && launch.repeat !== 'hourly' && d.atTime !== launch.atTime && !scope) {
           setAsk(next);
           return;
         }
@@ -707,7 +713,7 @@ function TimedForm({
 
       <div className="time-grid">
         <label className="field">
-          <span>Time</span>
+          <span>{d.repeat === 'hourly' ? 'From' : 'Time'}</span>
           <input type="time" required value={d.atTime} onChange={(e) => set('atTime', e.target.value || '10:00')} />
         </label>
         <label className="field">
@@ -721,7 +727,70 @@ function TimedForm({
             onChange={(e) => set('minutes', Math.min(480, Math.max(1, Number(e.target.value) || 1)))}
           />
         </label>
+        {d.repeat === 'hourly' && (
+          <label className="field">
+            <span>Until (last one)</span>
+            <input type="time" required value={d.untilTime ?? ''} onChange={(e) => set('untilTime', e.target.value || null)} />
+          </label>
+        )}
       </div>
+
+      <div className="time-grid">
+        <label className="field">
+          <span>Logs when checked off</span>
+          <select
+            value={d.logKind ?? ''}
+            onChange={(e) => {
+              const k = (e.target.value || null) as LaunchLogKind | null;
+              setD((x) => ({ ...x, logKind: k, logAmount: k === 'h2o' ? 500 : k === 'vices' ? 1 : k === 'food' ? x.logAmount ?? null : null }));
+            }}
+          >
+            <option value="">{d.urls.length || d.ritualId ? 'Auto: Productivity, time spent' : 'Nothing (a reminder)'}</option>
+            {LOG_KINDS.map((k) => (
+              <option key={k.kind} value={k.kind}>
+                {k.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {d.logKind === 'h2o' && (
+          <label className="field">
+            <span>Size</span>
+            <select value={d.logAmount ?? 500} onChange={(e) => set('logAmount', Number(e.target.value))}>
+              <option value={500}>Glass · 500 ml</option>
+              <option value={750}>Bottle · 750 ml</option>
+            </select>
+          </label>
+        )}
+        {d.logKind === 'food' && (
+          <label className="field">
+            <span>Calories (kcal)</span>
+            <input type="number" min={0} step="any" value={d.logAmount ?? ''} onChange={(e) => set('logAmount', Number(e.target.value) || 0)} />
+          </label>
+        )}
+        {d.logKind === 'vices' && (
+          <label className="field">
+            <span>Weight</span>
+            <select value={d.logAmount ?? 1} onChange={(e) => set('logAmount', Number(e.target.value))}>
+              <option value={0.5}>Light · 0.5</option>
+              <option value={1}>Medium · 1</option>
+              <option value={3}>Heavy · 3</option>
+            </select>
+          </label>
+        )}
+      </div>
+      {d.logKind && (
+        <p className="field-hint timed-log-hint">
+          {d.logKind === 'activity' || d.logKind === 'rest'
+            ? `Logs the time allotted (${d.minutes} min) every time.`
+            : d.logKind === 'productivity'
+              ? d.urls.length || d.ritualId
+                ? 'Logs the time from Launch to Done as work blocks.'
+                : `Logs the time allotted as work blocks (${Math.round((d.minutes / 90) * 4) / 4}).`
+              : 'Logs this amount every time.'}{' '}
+          {!d.urls.length && !d.ritualId && 'Nothing to open, so its button is LOG: one tap logs it and checks it off.'}
+        </p>
+      )}
 
       <fieldset className="field">
         <legend>Alarm</legend>
@@ -752,10 +821,15 @@ function TimedForm({
       <fieldset className="field">
         <legend>Repeats</legend>
         <div className="choice-row">
-          {(['weekly', 'monthly', 'once'] as Repeat[]).map((r) => (
+          {(['weekly', 'monthly', 'once', 'hourly'] as Repeat[]).map((r) => (
             <label key={r} className="choice">
-              <input type="radio" name="repeat" checked={d.repeat === r} onChange={() => set('repeat', r)} />
-              <span>{r === 'weekly' ? 'Weekly' : r === 'monthly' ? 'Monthly' : 'Once'}</span>
+              <input
+                type="radio"
+                name="repeat"
+                checked={d.repeat === r}
+                onChange={() => setD((x) => ({ ...x, repeat: r, untilTime: r === 'hourly' ? x.untilTime ?? '06:00' : x.untilTime }))}
+              />
+              <span>{r === 'weekly' ? 'Weekly' : r === 'monthly' ? 'Monthly' : r === 'once' ? 'Once' : 'Hourly'}</span>
             </label>
           ))}
         </div>

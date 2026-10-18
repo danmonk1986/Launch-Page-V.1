@@ -62,6 +62,9 @@ import {
   type Launch,
   type LaunchLog,
   launchLogStore,
+  runKey,
+  opensSomething,
+  describeLog,
   logFor,
   timeFor,
   type Launcher
@@ -529,7 +532,7 @@ export default function App() {
   useEffect(() => {
     if (reminder) return;
     const due = launches.find(
-      (l) => isDue(l, now) && !handled[`${l.id}:${isoDate(now)}`] && !(snoozed[l.id] && snoozed[l.id] > now.getTime())
+      (l) => isDue(l, now) && !handled[runKey(l, now)] && !(snoozed[l.id] && snoozed[l.id] > now.getTime())
     );
     if (due) setReminder(due);
   }, [now, launches, reminder, snoozed, handled]);
@@ -544,63 +547,71 @@ export default function App() {
   // End alarm: a launched launch whose time allotted has run out.
   useEffect(() => {
     if (timeUp || reminder) return;
-    const today = isoDate(now);
     const nowMin = now.getHours() * 60 + now.getMinutes();
     const over = launches.find((l) => {
-      const key = `${l.id}:${today}`;
+      const key = runKey(l, now);
       if (handled[key] !== 'launched' || endAlerted[key]) return false;
       const [h, m] = timeFor(l, now).split(':').map(Number);
       const end = h * 60 + m + l.minutes + extraToday(l.id);
       return nowMin >= end;
     });
     if (!over) return;
-    setEndAlerted((m) => ({ ...m, [`${over.id}:${today}`]: true }));
+    setEndAlerted((m) => ({ ...m, [runKey(over, now)]: true }));
     setTimeUp(over);
     if (over.sound !== false) chime('end', over.tone);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, launches, handled, endAlerted, launchLog, timeUp, reminder]);
 
   async function finishLaunch(l: Launch, how: 'done' | 'skipped') {
-    setHandled(markHandled(l.id, new Date(), how));
+    setHandled(markHandled(l, new Date(), how));
     logLaunch(l, () => ({ outcome: how, finishedAt: new Date().toISOString() }));
     if (reminder?.id === l.id) setReminder(null);
     if (how === 'skipped') {
+      if (l.repeat === 'hourly') return setStatus(`${l.title}: skipped this hour.`);
       // Skip today = same time tomorrow.
       await launchOps.save(skipToTomorrow(l, new Date()));
       setStatus(`${l.title} moved to tomorrow, same time.`);
     } else {
-      const blocks = await logLaunchBlocks(l);
-      setStatus(blocks ? `${l.title} checked off: ${blocks} block${blocks === 1 ? '' : 's'} logged to Productivity.` : `${l.title} checked off for today.`);
+      const logged = await logFromLaunch(l);
+      setStatus(logged ? `${l.title} checked off: ${logged} logged.` : `${l.title} checked off.`);
     }
   }
 
   /**
-   * A timed launch checked off Done logs Productivity: the time from Launch to Done, capped at
-   * the planned minutes plus any +10s, in quarter blocks (90 min = 1). Checked off without
-   * launching, it logs the planned time. The log shares the launch log's id, so checking the
-   * same launch off again updates it instead of adding a second one.
+   * What a timed launch logs when checked off Done (26 Days). Set on the launch under "Logs":
+   * Activity / Break use the time allotted, H2O / Food / Vice their fixed amount, Productivity
+   * the time from Launch to Done (or the time allotted if there was nothing to open). Unset:
+   * launches that open tabs or apps log Productivity by time spent; the rest log nothing.
+   * Returns a short description of what was logged, or '' if nothing.
    */
-  async function logLaunchBlocks(l: Launch): Promise<number> {
-    // A ritual isn't a work block.
-    if (l.ritualId) return 0;
+  async function logFromLaunch(l: Launch): Promise<string> {
+    const kind = l.logKind ?? (l.urls.length && !l.ritualId ? 'productivity' : null);
+    if (!kind) return '';
+    // Hourly launches log once an hour, so each gets its own line; others update today's line.
     const run = logFor(logRef.current, l, new Date());
-    const allowed = (run.planned || l.minutes) + run.extra;
-    const spent = run.launchedAt ? (Date.now() - new Date(run.launchedAt).getTime()) / 60_000 : allowed;
-    const blocks = Math.round((Math.min(spent, allowed) / 90) * 4) / 4;
-    if (blocks <= 0) return 0;
-    await saveLog({
-      id: run.id,
-      day: d26Today,
-      at: new Date().toISOString(),
-      kind: 'productivity',
-      amount: 1,
-      qty: blocks,
-      unit: 'blocks',
-      note: l.title,
-      mode: d26Mode,
-      sort: 0
-    });
-    return blocks;
+    const id = l.repeat === 'hourly' ? crypto.randomUUID() : run.id;
+    const base = { id, day: d26Today, at: new Date().toISOString(), note: l.title, mode: d26Mode, sort: 0, qty: 1 };
+    if (kind === 'productivity') {
+      const allowed = (run.planned || l.minutes) + run.extra;
+      const spent = run.launchedAt && opensSomething(l) ? (Date.now() - new Date(run.launchedAt).getTime()) / 60_000 : allowed;
+      const blocks = Math.round((Math.min(spent, allowed) / 90) * 4) / 4;
+      if (blocks <= 0) return '';
+      await saveLog({ ...base, kind, amount: 1, qty: blocks, unit: 'blocks' });
+      return `${blocks} block${blocks === 1 ? '' : 's'} of Productivity`;
+    }
+    const entry: LogEntry =
+      kind === 'activity'
+        ? { ...base, kind, amount: l.minutes, unit: 'min' }
+        : kind === 'rest'
+          ? { ...base, kind, amount: l.minutes, unit: 'min' }
+          : kind === 'h2o'
+            ? { ...base, kind, amount: l.logAmount ?? 500, unit: 'ml', note: '' }
+            : kind === 'food'
+              ? { ...base, kind, amount: l.logAmount ?? 0, unit: 'kcal' }
+              : { ...base, kind, amount: l.logAmount ?? 1, unit: 'load' };
+    if (!(entry.amount > 0)) return '';
+    await saveLog(entry);
+    return describeLog(l).replace(' · ', ' ');
   }
 
   function launchNow(l: Launch) {
@@ -608,7 +619,7 @@ export default function App() {
     if (ritual) setRitualPop({ ritualId: ritual.id, launch: l });
     const blocked = l.urls.length ? openTabs(l.urls) : false;
     // Opening the tabs is not finishing: it stays open until checked off.
-    setHandled(markHandled(l.id, new Date(), 'launched'));
+    setHandled(markHandled(l, new Date(), 'launched'));
     logLaunch(l, (g) => ({ outcome: 'launched', launchedAt: g.launchedAt ?? new Date().toISOString(), planned: l.minutes }));
     setReminder(null);
     setStatus(blocked ? BLOCKED_HELP : `Launched ${l.title}.`);
@@ -892,6 +903,7 @@ export default function App() {
           setReminder(null);
         }}
         onSkip={(l) => finishLaunch(l, 'skipped')}
+        onDone={(l) => finishLaunch(l, 'done')}
       />
       <TimeUpReminder
         launch={timeUp}
@@ -904,7 +916,7 @@ export default function App() {
           logLaunch(l, (g) => ({ extra: g.extra + 10 }));
           setEndAlerted((m) => {
             const next = { ...m };
-            delete next[`${l.id}:${isoDate(new Date())}`];
+            delete next[runKey(l, new Date())];
             return next;
           });
           setStatus(`${l.title}: 10 more minutes.`);
