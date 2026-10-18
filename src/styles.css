@@ -1954,3 +1954,32 @@ dialog.crawl::backdrop { background: #000000; }
   .mantra { font-size: 16px; }
   .topbar-logo { height: 44px; }
 }
+
+/* Header (Oct 17, 11 PM): tabs sit on the header's bottom edge (active underline on the border);
+   the buttons and date/time drop to the bottom with them; logo, headline and mantra centre in the space above. */
+@media (min-width: 1001px) {
+  .topbar { padding-bottom: 0; grid-template-rows: 1fr auto; row-gap: 4px; }
+  .topbar-logo, .topbar-words { align-self: center; }
+  .topbar .tabs { align-self: end; }
+  .topbar .tab { min-height: 40px; }
+  .topbar-right { align-self: end; padding-bottom: 8px; }
+}
+
+/* 🎧 Music: a SoundCloud player that slides out to the left of the headphones; stays loaded when hidden. */
+.music { position: relative; display: flex; align-items: center; }
+.music-panel {
+  position: absolute; right: calc(100% + 8px); top: 0; height: 40px; width: 0; overflow: hidden; opacity: 0;
+  display: flex; align-items: center; gap: 6px; transition: width 0.25s ease, opacity 0.2s ease; pointer-events: none;
+  background: var(--surface-solid); border: 1px solid transparent; border-radius: 10px;
+}
+.music.is-open .music-panel { width: min(440px, calc(100vw - 140px)); opacity: 1; pointer-events: auto; border-color: var(--edge-strong); padding: 0 6px 0 10px; }
+.music-frame { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.music-frame.is-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
+.music-frame iframe { flex: 1; min-width: 0; height: 20px; border: 0; }
+.music-form { flex: 1; display: flex; align-items: center; gap: 6px; }
+.music-form input { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--edge-strong); background: rgb(15 11 34 / 0.85); color: var(--beige); font: inherit; font-size: 13px; }
+.music-panel .tool-btn { width: 30px; height: 30px; border-radius: 8px; flex: none; }
+.music-btn.is-on { border-color: var(--accent-teal); color: var(--accent-teal); }
+.app[data-tone='light'] .music-form input { background: #ffffff; color: #444242; }
+@media (prefers-reduced-motion: reduce) { .music-panel { transition: none; } }
+@media (max-width: 560px) { .music-panel { right: auto; left: 0; top: calc(100% + 6px); } .music.is-open .music-panel { width: calc(100vw - 32px); } }
