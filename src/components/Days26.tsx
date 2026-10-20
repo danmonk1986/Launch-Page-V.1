@@ -822,7 +822,8 @@ function LoggingCard({ logs, config, mode, onNew, onOpen }: { logs: LogEntry[]; 
       </div>
       <div className="d26-tiles">
         {KINDS.map((k) => {
-          const list = logs.filter((e) => e.kind === k.kind).sort((a, b) => (a.at < b.at ? 1 : -1));
+          // Timetable order (Oct 20): earliest in the routine day first, like the routine itself.
+          const list = logs.filter((e) => e.kind === k.kind).sort((a, b) => (a.at < b.at ? -1 : 1));
           const b = big(k.kind, list);
           const over = k.kind === 'vices' && sum(list) > viceLimit(config, mode);
           return (
