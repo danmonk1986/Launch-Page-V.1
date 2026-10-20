@@ -36,7 +36,8 @@ export function TodayPanel({ routine, shift, onEdit, follow }: Props) {
         </div>
       ) : (
         <>
-        {nowBlock && (
+        {/* Free mode: no NOW card; the list stays wake to bed with the current step marked inline. */}
+        {follow && nowBlock && (
           <div className="now-card" aria-label="Right now">
             <span className="tl-time">{nowBlock.time ?? ''}</span>
             <span className="now-pill">NOW</span>

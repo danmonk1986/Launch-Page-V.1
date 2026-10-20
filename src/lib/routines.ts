@@ -153,24 +153,26 @@ export function toBlocks(r: Routine, shift: Shift): Block[] {
 export const routinesOnly = (list: Routine[]) => list.filter((r) => r.kind !== 'ritual');
 
 /**
- * The block happening now. Routine order is kept, so a Nights routine that runs past
- * midnight still reads in order: each time after the first is counted forward from it.
+ * The block happening now. The routine's day starts at its first timed step, and every
+ * time is counted forward from there (so a Nights routine that runs past midnight works).
+ * Oct 20 fix: a step whose time is earlier than the step above it (e.g. Breakfast 9:00 after
+ * Power Up 9:25) used to push it and every step below it a full day ahead, so NOW froze.
+ * Now each time is measured on its own, and NOW is the latest step that has started.
  */
 export function nowBlockIndex(blocks: Block[], now: Date): number {
   const timed = blocks.map((b, i) => ({ i, m: b.minutes })).filter((x): x is { i: number; m: number } => x.m !== null);
   if (timed.length === 0) return -1;
   const start = timed[0].m;
-  let prev = start;
-  let carry = 0;
-  const offsets = timed.map((x) => {
-    if (x.m < prev) carry += 1440;
-    prev = x.m;
-    return { i: x.i, off: x.m + carry - start };
-  });
-  let nowOff = now.getHours() * 60 + now.getMinutes() - start;
-  if (nowOff < 0) nowOff += 1440;
+  const nowOff = (now.getHours() * 60 + now.getMinutes() - start + 1440) % 1440;
   let idx = -1;
-  for (const o of offsets) if (o.off <= nowOff) idx = o.i;
+  let best = -1;
+  for (const x of timed) {
+    const off = (x.m - start + 1440) % 1440;
+    if (off <= nowOff && off >= best) {
+      best = off;
+      idx = x.i;
+    }
+  }
   return idx;
 }
 
