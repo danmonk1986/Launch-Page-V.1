@@ -27,9 +27,8 @@ export function unlockAudioOnFirstGesture() {
   window.addEventListener('keydown', unlock);
 }
 
-/** The alarm sounds, all made in the browser (no sound files). */
+/** The alarm sounds, all made in the browser (no sound files). Chime retired Oct 20 (it sounded like Marimba). */
 export const TONES = [
-  { id: 'chime', label: 'Chime' },
   { id: 'bell', label: 'Bell' },
   { id: 'rocket', label: 'Rocket' },
   { id: 'arcade', label: 'Arcade' },
@@ -103,7 +102,7 @@ function score(tone: Tone, kind: 'start' | 'end'): Note[] {
 }
 
 /** Plays the launch's alarm: start = launch time, end = time's up. */
-export function chime(kind: 'start' | 'end', tone: Tone = 'chime') {
+export function chime(kind: 'start' | 'end', tone: Tone = 'marimba') {
   const a = audio();
   if (!a) return;
   if (a.state === 'suspended') a.resume();

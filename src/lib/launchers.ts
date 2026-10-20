@@ -332,7 +332,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     ...(l.movedTo ? { moved_to: l.movedTo } : {}),
     sound: l.sound,
     notify: l.notify,
-    tone: l.tone ?? 'chime',
+    tone: l.tone ?? 'marimba',
     once_time: l.onceTime ?? null,
     // Only sent once the column exists (0019) or a ritual is picked, so older setups keep saving cleanly.
     ...('ritualId' in l ? { ritual_id: l.ritualId ?? null } : {}),
@@ -356,7 +356,8 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     movedTo: r.moved_to ?? null,
     sound: r.sound ?? true,
     notify: r.notify ?? false,
-    tone: isTone(r.tone) ? r.tone : 'chime',
+    // Old Chime launches play Marimba.
+    tone: isTone(r.tone) ? r.tone : 'marimba',
     onceTime: r.once_time ?? null,
     ...(r.ritual_id !== undefined ? { ritualId: r.ritual_id } : {}),
     ...(r.log_kind !== undefined ? { logKind: (r.log_kind as LaunchLogKind | null) ?? null, logAmount: r.log_amount == null ? null : Number(r.log_amount) } : {}),

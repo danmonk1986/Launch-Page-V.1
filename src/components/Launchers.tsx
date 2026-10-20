@@ -28,7 +28,7 @@ import {
   type LaunchLogKind
 } from '../lib/launchers';
 import { formatMinutes, toMinutes } from '../lib/routines';
-import { chime, TONES } from '../lib/alerts';
+import { chime, isTone, TONES } from '../lib/alerts';
 
 /** What "+ Timed launch" hands over: the fields to fill in, and who to tell once it's saved. */
 export type TimedPreset = { fill: Partial<Launch>; n: number; onSaved?: (l: Launch) => void };
@@ -898,22 +898,19 @@ function TimedForm({
               <input
                 type="radio"
                 name="tone"
-                checked={d.sound && (d.tone ?? 'chime') === t.id}
+                checked={d.sound && (isTone(d.tone) ? d.tone : 'marimba') === t.id}
                 onChange={() => {
                   setD((x) => ({ ...x, sound: true, tone: t.id }));
                   chime('start', t.id);
                 }}
-                onClick={() => d.sound && (d.tone ?? 'chime') === t.id && chime('start', t.id)}
+                // Tap the picked sound again to turn the alarm off (no None button).
+                onClick={() => d.sound && (isTone(d.tone) ? d.tone : 'marimba') === t.id && set('sound', false)}
               />
               <span>{t.label}</span>
             </label>
           ))}
-          <label className="choice">
-            <input type="radio" name="tone" checked={!d.sound} onChange={() => set('sound', false)} />
-            <span>None</span>
-          </label>
         </div>
-        <p className="field-hint">Tap a sound to hear it. It plays at launch time, and twice when the time allotted runs out.</p>
+        <p className="field-hint">Tap a sound to hear it and pick it; tap it again for no sound. It plays at launch time, and twice when the time allotted runs out.</p>
       </fieldset>
 
       <fieldset className="field">
