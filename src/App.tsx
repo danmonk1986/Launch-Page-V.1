@@ -11,6 +11,7 @@ import { budgetStore, type BudgetLine } from './lib/budget';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
 import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
+import { syncNonNegs } from './lib/nnsync';
 import { Days26Page } from './components/Days26';
 import {
   DEFAULT_CONFIG,
@@ -360,6 +361,23 @@ export default function App() {
     if (!clean || activeNonNegs(nonnegs).some((n) => n.label.toLowerCase() === clean.toLowerCase())) return;
     void nonNegOps.save({ id: crypto.randomUUID(), label: clean, section: 'morning', time: null, timeFrom: null, log: null, target: 0, perWeek: null, archived: false, sort: nonnegs.length });
   }
+  // Non-Negotiables are every routine's baseline: on load and whenever the list changes,
+  // add, link, rename or remove their steps in each routine (lib/nnsync.ts).
+  const routinesRef = useRef(routines);
+  routinesRef.current = routines;
+  useEffect(() => {
+    if (!d26Ready) return;
+    const changed = syncNonNegs(routinesRef.current, nonnegs);
+    if (changed.length === 0) return;
+    const next = routinesRef.current.map((r) => changed.find((c) => c.id === r.id) ?? r);
+    routinesRef.current = next;
+    setRoutines(next);
+    void (async () => {
+      let ok = true;
+      for (const r of changed) ok = (await saveRoutine(userId, r, next)) && ok;
+      if (!ok) setStatus('Non-Negotiables synced to routines on this device only.');
+    })();
+  }, [d26Ready, nonnegs, userId]);
   async function saveRitual(r: Routine) {
     const exists = routines.some((x) => x.id === r.id);
     const next = exists ? routines.map((x) => (x.id === r.id ? r : x)) : [...routines, r];

@@ -15,6 +15,8 @@ export interface RoutineItem {
   script?: string;
   /** Check-in: which of today's journal check-ins (1 = ✓ Check in #1). */
   checkin?: number;
+  /** Routine steps only: the Non-Negotiable this step is (kept in sync, see nnsync.ts). */
+  nonNegId?: string;
 }
 
 export interface Routine {

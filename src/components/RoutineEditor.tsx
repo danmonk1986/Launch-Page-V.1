@@ -117,7 +117,7 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
     e.preventDefault();
     if (!draft.name.trim()) return;
     setSaving(true);
-    const items: RoutineItem[] = draft.items.filter((i) => i.label.trim()).map(({ time: t, label }) => ({ time: t, label: label.trim() }));
+    const items: RoutineItem[] = draft.items.filter((i) => i.label.trim()).map(({ time: t, label, nonNegId }) => ({ time: t, label: label.trim(), ...(nonNegId ? { nonNegId } : {}) }));
     await onSave({ ...draft, kind: 'routine', name: draft.name.trim(), items });
     setSaving(false);
     onClose();
