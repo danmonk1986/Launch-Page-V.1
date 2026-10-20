@@ -8,7 +8,10 @@ export interface RoutineItem {
   time: string | null; // "HH:MM", 24-hour, as written for Days
   label: string;
   /** Ritual steps only. step = tick it; meditation = plays its script; checkin = a journal check-in. */
-  type?: 'step' | 'meditation' | 'checkin';
+  type?: 'step' | 'meditation' | 'checkin' | 'list';
+  /** List: the choices (Chill time → Outdoor, Movie, Read) and the one picked last. */
+  options?: string[];
+  picked?: string;
   /** Tapping the step's name opens this (a site or an app link). */
   url?: string;
   /** Meditation: the words that play up the screen. */

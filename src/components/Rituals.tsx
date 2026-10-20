@@ -29,6 +29,47 @@ export function stepType(s: RoutineItem): { type: StepType; checkin: number } {
   return { type: 'step', checkin: 1 };
 }
 
+/** A List step's choices in Edit ritual: each sits as a ticked box (untick to remove); type to add. */
+function ListOptions({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const [draft, setDraft] = useState('');
+  const add = () => {
+    const v = draft.trim();
+    if (v && !value.some((x) => x.toLowerCase() === v.toLowerCase())) onChange([...value, v]);
+    setDraft('');
+  };
+  return (
+    <div className="rocket-picker">
+      {value.length > 0 && (
+        <div className="tab-picks">
+          {value.map((o) => (
+            <label key={o} className="choice">
+              <input type="checkbox" checked onChange={() => onChange(value.filter((x) => x !== o))} aria-label={`Remove ${o}`} />
+              <span>{o}</span>
+            </label>
+          ))}
+        </div>
+      )}
+      <div className="rocket-new">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              add();
+            }
+          }}
+          placeholder="Add a choice: Outdoor, Movie, Read…"
+          aria-label="Add a choice"
+        />
+        <button type="button" className="icon-btn tool-btn" aria-label="Add a choice" title="Add a choice" disabled={!draft.trim()} onClick={add}>
+          <Icon d={PLUS} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const safeUrl = (u?: string) => {
   const v = (u ?? '').trim();
   if (!v) return null;
@@ -80,6 +121,29 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
                 </a>
               ) : (
                 <span className="rit-label">{s.label}</span>
+              )}
+              {type === 'list' && (
+                // Pick one for today: it ticks the step (Oct 20).
+                <div className="rit-options" role="group" aria-label={`${s.label}: pick one`}>
+                  {(s.options ?? []).map((o) => {
+                    const on = ok && s.picked === o;
+                    return (
+                      <button
+                        key={o}
+                        type="button"
+                        className={`btn btn-quiet rit-option${on ? ' is-picked' : ''}`}
+                        aria-pressed={on}
+                        onClick={() => {
+                          onSaveRitual({ ...ritual, items: ritual.items.map((x, j) => (j === i ? { ...x, picked: o } : x)) });
+                          if (!ok) onTick(i, true);
+                        }}
+                      >
+                        {o}
+                      </button>
+                    );
+                  })}
+                  {!(s.options ?? []).length && <span className="rit-label">Add choices with the pencil.</span>}
+                </div>
               )}
               {type === 'meditation' && <SaveOnBlur className="rit-text rit-script" value={s.script ?? ''} placeholder="The words that play up the screen" label={`${s.label} script`} onSave={(v) => setScript(i, v)} />}
               {type === 'checkin' && (
@@ -469,6 +533,10 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
             if (r.url?.trim()) out.url = r.url.trim();
             if (r.type === 'meditation') out.script = r.script ?? '';
             if (r.type === 'checkin') out.checkin = Math.max(1, r.checkin ?? 1);
+            if (r.type === 'list') {
+              out.options = [...new Set((r.options ?? []).map((o) => o.trim()).filter(Boolean))];
+              if (r.picked) out.picked = r.picked;
+            }
             return out;
           });
         const onDates = [...new Set(dates.filter(Boolean))].sort();
@@ -507,6 +575,7 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
                   <option value="step">Step</option>
                   <option value="meditation">Meditation</option>
                   <option value="checkin">Journal check-in</option>
+                  <option value="list">List</option>
                 </select>
                 <span className="d26-edit-tools">
                   <button type="button" className="icon-btn tool-btn" aria-label="Move up" title="Move up" disabled={i === 0} onClick={() => move(i, -1)}>
@@ -523,6 +592,7 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
               {(r.type ?? 'step') === 'step' && (
                 <RocketPicker single options={rockets} picked={r.url ? [r.url] : []} onChange={(urls) => set(i, { url: urls[0] || undefined })} onAddNew={onAddRocket} />
               )}
+              {r.type === 'list' && <ListOptions value={r.options ?? []} onChange={(options) => set(i, { options })} />}
               {r.type === 'meditation' && (
                 <textarea value={r.script ?? ''} rows={4} onChange={(e) => set(i, { script: e.target.value })} placeholder="The words that play up the screen" aria-label="Meditation script" />
               )}

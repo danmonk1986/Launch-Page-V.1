@@ -613,6 +613,8 @@ input:-webkit-autofill:focus {
 .tab-picks { display: flex; flex-wrap: wrap; gap: 8px; }
 .rocket-picker { display: grid; gap: 10px; }
 .once-dates { display: grid; gap: 8px; }
+.rit-options { display: flex; flex-wrap: wrap; gap: 6px; }
+.rit-option.is-picked { color: var(--accent-teal); border-color: var(--accent-teal); }
 .once-date { display: flex; gap: 8px; align-items: center; }
 .once-date input { flex: 1; min-width: 0; }
 .rocket-new { display: flex; gap: 8px; align-items: center; }
