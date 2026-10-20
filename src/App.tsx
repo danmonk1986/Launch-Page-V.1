@@ -21,6 +21,7 @@ import {
   dayStore,
   effShift,
   flipsNow,
+  resetMinutes,
   logStore,
   modeOf,
   nonNegForRitual,
@@ -66,6 +67,7 @@ import {
   type LaunchLog,
   launchLogStore,
   runKey,
+  setLaunchDayReset,
   opensSomething,
   describeLog,
   logFor,
@@ -422,6 +424,8 @@ export default function App() {
   const d26Mode = modeOf(activeRoutine);
   const d26Shift = effShift(d26Mode, shift);
   const d26Today = routineDay(now, activeRoutine, shift, flipsNow(d26Mode, shift));
+  // Timed launches roll over with the routine day (its reset), the same as 26 Days.
+  setLaunchDayReset(resetMinutes(activeRoutine, shift, flipsNow(d26Mode, shift)));
   useEffect(() => {
     if (!d26Ready || !activeRoutine) return;
     const items = snapshot(nonnegs);

@@ -59,7 +59,7 @@ export interface Launch {
 /** The launch's time on a given day: its one-day change if there is one. */
 export function timeFor(l: Launch, day: Date) {
   if (l.repeat === 'hourly') return hhmm(slotStart(l, day));
-  return l.onceTime && l.onceTime.date === isoDate(day) ? l.onceTime.atTime : l.atTime;
+  return l.onceTime && l.onceTime.date === isoDate(launchDate(l, day)) ? l.onceTime.atTime : l.atTime;
 }
 
 const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -95,7 +95,7 @@ export function slotStart(l: Launch, now: Date): Date {
 
 /** Hourly launches are handled per hour; everything else once a day. */
 export function runKey(l: Launch, now: Date) {
-  if (l.repeat !== 'hourly') return `${l.id}:${isoDate(now)}`;
+  if (l.repeat !== 'hourly') return `${l.id}:${isoDate(launchDate(l, now))}`;
   const s = slotStart(l, now);
   return `${l.id}:${isoDate(s)}@${hhmm(s)}`;
 }
@@ -365,6 +365,30 @@ export const launchStore = makeStore<Launch, LaunchRow>({
 export const isoDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+/**
+ * The routine day (Oct 20): timed launches roll over when the routine's day resets (its Bed
+ * time, flipped on Nights; 4 AM, or 4 PM on nights, without one), the same as 26 Days, not at
+ * midnight. So on nights, a 12:30 AM launch is still tonight and a 7 PM one is tomorrow's.
+ * App sets the reset from the active routine on every render.
+ */
+let resetMin = 4 * 60;
+export function setLaunchDayReset(min: number) {
+  resetMin = ((Math.round(min) % 1440) + 1440) % 1440;
+}
+
+/** The calendar date this launch's run falls on, inside the routine day that holds `ref`. */
+export function launchDate(l: Launch, ref: Date): Date {
+  if (l.repeat === 'hourly') return ref;
+  const since = (ref.getHours() * 60 + ref.getMinutes() - resetMin + 1440) % 1440;
+  const start = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate(), ref.getHours(), ref.getMinutes() - since);
+  const at = new Date(start.getFullYear(), start.getMonth(), start.getDate(), start.getHours(), start.getMinutes() + ((toMinutes(l.atTime) - resetMin + 1440) % 1440));
+  return new Date(at.getFullYear(), at.getMonth(), at.getDate(), 12);
+}
+
+/** Whether the launch runs in the routine day that holds `ref` (today's lists use this). */
+export const happensToday = (l: Launch, ref: Date) => happensOn(l, launchDate(l, ref));
+
+/** Calendar check: does the launch run on this date? */
 export function happensOn(l: Launch, day: Date) {
   if (l.repeat === 'hourly') return true;
   if (l.movedTo && l.movedTo === isoDate(day)) return true;
@@ -375,7 +399,7 @@ export function happensOn(l: Launch, day: Date) {
 
 /** Due from its start time until its time allotted runs out. */
 export function isDue(l: Launch, now: Date) {
-  if (!l.active || !happensOn(l, now)) return false;
+  if (!l.active || !happensToday(l, now)) return false;
   if (l.repeat === 'hourly') {
     const ago = (now.getTime() - slotStart(l, now).getTime()) / 60_000;
     return ago >= 0 && ago < Math.min(Math.max(l.minutes, 15), 59);
@@ -503,7 +527,8 @@ export function markHandled(l: Launch, day: Date, how: HandledHow = 'done') {
 export function skipToTomorrow(l: Launch, today: Date): Launch {
   // Hourly: skipping one hour just closes that hour.
   if (l.repeat === 'hourly') return l;
-  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 12);
+  const d = launchDate(l, today);
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 12);
   const tomorrow = isoDate(t);
   return l.repeat === 'once' ? { ...l, onDate: tomorrow, movedTo: null } : { ...l, movedTo: tomorrow };
 }
@@ -513,7 +538,7 @@ export function orderLaunches(list: Launch[], today: Date, handled: Record<strin
   const key = (l: Launch) => runKey(l, today);
   const rank = (l: Launch) => {
     const h = handled[key(l)];
-    const todays = l.active && happensOn(l, today);
+    const todays = l.active && happensToday(l, today);
     if (todays && (!h || h === 'launched')) return 0;
     if (todays) return 1;
     return l.active ? 2 : 3;
@@ -571,7 +596,7 @@ export const launchLogStore = makeStore<LaunchLog, LogRow>({
 
 /** Today's log row for a launch, made if missing. */
 export function logFor(list: LaunchLog[], l: Launch, day: Date): LaunchLog {
-  const iso = isoDate(day);
+  const iso = isoDate(launchDate(l, day));
   return (
     list.find((g) => g.launchId === l.id && g.day === iso) ?? {
       id: crypto.randomUUID(),

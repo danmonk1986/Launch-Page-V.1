@@ -3,7 +3,8 @@ import { FormActions, Sheet } from './Sheet';
 import {
   describeSchedule,
   LAUNCHER_PRESETS,
-  happensOn,
+  happensToday,
+  launchDate,
   isoDate,
   orderLaunches,
   type HandledHow,
@@ -126,7 +127,8 @@ export function LaunchersPanel(p: Props) {
   const [showAllTimed, setShowAllTimed] = useState(false);
   const [view, setView] = useState<TimedView>('active');
   const ordered = orderLaunches(p.launches, p.today, p.handled);
-  const tomorrow = new Date(p.today.getFullYear(), p.today.getMonth(), p.today.getDate() + 1, 12);
+  // The next routine day: 24 hours on from now (the day rolls over at the routine's reset, not midnight).
+  const tomorrow = new Date(p.today.getTime() + 86_400_000);
   const stateOf = (l: Launch) => {
     const h = p.handled[runKey(l, p.today)];
     return h === true ? 'done' : h;
@@ -150,12 +152,12 @@ export function LaunchersPanel(p: Props) {
     }
   }
   const views: Record<TimedView, Launch[]> = {
-    active: ordered.filter((l) => l.active && happensOn(l, p.today) && (!stateOf(l) || stateOf(l) === 'launched')),
+    active: ordered.filter((l) => l.active && happensToday(l, p.today) && (!stateOf(l) || stateOf(l) === 'launched')),
     complete: ordered.filter(
-      (l) => happensOn(l, p.today) && (stateOf(l) === 'done' || stateOf(l) === 'skipped') && !cleared[clearKey(l)]
+      (l) => happensToday(l, p.today) && (stateOf(l) === 'done' || stateOf(l) === 'skipped') && !cleared[clearKey(l)]
     ),
     tomorrow: [...p.launches]
-      .filter((l) => l.active && happensOn(l, tomorrow))
+      .filter((l) => l.active && happensToday(l, tomorrow))
       .sort((a, b) => a.atTime.localeCompare(b.atTime)),
     all: [...p.launches].sort((a, b) => a.atTime.localeCompare(b.atTime))
   };
@@ -327,7 +329,7 @@ export function LaunchersPanel(p: Props) {
             {visible.map((l) => {
               // Tomorrow shows plain rows: today's check-offs belong to today.
               const ahead = view === 'tomorrow';
-              const todays = !ahead && l.active && happensOn(l, p.today);
+              const todays = !ahead && l.active && happensToday(l, p.today);
               const how = ahead ? undefined : stateOf(l);
               return (
                 <li key={l.id} className={`timed-item${how && how !== 'launched' ? ` is-${how}` : ''}${how === 'launched' ? ' is-launched' : ''}`}>
@@ -344,7 +346,7 @@ export function LaunchersPanel(p: Props) {
                     <span className="timed-meta">
                       {describeSchedule(l)} · {l.minutes} min
                       {(() => {
-                        const g = !ahead && p.log?.find((x) => x.launchId === l.id && x.day === isoDate(p.today));
+                        const g = !ahead && p.log?.find((x) => x.launchId === l.id && x.day === isoDate(launchDate(l, p.today)));
                         return g && g.extra > 0 ? ` (+${g.extra} → ${g.planned + g.extra} min)` : '';
                       })()}{' '}
                       {opensSomething(l) ? ` · ${describeOpens(l.urls)}` : ''}
@@ -703,13 +705,14 @@ function TimedForm({
               type="button"
               className="btn btn-quiet"
               onClick={async () => {
-                const day = nextDate(launch, today) ?? isoDate(today);
-                const label = day === isoDate(today) ? 'today' : day;
+                const runToday = isoDate(launchDate(launch, today));
+                const day = happensToday(launch, today) ? runToday : nextDate(launch, today) ?? runToday;
+                const label = day === runToday ? 'today' : day;
                 setScope(label);
                 await onSave({ ...ask, atTime: launch.atTime, onceTime: { date: day, atTime: ask.atTime } });
               }}
             >
-              {nextDate(launch, today) === isoDate(today) ? 'Today only' : 'Next one only'}
+              {happensToday(launch, today) ? 'Today only' : 'Next one only'}
             </button>
             <button
               type="button"
