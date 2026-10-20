@@ -10,6 +10,8 @@ import {
   isRecurring,
   newStep,
   newTask,
+  OLD_REPEAT_STATUSES,
+  repeatOf,
   SECTIONS,
   STATUS_LABEL,
   STATUSES,
@@ -17,6 +19,10 @@ import {
   type Section,
   type Task
 } from '../lib/tasks';
+import { describeRepeat, writeRepeat, type RepeatKind } from '../lib/repeat';
+import { RepeatPicker } from './RepeatPicker';
+
+const REPEAT_BADGE: Record<RepeatKind, string> = { none: '', weekly: 'WEEKLY', monthly: 'MONTHLY', quarterly: 'QUARTERLY', annual: 'ANNUAL' };
 
 type Common = {
   tasks: Task[];
@@ -210,12 +216,16 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
         </span>
       </td>
       <td className="col-status col-center">
-        {!step && <span className={`status status-${(badge ?? t.status).replace(/\s+/g, '-').toLowerCase()}`}>{badge ?? t.status}</span>}
+        {!step && (() => {
+          // Recurring tasks show how they repeat (WEEKLY, MONTHLY…) in place of a status.
+          const shown = badge ?? (isRecurring(t) ? REPEAT_BADGE[repeatOf(t).kind] : t.status);
+          return <span className={`status status-${shown.replace(/\s+/g, '-').toLowerCase()}`}>{shown}</span>;
+        })()}
       </td>
       <td className="col-link col-info col-center">
         <InfoLink t={t} />
       </td>
-      <td className="col-date col-start col-center">{isRecurring(t) ? describeRule(t) : shortDate(t.startDate)}</td>
+      <td className="col-date col-start col-center">{isRecurring(t) ? describeRepeat(repeatOf(t)) : shortDate(t.startDate)}</td>
       <td className="col-date col-center">{isRecurring(t) ? '' : shortDate(t.endDate)}</td>
       <td className="col-time col-center">{t.atTime ? formatMinutes(toMinutes(t.atTime)) : ''}</td>
       <td className="col-expense col-center">{t.expense}</td>
@@ -566,7 +576,8 @@ function TaskForm({
   const [d, setD] = useState<Task>(task);
   const [steps, setSteps] = useState<string[]>([]);
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setD((x) => ({ ...x, [k]: v }));
-  const recurring = d.status === 'MTH RCR' || d.status === 'ANN RCR';
+  const [rep, setRep] = useState(() => repeatOf(task));
+  const recurring = rep.kind !== 'none';
   const tree = projectTree(projects);
   const formId = useId();
   return (
@@ -575,8 +586,10 @@ function TaskForm({
         e.preventDefault();
         if (!d.task.trim()) return;
         const endDate = d.endDate && d.startDate && d.endDate < d.startDate ? d.startDate : d.endDate;
-        const repeatRule = recurring ? d.repeatRule ?? (d.status === 'ANN RCR' ? '01-01' : '1') : d.repeatRule;
-        await onSave({ ...d, task: d.task.trim(), description: d.description.trim(), endDate, repeatRule }, steps);
+        const repeatRule = writeRepeat(rep);
+        // The old repeat statuses become ON DECK; Repeat carries the rhythm now.
+        const status = OLD_REPEAT_STATUSES.includes(d.status) ? 'ON DECK' : d.status;
+        await onSave({ ...d, task: d.task.trim(), description: d.description.trim(), endDate, repeatRule, status }, steps);
       }}
     >
       <div className="time-grid">
@@ -598,7 +611,7 @@ function TaskForm({
         </label>
         <label className="field">
           <span>Status</span>
-          <select value={d.status} onChange={(e) => set('status', e.target.value)}>
+          <select value={OLD_REPEAT_STATUSES.includes(d.status) ? 'ON DECK' : d.status} onChange={(e) => set('status', e.target.value)}>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {STATUS_LABEL[s] ?? s}
@@ -671,9 +684,8 @@ function TaskForm({
           <input value={d.linkLabel} onChange={(e) => set('linkLabel', e.target.value)} placeholder="RENTFASTER" />
         </label>
       </div>
-      {recurring ? (
-        <RepeatPicker annual={d.status === 'ANN RCR'} rule={d.repeatRule} onChange={(r) => set('repeatRule', r)} />
-      ) : (
+      <RepeatPicker value={rep} onChange={setRep} from={d.endDate ?? d.startDate} />
+      {recurring ? null : (
         <div className="time-grid">
           <label className="field">
             <span>Start</span>
@@ -716,108 +728,6 @@ function TaskForm({
       </label>
       <FormActions formId={formId} saveDisabled={!d.task.trim()} onDelete={!isNew ? () => onDelete(task.id) : undefined} deleteLabel={task.task} />
     </form>
-  );
-}
-
-// ---------- Repeat picker: "on the 5th" or "every 2nd Tuesday"; annual = month + day ----------
-
-const ORD = ['1ST', '2ND', '3RD', '4TH', 'LAST'];
-const ORD_LABEL: Record<string, string> = { '1ST': '1st', '2ND': '2nd', '3RD': '3rd', '4TH': '4th', LAST: 'Last' };
-const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-const WEEKDAY_LABEL: Record<string, string> = { MON: 'Monday', TUE: 'Tuesday', WED: 'Wednesday', THU: 'Thursday', FRI: 'Friday', SAT: 'Saturday', SUN: 'Sunday' };
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const nth = (n: number) => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
-
-/** "1st THURSDAY", "17th", "Mar 15" for the table. */
-export function describeRule(t: Task) {
-  const r = (t.repeatRule ?? '').trim().toUpperCase();
-  if (!r) return '';
-  if (t.status === 'ANN RCR') {
-    const m = r.match(/^(\d{1,2})-(\d{1,2})$/);
-    return m ? `${MONTHS[Number(m[1]) - 1] ?? ''} ${Number(m[2])}` : r;
-  }
-  if (/^\d{1,2}$/.test(r)) return nth(Number(r));
-  const m = r.match(/^(1ST|2ND|3RD|4TH|LAST)\s+([A-Z]{3})/);
-  return m ? `${ORD_LABEL[m[1]]} ${WEEKDAY_LABEL[m[2]]?.toUpperCase() ?? m[2]}` : r;
-}
-
-function RepeatPicker({ annual, rule, onChange }: { annual: boolean; rule: string | null; onChange: (r: string | null) => void }) {
-  const r = (rule ?? '').trim().toUpperCase();
-  if (annual) {
-    const m = r.match(/^(\d{1,2})-(\d{1,2})$/);
-    const month = m ? Number(m[1]) : 1;
-    const day = m ? Number(m[2]) : 1;
-    const put = (mo: number, dy: number) => onChange(`${String(mo).padStart(2, '0')}-${String(dy).padStart(2, '0')}`);
-    return (
-      <fieldset className="field">
-        <legend>Every year on</legend>
-        <div className="time-grid">
-          <select aria-label="Month" value={month} onChange={(e) => put(Number(e.target.value), day)}>
-            {MONTHS.map((mo, i) => (
-              <option key={mo} value={i + 1}>
-                {mo}
-              </option>
-            ))}
-          </select>
-          <select aria-label="Day" value={day} onChange={(e) => put(month, Number(e.target.value))}>
-            {Array.from({ length: 31 }, (_, i) => (
-              <option key={i} value={i + 1}>
-                {i + 1}
-              </option>
-            ))}
-          </select>
-        </div>
-      </fieldset>
-    );
-  }
-  const wk = r.match(/^(1ST|2ND|3RD|4TH|LAST)\s+([A-Z]{3})/);
-  const mode: 'day' | 'weekday' = wk ? 'weekday' : 'day';
-  const dayNum = /^\d{1,2}$/.test(r) ? Number(r) : 1;
-  const ord = wk ? wk[1] : '1ST';
-  const dow = wk ? wk[2] : 'MON';
-  return (
-    <fieldset className="field">
-      <legend>Every month</legend>
-      <div className="choice-row">
-        <label className="choice">
-          <input type="radio" name="repeat-mode" checked={mode === 'day'} onChange={() => onChange(String(dayNum))} />
-          <span>On a date</span>
-        </label>
-        <label className="choice">
-          <input type="radio" name="repeat-mode" checked={mode === 'weekday'} onChange={() => onChange(`${ord} ${dow}`)} />
-          <span>On a weekday</span>
-        </label>
-      </div>
-      {mode === 'day' ? (
-        <div className="time-grid repeat-row">
-          <select aria-label="Day of the month" value={dayNum} onChange={(e) => onChange(e.target.value)}>
-            {Array.from({ length: 31 }, (_, i) => (
-              <option key={i} value={i + 1}>
-                the {nth(i + 1)}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : (
-        <div className="time-grid repeat-row">
-          <select aria-label="Which week" value={ord} onChange={(e) => onChange(`${e.target.value} ${dow}`)}>
-            {ORD.map((o) => (
-              <option key={o} value={o}>
-                {ORD_LABEL[o]}
-              </option>
-            ))}
-          </select>
-          <select aria-label="Weekday" value={dow} onChange={(e) => onChange(`${ord} ${e.target.value}`)}>
-            {WEEKDAYS.map((w) => (
-              <option key={w} value={w}>
-                {WEEKDAY_LABEL[w]}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-      <p className="field-hint">Days past the end of a short month land on its last day.</p>
-    </fieldset>
   );
 }
 

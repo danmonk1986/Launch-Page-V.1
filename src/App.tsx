@@ -12,6 +12,7 @@ import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
 import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
 import { syncNonNegs } from './lib/nnsync';
+import { nextRepeat, readRepeat, writeRepeat } from './lib/repeat';
 import { Days26Page } from './components/Days26';
 import {
   DEFAULT_CONFIG,
@@ -49,7 +50,7 @@ import { buildJournalImport, byNewest, checkinsOf, journalStore, newEntry, withC
 import { JournalPanel } from './components/Journal';
 import { Sheet } from './components/Sheet';
 import { RitualRunner } from './components/Rituals';
-import { buildImport, newTask, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
+import { buildImport, newTask, repeatOf, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
 import { addTaskToGoogle, googleConfigured, knownCalendars, wasConnected } from './lib/google';
 import {
   isDue,
@@ -569,7 +570,10 @@ export default function App() {
   /** ⋯ → Create launch: a timed launch from the task, opening its link at its time. */
   /** Create launch from a task: opens Add timed launch filled in, so it can be checked before saving. */
   function createLaunchFromTask(t: Task) {
-    const monthly = t.status === 'MTH RCR' && /^\d{1,2}$/.test(t.repeatRule ?? '');
+    // Repeats carry over: weekly days, a monthly date; anything else launches once on its next date.
+    const rep = repeatOf(t);
+    const monthly = rep.kind === 'monthly' && /^\d{1,2}$/.test(rep.rule);
+    const weekly = rep.kind === 'weekly' && rep.days.length > 0;
     // No time: 9:30 AM, the first work block. No date: today if 9:30 hasn't passed, else tomorrow.
     const now = new Date();
     const firstBlock = now.getHours() * 60 + now.getMinutes() < 9 * 60 + 30 ? now : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12);
@@ -578,10 +582,10 @@ export default function App() {
       fill: {
         title: t.task,
         atTime: t.atTime ?? '09:30',
-        repeat: monthly ? 'monthly' : 'once',
-        weekdays: [],
-        monthDay: monthly ? Number(t.repeatRule) : null,
-        onDate: monthly ? null : t.endDate ?? t.startDate ?? isoDate(firstBlock),
+        repeat: monthly ? 'monthly' : weekly ? 'weekly' : 'once',
+        weekdays: weekly ? rep.days : [],
+        monthDay: monthly ? Number(rep.rule) : null,
+        onDate: monthly || weekly ? null : (rep.kind !== 'none' ? nextRepeat(rep, new Date()) : null) ?? t.endDate ?? t.startDate ?? isoDate(firstBlock),
         urls: t.link ? [t.link] : []
       },
       n: Date.now(),
@@ -953,10 +957,27 @@ export default function App() {
                 const now = new Date();
                 const firstBlock = now.getHours() * 60 + now.getMinutes() < 9 * 60 + 30 ? now : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12);
                 setPage('launch');
-                setTimedPreset({ fill: { title: l.description, atTime: '09:30', repeat: 'once', weekdays: [], monthDay: null, onDate: l.date ?? isoDate(firstBlock), urls: [] }, n: Date.now() });
+                // A repeating line keeps its rhythm: weekly days, a monthly date; else once on its next date.
+                const rep = readRepeat(l.repeat);
+                const monthly = rep.kind === 'monthly' && /^\d{1,2}$/.test(rep.rule);
+                const weekly = rep.kind === 'weekly' && rep.days.length > 0;
+                setTimedPreset({
+                  fill: {
+                    title: l.description,
+                    atTime: '09:30',
+                    repeat: monthly ? 'monthly' : weekly ? 'weekly' : 'once',
+                    weekdays: weekly ? rep.days : [],
+                    monthDay: monthly ? Number(rep.rule) : null,
+                    onDate: monthly || weekly ? null : (rep.kind !== 'none' ? nextRepeat(rep, new Date()) : null) ?? l.date ?? isoDate(firstBlock),
+                    urls: []
+                  },
+                  n: Date.now()
+                });
               }}
               onToTask={async (l, projectId) => {
-                const t: Task = { ...newTask(tasks.length, projectId), task: l.description || 'Budget item', description: l.category || l.pmtCategory || '', endDate: l.date, expense: l.amount === null ? '' : String(l.amount), notes: l.notes };
+                // The line's repeat comes along, so a monthly bill is a monthly task.
+                const rep = readRepeat(l.repeat);
+                const t: Task = { ...newTask(tasks.length, projectId), task: l.description || 'Budget item', description: l.category || l.pmtCategory || '', endDate: rep.kind === 'none' ? l.date : null, repeatRule: writeRepeat(rep), expense: l.amount === null ? '' : String(l.amount), notes: l.notes };
                 await taskOps.save(t);
                 setFocusTask(t.id);
                 setPage('tasks');

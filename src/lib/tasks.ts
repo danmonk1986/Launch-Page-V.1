@@ -1,8 +1,11 @@
+import { readRepeat, repeatOn } from './repeat';
 import { makeStore } from './store';
 import { isoDate } from './launchers';
 
 /** Statuses from the Launch Sheet. DUE and OVERDUE are worked out from the date, not picked. */
-export const STATUSES = ['THREE', 'WIP', 'APPTS', 'ON DECK', 'PENDING', 'MTH RCR', 'ANN RCR'] as const;
+/** MTH RCR / ANN RCR retired Oct 20: Repeat says how a task recurs (lib/repeat.ts). */
+export const STATUSES = ['THREE', 'WIP', 'APPTS', 'ON DECK', 'PENDING'] as const;
+export const OLD_REPEAT_STATUSES = ['MTH RCR', 'ANN RCR'];
 export type Status = (typeof STATUSES)[number] | string;
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -28,7 +31,8 @@ export interface Task {
   startDate: string | null;
   endDate: string | null; // date required
   atTime: string | null; // "HH:MM"
-  repeatRule: string | null; // "17" (day of month), "1st THU", "LAST WED", or "MM-DD" for annual
+  /** Repeat (lib/repeat.ts): "W:1,4", "M:17", "Q1:15", "A:04-30"; older rows: a bare rule with status MTH/ANN RCR. */
+  repeatRule: string | null;
   expense: string;
   notes: string;
   done: boolean;
@@ -156,29 +160,13 @@ export function newTask(sort: number, projectId: string | null = null): Task {
 
 // ---------- Recurring rules ----------
 
-const DOW = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+/** How a task repeats (none for one-offs). */
+export const repeatOf = (t: Task) => readRepeat(t.repeatRule, t.status);
 
-/** Does a recurring task land on this day? Monthly: "17", "1st THU", "LAST WED". Annual: "MM-DD". */
-export function repeatsOn(t: Task, day: Date) {
-  const rule = (t.repeatRule ?? '').trim().toUpperCase();
-  if (!rule) return false;
-  if (t.status === 'ANN RCR') {
-    const m = rule.match(/^(\d{1,2})-(\d{1,2})$/);
-    return !!m && Number(m[1]) === day.getMonth() + 1 && Number(m[2]) === day.getDate();
-  }
-  if (/^\d{1,2}$/.test(rule)) {
-    const last = new Date(day.getFullYear(), day.getMonth() + 1, 0).getDate();
-    return Math.min(Number(rule), last) === day.getDate();
-  }
-  const m = rule.match(/^(1ST|2ND|3RD|4TH|LAST)\s+([A-Z]{3})/);
-  if (!m) return false;
-  const dow = DOW.indexOf(m[2]);
-  if (dow !== day.getDay()) return false;
-  if (m[1] === 'LAST') return day.getDate() + 7 > new Date(day.getFullYear(), day.getMonth() + 1, 0).getDate();
-  return Math.ceil(day.getDate() / 7) === parseInt(m[1], 10);
-}
+/** Does a recurring task land on this day? */
+export const repeatsOn = (t: Task, day: Date) => repeatOn(repeatOf(t), day);
 
-export const isRecurring = (t: Task) => t.status === 'MTH RCR' || t.status === 'ANN RCR';
+export const isRecurring = (t: Task) => repeatOf(t).kind !== 'none';
 
 // ---------- Sections (how the sheet sorts its list) ----------
 
@@ -190,8 +178,8 @@ export const SECTIONS: { id: Section; title: string; hint: string; pill?: string
   { id: 'wip', title: 'In progress', hint: 'Status WIP, or due within 30 days' },
   { id: 'appts', title: 'Appointments', hint: 'Status APPOINTMENT' },
   { id: 'ondeck', title: 'On deck (+30 days)', hint: 'Due more than 30 days out, or ON DECK', pill: 'On deck' },
-  { id: 'monthly', title: 'Monthly recurring', hint: 'MTH RCR', pill: 'Monthly' },
-  { id: 'annual', title: 'Annual recurring', hint: 'ANN RCR', pill: 'Annual' },
+  { id: 'monthly', title: 'Recurring: weekly, monthly, quarterly', hint: 'Repeat: weekly, monthly or quarterly', pill: 'Monthly' },
+  { id: 'annual', title: 'Annual recurring', hint: 'Repeat: annually', pill: 'Annual' },
   { id: 'pending', title: 'Pending (no date)', hint: 'Anything without a date', pill: 'Pending' },
   { id: 'done', title: 'Completed', hint: 'Checked off' },
   { id: 'deleted', title: 'Recently deleted', hint: 'Removed in the last 30 days; restore from ⋯', pill: 'Deleted' }
@@ -210,7 +198,7 @@ export function sectionOf(t: Task, today: Date): Section {
   if (t.deletedAt) return 'deleted';
   if (isRecurring(t)) {
     if (repeatsOn(t, today) && !doneToday(t, today)) return 'due';
-    return t.status === 'ANN RCR' ? 'annual' : 'monthly';
+    return repeatOf(t).kind === 'annual' ? 'annual' : 'monthly';
   }
   if (t.done) return 'done';
   const due = t.endDate ?? null;

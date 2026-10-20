@@ -2,6 +2,8 @@ import { useId, useMemo, useRef, useState } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
 import { TitleCombo } from './Launchers';
+import { RepeatPicker } from './RepeatPicker';
+import { describeRepeat, readRepeat, writeRepeat } from '../lib/repeat';
 import type { Project } from '../lib/projects';
 import {
   BUDGET_CATEGORIES,
@@ -305,7 +307,9 @@ export function BudgetPage(p: Props) {
                             <span className="chip chip-empty">—</span>
                           )}
                         </td>
-                        <td className="col-date">{shortDate(l.date)}</td>
+                        <td className="col-date" title={l.repeat ? `Repeats: ${describeRepeat(readRepeat(l.repeat))}` : undefined}>
+                          {l.repeat ? describeRepeat(readRepeat(l.repeat)) : shortDate(l.date)}
+                        </td>
                         <td className="col-task">
                           <button type="button" className="task-name" onClick={() => setEditing(l)}>
                             {l.description}
@@ -472,6 +476,11 @@ function LineForm({
           <span>Date</span>
           <input type="date" value={d.date ?? ''} onChange={(e) => set({ date: e.target.value || null })} />
         </label>
+        <RepeatPicker
+          value={readRepeat(d.repeat)}
+          from={d.date}
+          onChange={(r) => set({ repeat: writeRepeat(r) })}
+        />
         <div className="field">
           <span>Pmt method</span>
           <TitleCombo value={d.method} titles={methods} required={false} placeholder="ATB" onChange={(method) => set({ method })} />

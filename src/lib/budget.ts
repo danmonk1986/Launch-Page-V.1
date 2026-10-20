@@ -33,6 +33,8 @@ export interface BudgetLine {
   amount: number | null;
   notes: string;
   sort: number;
+  /** How it repeats (lib/repeat.ts), e.g. "M:1" for rent on the 1st. Column from 0026. */
+  repeat?: string | null;
 }
 
 export function newBudgetLine(section: BudgetSection, sort: number): BudgetLine {
@@ -52,6 +54,7 @@ type Row = {
   amount: number | string | null;
   notes: string;
   sort: number;
+  repeat_rule?: string | null;
 };
 
 export const budgetStore = makeStore<BudgetLine, Row>({
@@ -60,7 +63,7 @@ export const budgetStore = makeStore<BudgetLine, Row>({
   orderBy: 'sort',
   script: 'supabase/migrations/0023_budget.sql',
   seed: () => [],
-  toRow: (l) => ({ id: l.id, section: l.section, project: l.project, on_date: l.date, description: l.description, method: l.method, pmt_type: l.type, category: l.category, pmt_category: l.pmtCategory, amount: l.amount, notes: l.notes, sort: l.sort }),
+  toRow: (l) => ({ id: l.id, section: l.section, project: l.project, on_date: l.date, description: l.description, method: l.method, pmt_type: l.type, category: l.category, pmt_category: l.pmtCategory, amount: l.amount, notes: l.notes, sort: l.sort, ...(l.repeat !== undefined ? { repeat_rule: l.repeat } : {}) }),
   fromRow: (r) => ({
     id: r.id,
     section: (BUDGET_SECTIONS.some((s) => s.id === r.section) ? r.section : 'variable') as BudgetSection,
@@ -73,7 +76,8 @@ export const budgetStore = makeStore<BudgetLine, Row>({
     pmtCategory: r.pmt_category ?? '',
     amount: r.amount === null || r.amount === '' || r.amount === undefined ? null : Number(r.amount),
     notes: r.notes ?? '',
-    sort: r.sort ?? 0
+    sort: r.sort ?? 0,
+    ...(r.repeat_rule !== undefined ? { repeat: r.repeat_rule } : {})
   })
 });
 
