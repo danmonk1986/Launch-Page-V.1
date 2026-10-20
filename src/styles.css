@@ -538,6 +538,7 @@ input:-webkit-autofill:focus {
 
 .tile:hover { border-color: var(--accent-teal); background: rgb(136 105 203 / 0.2); }
 .tile-edit { border-style: dashed; }
+.tile-hidden { opacity: 0.45; }
 
 .tile-badge {
   width: 34px;

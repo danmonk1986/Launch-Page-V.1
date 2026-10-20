@@ -13,6 +13,8 @@ export interface Launcher {
   /** null = every routine. Linking tiles to routines comes later. */
   routineIds: string[] | null;
   sort: number;
+  /** Off the Launch Page but kept: still in every rocket list (timed launches, rituals). Column from 0028. */
+  hidden?: boolean;
 }
 
 export type Repeat = 'weekly' | 'monthly' | 'once' | 'hourly';
@@ -256,6 +258,7 @@ type LauncherRow = {
   color: TileColor;
   routine_ids: string[] | null;
   sort: number;
+  hidden?: boolean;
 };
 
 type LaunchRow = {
@@ -287,12 +290,16 @@ export const launcherStore = makeStore<Launcher, LauncherRow>({
   localKey: 'launchpage.launchers.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0003_launchers_events.sql',
-  latestScript: 'supabase/migrations/0006_launcher_pink.sql',
-  // Before 0006 is run, pink is refused: save the tile as purple in Supabase until then.
-  legacyRow: (r) => (r.color === 'pink' ? { ...r, color: 'purple' } : r),
+  latestScript: 'supabase/migrations/0028_rocket_hidden.sql',
+  // Before 0006 is run, pink is refused (saved as purple); before 0028, hidden stays on this device.
+  legacyRow: (r) => {
+    const x: Partial<LauncherRow> = r.color === 'pink' ? { ...r, color: 'purple' } : { ...r };
+    delete x.hidden;
+    return x;
+  },
   seed: seedLaunchers,
-  toRow: (l) => ({ id: l.id, name: l.name, note: l.note, url: l.url, color: l.color, routine_ids: l.routineIds, sort: l.sort }),
-  fromRow: (r) => ({ id: r.id, name: r.name, note: r.note, url: r.url, color: r.color, routineIds: r.routine_ids, sort: r.sort })
+  toRow: (l) => ({ id: l.id, name: l.name, note: l.note, url: l.url, color: l.color, routine_ids: l.routineIds, sort: l.sort, ...(l.hidden !== undefined ? { hidden: l.hidden } : {}) }),
+  fromRow: (r) => ({ id: r.id, name: r.name, note: r.note, url: r.url, color: r.color, routineIds: r.routine_ids, sort: r.sort, hidden: !!r.hidden })
 });
 
 export const launchStore = makeStore<Launch, LaunchRow>({

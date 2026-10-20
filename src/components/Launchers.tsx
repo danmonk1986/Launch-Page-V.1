@@ -171,7 +171,7 @@ export function LaunchersPanel(p: Props) {
   const visible = capped ? list.slice(0, 3) : list;
 
   function launchAll() {
-    const urls = p.launchers.map((l) => l.url).filter(Boolean);
+    const urls = p.launchers.filter((l) => !l.hidden).map((l) => l.url).filter(Boolean);
     if (!urls.length) return p.onStatus('Add links to your tiles first.');
     const blocked = openTabs(urls);
     setLaunched({ count: urls.length, blocked });
@@ -255,12 +255,13 @@ export function LaunchersPanel(p: Props) {
       )}
 
       <ul className="tiles" id="rocket-tiles" hidden={!showTiles}>
-        {p.launchers.map((l) => (
+        {/* Hidden rockets stay off the Launch Page; in edit mode they show dimmed so you can bring them back. */}
+        {p.launchers.filter((l) => editing || !l.hidden).map((l) => (
           <li key={l.id}>
             {editing || !l.url ? (
               <button
                 type="button"
-                className="tile tile-edit"
+                className={`tile tile-edit${l.hidden ? ' tile-hidden' : ''}`}
                 onClick={() => {
                   setTile(l);
                   setTileOpen(true);
@@ -271,7 +272,7 @@ export function LaunchersPanel(p: Props) {
                 </span>
                 <span className="tile-words">
                   <span className="tile-name">{l.name}</span>
-                  <span className="tile-note">{l.url ? 'Edit' : 'Add a link'}</span>
+                  <span className="tile-note">{l.hidden ? 'Hidden · Edit' : l.url ? 'Edit' : 'Add a link'}</span>
                 </span>
               </button>
             ) : (
@@ -642,6 +643,10 @@ function TileForm({
           ))}
         </div>
       </fieldset>
+      <label className="choice choice-wide">
+        <input type="checkbox" checked={!!d.hidden} onChange={(e) => setD((x) => ({ ...x, hidden: e.target.checked }))} />
+        <span>Hide from the Launch Page (keeps it for timed launches and rituals)</span>
+      </label>
       <FormActions formId={formId} saveDisabled={!d.name.trim()} onDelete={tile ? () => onDelete(tile.id) : undefined} deleteLabel={tile?.name} />
     </form>
   );
