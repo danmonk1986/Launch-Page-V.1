@@ -120,6 +120,8 @@ type Props = {
   onCheckin: (n: number, text: string) => void;
 };
 
+const RITUAL_SECTION_KEY = 'launchpage.d26.ritualSection';
+
 /** 26 Days: quote + daily goal, Non-Negotiables, Rituals, Logging, Summary. */
 export function Days26Page(p: Props) {
   const { now, routine, shift, nonnegs, records, logs, config } = p;
@@ -138,6 +140,29 @@ export function Days26Page(p: Props) {
     setShownRitual(id);
     writeShownRitual(id);
   };
+  // Rituals follow the time of day (Oct 20): when the section changes (Morning → Midday →
+  // Evening, flipped on nights), show the ritual linked to a Non-Negotiable in that section.
+  // Picking one by hand holds until the next section starts.
+  const section = currentSection(now, reset, flip);
+  useEffect(() => {
+    const mark = `${today}:${section}`;
+    let last: string | null = null;
+    try {
+      last = localStorage.getItem(RITUAL_SECTION_KEY);
+    } catch {
+      /* ignore */
+    }
+    if (last === mark) return;
+    const fit = p.rituals.find((r) => nonNegForRitual(nonnegs, r)?.section === section);
+    if (!fit && p.rituals.length === 0) return;
+    try {
+      localStorage.setItem(RITUAL_SECTION_KEY, mark);
+    } catch {
+      /* ignore */
+    }
+    if (fit && fit.id !== shownRitual) showRitual(fit.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [today, section, p.rituals.length, nonnegs]);
   const [editList, setEditList] = useState(false);
   const toggle = (id: string, on?: boolean) => p.onTick(id, on);
 
