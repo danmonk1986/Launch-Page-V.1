@@ -635,6 +635,14 @@ function TileForm({
   );
 }
 
+/** The starting list for a timed launch's What; anything typed there joins it once saved. */
+const WHAT_CATEGORIES = ['Work Block #1', 'Work Block #2', 'Work Block #3', 'Expansion Work', 'Leisure Work'];
+function splitTitle(t: string) {
+  const i = t.indexOf(' - ');
+  return i < 0 ? { cat: t.trim(), desc: '' } : { cat: t.slice(0, i).trim(), desc: t.slice(i + 3).trim() };
+}
+const joinTitle = (c: string, x: string) => (x.trim() ? `${c.trim()} - ${x.trim()}` : c.trim());
+
 function TimedForm({
   launch,
   today,
@@ -682,11 +690,24 @@ function TimedForm({
         movedTo: null,
         sound: true,
         notify: false,
+        // New launches log Productivity when checked off (change it under Logs when checked off).
+        logKind: 'productivity',
         ...fill,
         sort: nextSort
       }
   );
   const set = <K extends keyof Launch>(k: K, v: Launch[K]) => setD((x) => ({ ...x, [k]: v }));
+  // What = a category (Work Block #1…, or any you type, which joins the list once saved) and a
+  // description. Saved as one title, "Category - Description", so lists read the same (Oct 20).
+  const [cat, setCat] = useState(() => splitTitle(d.title).cat);
+  const [desc, setDesc] = useState(() => splitTitle(d.title).desc);
+  const setWhat = (c: string, x: string) => {
+    setCat(c);
+    setDesc(x);
+    set('title', joinTitle(c, x));
+  };
+  const categories = [...new Set([...WHAT_CATEGORIES, ...titles.map((t) => splitTitle(t).cat).filter(Boolean)])];
+  const descriptions = [...new Set(titles.map(splitTitle).filter((t) => t.cat === cat.trim() && t.desc).map((t) => t.desc))].sort((a, b) => a.localeCompare(b));
   const toggleDay = (i: number) =>
     set('weekdays', d.weekdays.includes(i) ? d.weekdays.filter((x) => x !== i) : [...d.weekdays, i].sort());
 
@@ -742,7 +763,11 @@ function TimedForm({
       )}
       <label className="field">
         <span>What</span>
-        <TitleCombo value={d.title} titles={titles} onChange={(v) => set('title', v)} />
+        <TitleCombo value={cat} titles={categories} placeholder="Work Block #1" onChange={(v) => setWhat(v, desc)} />
+      </label>
+      <label className="field">
+        <span>Description</span>
+        <TitleCombo value={desc} titles={descriptions} required={false} placeholder="Launch Page Construction" onChange={(v) => setWhat(cat, v)} />
       </label>
       {rituals.length > 0 && (
         <label className="field">
