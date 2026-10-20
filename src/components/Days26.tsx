@@ -153,7 +153,8 @@ export function Days26Page(p: Props) {
       /* ignore */
     }
     if (last === mark) return;
-    const fit = p.rituals.find((r) => nonNegForRitual(nonnegs, r)?.section === section);
+    // A ritual set for today leads; otherwise the one for this section.
+    const fit = p.rituals.find((r) => r.onDates?.includes(today)) ?? p.rituals.find((r) => nonNegForRitual(nonnegs, r)?.section === section);
     if (!fit && p.rituals.length === 0) return;
     try {
       localStorage.setItem(RITUAL_SECTION_KEY, mark);

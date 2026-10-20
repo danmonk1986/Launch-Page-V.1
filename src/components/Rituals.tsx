@@ -438,6 +438,7 @@ type Draft = RoutineItem & { k: string };
 /** Name and steps; each step can be a plain step, a meditation or a journal check-in, with a link. */
 export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAddRocket }: { ritual: Routine; isNew: boolean; onSave: (r: Routine) => void; onDelete: () => void; /** What a step can open (Oct 20: pick a rocket, not type a link). */ rockets?: RocketOption[]; onAddRocket?: (url: string) => Promise<void> }) {
   const [name, setName] = useState(ritual.name);
+  const [dates, setDates] = useState<string[]>(() => ritual.onDates ?? []);
   const [rows, setRows] = useState<Draft[]>(() => {
     const list = ritual.items.map((s) => ({ ...s, ...(() => {
       const t = stepType(s);
@@ -470,13 +471,31 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
             if (r.type === 'checkin') out.checkin = Math.max(1, r.checkin ?? 1);
             return out;
           });
-        onSave({ ...ritual, kind: 'ritual', name: name.trim(), items });
+        const onDates = [...new Set(dates.filter(Boolean))].sort();
+        onSave({ ...ritual, kind: 'ritual', name: name.trim(), items, ...(onDates.length || ritual.onDates?.length ? { onDates } : {}) });
       }}
     >
       <label className="field">
         <span>Name</span>
         <input value={name} autoFocus={isNew} onChange={(e) => setName(e.target.value)} placeholder="Rise to Shine" />
       </label>
+      <fieldset className="field">
+        <legend>Dates (optional)</legend>
+        {/* On these days this ritual leads the Rituals card, ahead of the time of day (Oct 20). */}
+        <div className="once-dates">
+          {dates.map((x, i) => (
+            <div key={i} className="once-date">
+              <input type="date" value={x} onChange={(e) => setDates((ds) => ds.map((y, j) => (j === i ? e.target.value : y)))} aria-label={`Date ${i + 1}`} />
+              <button type="button" className="icon-btn tool-btn" aria-label={`Remove date ${i + 1}`} title="Remove this date" onClick={() => setDates((ds) => ds.filter((_, j) => j !== i))}>
+                <Icon d="M6 6l12 12M18 6L6 18" />
+              </button>
+            </div>
+          ))}
+          <button type="button" className="btn btn-quiet" onClick={() => setDates((ds) => [...ds, ''])}>
+            + Add a date
+          </button>
+        </div>
+      </fieldset>
       <div className="field">
         <span>Steps</span>
         <ol className="rit-edit-list">

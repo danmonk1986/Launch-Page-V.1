@@ -31,6 +31,8 @@ export interface Routine {
   bed: string | null;
   items: RoutineItem[];
   sort: number;
+  /** Rituals: routine days ("YYYY-MM-DD") it leads the Rituals card. Column from 0025. */
+  onDates?: string[];
 }
 
 const step = (time: string | null, label: string): RoutineItem => ({ time, label });
@@ -227,6 +229,7 @@ type Row = {
   bed: string | null;
   items: RoutineItem[];
   sort: number;
+  on_dates?: string[] | null;
 };
 
 const toRow = (r: Routine): Row => ({
@@ -239,7 +242,9 @@ const toRow = (r: Routine): Row => ({
   wake: r.wake,
   bed: r.bed,
   items: r.items,
-  sort: r.sort
+  sort: r.sort,
+  // Only sent when dates were set (needs 0025), so older setups keep saving cleanly.
+  ...(r.onDates && r.onDates.length ? { on_dates: r.onDates } : r.onDates ? { on_dates: [] } : {})
 });
 
 const fromRow = (row: Row): Routine => ({
@@ -252,7 +257,8 @@ const fromRow = (row: Row): Routine => ({
   wake: row.wake,
   bed: row.bed,
   items: Array.isArray(row.items) ? row.items : [],
-  sort: row.sort
+  sort: row.sort,
+  ...(row.on_dates !== undefined ? { onDates: row.on_dates ?? [] } : {})
 });
 
 export interface LoadResult {
