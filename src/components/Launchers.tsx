@@ -363,7 +363,7 @@ export function LaunchersPanel(p: Props) {
                   {todays && (!how || how === 'launched') && xAsk === l.id && (
                     <div className="timed-quick timed-xask" role="group" aria-label={`Remove ${l.title}`}>
                       <button type="button" className="btn btn-quiet" onClick={() => { setXAsk(null); p.onFinish(l, 'skipped'); }}>
-                        {l.repeat === 'hourly' ? 'Skip this hour' : 'Skip today'}
+                        Skip
                       </button>
                       <button
                         type="button"
@@ -371,10 +371,10 @@ export function LaunchersPanel(p: Props) {
                         onClick={async () => {
                           setXAsk(null);
                           await p.onDeleteLaunch(l.id);
-                          p.onStatus(`${l.title} removed for good.`);
+                          p.onStatus(`${l.title} removed.`);
                         }}
                       >
-                        Remove for good
+                        Remove
                       </button>
                       <button type="button" className="quick-btn" aria-label="Cancel" title="Cancel" onClick={() => setXAsk(null)}>
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
