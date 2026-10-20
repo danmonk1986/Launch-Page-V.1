@@ -865,6 +865,18 @@ export default function App() {
                   onSave={eventOps.save}
                   onDelete={eventOps.remove}
                   onStatus={setStatus}
+                  taskFor={(e) => {
+                    const live = tasks.filter((t) => !t.deletedAt);
+                    // The event made from the task, or (older ones) a task of the same name on that day.
+                    const byId = e.google ? live.find((t) => t.googleEventId === e.google!.id) : undefined;
+                    const name = e.title.trim().toLowerCase();
+                    const byName = live.find((t) => t.task.trim().toLowerCase() === name && (!t.endDate || (t.endDate >= e.startDate && t.endDate <= e.endDate) || t.startDate === e.startDate));
+                    return (byId ?? byName)?.id ?? null;
+                  }}
+                  onOpenTask={(id) => {
+                    setFocusTask(id);
+                    setPage('tasks');
+                  }}
                 />
               }
               tasks={

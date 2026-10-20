@@ -32,6 +32,9 @@ type Props = {
   onSave: (e: CalEvent) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onStatus?: (msg: string) => void;
+  /** An event that is a task (added from Tasks): its task's id, so tapping it opens Tasks there. */
+  taskFor?: (e: CalEvent) => string | null;
+  onOpenTask?: (taskId: string) => void;
 };
 
 const COLORS: EventColor[] = ['teal', 'purple', 'blue'];
@@ -39,7 +42,7 @@ const COLORS: EventColor[] = ['teal', 'purple', 'blue'];
 type GState = 'off' | 'reconnect' | 'loading' | 'on';
 
 /** Sunday to Saturday. Multi-day events span their days; click a day to add, an event to edit. */
-export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, events, projects = [], onCalendars, onSave, onDelete, onStatus }: Props) {
+export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, events, projects = [], onCalendars, onSave, onDelete, onStatus, taskFor, onOpenTask }: Props) {
   const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<CalEvent | null>(null);
   const [newDate, setNewDate] = useState<string | null>(null);
@@ -302,7 +305,11 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
               // The time sits in the hover and the editor, so the tile has room for the title (Oct 20).
               title={`${event.google?.time ? `${event.google.time} · ` : ''}${event.title}${event.google ? ` · ${event.google.calendar ?? 'Google Calendar'}` : ''}`}
               onClick={() => {
-                setEditing(original.get(event.id) ?? event);
+                const whole = original.get(event.id) ?? event;
+                // A task's event opens Tasks on that task, the same as the Launch Page card (Oct 20).
+                const taskId = taskFor?.(whole);
+                if (taskId && onOpenTask) return onOpenTask(taskId);
+                setEditing(whole);
                 setOpen(true);
               }}
             >
