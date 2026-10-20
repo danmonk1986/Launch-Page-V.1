@@ -4,6 +4,7 @@ import { Icon } from './Tasks';
 import type { Routine, RoutineItem } from '../lib/routines';
 import type { NonNeg } from '../lib/days26';
 import { RocketPicker, type RocketOption } from './Launchers';
+import { openCard } from '../lib/launchers';
 
 const CHECK = 'M5 12l5 5L20 7';
 const PLAY = 'M7 4v16l13-8z';
@@ -74,7 +75,7 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
                   <Icon d={PLAY} size={14} /> {s.label}
                 </button>
               ) : url ? (
-                <a className="rit-label is-link" href={url} target="_blank" rel="noopener noreferrer" title={`Open ${url}`}>
+                <a className="rit-label is-link" href={url} target="_blank" rel="noopener noreferrer" title={`Open ${url}`} onClick={(e) => openCard(url) && e.preventDefault()}>
                   {s.label} <Icon d={LINK} size={13} />
                 </a>
               ) : (

@@ -460,6 +460,30 @@ export const APP_LINKS: { name: string; url: string }[] = [
   { name: 'Headway', url: 'https://makeheadway.com/' }
 ];
 
+/**
+ * Card rockets (Oct 20): open one of LaunchPage's own pages instead of a site.
+ * Stored like a link ("launchpage:journal"); App says how to open them (setCardOpener).
+ */
+export const CARD_LINKS: { name: string; url: string; page: string }[] = [
+  { name: 'Launch Page', url: 'launchpage:launch', page: 'launch' },
+  { name: 'Journal', url: 'launchpage:journal', page: 'journal' },
+  { name: 'Tasks', url: 'launchpage:tasks', page: 'tasks' },
+  { name: '26 Days', url: 'launchpage:days26', page: 'days26' },
+  { name: 'Budget', url: 'launchpage:budget', page: 'budget' }
+];
+export const cardOf = (url: string | null | undefined) => CARD_LINKS.find((c) => c.url === (url ?? '').trim()) ?? null;
+let cardOpener: ((page: string) => void) | null = null;
+export function setCardOpener(fn: (page: string) => void) {
+  cardOpener = fn;
+}
+/** Opens a card rocket; false if the link isn't one. */
+export function openCard(url: string | null | undefined) {
+  const c = cardOf(url);
+  if (!c) return false;
+  cardOpener?.(c.page);
+  return true;
+}
+
 const UNSAFE_SCHEMES = /^(javascript|data|vbscript|file|blob|about):/i;
 
 /** An app link like claude:// or spotify: (anything with a scheme that isn't a web page). */
@@ -495,6 +519,7 @@ export function openTabs(urls: string[]) {
   for (const raw of urls) {
     const url = normalizeUrl(raw);
     if (!url) continue;
+    if (openCard(url)) continue;
     if (isAppLink(url)) {
       openApp(url);
       continue;
@@ -564,7 +589,7 @@ export function orderLaunches(list: Launch[], today: Date, handled: Record<strin
 
 /** "2 tabs + Claude" */
 export function describeOpens(urls: string[]) {
-  const apps = urls.filter(isAppLink).map((u) => APP_LINKS.find((a) => a.url === u)?.name ?? 'app');
+  const apps = urls.filter(isAppLink).map((u) => APP_LINKS.find((a) => a.url === u)?.name ?? cardOf(u)?.name ?? 'app');
   const tabs = urls.length - apps.length;
   const parts: string[] = [];
   if (tabs || !apps.length) parts.push(`${tabs} ${tabs === 1 ? 'tab' : 'tabs'}`);

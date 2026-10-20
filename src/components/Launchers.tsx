@@ -10,6 +10,8 @@ import {
   type HandledHow,
   normalizeUrl,
   APP_LINKS,
+  CARD_LINKS,
+  openCard,
   describeOpens,
   nextDate,
   timeFor,
@@ -273,7 +275,16 @@ export function LaunchersPanel(p: Props) {
                 </span>
               </button>
             ) : (
-              <a className="tile" href={normalizeUrl(l.url)} target="_blank" rel="noopener noreferrer">
+              <a
+                className="tile"
+                href={normalizeUrl(l.url)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  // Card rockets open a LaunchPage page here, not a new tab.
+                  if (openCard(l.url)) e.preventDefault();
+                }}
+              >
                 <span className={`tile-badge tile-${l.color}`} aria-hidden="true">
                   {l.name.charAt(0)}
                 </span>
@@ -580,7 +591,8 @@ function TileForm({
           value={d.name}
           options={[
             ...open.map((p) => ({ name: p.name, note: p.note, url: p.url, color: p.color, kind: 'Original' })),
-            ...APP_LINKS.filter((a) => !taken.includes(a.name)).map((a) => ({ name: a.name, note: 'App', url: a.url, color: 'purple' as TileColor, kind: 'App' }))
+            ...APP_LINKS.filter((a) => !taken.includes(a.name)).map((a) => ({ name: a.name, note: 'App', url: a.url, color: 'purple' as TileColor, kind: 'App' })),
+            ...CARD_LINKS.filter((c) => !taken.includes(c.name)).map((c) => ({ name: c.name, note: 'LaunchPage card', url: c.url, color: 'green' as TileColor, kind: 'Card' }))
           ]}
           onType={(name) => setD((x) => ({ ...x, name }))}
           onPick={(o) => setD((x) => ({ ...x, name: o.name, note: o.note, url: o.url, color: o.color }))}
@@ -1089,6 +1101,7 @@ export function rocketOptions(tiles: Launcher[]): RocketOption[] {
   for (const t of tiles) add({ name: t.name, note: t.note, url: t.url, color: t.color, kind: 'Rocket' });
   for (const p of LAUNCHER_PRESETS) add({ name: p.name, note: p.note, url: p.url, color: p.color, kind: 'Original' });
   for (const a of APP_LINKS) add({ name: a.name, note: 'App', url: a.url, color: 'purple', kind: 'App' });
+  for (const c of CARD_LINKS) add({ name: c.name, note: 'LaunchPage card', url: c.url, color: 'green', kind: 'Card' });
   return out;
 }
 

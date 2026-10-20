@@ -68,6 +68,7 @@ import {
   launchLogStore,
   runKey,
   setLaunchDayReset,
+  setCardOpener,
   opensSomething,
   describeLog,
   logFor,
@@ -424,6 +425,11 @@ export default function App() {
   const d26Mode = modeOf(activeRoutine);
   const d26Shift = effShift(d26Mode, shift);
   const d26Today = routineDay(now, activeRoutine, shift, flipsNow(d26Mode, shift));
+  // Card rockets open one of LaunchPage's pages.
+  setCardOpener((pg) => {
+    setPage(pg as PageId);
+    window.scrollTo({ top: 0 });
+  });
   // Timed launches roll over with the routine day (its reset), the same as 26 Days.
   setLaunchDayReset(resetMinutes(activeRoutine, shift, flipsNow(d26Mode, shift)));
   useEffect(() => {
