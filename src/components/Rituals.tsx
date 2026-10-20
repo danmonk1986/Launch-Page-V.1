@@ -3,6 +3,7 @@ import { FormActions } from './Sheet';
 import { Icon } from './Tasks';
 import type { Routine, RoutineItem } from '../lib/routines';
 import type { NonNeg } from '../lib/days26';
+import { RocketPicker, type RocketOption } from './Launchers';
 
 const CHECK = 'M5 12l5 5L20 7';
 const PLAY = 'M7 4v16l13-8z';
@@ -434,7 +435,7 @@ export function RitualPicker({ rituals, activeId, onPick, onAdd, onEdit, onDupli
 type Draft = RoutineItem & { k: string };
 
 /** Name and steps; each step can be a plain step, a meditation or a journal check-in, with a link. */
-export function RitualForm({ ritual, isNew, onSave, onDelete }: { ritual: Routine; isNew: boolean; onSave: (r: Routine) => void; onDelete: () => void }) {
+export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAddRocket }: { ritual: Routine; isNew: boolean; onSave: (r: Routine) => void; onDelete: () => void; /** What a step can open (Oct 20: pick a rocket, not type a link). */ rockets?: RocketOption[]; onAddRocket?: (url: string) => Promise<void> }) {
   const [name, setName] = useState(ritual.name);
   const [rows, setRows] = useState<Draft[]>(() => {
     const list = ritual.items.map((s) => ({ ...s, ...(() => {
@@ -499,7 +500,9 @@ export function RitualForm({ ritual, isNew, onSave, onDelete }: { ritual: Routin
                   </button>
                 </span>
               </div>
-              {(r.type ?? 'step') === 'step' && <input value={r.url ?? ''} onChange={(e) => set(i, { url: e.target.value })} placeholder="Rocket to launch (optional): makeheadway.com" aria-label="Rocket to launch" />}
+              {(r.type ?? 'step') === 'step' && (
+                <RocketPicker single options={rockets} picked={r.url ? [r.url] : []} onChange={(urls) => set(i, { url: urls[0] || undefined })} onAddNew={onAddRocket} />
+              )}
               {r.type === 'meditation' && (
                 <textarea value={r.script ?? ''} rows={4} onChange={(e) => set(i, { script: e.target.value })} placeholder="The words that play up the screen" aria-label="Meditation script" />
               )}

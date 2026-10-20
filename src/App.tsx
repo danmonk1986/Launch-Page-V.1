@@ -38,7 +38,7 @@ import {
 } from './lib/days26';
 import { readScrollMode, writeScrollMode, type ScrollMode } from './lib/view';
 import { TodayPanel, useNow } from './components/TodayPanel';
-import { BLOCKED_HELP, LaunchersPanel, type TimedPreset } from './components/Launchers';
+import { BLOCKED_HELP, LaunchersPanel, nameFromUrl, rocketOptions, type TimedPreset } from './components/Launchers';
 import { LaunchReminder, TimeUpReminder } from './components/LaunchReminder';
 import { chime, unlockAudioOnFirstGesture } from './lib/alerts';
 import { WeekCalendar } from './components/WeekCalendar';
@@ -910,6 +910,10 @@ export default function App() {
               onSaveConfig={saveD26Config}
               onSaveRitual={saveRitual}
               onDeleteRitual={handleDeleteRoutine}
+              rockets={rocketOptions(launchers)}
+              onAddRocket={async (url) => {
+                await launcherOps.save({ id: crypto.randomUUID(), name: nameFromUrl(url), note: '', url, color: 'teal', routineIds: activeRoutine ? [activeRoutine.id] : null, sort: launchers.length });
+              }}
               onTick={tickToday}
               checkinText={checkinText}
               onCheckin={setCheckin}

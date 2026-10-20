@@ -493,6 +493,9 @@ export function LaunchersPanel(p: Props) {
           today={p.today}
           fill={timed ? null : fill?.fill ?? null}
           launchers={p.launchers}
+          onAddRocket={async (url) => {
+            await p.onSaveLauncher({ id: crypto.randomUUID(), name: nameFromUrl(url), note: '', url, color: 'teal', routineIds: p.routineId ? [p.routineId] : null, sort: p.launchers.length });
+          }}
           rituals={p.rituals ?? []}
           titles={[...new Set(p.launches.map((l) => l.title.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
           nextSort={p.launches.length}
@@ -641,12 +644,15 @@ function TimedForm({
   titles,
   nextSort,
   onSave,
-  onDelete
+  onDelete,
+  onAddRocket
 }: {
   launch: Launch | null;
   today: Date;
   fill?: Partial<Launch> | null;
   launchers: Launcher[];
+  /** Add new rocket: saves a pasted link as a rocket tile. */
+  onAddRocket: (url: string) => Promise<void>;
   rituals: { id: string; name: string }[];
   /** Names already used, so the same task keeps the same name. */
   titles: string[];
@@ -680,15 +686,7 @@ function TimedForm({
         sort: nextSort
       }
   );
-  const [extra, setExtra] = useState(() =>
-    (launch?.urls ?? fill?.urls ?? [])
-      .filter((u) => !launchers.some((l) => l.url && l.url === u) && !APP_LINKS.some((a) => a.url === u))
-      .join('\n')
-  );
   const set = <K extends keyof Launch>(k: K, v: Launch[K]) => setD((x) => ({ ...x, [k]: v }));
-  const picked = new Set(d.urls);
-  const toggleUrl = (url: string) =>
-    set('urls', picked.has(url) ? d.urls.filter((u) => u !== url) : [...d.urls, url]);
   const toggleDay = (i: number) =>
     set('weekdays', d.weekdays.includes(i) ? d.weekdays.filter((x) => x !== i) : [...d.weekdays, i].sort());
 
@@ -698,12 +696,7 @@ function TimedForm({
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.title.trim()) return;
-        const tileUrls = d.urls.filter((u) => launchers.some((l) => l.url === u) || APP_LINKS.some((a) => a.url === u));
-        const extras = extra
-          .split(/\s+/)
-          .map((u) => u.trim())
-          .filter((u) => u && !isBarePrefix(u));
-        const next = { ...d, active: true, notify: false, title: d.title.trim(), urls: [...tileUrls, ...extras] };
+        const next = { ...d, active: true, notify: false, title: d.title.trim(), urls: d.urls.filter((u) => u && !isBarePrefix(u)) };
         // A repeating launch whose time changed: ask whether it's just the next one or every time.
         if (launch && launch.repeat !== 'once' && launch.repeat !== 'hourly' && d.atTime !== launch.atTime && !scope) {
           setAsk(next);
@@ -928,46 +921,10 @@ function TimedForm({
       )}
 
       <fieldset className="field">
-        <legend>Tabs to open</legend>
-        <div className="tab-picks">
-          {launchers
-            .filter((l) => l.url)
-            .map((l) => (
-              <label key={l.id} className="choice">
-                <input type="checkbox" checked={picked.has(l.url)} onChange={() => toggleUrl(l.url)} />
-                <span>{l.name}</span>
-              </label>
-            ))}
-        </div>
+        <legend>Rockets to launch</legend>
+        <RocketPicker options={rocketOptions(launchers)} picked={d.urls} onChange={(urls) => set('urls', urls)} onAddNew={onAddRocket} />
+        <p className="field-hint">Apps: the first time, your browser asks to open the app. Tick “Always allow” and it opens straight away after that.</p>
       </fieldset>
-      <fieldset className="field">
-        <legend>Apps to open</legend>
-        <div className="tab-picks">
-          {APP_LINKS.map((a) => (
-            <label key={a.url} className="choice">
-              <input type="checkbox" checked={picked.has(a.url)} onChange={() => toggleUrl(a.url)} />
-              <span>{a.name}</span>
-            </label>
-          ))}
-        </div>
-        <p className="field-hint">The first time, your browser asks to open the app. Tick “Always allow” and it opens straight away after that. Other apps: paste their link (like <code>todoist://</code>) below.</p>
-      </fieldset>
-      <label className="field">
-        <span>Other links or app links, one per line</span>
-        <textarea
-          rows={3}
-          value={extra}
-          onFocus={() => setExtra((v) => (v.trim() ? (v.endsWith('\n') ? v + PREFIX : v) : PREFIX))}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              setExtra((v) => `${v}\n${PREFIX}`);
-            }
-          }}
-          onChange={(e) => setExtra(e.target.value)}
-          placeholder="https://www.atb.com"
-        />
-      </label>
 
       <FormActions formId={formId} saveDisabled={!d.title.trim()} onDelete={launch ? () => onDelete(launch.id) : undefined} deleteLabel={launch?.title} />
     </form>
@@ -1057,9 +1014,108 @@ export function TitleCombo({ value, titles, onChange, placeholder = 'Work Block 
 }
 
 type ComboOption = { name: string; note: string; url: string; color: TileColor; kind: string };
+export type RocketOption = ComboOption;
+
+/** A rocket's name from its link: todoist:// → Todoist, https://www.atb.com/x → atb.com. */
+export function nameFromUrl(url: string) {
+  const app = /^([a-z][a-z0-9+.-]*):/i.exec(url);
+  if (app && !/^https?$/i.test(app[1])) return (app[1][0].toUpperCase() + app[1].slice(1)).slice(0, NAME_MAX);
+  try {
+    return new URL(url).hostname.replace(/^www\./, '').slice(0, NAME_MAX);
+  } catch {
+    return url.slice(0, NAME_MAX);
+  }
+}
+
+/** Everything a launch or a ritual step can open: your rockets, then the originals and apps you don't have yet. */
+export function rocketOptions(tiles: Launcher[]): RocketOption[] {
+  const out: RocketOption[] = [];
+  const add = (o: RocketOption) => {
+    if (o.url && !out.some((x) => x.url === o.url)) out.push(o);
+  };
+  for (const t of tiles) add({ name: t.name, note: t.note, url: t.url, color: t.color, kind: 'Rocket' });
+  for (const p of LAUNCHER_PRESETS) add({ name: p.name, note: p.note, url: p.url, color: p.color, kind: 'Original' });
+  for (const a of APP_LINKS) add({ name: a.name, note: 'App', url: a.url, color: 'purple', kind: 'App' });
+  return out;
+}
+
+/**
+ * Pick rockets from the list; each one picked sits underneath as a ticked box, and unticking
+ * sends it back to the list. "Add new rocket" takes one link and makes it a rocket (Oct 20).
+ * single: a ritual step opens one rocket.
+ */
+export function RocketPicker({ options, picked, onChange, onAddNew, single }: { options: RocketOption[]; picked: string[]; onChange: (urls: string[]) => void; onAddNew?: (url: string) => Promise<void>; single?: boolean }) {
+  const [q, setQ] = useState('');
+  const [link, setLink] = useState('');
+  const [busy, setBusy] = useState(false);
+  const left = options.filter((o) => !picked.includes(o.url));
+  const labelFor = (u: string) => options.find((o) => o.url === u)?.name ?? nameFromUrl(u);
+  const add = (u: string) => onChange(single ? [u] : [...picked.filter((x) => x !== u), u]);
+  const open = !single || picked.length === 0;
+  async function addNew() {
+    const u = normalizeUrl(link);
+    if (!u || isBarePrefix(u) || busy) return;
+    setBusy(true);
+    try {
+      if (onAddNew && !options.some((o) => o.url === u)) await onAddNew(u);
+      add(u);
+      setLink('');
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="rocket-picker">
+      {open && (
+        <NameCombo
+          value={q}
+          options={left}
+          required={false}
+          onType={setQ}
+          onPick={(o) => {
+            add(o.url);
+            setQ('');
+          }}
+          placeholder={single ? 'Pick a rocket' : 'Pick rockets to launch'}
+        />
+      )}
+      {picked.length > 0 && (
+        <div className="tab-picks">
+          {picked.map((u) => (
+            <label key={u} className="choice">
+              <input type="checkbox" checked onChange={() => onChange(picked.filter((x) => x !== u))} aria-label={`Remove ${labelFor(u)}`} />
+              <span>{labelFor(u)}</span>
+            </label>
+          ))}
+        </div>
+      )}
+      {open && (
+        <div className="rocket-new">
+          <input
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void addNew();
+              }
+            }}
+            placeholder="Add new rocket: paste a link (or an app link like todoist://)"
+            aria-label="Add new rocket"
+          />
+          <button type="button" className="icon-btn tool-btn" aria-label="Add new rocket" title="Add new rocket" disabled={busy || !link.trim()} onClick={() => void addNew()}>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Type a new name, or open the list with the ⌄ (or by typing) and pick an original or an app. */
-function NameCombo({ value, options, onType, onPick, placeholder }: { value: string; options: ComboOption[]; onType: (v: string) => void; onPick: (o: ComboOption) => void; placeholder: string }) {
+function NameCombo({ value, options, onType, onPick, placeholder, required = true }: { value: string; options: ComboOption[]; onType: (v: string) => void; onPick: (o: ComboOption) => void; placeholder: string; required?: boolean }) {
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(0);
   const [filtering, setFiltering] = useState(false);
@@ -1081,7 +1137,7 @@ function NameCombo({ value, options, onType, onPick, placeholder }: { value: str
       }}
     >
       <input
-        required
+        required={required}
         maxLength={NAME_MAX}
         autoComplete="off"
         role="combobox"

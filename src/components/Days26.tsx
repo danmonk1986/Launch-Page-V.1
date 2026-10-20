@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
 import { RitualForm, RitualPicker, RitualRunner, duplicateRitual } from './Rituals';
-import { TitleCombo } from './Launchers';
+import { TitleCombo, type RocketOption } from './Launchers';
 import type { Routine, Shift } from '../lib/routines';
 import {
   H2O_SIZES,
@@ -110,6 +110,9 @@ type Props = {
   onSaveConfig: (c: Config) => void;
   onSaveRitual: (r: Routine) => void;
   onDeleteRitual: (id: string) => void;
+  /** What a ritual step can open, and Add new rocket. */
+  rockets?: RocketOption[];
+  onAddRocket?: (url: string) => Promise<void>;
   /** Ticks something for today: a Non-Negotiable's id or a ritual step's key. */
   onTick: (key: string, on?: boolean) => void;
   /** Today's journal check-ins, for a ritual's check-in step. */
@@ -295,6 +298,8 @@ export function Days26Page(p: Props) {
           <RitualForm
             ritual={ritualEdit.r}
             isNew={ritualEdit.isNew}
+            rockets={p.rockets}
+            onAddRocket={p.onAddRocket}
             onSave={(r) => {
               p.onSaveRitual(r);
               showRitual(r.id);
