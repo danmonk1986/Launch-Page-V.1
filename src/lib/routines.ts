@@ -14,8 +14,10 @@ export interface RoutineItem {
   picked?: string;
   /** Tapping the step's name opens this (a site or an app link). */
   url?: string;
-  /** Meditation: the words that play up the screen. */
+  /** Meditation: the words that play up the screen (kept as a fallback; the library has the live copy). */
   script?: string;
+  /** Meditation: which one from the library (lib/meditations.ts). */
+  meditationId?: string;
   /** Check-in: which of today's journal check-ins (1 = ✓ Check in #1). */
   checkin?: number;
   /** Routine steps only: the Non-Negotiable this step is (kept in sync, see nnsync.ts). */

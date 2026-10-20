@@ -12,6 +12,7 @@ import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
 import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
 import { syncNonNegs } from './lib/nnsync';
+import { meditationStore, MeditationsContext, type Meditation } from './lib/meditations';
 import { nextRepeat, readRepeat, writeRepeat } from './lib/repeat';
 import { Days26Page } from './components/Days26';
 import {
@@ -137,6 +138,8 @@ export default function App() {
   const [budget, setBudget] = useState<BudgetLine[]>([]);
   const [d26Config, setD26Config] = useState<Config>(DEFAULT_CONFIG);
   const [d26Ready, setD26Ready] = useState(false);
+  const [meditations, setMeditations] = useState<Meditation[]>([]);
+  const [medReady, setMedReady] = useState(false);
   const tasksRef = useRef<Task[]>([]);
   const [gcalOff, setGcalOff] = useState(0);
   const [focusTask, setFocusTask] = useState<string | null>(null);
@@ -263,6 +266,10 @@ export default function App() {
       const b1 = await budgetStore.load(userId);
       if (!live) return;
       setBudget(b1.items);
+      const md = await meditationStore.load(userId);
+      if (!live) return;
+      setMeditations(md.items);
+      setMedReady(true);
       setStoreProblem(l1.problem ?? l2.problem ?? l3.problem ?? p1.problem ?? t1.problem ?? j1.problem ?? n1.problem ?? dd.problem ?? lg.problem);
     })();
     return () => {
@@ -323,6 +330,17 @@ export default function App() {
   const projectOps = ops(projectStore, projects, setProjects, (p) => p.name);
   const taskOps = ops(taskStore, tasks, setTasks, (t) => t.task);
   const nonNegOps = ops(nonNegStore, nonnegs, setNonnegs, (n) => n.label);
+  // Meditations save from the newest copy (several can change in one ritual save).
+  const medsRef = useRef(meditations);
+  medsRef.current = meditations;
+  async function saveMeditation(m: Meditation) {
+    const list = medsRef.current;
+    const next = list.some((x) => x.id === m.id) ? list.map((x) => (x.id === m.id ? m : x)) : [...list, m];
+    medsRef.current = next;
+    setMeditations(next);
+    const ok = await meditationStore.save(userId, m, next);
+    if (!ok) setStatus(`${m.title || 'Meditation'} saved on this device only.`);
+  }
   const quoteOps = ops(quoteStore, quotes, setQuotes, () => 'Quote');
   const budgetOps = ops(budgetStore, budget, setBudget, (l) => l.description);
   /** An import: the budget becomes exactly this list. */
@@ -391,6 +409,38 @@ export default function App() {
       if (!ok) setStatus('Non-Negotiables synced to routines on this device only.');
     })();
   }, [d26Ready, nonnegs, userId]);
+  // Once: meditation steps that kept their own script move into the library (Oct 20).
+  const medMoved = useRef(false);
+  useEffect(() => {
+    if (!medReady || medMoved.current || routines.length === 0) return;
+    medMoved.current = true;
+    void (async () => {
+      let lib = medsRef.current;
+      const changedRituals: Routine[] = [];
+      for (const r of routinesRef.current.filter((x) => x.kind === 'ritual')) {
+        let changed = false;
+        const items = r.items.map((s) => {
+          if (s.type !== 'meditation' && !/medit/i.test(s.label)) return s;
+          if (s.meditationId || !s.script?.trim()) return s;
+          const same = lib.find((m) => m.script.trim() === s.script!.trim());
+          const m = same ?? { id: crypto.randomUUID(), title: s.label.trim() || 'Meditation', script: s.script, sort: lib.length };
+          if (!same) {
+            lib = [...lib, m];
+            void saveMeditation(m);
+          }
+          changed = true;
+          return { ...s, meditationId: m.id };
+        });
+        if (changed) changedRituals.push({ ...r, items });
+      }
+      if (!changedRituals.length) return;
+      const next = routinesRef.current.map((x) => changedRituals.find((c) => c.id === x.id) ?? x);
+      routinesRef.current = next;
+      setRoutines(next);
+      for (const r of changedRituals) await saveRoutine(userId, r, next);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [medReady, routines.length]);
   async function saveRitual(r: Routine) {
     const exists = routines.some((x) => x.id === r.id);
     const next = exists ? routines.map((x) => (x.id === r.id ? r : x)) : [...routines, r];
@@ -756,6 +806,7 @@ export default function App() {
   }
 
   return (
+    <MeditationsContext.Provider value={{ list: meditations, save: saveMeditation }}>
     <div className={`${scrolled ? 'app is-scrolled' : 'app'}${bgImage ? ' has-bg-image' : ''}`} style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'} data-scroll={scrollMode}>
       <div className="sky" aria-hidden="true">
         <div className="sky-lines" />
@@ -1129,5 +1180,6 @@ export default function App() {
         }
       />
     </div>
+    </MeditationsContext.Provider>
   );
 }

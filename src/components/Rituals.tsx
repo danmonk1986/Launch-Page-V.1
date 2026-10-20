@@ -1,4 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { MeditationsContext } from '../lib/meditations';
 import { FormActions } from './Sheet';
 import { Icon } from './Tasks';
 import type { Routine, RoutineItem } from '../lib/routines';
@@ -96,7 +97,16 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
   const done = steps.filter(({ i }) => isTicked(i)).length;
   const [playing, setPlaying] = useState<number | null>(null);
   const all = steps.length > 0 && done === steps.length;
-  const setScript = (i: number, script: string) => onSaveRitual({ ...ritual, items: ritual.items.map((x, j) => (j === i ? { ...x, script } : x)) });
+  const med = useContext(MeditationsContext);
+  const libOf = (s?: RoutineItem) => (s?.meditationId ? med.list.find((m) => m.id === s.meditationId) : undefined);
+  const scriptOf = (s?: RoutineItem) => libOf(s)?.script ?? s?.script ?? '';
+  // Editing under the player changes the library copy, so every ritual using it changes too.
+  const setScript = (i: number, script: string) => {
+    const s = ritual.items[i];
+    const lib = libOf(s);
+    if (lib) return void med.save({ ...lib, script });
+    onSaveRitual({ ...ritual, items: ritual.items.map((x, j) => (j === i ? { ...x, script } : x)) });
+  };
 
   const number = new Map(steps.map(({ i }, n) => [i, n + 1]));
   const renderStep = ({ s, i }: { s: RoutineItem; i: number }) => {
@@ -197,7 +207,7 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
       {playing !== null && (
         <MeditationCrawl
           title={ritual.items[playing]?.label ?? 'Meditation'}
-          script={ritual.items[playing]?.script ?? ''}
+          script={scriptOf(ritual.items[playing])}
           onClose={() => setPlaying(null)}
           onCheck={() => {
             onTick(playing, true);
@@ -501,10 +511,11 @@ type Draft = RoutineItem & { k: string };
 
 /** Name and steps; each step can be a plain step, a meditation or a journal check-in, with a link. */
 export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAddRocket }: { ritual: Routine; isNew: boolean; onSave: (r: Routine) => void; onDelete: () => void; /** What a step can open (Oct 20: pick a rocket, not type a link). */ rockets?: RocketOption[]; onAddRocket?: (url: string) => Promise<void> }) {
+  const med = useContext(MeditationsContext);
   const [name, setName] = useState(ritual.name);
   const [dates, setDates] = useState<string[]>(() => ritual.onDates ?? []);
   const [rows, setRows] = useState<Draft[]>(() => {
-    const list = ritual.items.map((s) => ({ ...s, ...(() => {
+    const list = ritual.items.map((s) => ({ ...s, ...(s.meditationId ? { script: med.list.find((m) => m.id === s.meditationId)?.script ?? s.script } : {}), ...(() => {
       const t = stepType(s);
       return { type: t.type, checkin: t.type === 'checkin' ? t.checkin : undefined };
     })(), k: crypto.randomUUID() }));
@@ -531,7 +542,16 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
           .map((r) => {
             const out: RoutineItem = { time: null, label: r.label.trim(), type: r.type ?? 'step' };
             if (r.url?.trim()) out.url = r.url.trim();
-            if (r.type === 'meditation') out.script = r.script ?? '';
+            if (r.type === 'meditation') {
+              out.script = r.script ?? '';
+              // Into the library: a picked one is updated, a new one (+ or a typed script) is added.
+              const id = r.meditationId ?? (out.script.trim() ? crypto.randomUUID() : undefined);
+              if (id) {
+                const lib = med.list.find((m) => m.id === id);
+                if (!lib || lib.script !== out.script) void med.save({ id, title: lib?.title || r.label.trim() || 'Meditation', script: out.script, sort: lib?.sort ?? med.list.length });
+                out.meditationId = id;
+              }
+            }
             if (r.type === 'checkin') out.checkin = Math.max(1, r.checkin ?? 1);
             if (r.type === 'list') {
               out.options = [...new Set((r.options ?? []).map((o) => o.trim()).filter(Boolean))];
@@ -593,6 +613,29 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
                 <RocketPicker single options={rockets} picked={r.url ? [r.url] : []} onChange={(urls) => set(i, { url: urls[0] || undefined })} onAddNew={onAddRocket} />
               )}
               {r.type === 'list' && <ListOptions value={r.options ?? []} onChange={(options) => set(i, { options })} />}
+              {r.type === 'meditation' && (
+                <div className="rocket-new">
+                  <select
+                    value={r.meditationId ?? ''}
+                    aria-label="Meditation from the library"
+                    onChange={(e) => {
+                      const m = med.list.find((x) => x.id === e.target.value);
+                      set(i, m ? { meditationId: m.id, script: m.script } : { meditationId: undefined });
+                    }}
+                  >
+                    <option value="">{r.script?.trim() ? 'New: saves to the library' : 'Pick a meditation'}</option>
+                    {med.list.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.title || 'Untitled'}
+                      </option>
+                    ))}
+                    {r.meditationId && !med.list.some((m) => m.id === r.meditationId) && <option value={r.meditationId}>{r.label.trim() || 'New meditation'} (new)</option>}
+                  </select>
+                  <button type="button" className="icon-btn tool-btn" aria-label="New meditation" title="Write a new meditation" onClick={() => set(i, { meditationId: crypto.randomUUID(), script: '' })}>
+                    <Icon d={PLUS} />
+                  </button>
+                </div>
+              )}
               {r.type === 'meditation' && (
                 <textarea value={r.script ?? ''} rows={4} onChange={(e) => set(i, { script: e.target.value })} placeholder="The words that play up the screen" aria-label="Meditation script" />
               )}
