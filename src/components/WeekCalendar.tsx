@@ -177,19 +177,29 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
   const onNorthStar = (e: CalEvent) => !!e.google && (northStarCals.has(e.google.calendarId) || /^north\s*star$/i.test((e.google.calendar ?? '').trim()));
   const isTheme = (e: CalEvent) =>
     !e.google?.time && (onNorthStar(e) || (e.startDate === e.endDate && themeTitles.has(e.title.trim().toLowerCase())));
-  // Long all-day events (a week or more, like OPTIMIZE LAUNCH! SHEET) keep the bar look but sit with the rest.
-  const isLong = (e: CalEvent) => !e.google?.time && dateNum(e.endDate) - dateNum(e.startDate) >= 6;
-  const main = layoutWeek(all.filter((e) => !isTheme(e)), start).map((p) => (isLong(p.event) ? { ...p, theme: true } : p));
+  // One tile per day (Oct 20): anything that runs over several days, themes and the North
+  // Star included, shows as its own tile on each day it covers instead of one stretched bar.
+  const weekDays = days.map(isoDate);
+  const original = new Map<string, CalEvent>();
+  const perDay = (list: CalEvent[]) => {
+    const out: CalEvent[] = [];
+    const seen = new Set<string>();
+    for (const e of list) {
+      for (const day of weekDays) {
+        if (day < e.startDate || day > e.endDate) continue;
+        const id = e.startDate === e.endDate ? e.id : `${e.id}@${day}`;
+        const dupe = `${e.title.trim().toLowerCase()}@${day}`;
+        if (isTheme(e) && seen.has(dupe)) continue;
+        seen.add(dupe);
+        original.set(id, e);
+        out.push({ ...e, id, startDate: day, endDate: day });
+      }
+    }
+    return out;
+  };
+  const main = layoutWeek(perDay(all.filter((e) => !isTheme(e))), start);
   const mainLanes = main.reduce((m, p) => Math.max(m, p.lane + 1), 0);
-  // Back-to-back days of the same theme become one bar, always on the last row.
-  const merged: CalEvent[] = [];
-  for (const e of all.filter(isTheme).sort((a, b) => a.startDate.localeCompare(b.startDate))) {
-    const prev = merged.find((m) => m.title.trim().toLowerCase() === e.title.trim().toLowerCase() && dateNum(e.startDate) <= dateNum(m.endDate) + 1);
-    if (prev) {
-      if (e.endDate > prev.endDate) prev.endDate = e.endDate;
-    } else merged.push({ ...e });
-  }
-  const themes = layoutWeek(merged, start).map((p) => ({ ...p, lane: p.lane + mainLanes, theme: true }));
+  const themes = layoutWeek(perDay(all.filter(isTheme)), start).map((p) => ({ ...p, lane: p.lane + mainLanes, theme: true }));
   const placed = [...main, ...themes];
   const lanes = placed.reduce((m, p) => Math.max(m, p.lane + 1), 0);
   const end = days[6];
@@ -289,13 +299,13 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
                   ? { borderLeftColor: colorForCalendar(projects, event.google.calendarId) ?? event.google.color ?? undefined }
                   : {})
               }}
-              title={event.google ? `${event.title} · ${event.google.calendar ?? 'Google Calendar'}` : event.title}
+              // The time sits in the hover and the editor, so the tile has room for the title (Oct 20).
+              title={`${event.google?.time ? `${event.google.time} · ` : ''}${event.title}${event.google ? ` · ${event.google.calendar ?? 'Google Calendar'}` : ''}`}
               onClick={() => {
-                setEditing(event);
+                setEditing(original.get(event.id) ?? event);
                 setOpen(true);
               }}
             >
-              {event.google?.time && <span className="ev-time">{event.google.time}</span>}
               {event.title}
             </button>
           ))}
