@@ -642,6 +642,13 @@ function splitTitle(t: string) {
   return i < 0 ? { cat: t.trim(), desc: '' } : { cat: t.slice(0, i).trim(), desc: t.slice(i + 3).trim() };
 }
 const joinTitle = (c: string, x: string) => (x.trim() ? `${c.trim()} - ${x.trim()}` : c.trim());
+/** The day after the latest date already picked, for + Add another date. */
+function nextFree(l: Launch) {
+  const all = [l.onDate, ...(l.moreDates ?? [])].filter((x): x is string => !!x).sort();
+  const last = all.length ? new Date(`${all[all.length - 1]}T12:00:00`) : new Date();
+  last.setDate(last.getDate() + 1);
+  return isoDate(last);
+}
 
 function TimedForm({
   launch,
@@ -717,7 +724,8 @@ function TimedForm({
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.title.trim()) return;
-        const next = { ...d, active: true, notify: false, title: d.title.trim(), urls: d.urls.filter((u) => u && !isBarePrefix(u)) };
+        const more = d.repeat === 'once' ? [...new Set((d.moreDates ?? []).filter((x) => x && x !== d.onDate))].sort() : [];
+        const next = { ...d, active: true, notify: false, title: d.title.trim(), urls: d.urls.filter((u) => u && !isBarePrefix(u)), ...(d.moreDates !== undefined || more.length ? { moreDates: more } : {}) };
         // A repeating launch whose time changed: ask whether it's just the next one or every time.
         if (launch && launch.repeat !== 'once' && launch.repeat !== 'hourly' && d.atTime !== launch.atTime && !scope) {
           setAsk(next);
@@ -939,10 +947,30 @@ function TimedForm({
         </label>
       )}
       {d.repeat === 'once' && (
-        <label className="field">
-          <span>Date</span>
-          <input type="date" value={d.onDate ?? ''} onChange={(e) => set('onDate', e.target.value || null)} />
-        </label>
+        <fieldset className="field">
+          <legend>Date</legend>
+          {/* Once on a few picked dates: + adds another (Oct 20). */}
+          <div className="once-dates">
+            <div className="once-date">
+              <input type="date" value={d.onDate ?? ''} onChange={(e) => set('onDate', e.target.value || null)} aria-label="Date" />
+              <button type="button" className="icon-btn tool-btn" aria-label="Add another date" title="Add another date" onClick={() => set('moreDates', [...(d.moreDates ?? []), nextFree(d)])}>
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+            </div>
+            {(d.moreDates ?? []).map((x, i) => (
+              <div key={i} className="once-date">
+                <input type="date" value={x} onChange={(e) => set('moreDates', (d.moreDates ?? []).map((y, j) => (j === i ? e.target.value : y)))} aria-label={`Date ${i + 2}`} />
+                <button type="button" className="icon-btn tool-btn" aria-label={`Remove date ${i + 2}`} title="Remove this date" onClick={() => set('moreDates', (d.moreDates ?? []).filter((_, j) => j !== i))}>
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </fieldset>
       )}
 
       <fieldset className="field">

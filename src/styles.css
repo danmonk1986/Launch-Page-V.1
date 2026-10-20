@@ -612,6 +612,9 @@ input:-webkit-autofill:focus {
 
 .tab-picks { display: flex; flex-wrap: wrap; gap: 8px; }
 .rocket-picker { display: grid; gap: 10px; }
+.once-dates { display: grid; gap: 8px; }
+.once-date { display: flex; gap: 8px; align-items: center; }
+.once-date input { flex: 1; min-width: 0; }
 .rocket-new { display: flex; gap: 8px; align-items: center; }
 .rocket-new input { flex: 1; min-width: 0; }
 

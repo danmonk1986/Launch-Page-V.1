@@ -29,6 +29,8 @@ export interface Launch {
   weekdays: number[]; // 0 = Sunday
   monthDay: number | null;
   onDate: string | null; // "YYYY-MM-DD"
+  /** Once: more picked dates, not a pattern (Oct 21 / Oct 22 / Oct 23). Column from 0024. */
+  moreDates?: string[];
   minutes: number;
   urls: string[];
   active: boolean;
@@ -276,6 +278,7 @@ type LaunchRow = {
   log_kind?: string | null;
   log_amount?: number | null;
   until_time?: string | null;
+  more_dates?: string[] | null;
   sort: number;
 };
 
@@ -335,6 +338,8 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     ...('ritualId' in l ? { ritual_id: l.ritualId ?? null } : {}),
     ...('logKind' in l ? { log_kind: l.logKind ?? null, log_amount: l.logAmount ?? null } : {}),
     ...('untilTime' in l ? { until_time: l.untilTime ?? null } : {}),
+    // Only sent when there are more dates (needs 0024), so older setups keep saving cleanly.
+    ...(l.moreDates && l.moreDates.length ? { more_dates: l.moreDates } : 'moreDates' in l && l.moreDates ? { more_dates: [] } : {}),
     sort: l.sort
   }),
   fromRow: (r) => ({
@@ -356,6 +361,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     ...(r.ritual_id !== undefined ? { ritualId: r.ritual_id } : {}),
     ...(r.log_kind !== undefined ? { logKind: (r.log_kind as LaunchLogKind | null) ?? null, logAmount: r.log_amount == null ? null : Number(r.log_amount) } : {}),
     ...(r.until_time !== undefined ? { untilTime: r.until_time } : {}),
+    ...(r.more_dates !== undefined ? { moreDates: r.more_dates ?? [] } : {}),
     sort: r.sort
   })
 });
@@ -394,7 +400,8 @@ export function happensOn(l: Launch, day: Date) {
   if (l.movedTo && l.movedTo === isoDate(day)) return true;
   if (l.repeat === 'weekly') return l.weekdays.includes(day.getDay());
   if (l.repeat === 'monthly') return l.monthDay === day.getDate();
-  return l.onDate === isoDate(day);
+  const iso = isoDate(day);
+  return l.onDate === iso || !!l.moreDates?.includes(iso);
 }
 
 /** Due from its start time until its time allotted runs out. */
@@ -418,7 +425,8 @@ export function describeSchedule(l: Launch) {
     return l.weekdays.length ? l.weekdays.map((d) => WEEKDAY[d]).join(', ') : 'No days picked';
   }
   if (l.repeat === 'monthly') return l.monthDay ? `Monthly on the ${ordinal(l.monthDay)}` : 'Monthly';
-  return l.onDate ? new Date(`${l.onDate}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : 'One date';
+  const dates = [l.onDate, ...(l.moreDates ?? [])].filter((x): x is string => !!x).sort();
+  return dates.length ? dates.map((x) => new Date(`${x}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })).join(' / ') : 'One date';
 }
 
 function clock12(t: string) {
@@ -532,7 +540,13 @@ export function skipToTomorrow(l: Launch, today: Date): Launch {
   const d = launchDate(l, today);
   const t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 12);
   const tomorrow = isoDate(t);
-  return l.repeat === 'once' ? { ...l, onDate: tomorrow, movedTo: null } : { ...l, movedTo: tomorrow };
+  if (l.repeat === 'once') {
+    // Several dates: only the skipped one moves to the next day.
+    const run = isoDate(d);
+    if (l.moreDates?.includes(run)) return { ...l, moreDates: l.moreDates.map((x) => (x === run ? tomorrow : x)), movedTo: null };
+    return { ...l, onDate: tomorrow, movedTo: null };
+  }
+  return { ...l, movedTo: tomorrow };
 }
 
 /** Today's open ones first (by time), then the rest by time. */
