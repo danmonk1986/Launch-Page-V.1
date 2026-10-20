@@ -49,7 +49,7 @@ import { buildJournalImport, byNewest, checkinsOf, journalStore, newEntry, withC
 import { JournalPanel } from './components/Journal';
 import { Sheet } from './components/Sheet';
 import { RitualRunner } from './components/Rituals';
-import { buildImport, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
+import { buildImport, newTask, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
 import { addTaskToGoogle, googleConfigured, knownCalendars, wasConnected } from './lib/google';
 import {
   isDue,
@@ -544,6 +544,22 @@ export default function App() {
     }
   }
 
+  /** Budget ⋯ → Add to calendar: an all-day event on the line's date, in its project's calendar. */
+  async function budgetToCalendar(l: BudgetLine, projectId: string | null) {
+    if (!googleConfigured()) return setStatus('Google Calendar isn’t set up for this app yet.');
+    const proj = projects.find((x) => x.id === projectId);
+    const parent = proj?.parentId ? projects.find((x) => x.id === proj.parentId) : null;
+    const calendarId = proj?.calendarId ?? parent?.calendarId ?? 'primary';
+    const date = l.date ?? isoDate(new Date());
+    try {
+      await addTaskToGoogle({ calendarId, title: l.description, date, time: null, details: [l.amount === null ? '' : `$${l.amount}`, l.notes].filter(Boolean).join('\n') });
+      const cal = knownCalendars().find((c) => c.id === calendarId)?.summary ?? 'your calendar';
+      setStatus(`${l.description} added to ${cal}.`);
+    } catch (err) {
+      setStatus((err as Error).message || 'Could not add it to Google Calendar.');
+    }
+  }
+
   /** ⋯ → Create launch: a timed launch from the task, opening its link at its time. */
   /** Create launch from a task: opens Add timed launch filled in, so it can be checked before saving. */
   function createLaunchFromTask(t: Task) {
@@ -919,7 +935,28 @@ export default function App() {
               onCheckin={setCheckin}
             />
           ) : page === 'budget' ? (
-            <BudgetPage lines={budget} projects={projects} onSave={budgetOps.save} onDelete={budgetOps.remove} onReplace={replaceBudget} onClose={() => setPage('launch')} />
+            <BudgetPage
+              lines={budget}
+              projects={projects}
+              onSave={budgetOps.save}
+              onDelete={budgetOps.remove}
+              onReplace={replaceBudget}
+              onClose={() => setPage('launch')}
+              onToCalendar={budgetToCalendar}
+              onToLaunch={(l) => {
+                const now = new Date();
+                const firstBlock = now.getHours() * 60 + now.getMinutes() < 9 * 60 + 30 ? now : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12);
+                setPage('launch');
+                setTimedPreset({ fill: { title: l.description, atTime: '09:30', repeat: 'once', weekdays: [], monthDay: null, onDate: l.date ?? isoDate(firstBlock), urls: [] }, n: Date.now() });
+              }}
+              onToTask={async (l, projectId) => {
+                const t: Task = { ...newTask(tasks.length, projectId), task: l.description || 'Budget item', description: l.category || l.pmtCategory || '', endDate: l.date, expense: l.amount === null ? '' : String(l.amount), notes: l.notes };
+                await taskOps.save(t);
+                setFocusTask(t.id);
+                setPage('tasks');
+                setStatus(`${t.task} added to Tasks.`);
+              }}
+            />
           ) : (
             <ComingSoon page={page} />
           )}

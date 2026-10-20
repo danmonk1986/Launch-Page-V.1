@@ -40,7 +40,52 @@ type Props = {
   onDelete: (id: string) => Promise<void>;
   onReplace: (lines: BudgetLine[]) => Promise<void>;
   onClose: () => void;
+  /** ⋯ on a line (Oct 20): the same as a task's, with Add a task in place of Add a step. */
+  onToCalendar: (l: BudgetLine, projectId: string | null) => void;
+  onToLaunch: (l: BudgetLine) => void;
+  onToTask: (l: BudgetLine, projectId: string | null) => void;
 };
+
+/** The ⋯ menu on a budget line. */
+function LineMenu({ l, onEdit, onCalendar, onLaunch, onTask, onRemove }: { l: BudgetLine; onEdit: () => void; onCalendar: () => void; onLaunch: () => void; onTask: () => void; onRemove: () => void }) {
+  const [open, setOpen] = useState(false);
+  const run = (fn: () => void) => () => {
+    fn();
+    setOpen(false);
+  };
+  return (
+    <div
+      className="row-menu"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
+      onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}
+    >
+      <button type="button" className="quick-btn quick-skip task-quick" aria-haspopup="menu" aria-expanded={open} aria-label={`More for ${l.description}`} title="More" onClick={() => setOpen((o) => !o)}>
+        <Icon d="M5 12h.01M12 12h.01M19 12h.01" size={18} />
+      </button>
+      {open && (
+        <div className="row-menu-list" role="menu">
+          <button type="button" role="menuitem" onClick={run(onEdit)}>
+            Edit
+          </button>
+          <button type="button" role="menuitem" onClick={run(onCalendar)}>
+            Add to calendar
+          </button>
+          <button type="button" role="menuitem" onClick={run(onLaunch)}>
+            Create launch
+          </button>
+          <button type="button" role="menuitem" onClick={run(onTask)}>
+            Add a task
+          </button>
+          <button type="button" role="menuitem" className="menu-danger" onClick={run(onRemove)}>
+            Remove
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const norm = (s: string) => s.toLowerCase().replace(/^stardvst\s+/, '').replace(/[^a-z0-9]/g, '');
 
@@ -214,6 +259,7 @@ export function BudgetPage(p: Props) {
                 <th>Pmt category</th>
                 <th className="col-amount">Amount</th>
                 <th className="col-notes">Notes</th>
+                <th className="col-actions" aria-label="More" />
               </tr>
             </thead>
             {sections.map((id) => {
@@ -233,10 +279,11 @@ export function BudgetPage(p: Props) {
                     </th>
                     <th className="col-amount budget-subtotal">{money(sumLines(rows))}</th>
                     <th />
+                    <th />
                   </tr>
                   {!shut && rows.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="task-empty">
+                      <td colSpan={10} className="task-empty">
                         Nothing here.
                       </td>
                     </tr>
@@ -271,6 +318,18 @@ export function BudgetPage(p: Props) {
                         <td className="col-amount">{l.amount === null ? '' : money(l.amount)}</td>
                         <td className="col-notes" title={l.notes}>
                           {l.notes}
+                        </td>
+                        <td className="col-actions">
+                          <div className="timed-quick">
+                            <LineMenu
+                              l={l}
+                              onEdit={() => setEditing(l)}
+                              onCalendar={() => p.onToCalendar(l, projectFor(l.project)?.id ?? null)}
+                              onLaunch={() => p.onToLaunch(l)}
+                              onTask={() => p.onToTask(l, projectFor(l.project)?.id ?? null)}
+                              onRemove={() => void p.onDelete(l.id)}
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))}
