@@ -520,7 +520,14 @@ export function openTabs(urls: string[]) {
   for (const raw of urls) {
     const url = normalizeUrl(raw);
     if (!url) continue;
-    if (openCard(url)) continue;
+    // A timed launch opens each card in its own tab at that page (LaunchPage.app/#tasks), so the
+    // Launch Page stays put and Tasks + Budget can both open (Oct 20). Tapping a tile stays in place.
+    const card = cardOf(url);
+    if (card) {
+      const w = window.open(`${window.location.origin}${window.location.pathname}#${card.page}`, '_blank');
+      if (!w) blocked += 1;
+      continue;
+    }
     if (isAppLink(url)) {
       openApp(url);
       continue;

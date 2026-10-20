@@ -101,7 +101,16 @@ export default function App() {
   const [settings, setSettings] = useState<BrandSettings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState<false | 'brand' | 'colours'>(false);
   const [status, setStatus] = useState('');
-  const [page, setPage] = useState<PageId>('launch');
+  // A page in the address (#tasks, #budget…) opens there: card rockets from a timed launch use it.
+  const [page, setPage] = useState<PageId>(() => {
+    const h = window.location.hash.replace('#', '');
+    return (['launch', 'tasks', 'days26', 'budget', 'journal'] as PageId[]).includes(h as PageId) ? (h as PageId) : 'launch';
+  });
+  useEffect(() => {
+    // Keep the address on the page you're on, so a refresh stays there.
+    const want = page === 'launch' ? '' : `#${page}`;
+    if (window.location.hash !== want) history.replaceState(null, '', `${window.location.pathname}${want}`);
+  }, [page]);
   // Phones fold the headline out of the fixed header once the page scrolls.
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
