@@ -126,6 +126,8 @@ export function LaunchersPanel(p: Props) {
   };
   const [showAllTimed, setShowAllTimed] = useState(false);
   const [view, setView] = useState<TimedView>('active');
+  // The X on a row asks first: skip just today, or remove the launch for good.
+  const [xAsk, setXAsk] = useState<string | null>(null);
   const ordered = orderLaunches(p.launches, p.today, p.handled);
   // The next routine day: 24 hours on from now (the day rolls over at the routine's reset, not midnight).
   const tomorrow = new Date(p.today.getTime() + 86_400_000);
@@ -358,18 +360,36 @@ export function LaunchersPanel(p: Props) {
                       {how === 'skipped' && (l.repeat === 'hourly' ? ' · skipped this hour' : ' · skipped, back tomorrow')}
                     </span>
                   </button>
-                  {todays && (!how || how === 'launched') && (
+                  {todays && (!how || how === 'launched') && xAsk === l.id && (
+                    <div className="timed-quick timed-xask" role="group" aria-label={`Remove ${l.title}`}>
+                      <button type="button" className="btn btn-quiet" onClick={() => { setXAsk(null); p.onFinish(l, 'skipped'); }}>
+                        {l.repeat === 'hourly' ? 'Skip this hour' : 'Skip today'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-quiet"
+                        onClick={async () => {
+                          setXAsk(null);
+                          await p.onDeleteLaunch(l.id);
+                          p.onStatus(`${l.title} removed for good.`);
+                        }}
+                      >
+                        Remove for good
+                      </button>
+                      <button type="button" className="quick-btn" aria-label="Cancel" title="Cancel" onClick={() => setXAsk(null)}>
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M15 18l-6-6 6-6" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  {todays && (!how || how === 'launched') && xAsk !== l.id && (
                     <div className="timed-quick">
                       {opensSomething(l) ? (
                         <button type="button" className="quick-btn quick-launch" aria-label={`Launch ${l.title} now`} title="Launch now" onClick={() => p.onLaunchNow(l)}>
                           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
                           </svg>
-                        </button>
-                      ) : l.logKind ? (
-                        // Nothing to open: one tap logs it (its preset) and checks it off.
-                        <button type="button" className="quick-btn quick-log" aria-label={`Log ${l.title}`} title={`Log: ${describeLog(l)}`} onClick={() => p.onFinish(l, 'done')}>
-                          LOG
                         </button>
                       ) : null}
                       <button
@@ -386,9 +406,9 @@ export function LaunchersPanel(p: Props) {
                       <button
                         type="button"
                         className="quick-btn quick-skip"
-                        aria-label={`Skip ${l.title} today`}
-                        title="Skip today"
-                        onClick={() => p.onFinish(l, 'skipped')}
+                        aria-label={`Skip or remove ${l.title}`}
+                        title="Skip today or remove"
+                        onClick={() => setXAsk(l.id)}
                       >
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                           <path d="M6 6l12 12M18 6L6 18" />
@@ -828,7 +848,7 @@ function TimedForm({
                 ? 'Logs the time from Launch to Done as work blocks.'
                 : `Logs the time allotted as work blocks (${Math.round((d.minutes / 90) * 4) / 4}).`
               : 'Logs this amount every time.'}{' '}
-          {!d.urls.length && !d.ritualId && 'Nothing to open, so its button is LOG: one tap logs it and checks it off.'}
+          {'Checking it off (✓) logs it.'}
         </p>
       )}
 

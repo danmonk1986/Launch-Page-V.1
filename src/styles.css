@@ -1840,8 +1840,6 @@ dialog.crawl::backdrop { background: #000000; }
 @media (max-width: 640px) { .rit-left .rit-tiles { grid-template-columns: minmax(0, 1fr); } }
 
 /* Timed launches with nothing to open: LOG in place of the rocket (Oct 17). */
-.quick-btn.quick-log { width: auto; padding: 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; color: var(--accent-teal); border-color: var(--accent-teal); }
-.quick-btn.quick-log:hover { background: color-mix(in srgb, var(--accent-teal) 14%, transparent); }
 .timed-log-hint { margin: -6px 0 14px; }
 
 /* Header (Oct 17, 10:55 PM): date and time 4px smaller; headline and mantra 4px bigger; bigger logo. */

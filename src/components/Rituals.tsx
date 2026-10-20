@@ -499,7 +499,7 @@ export function RitualForm({ ritual, isNew, onSave, onDelete }: { ritual: Routin
                   </button>
                 </span>
               </div>
-              {(r.type ?? 'step') === 'step' && <input value={r.url ?? ''} onChange={(e) => set(i, { url: e.target.value })} placeholder="Link it opens (optional): headway.app" aria-label="Link" />}
+              {(r.type ?? 'step') === 'step' && <input value={r.url ?? ''} onChange={(e) => set(i, { url: e.target.value })} placeholder="Rocket to launch (optional): makeheadway.com" aria-label="Rocket to launch" />}
               {r.type === 'meditation' && (
                 <textarea value={r.script ?? ''} rows={4} onChange={(e) => set(i, { script: e.target.value })} placeholder="The words that play up the screen" aria-label="Meditation script" />
               )}

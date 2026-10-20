@@ -447,7 +447,9 @@ export const APP_LINKS: { name: string; url: string }[] = [
   { name: 'Zoom', url: 'zoommtg://' },
   { name: 'Teams', url: 'msteams:' },
   { name: 'Discord', url: 'discord://' },
-  { name: 'VS Code', url: 'vscode://' }
+  { name: 'VS Code', url: 'vscode://' },
+  // Web app (no desktop app link): opens as a tab.
+  { name: 'Headway', url: 'https://makeheadway.com/' }
 ];
 
 const UNSAFE_SCHEMES = /^(javascript|data|vbscript|file|blob|about):/i;
