@@ -83,3 +83,51 @@ export function TimeUpReminder({ launch, onDone, onMore, onTomorrow }: TimeUpPro
     </Sheet>
   );
 }
+
+type MissedProps = {
+  /** Missed and due-now launches, by time. Empty = closed. */
+  launches: Launch[];
+  onLaunch: (l: Launch) => void;
+  onDone: (l: Launch) => void;
+  onSkip: (l: Launch) => void;
+  /** Close: they stay in Active; this pop-up won't come back for them today. */
+  onClose: () => void;
+};
+
+/** Everything missed while the app was closed, in one pop-up instead of one at a time (Oct 21). */
+export function MissedLaunches({ launches, onLaunch, onDone, onSkip, onClose }: MissedProps) {
+  const now = new Date();
+  return (
+    <Sheet open={launches.length > 0} title={`Missed · ${launches.length}`} onClose={onClose}>
+      <div className="reminder">
+        <p className="panel-empty">While you were away. Launch, check off or skip each one; close to leave them in Active.</p>
+        <ul className="missed-list">
+          {launches.map((l) => (
+            <li key={l.id} className="missed-row">
+              <span className="timed-time">{formatMinutes(toMinutes(timeFor(l, now)))}</span>
+              <span className="missed-title">{l.title}</span>
+              <span className="missed-actions">
+                {opensSomething(l) && (
+                  <button type="button" className="btn btn-quiet" title={l.ritualId ? 'Open the ritual' : `Open ${describeOpens(l.urls)}`} onClick={() => onLaunch(l)}>
+                    Launch
+                  </button>
+                )}
+                <button type="button" className="btn btn-quiet" title={l.logKind ? `Log ${describeLog(l)} and check it off` : 'Check it off'} onClick={() => onDone(l)}>
+                  {l.logKind ? 'Log' : 'Done'}
+                </button>
+                <button type="button" className="btn btn-quiet" title={l.repeat === 'once' ? 'Move to tomorrow, same time' : 'Skip today'} onClick={() => onSkip(l)}>
+                  Skip
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="reminder-actions">
+          <button type="button" className="btn" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </Sheet>
+  );
+}

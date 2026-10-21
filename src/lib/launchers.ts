@@ -412,6 +412,22 @@ export function happensOn(l: Launch, day: Date) {
   return l.onDate === iso || !!l.moreDates?.includes(iso);
 }
 
+/** When today's run of a launch starts (in the routine day that holds `now`). */
+export function runStart(l: Launch, now: Date) {
+  const d = launchDate(l, now);
+  const [h, m] = timeFor(l, now).split(':').map(Number);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m || 0);
+}
+
+/**
+ * Missed (Oct 21): today's run started and its window has passed without a check-off or skip
+ * (the app was closed, the computer asleep). Hourly launches just roll to the next hour.
+ */
+export function isMissed(l: Launch, now: Date) {
+  if (!l.active || l.repeat === 'hourly' || !happensToday(l, now)) return false;
+  return runStart(l, now).getTime() <= now.getTime() && !isDue(l, now);
+}
+
 /** Due from its start time until its time allotted runs out. */
 export function isDue(l: Launch, now: Date) {
   if (!l.active || !happensToday(l, now)) return false;

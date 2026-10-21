@@ -2095,3 +2095,9 @@ select:not([multiple]) {
 .music-list-new { margin-top: 4px; padding: 8px 10px; border: 1px dashed var(--edge-strong); border-radius: 8px; background: none; color: var(--mist); font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
 .music-list-new:hover { color: var(--accent-teal); border-color: var(--accent-teal); }
 .app[data-tone='light'] .music-list-pick { color: #444242; }
+
+/* Missed launches pop-up (Oct 21) */
+.missed-list { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; }
+.missed-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--edge); }
+.missed-title { color: var(--beige); }
+.missed-actions { display: flex; gap: 6px; }

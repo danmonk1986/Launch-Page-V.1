@@ -41,7 +41,7 @@ import {
 import { readScrollMode, writeScrollMode, type ScrollMode } from './lib/view';
 import { TodayPanel, useNow } from './components/TodayPanel';
 import { BLOCKED_HELP, LaunchersPanel, nameFromUrl, rocketOptions, type TimedPreset } from './components/Launchers';
-import { LaunchReminder, TimeUpReminder } from './components/LaunchReminder';
+import { LaunchReminder, MissedLaunches, TimeUpReminder } from './components/LaunchReminder';
 import { chime, unlockAudioOnFirstGesture } from './lib/alerts';
 import { WeekCalendar } from './components/WeekCalendar';
 import { TasksPage, TasksPanel } from './components/Tasks';
@@ -55,6 +55,7 @@ import { buildImport, newTask, repeatOf, taskStore, trashExpired, type ImportRow
 import { addTaskToGoogle, googleConfigured, knownCalendars, wasConnected } from './lib/google';
 import {
   isDue,
+  isMissed,
   isoDate,
   launchStore,
   launcherStore,
@@ -668,14 +669,44 @@ export default function App() {
     await projectOps.remove(p.id);
   }
 
+  // Missed launches (Oct 21): coming back to the app, everything whose time passed today without
+  // a check-off shows in ONE pop-up (with anything due right now), not one reminder after another.
+  // Close keeps them in Active and the pop-up doesn't come back for those runs (kept per device).
+  const MISSED_KEY = 'launchpage.missed.closed.v1';
+  const [missedClosed, setMissedClosed] = useState<Record<string, true>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(MISSED_KEY) ?? '{}');
+    } catch {
+      return {};
+    }
+  });
+  const stillOpen = (l: Launch) => !handled[runKey(l, now)] && !missedClosed[runKey(l, now)];
+  const missedNow = launches.filter((l) => isMissed(l, now) && stillOpen(l));
+  const missedList = missedNow.length
+    ? [...missedNow, ...launches.filter((l) => isDue(l, now) && stillOpen(l) && !(snoozed[l.id] && snoozed[l.id] > now.getTime()))].sort((a, b) =>
+        timeFor(a, now).localeCompare(timeFor(b, now))
+      )
+    : [];
+  function closeMissed() {
+    const next = { ...missedClosed };
+    for (const l of missedList) next[runKey(l, now)] = true;
+    setMissedClosed(next);
+    try {
+      localStorage.setItem(MISSED_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  }
+
   // Timed launches: pop the reminder when one is due and not handled today.
   useEffect(() => {
-    if (reminder) return;
+    if (reminder || missedList.length) return;
     const due = launches.find(
       (l) => isDue(l, now) && !handled[runKey(l, now)] && !(snoozed[l.id] && snoozed[l.id] > now.getTime())
     );
     if (due) setReminder(due);
-  }, [now, launches, reminder, snoozed, handled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, launches, reminder, snoozed, handled, missedList.length]);
 
   // Start alert: chime + desktop notification when a reminder pops.
   useEffect(() => {
@@ -1100,6 +1131,13 @@ export default function App() {
           />
         )}
       </Sheet>
+      <MissedLaunches
+        launches={reminder ? [] : missedList}
+        onLaunch={launchNow}
+        onDone={(l) => finishLaunch(l, 'done')}
+        onSkip={(l) => finishLaunch(l, 'skipped')}
+        onClose={closeMissed}
+      />
       <LaunchReminder
         launch={reminder}
         onLaunch={launchNow}
