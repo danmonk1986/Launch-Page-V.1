@@ -203,7 +203,13 @@ export function Days26Page(p: Props) {
         mode={mode}
         routine={routine}
         shift={shift}
-        onToggle={(n) => toggle(n.id)}
+        onToggle={(n) => {
+          const turningOn = !rec?.ticks.includes(n.id);
+          toggle(n.id);
+          // Oct 22: ticking H2O or a meal opens its log, filled in, so the tick and the log match.
+          const k = logKindFor(n.label);
+          if (turningOn && k && !n.log) setLog({ entry: newLog(k.kind, k.fill), isNew: true });
+        }}
         onLog={(n) => setLog({ entry: newLog(n.log!), isNew: true })}
         ritualFor={ritualFor}
         onOpenRitual={(r) => {
@@ -297,12 +303,22 @@ export function Days26Page(p: Props) {
               for (let i = 0; i < n; i += 1) {
                 p.onSaveLog({ ...e, day, qty: n > 1 ? 1 : e.qty, id: i === 0 ? e.id : crypto.randomUUID(), at: new Date(new Date(e.at).getTime() + i * 1000).toISOString() });
               }
-              // A note that matches a Non-Negotiable ticks it, as a timed launch does.
+              // A note that matches a Non-Negotiable ticks it, as a timed launch does. Oct 22: an H2O
+              // log ticks the H2O / water one, and a food log ticks its meal (Breakfast…), note or not.
               const note = e.note.trim().toLowerCase();
-              if (note.length >= 3 && day === today && e.kind !== 'vices') {
+              if (day === today && e.kind !== 'vices') {
+                const meal = e.kind === 'food' ? splitMeal(e.note).meal.toLowerCase() : '';
+                let waterTicked = false;
                 for (const n of items) {
+                  if (n.log) continue;
                   const label = n.label.trim().toLowerCase();
-                  if (!n.log && label.length >= 3 && (note.includes(label) || label.includes(note))) p.onTick(n.id, true);
+                  const k = logKindFor(n.label);
+                  const byNote = note.length >= 3 && label.length >= 3 && (note.includes(label) || label.includes(note));
+                  // One glass ticks the next water Non-Negotiable not yet ticked, not all of them.
+                  const water = !!k && k.kind === 'h2o' && e.kind === 'h2o' && !waterTicked && !rec?.ticks.includes(n.id);
+                  const byMeal = !!k && k.kind === 'food' && e.kind === 'food' && !!meal && label.includes(meal);
+                  if (water) waterTicked = true;
+                  if (byNote || water || byMeal) p.onTick(n.id, true);
                 }
               }
               if (e.kind === 'vices' && e.note.trim()) {
@@ -891,6 +907,14 @@ function Pills<T extends string | number>({ value, options, onChange, label }: {
 }
 
 const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+
+/** A Non-Negotiable that is really a log: H2O / water, or a meal (Breakfast, Lunch, Dinner, Snack). */
+function logKindFor(label: string): { kind: LogKind; fill: Partial<LogEntry> } | null {
+  const l = label.trim().toLowerCase();
+  if (/\bh2o\b|\bwater\b/.test(l)) return { kind: 'h2o', fill: {} };
+  const meal = MEALS.find((m) => new RegExp(`\\b${m.toLowerCase()}\\b`).test(l));
+  return meal ? { kind: 'food', fill: { note: meal } } : null;
+}
 
 /** A food note is saved as "Meal · Description" (the meal is optional). */
 export function splitMeal(note: string): { meal: string; desc: string } {
