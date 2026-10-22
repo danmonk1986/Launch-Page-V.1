@@ -163,7 +163,24 @@ export default function App() {
   const [calVersion, setCalVersion] = useState(0);
   const [storeProblem, setStoreProblem] = useState<string | null>(null);
   const [reminder, setReminder] = useState<Launch | null>(null);
-  const [snoozed, setSnoozed] = useState<Record<string, number>>({});
+  // Snoozes are kept in this browser (Oct 22, LP-026): a reload or coming back to the tab no
+  // longer forgets them and brings the reminder straight back. Expired ones are dropped.
+  const SNOOZE_KEY = 'launchpage.snoozed.v1';
+  const [snoozed, setSnoozed] = useState<Record<string, number>>(() => {
+    try {
+      const all = JSON.parse(localStorage.getItem(SNOOZE_KEY) ?? '{}') as Record<string, number>;
+      return Object.fromEntries(Object.entries(all).filter(([, until]) => until > Date.now()));
+    } catch {
+      return {};
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(SNOOZE_KEY, JSON.stringify(snoozed));
+    } catch {
+      /* ignore */
+    }
+  }, [snoozed]);
   const [handled, setHandled] = useState(() => readHandled());
   const [timeUp, setTimeUp] = useState<Launch | null>(null);
   // Each run of a timed launch (launched, +10s, done or skipped), kept for 26 Days.
