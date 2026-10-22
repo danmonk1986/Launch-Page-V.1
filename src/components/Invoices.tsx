@@ -201,6 +201,31 @@ function num(v: string): number | null {
   return v.trim() === '' || !isFinite(x) ? null : x;
 }
 
+/**
+ * A money/number box that keeps what you type ("1." while typing 1.20) and hands back the number.
+ * Oct 22: the boxes showed the parsed number, so the decimal point vanished as you typed it.
+ */
+function NumInput({ value, onChange, placeholder, label }: { value: number | null; onChange: (n: number | null) => void; placeholder?: string; label?: string }) {
+  const [text, setText] = useState(value === null ? '' : String(value));
+  // A value set from outside (Use last) shows; one we just typed stays as typed.
+  if (num(text) !== value && !(text.trim() === '' && value === null)) {
+    const next = value === null ? '' : String(value);
+    if (next !== text) setText(next);
+  }
+  return (
+    <input
+      inputMode="decimal"
+      aria-label={label}
+      value={text}
+      placeholder={placeholder}
+      onChange={(e) => {
+        setText(e.target.value);
+        onChange(num(e.target.value));
+      }}
+    />
+  );
+}
+
 function InvoiceForm({
   invoice,
   isNew,
@@ -282,13 +307,13 @@ function InvoiceForm({
         </label>
         <label className="field">
           <span>Day rate ($)</span>
-          <input inputMode="decimal" value={d.dayRate ?? ''} placeholder={last?.dayRate ? `Last: ${last.dayRate}` : '700'} onChange={(e) => set({ dayRate: num(e.target.value) })} />
+          <NumInput value={d.dayRate} placeholder={last?.dayRate ? `Last: ${last.dayRate}` : '700'} onChange={(v) => set({ dayRate: v })} />
         </label>
         <div className="field">
           <span>Travel (km × $/km)</span>
           <div className="time-grid">
-            <input inputMode="decimal" aria-label="Travel km" value={d.travelKm ?? ''} placeholder={last?.travelKm ? `Last: ${last.travelKm}` : '600'} onChange={(e) => set({ travelKm: num(e.target.value) })} />
-            <input inputMode="decimal" aria-label="Travel rate per km" value={d.travelRate ?? ''} placeholder={last?.travelRate ? `Last: ${last.travelRate}` : '1.20'} onChange={(e) => set({ travelRate: num(e.target.value) })} />
+            <NumInput label="Travel km" value={d.travelKm} placeholder={last?.travelKm ? `Last: ${last.travelKm}` : '600'} onChange={(v) => set({ travelKm: v })} />
+            <NumInput label="Travel rate per km" value={d.travelRate} placeholder={last?.travelRate ? `Last: ${last.travelRate}` : '1.20'} onChange={(v) => set({ travelRate: v })} />
           </div>
         </div>
         {last && (last.dayRate || last.travelKm) && (d.dayRate === null || d.travelKm === null) ? (
@@ -307,8 +332,8 @@ function InvoiceForm({
           {d.extras.map((x, i) => (
             <div key={i} className="invoice-extra">
               <input aria-label="What" value={x.desc} placeholder="Subsistence" onChange={(e) => set({ extras: d.extras.map((y, j) => (j === i ? { ...y, desc: e.target.value } : y)) })} />
-              <input aria-label="How many" inputMode="decimal" value={x.qty || ''} placeholder="Qty" onChange={(e) => set({ extras: d.extras.map((y, j) => (j === i ? { ...y, qty: num(e.target.value) ?? 0 } : y)) })} />
-              <input aria-label="Rate" inputMode="decimal" value={x.rate || ''} placeholder="Rate $" onChange={(e) => set({ extras: d.extras.map((y, j) => (j === i ? { ...y, rate: num(e.target.value) ?? 0 } : y)) })} />
+              <NumInput label="How many" value={x.qty || null} placeholder="Qty" onChange={(v) => set({ extras: d.extras.map((y, j) => (j === i ? { ...y, qty: v ?? 0 } : y)) })} />
+              <NumInput label="Rate" value={x.rate || null} placeholder="Rate $" onChange={(v) => set({ extras: d.extras.map((y, j) => (j === i ? { ...y, rate: v ?? 0 } : y)) })} />
               <button type="button" className="icon-btn tool-btn" aria-label="Remove this extra" title="Remove" onClick={() => set({ extras: d.extras.filter((_, j) => j !== i) })}>
                 <Icon d={CLOSE} />
               </button>
@@ -324,7 +349,7 @@ function InvoiceForm({
         </label>
         <label className="field">
           <span>Deposit ($, if different)</span>
-          <input inputMode="decimal" value={d.deposit ?? ''} placeholder={money(t.subTotal)} onChange={(e) => set({ deposit: num(e.target.value) })} />
+          <NumInput value={d.deposit} placeholder={money(t.subTotal)} onChange={(v) => set({ deposit: v })} />
         </label>
         <label className="field budget-wide">
           <span>Notes</span>
