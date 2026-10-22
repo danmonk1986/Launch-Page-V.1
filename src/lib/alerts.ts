@@ -27,12 +27,11 @@ export function unlockAudioOnFirstGesture() {
   window.addEventListener('keydown', unlock);
 }
 
-/** The alarm sounds, all made in the browser (no sound files). Chime retired Oct 20 (it sounded like Marimba). */
+/** The alarm sounds, all made in the browser (no sound files). Chime retired Oct 20 (it sounded like Marimba), Alarm clock Oct 22. */
 export const TONES = [
   { id: 'bell', label: 'Bell' },
   { id: 'rocket', label: 'Rocket' },
   { id: 'arcade', label: 'Arcade' },
-  { id: 'beep', label: 'Alarm clock' },
   { id: 'marimba', label: 'Marimba' }
 ] as const;
 export type Tone = (typeof TONES)[number]['id'];
@@ -86,10 +85,6 @@ function score(tone: Tone, kind: 'start' | 'end'): Note[] {
       return up
         ? seq([523.25, 659.25, 783.99, 1046.5, 1318.5], 0.07, 0.12, 'square', 0.07)
         : [...seq([1046.5, 783.99, 659.25, 523.25], 0.09, 0.14, 'square', 0.07), ...seq([1046.5, 783.99, 659.25, 523.25], 0.09, 0.14, 'square', 0.07, 0.6)];
-    case 'beep': {
-      const three = (o: number) => seq([988, 988, 988], 0.16, 0.1, 'square', 0.06, o);
-      return up ? [...three(0), ...three(0.7)] : [...three(0), ...three(0.7), ...three(1.4), ...three(2.1)];
-    }
     case 'marimba':
       return up
         ? seq([392, 523.25, 659.25, 783.99], 0.13, 0.5, 'triangle', 0.22)
