@@ -68,7 +68,7 @@ const COLORS: TileColor[] = ['teal', 'purple', 'green', 'pink'];
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-type TimedView = 'active' | 'complete' | 'tomorrow' | 'all';
+type TimedView = 'active' | 'complete' | 'tomorrow' | 'scheduled' | 'all' | 'history';
 
 const CLEARED_KEY = 'launchpage.launches.cleared.v1';
 
@@ -76,14 +76,18 @@ const TIMED_VIEWS: [TimedView, string][] = [
   ['active', 'Active'],
   ['complete', 'Complete'],
   ['tomorrow', 'Tomorrow'],
-  ['all', 'All']
+  ['scheduled', 'Scheduled'],
+  ['all', 'All'],
+  ['history', 'History']
 ];
 
 const EMPTY: Record<TimedView, string> = {
   active: 'Nothing left to launch today.',
   complete: 'Nothing checked off or skipped yet today.',
   tomorrow: 'Nothing scheduled for tomorrow.',
-  all: 'No timed launches yet.'
+  scheduled: 'Nothing switched on and ahead.',
+  all: 'No timed launches yet.',
+  history: 'No runs logged yet.'
 };
 
 /** Typing a link starts from https://www. so you only add the rest. */
@@ -155,6 +159,7 @@ export function LaunchersPanel(p: Props) {
       /* ignore */
     }
   }
+  const nextOf = (l: Launch) => nextDate(l, p.today);
   const views: Record<TimedView, Launch[]> = {
     active: ordered.filter((l) => l.active && happensToday(l, p.today) && (!stateOf(l) || stateOf(l) === 'launched')),
     complete: ordered.filter(
@@ -163,8 +168,19 @@ export function LaunchersPanel(p: Props) {
     tomorrow: [...p.launches]
       .filter((l) => l.active && happensToday(l, tomorrow))
       .sort((a, b) => a.atTime.localeCompare(b.atTime)),
-    all: [...p.launches].sort((a, b) => a.atTime.localeCompare(b.atTime))
+    // Scheduled (Oct 22): every launch that's on and still ahead, once each (not once per day),
+    // soonest first, so you can look forward without the daily ones repeating.
+    scheduled: p.launches
+      .filter((l) => l.active && nextOf(l))
+      .sort((a, b) => (nextOf(a) ?? '').localeCompare(nextOf(b) ?? '') || a.atTime.localeCompare(b.atTime)),
+    all: [...p.launches].sort((a, b) => a.atTime.localeCompare(b.atTime)),
+    history: []
   };
+  // History (Oct 22): every finished run, newest first.
+  const history = (p.log ?? [])
+    .filter((g) => g.outcome !== 'launched' || g.finishedAt)
+    .sort((a, b) => (b.finishedAt ?? b.launchedAt ?? b.day).localeCompare(a.finishedAt ?? a.launchedAt ?? a.day));
+  const countOf = (id: TimedView) => (id === 'history' ? history.length : views[id].length);
   const list = views[view];
   // Active keeps to the next 3 (Show all for the rest); the other tabs show their whole list.
   const capped = view === 'active' && !showAllTimed;
@@ -317,7 +333,7 @@ export function LaunchersPanel(p: Props) {
                   }}
                 >
                   {label}
-                  <span className="timed-tab-count">{views[id].length}</span>
+                  <span className="timed-tab-count">{countOf(id)}</span>
                 </button>
               ))}
             </div>
@@ -336,13 +352,36 @@ export function LaunchersPanel(p: Props) {
             <Icon d="M12 5v14M5 12h14" />
           </button>
         </div>
-        {list.length === 0 ? (
+        {view === 'history' ? (
+          history.length === 0 ? (
+            <p className="panel-empty timed-empty">{EMPTY.history}</p>
+          ) : (
+            <ul className="timed-list">
+              {history.slice(0, showAllTimed ? undefined : 30).map((g) => {
+                const spent = g.launchedAt && g.finishedAt ? Math.round((new Date(g.finishedAt).getTime() - new Date(g.launchedAt).getTime()) / 60_000) : null;
+                return (
+                  <li key={g.id} className={`timed-item is-${g.outcome === 'skipped' ? 'skipped' : 'done'}`}>
+                    <div className="timed-row">
+                      <span className="timed-time">{new Date(`${g.day}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}</span>
+                      <span className="timed-name">{g.title}</span>
+                      <span className="timed-meta">
+                        {g.outcome === 'skipped' ? 'Skipped' : 'Done'}
+                        {g.outcome !== 'skipped' && ` · ${spent ?? g.planned + g.extra} min${spent === null ? ' planned' : ''}`}
+                        {g.extra > 0 && ` · +${g.extra} added`}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : list.length === 0 ? (
           <p className="panel-empty timed-empty">{p.launches.length === 0 ? 'At a set time, a reminder pops up and one tap opens every tab you need.' : EMPTY[view]}</p>
         ) : (
           <ul className="timed-list">
             {visible.map((l) => {
               // Tomorrow shows plain rows: today's check-offs belong to today.
-              const ahead = view === 'tomorrow';
+              const ahead = view === 'tomorrow' || view === 'scheduled';
               const todays = !ahead && l.active && happensToday(l, p.today);
               const how = ahead ? undefined : stateOf(l);
               return (
@@ -358,6 +397,7 @@ export function LaunchersPanel(p: Props) {
                     <span className="timed-time">{formatMinutes(toMinutes(ahead ? timeFor(l, tomorrow) : timeFor(l, p.today)))}</span>
                     <span className="timed-name">{l.title}</span>
                     <span className="timed-meta">
+                      {view === 'scheduled' && nextOf(l) ? `Next ${new Date(`${nextOf(l)}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} · ` : ''}
                       {describeSchedule(l)} · {l.minutes} min
                       {(() => {
                         const g = !ahead && p.log?.find((x) => x.launchId === l.id && x.day === isoDate(launchDate(l, p.today)));
@@ -448,14 +488,14 @@ export function LaunchersPanel(p: Props) {
             })}
           </ul>
         )}
-        {view === 'active' && list.length > 3 && (
+        {((view === 'active' && list.length > 3) || (view === 'history' && history.length > 30)) && (
           <button
             type="button"
             className="timed-more"
             aria-expanded={showAllTimed}
             onClick={() => setShowAllTimed((v) => !v)}
           >
-            {showAllTimed ? 'Show 3' : `Show all ${list.length}`}
+            {view === 'history' ? (showAllTimed ? 'Show the latest 30' : `Show all ${history.length}`) : showAllTimed ? 'Show 3' : `Show all ${list.length}`}
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className={showAllTimed ? 'is-open' : ''}>
               <path d="M6 9l6 6 6-6" />
             </svg>
