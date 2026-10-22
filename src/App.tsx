@@ -13,6 +13,8 @@ import { RoutineEditor } from './components/RoutineEditor';
 import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
 import { syncNonNegs } from './lib/nnsync';
 import { meditationStore, MeditationsContext, type Meditation } from './lib/meditations';
+import { customerStore, invoiceStore, profileStore, type Customer, type Invoice, type InvoiceProfile } from './lib/invoices';
+import { InvoicesPage } from './components/Invoices';
 import { nextRepeat, readRepeat, writeRepeat } from './lib/repeat';
 import { Days26Page } from './components/Days26';
 import {
@@ -106,7 +108,7 @@ export default function App() {
   // A page in the address (#tasks, #budget…) opens there: card rockets from a timed launch use it.
   const [page, setPage] = useState<PageId>(() => {
     const h = window.location.hash.replace('#', '');
-    return (['launch', 'tasks', 'days26', 'budget', 'journal'] as PageId[]).includes(h as PageId) ? (h as PageId) : 'launch';
+    return (['launch', 'tasks', 'days26', 'budget', 'invoices', 'journal'] as PageId[]).includes(h as PageId) ? (h as PageId) : 'launch';
   });
   useEffect(() => {
     // Keep the address on the page you're on, so a refresh stays there.
@@ -140,6 +142,9 @@ export default function App() {
   const [d26Config, setD26Config] = useState<Config>(DEFAULT_CONFIG);
   const [d26Ready, setD26Ready] = useState(false);
   const [meditations, setMeditations] = useState<Meditation[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [invoiceProfile, setInvoiceProfile] = useState<InvoiceProfile[]>([]);
   const [medReady, setMedReady] = useState(false);
   const tasksRef = useRef<Task[]>([]);
   const [gcalOff, setGcalOff] = useState(0);
@@ -287,6 +292,11 @@ export default function App() {
       const md = await meditationStore.load(userId);
       if (!live) return;
       setMeditations(md.items);
+      const [iv, cu, pf] = await Promise.all([invoiceStore.load(userId), customerStore.load(userId), profileStore.load(userId)]);
+      if (!live) return;
+      setInvoices(iv.items);
+      setCustomers(cu.items);
+      setInvoiceProfile(pf.items);
       setMedReady(true);
       setStoreProblem(l1.problem ?? l2.problem ?? l3.problem ?? p1.problem ?? t1.problem ?? j1.problem ?? n1.problem ?? dd.problem ?? lg.problem);
     })();
@@ -361,6 +371,9 @@ export default function App() {
   }
   const quoteOps = ops(quoteStore, quotes, setQuotes, () => 'Quote');
   const budgetOps = ops(budgetStore, budget, setBudget, (l) => l.description);
+  const invoiceOps = ops(invoiceStore, invoices, setInvoices, (i) => i.number || 'Invoice');
+  const customerOps = ops(customerStore, customers, setCustomers, (c) => c.name);
+  const profileOps = ops(profileStore, invoiceProfile, setInvoiceProfile, () => 'Your details');
   /** An import: the budget becomes exactly this list. */
   async function replaceBudget(next: BudgetLine[]) {
     const old = budget;
@@ -1063,6 +1076,18 @@ export default function App() {
               onTick={tickToday}
               checkinText={checkinText}
               onCheckin={setCheckin}
+            />
+          ) : page === 'invoices' ? (
+            <InvoicesPage
+              invoices={invoices}
+              customers={customers}
+              profile={invoiceProfile[0] ?? null}
+              onSave={invoiceOps.save}
+              onDelete={invoiceOps.remove}
+              onSaveCustomer={customerOps.save}
+              onDeleteCustomer={customerOps.remove}
+              onSaveProfile={profileOps.save}
+              onClose={() => setPage('launch')}
             />
           ) : page === 'budget' ? (
             <BudgetPage

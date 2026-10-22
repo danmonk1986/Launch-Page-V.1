@@ -493,7 +493,8 @@ export const CARD_LINKS: { name: string; url: string; page: string }[] = [
   { name: 'Journal', url: 'launchpage:journal', page: 'journal' },
   { name: 'Tasks', url: 'launchpage:tasks', page: 'tasks' },
   { name: '26 Days', url: 'launchpage:days26', page: 'days26' },
-  { name: 'Budget', url: 'launchpage:budget', page: 'budget' }
+  { name: 'Budget', url: 'launchpage:budget', page: 'budget' },
+  { name: 'Invoices', url: 'launchpage:invoices', page: 'invoices' }
 ];
 export const cardOf = (url: string | null | undefined) => CARD_LINKS.find((c) => c.url === (url ?? '').trim()) ?? null;
 let cardOpener: ((page: string) => void) | null = null;
