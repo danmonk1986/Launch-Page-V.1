@@ -120,6 +120,26 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
                 <button type="button" role="checkbox" aria-checked={ok} className="d26-check" aria-label={s.label} onClick={() => onTick(i)}>
                   {ok && <Icon d={CHECK} size={14} />}
                 </button>
+                {/* Oct 22: swap today's meditation from the library right here, no Edit needed. */}
+                {type === 'meditation' && med.list.length > 1 && (
+                  <select
+                    className="rit-med-pick"
+                    aria-label={`Which meditation for ${s.label}`}
+                    title="Switch meditation"
+                    value={s.meditationId ?? ''}
+                    onChange={(e) => {
+                      const m = med.list.find((x) => x.id === e.target.value);
+                      if (m) onSaveRitual({ ...ritual, items: ritual.items.map((x, j) => (j === i ? { ...x, meditationId: m.id, script: m.script } : x)) });
+                    }}
+                  >
+                    {!s.meditationId && <option value="">This ritual's own</option>}
+                    {med.list.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.title || 'Untitled'}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               {type === 'meditation' ? (
                 <button type="button" className="rit-label is-link" onClick={() => setPlaying(i)} title="Play the meditation">
