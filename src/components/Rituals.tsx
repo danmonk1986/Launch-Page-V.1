@@ -515,6 +515,8 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
   const med = useContext(MeditationsContext);
   const [name, setName] = useState(ritual.name);
   const [dates, setDates] = useState<string[]>(() => ritual.onDates ?? []);
+  // A ritual's start time lives in shiftStart (rituals have no shift), written for Days like the Non-Negotiables.
+  const [startAt, setStartAt] = useState<string>(() => ritual.shiftStart ?? '');
   const [rows, setRows] = useState<Draft[]>(() => {
     const list = ritual.items.map((s) => ({ ...s, ...(s.meditationId ? { script: med.list.find((m) => m.id === s.meditationId)?.script ?? s.script } : {}), ...(() => {
       const t = stepType(s);
@@ -561,12 +563,17 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
             return out;
           });
         const onDates = [...new Set(dates.filter(Boolean))].sort();
-        onSave({ ...ritual, kind: 'ritual', name: name.trim(), items, ...(onDates.length || ritual.onDates?.length ? { onDates } : {}) });
+        onSave({ ...ritual, kind: 'ritual', name: name.trim(), items, shiftStart: startAt || null, ...(onDates.length || ritual.onDates?.length ? { onDates } : {}) });
       }}
     >
       <label className="field">
         <span>Name</span>
         <input value={name} autoFocus={isNew} onChange={(e) => setName(e.target.value)} placeholder="Rise to Shine" />
+      </label>
+      <label className="field">
+        <span>Starts at (optional)</span>
+        <input type="time" value={startAt} onChange={(e) => setStartAt(e.target.value)} aria-label="Start time" />
+        <span className="field-hint">Written for Days; MWD Nights flips it 12 hours. The Rituals card switches to this ritual at its time.</span>
       </label>
       <fieldset className="field">
         <legend>Dates (optional)</legend>

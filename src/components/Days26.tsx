@@ -3,7 +3,7 @@ import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
 import { RitualForm, RitualPicker, RitualRunner, duplicateRitual } from './Rituals';
 import { TitleCombo, type RocketOption } from './Launchers';
-import type { Routine, Shift } from '../lib/routines';
+import { shiftMinutes, type Routine, type Shift } from '../lib/routines';
 import {
   H2O_SIZES,
   SECTIONS,
@@ -143,9 +143,19 @@ export function Days26Page(p: Props) {
   // Rituals follow the time of day (Oct 20): when the section changes (Morning → Midday →
   // Evening, flipped on nights), show the ritual linked to a Non-Negotiable in that section.
   // Picking one by hand holds until the next section starts.
+  // Oct 22: a ritual can have its own start time. When any do, the card follows the ritual whose
+  // time came most recently (counted from the day's reset), so two in one section don't clash.
   const section = currentSection(now, reset, flip);
+  const since = (min: number) => (min - reset + 1440) % 1440;
+  const nowSince = since(now.getHours() * 60 + now.getMinutes());
+  const timedNow = p.rituals
+    .filter((r) => r.shiftStart)
+    .map((r) => ({ r, at: since(shiftMinutes(r.shiftStart!, flip ? 'nights' : 'days', true)) }))
+    .filter((x) => x.at <= nowSince)
+    .sort((a, b) => b.at - a.at)[0]?.r;
+  const slot = timedNow ? `t:${timedNow.id}` : section;
   useEffect(() => {
-    const mark = `${today}:${section}`;
+    const mark = `${today}:${slot}`;
     let last: string | null = null;
     try {
       last = localStorage.getItem(RITUAL_SECTION_KEY);
@@ -154,7 +164,10 @@ export function Days26Page(p: Props) {
     }
     if (last === mark) return;
     // A ritual set for today leads; otherwise the one for this section.
-    const fit = p.rituals.find((r) => r.onDates?.includes(today)) ?? p.rituals.find((r) => nonNegForRitual(nonnegs, r)?.section === section);
+    const fit =
+      p.rituals.find((r) => r.onDates?.includes(today)) ??
+      timedNow ??
+      p.rituals.find((r) => !r.shiftStart && nonNegForRitual(nonnegs, r)?.section === section);
     if (!fit && p.rituals.length === 0) return;
     try {
       localStorage.setItem(RITUAL_SECTION_KEY, mark);
@@ -163,7 +176,7 @@ export function Days26Page(p: Props) {
     }
     if (fit && fit.id !== shownRitual) showRitual(fit.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [today, section, p.rituals.length, nonnegs]);
+  }, [today, slot, p.rituals.length, nonnegs]);
   const [editList, setEditList] = useState(false);
   const toggle = (id: string, on?: boolean) => p.onTick(id, on);
 
