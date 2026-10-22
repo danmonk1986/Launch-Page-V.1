@@ -256,7 +256,7 @@ export function LaunchersPanel(p: Props) {
 
       <ul className="tiles" id="rocket-tiles" hidden={!showTiles}>
         {/* Hidden rockets stay off the Launch Page; in edit mode they show dimmed so you can bring them back. */}
-        {p.launchers.filter((l) => editing || !l.hidden).map((l) => (
+        {p.launchers.filter((l) => !l.hidden).map((l) => (
           <li key={l.id}>
             {editing || !l.url ? (
               <button
@@ -272,7 +272,7 @@ export function LaunchersPanel(p: Props) {
                 </span>
                 <span className="tile-words">
                   <span className="tile-name">{l.name}</span>
-                  <span className="tile-note">{l.hidden ? 'Hidden · Edit' : l.url ? 'Edit' : 'Add a link'}</span>
+                  <span className="tile-note">{l.url ? 'Edit' : 'Add a link'}</span>
                 </span>
               </button>
             ) : (
@@ -591,12 +591,18 @@ function TileForm({
         <NameCombo
           value={d.name}
           options={[
+            // Hidden rockets come first: pick one to put it back on the Launch Page (Oct 22).
+            ...(tile ? [] : tiles.filter((t) => t.hidden).map((t) => ({ name: t.name, note: t.note, url: t.url, color: t.color, kind: 'Hidden', id: t.id }))),
             ...open.map((p) => ({ name: p.name, note: p.note, url: p.url, color: p.color, kind: 'Original' })),
             ...APP_LINKS.filter((a) => !taken.includes(a.name)).map((a) => ({ name: a.name, note: 'App', url: a.url, color: 'purple' as TileColor, kind: 'App' })),
             ...CARD_LINKS.filter((c) => !taken.includes(c.name)).map((c) => ({ name: c.name, note: 'LaunchPage card', url: c.url, color: 'green' as TileColor, kind: 'Card' }))
           ]}
           onType={(name) => setD((x) => ({ ...x, name }))}
-          onPick={(o) => setD((x) => ({ ...x, name: o.name, note: o.note, url: o.url, color: o.color }))}
+          onPick={(o) => {
+            const back = o.id ? tiles.find((t) => t.id === o.id) : undefined;
+            if (back) return setD({ ...back, hidden: false });
+            setD((x) => ({ ...x, name: o.name, note: o.note, url: o.url, color: o.color }));
+          }}
           placeholder="New, or pick from the list"
         />
       </label>
@@ -645,7 +651,7 @@ function TileForm({
       </fieldset>
       <label className="choice choice-wide">
         <input type="checkbox" checked={!!d.hidden} onChange={(e) => setD((x) => ({ ...x, hidden: e.target.checked }))} />
-        <span>Hide from the Launch Page (keeps it for timed launches and rituals)</span>
+        <span>Hide from the Launch Page (keeps it for timed launches and rituals; bring it back from + Add rocket)</span>
       </label>
       <FormActions formId={formId} saveDisabled={!d.name.trim()} onDelete={tile ? () => onDelete(tile.id) : undefined} deleteLabel={tile?.name} />
     </form>
@@ -1080,7 +1086,7 @@ export function TitleCombo({ value, titles, onChange, placeholder = 'Work Block 
   );
 }
 
-type ComboOption = { name: string; note: string; url: string; color: TileColor; kind: string };
+type ComboOption = { name: string; note: string; url: string; color: TileColor; kind: string; /** A hidden rocket: picking it brings that one back. */ id?: string };
 export type RocketOption = ComboOption;
 
 /** A rocket's name from its link: todoist:// → Todoist, https://www.atb.com/x → atb.com. */
