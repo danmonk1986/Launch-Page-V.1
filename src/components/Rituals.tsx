@@ -183,7 +183,8 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
         // on the right at the same height and scrolls inside, so any number of steps fits.
         const kind = (st: Step) => stepType(st.s).type;
         const tiles = steps.filter((st) => kind(st) === 'step');
-        const rows = steps.filter((st) => kind(st) === 'checkin');
+        // Check-ins, List steps (Oct 22: they were left out and never showed) and anything else.
+        const rows = steps.filter((st) => kind(st) !== 'step' && kind(st) !== 'meditation');
         const meds = steps.filter((st) => kind(st) === 'meditation');
         const left = (
           <>
