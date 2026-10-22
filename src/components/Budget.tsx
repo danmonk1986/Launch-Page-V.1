@@ -1,6 +1,6 @@
 import { useId, useMemo, useRef, useState } from 'react';
 import { FormActions, Sheet } from './Sheet';
-import { Icon } from './Tasks';
+import { Icon, SearchToggle } from './Tasks';
 import { TitleCombo } from './Launchers';
 import { RepeatPicker } from './RepeatPicker';
 import { describeRepeat, readRepeat, writeRepeat } from '../lib/repeat';
@@ -101,6 +101,7 @@ function shortDate(iso: string | null) {
 export function BudgetPage(p: Props) {
   // The box clicked: shows only its lines. null = everything.
   const [pick, setPick] = useState<string | null>(null);
+  const [q, setQ] = useState('');
   const [closed, setClosed] = useState<Record<string, boolean>>({});
   const [editing, setEditing] = useState<BudgetLine | null>(null);
   const [incoming, setIncoming] = useState<{ name: string; lines: BudgetLine[] } | null>(null);
@@ -165,8 +166,12 @@ export function BudgetPage(p: Props) {
     }
   };
 
-  const shows = (l: BudgetLine) => pick === null || groupKey(l, groupBy) === pick;
-  const sections = BUDGET_SECTIONS.map((s) => s.id).filter((id) => pick === null || bySection[id].some(shows));
+  // Search (Oct 22): a line matches on any of its words or its amount.
+  const needle = q.trim().toLowerCase();
+  const found = (l: BudgetLine) =>
+    !needle || [l.description, l.project, l.method, l.type, l.category, l.pmtCategory, l.notes, l.amount === null ? '' : String(l.amount)].some((v) => v.toLowerCase().includes(needle));
+  const shows = (l: BudgetLine) => (pick === null || groupKey(l, groupBy) === pick) && found(l);
+  const sections = BUDGET_SECTIONS.map((s) => s.id).filter((id) => (pick === null && !needle) || bySection[id].some(shows));
   const boxLabel = (c: string) => {
     if (groupBy !== 'section') return c;
     const t = BUDGET_SECTIONS.find((x) => x.id === c)?.title ?? c;
@@ -181,6 +186,7 @@ export function BudgetPage(p: Props) {
           Budget
         </h2>
         <div className="panel-actions">
+          <SearchToggle value={q} onChange={setQ} placeholder="Search the budget" />
           <button type="button" className="icon-btn tool-btn" aria-label="Add a line" title="Add a line" onClick={() => setEditing(newBudgetLine(groupBy === 'section' && pick ? (pick as BudgetSection) : 'variable', p.lines.reduce((m, l) => Math.max(m, l.sort + 1), 0)))}>
             <Icon d={PLUS} />
           </button>
@@ -267,7 +273,7 @@ export function BudgetPage(p: Props) {
             {sections.map((id) => {
               const s = BUDGET_SECTIONS.find((x) => x.id === id)!;
               const rows = bySection[id].filter(shows);
-              const shut = !(groupBy === 'section' && pick) && closed[id];
+              const shut = !needle && !(groupBy === 'section' && pick) && closed[id];
               return (
                 <tbody key={id}>
                   <tr className="task-section">

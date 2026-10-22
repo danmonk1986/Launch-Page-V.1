@@ -491,11 +491,64 @@ export function TasksPanel(p: PageProps & { onOpenAll: () => void; onOpenTask: (
 }
 
 /** The Tasks page: the whole list, in the Launch Sheet's sections. */
+const SEARCH = 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4.3-4.3';
+
+/** 🔍 in a page's header: opens a search box; Esc or ✕ clears and closes it (Oct 22). */
+export function SearchToggle({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  const [open, setOpen] = useState(false);
+  if (!open && !value)
+    return (
+      <button type="button" className="icon-btn tool-btn" aria-label="Search" title="Search" onClick={() => setOpen(true)}>
+        <Icon d={SEARCH} />
+      </button>
+    );
+  return (
+    <span className="search-box">
+      <input
+        autoFocus
+        type="search"
+        value={value}
+        placeholder={placeholder}
+        aria-label="Search"
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            onChange('');
+            setOpen(false);
+          }
+        }}
+      />
+      <button
+        type="button"
+        className="icon-btn tool-btn"
+        aria-label="Close search"
+        title="Close search"
+        onClick={() => {
+          onChange('');
+          setOpen(false);
+        }}
+      >
+        <Icon d={CLOSE} />
+      </button>
+    </span>
+  );
+}
+
 export function TasksPage(p: PageProps & { onOpenProjects: () => void; onClose: () => void; focusId?: string | null }) {
   const editor = useTaskEditor(p);
   const act = useActions(p, editor);
   const [view, setView] = useState<Section | null>(null);
-  const grouped = groupTasks(p.tasks, p.today);
+  // Search: a task matches on its name, description, notes, info or project; its steps come with
+  // it, and a matching step brings its task.
+  const [q, setQ] = useState('');
+  const needle = q.trim().toLowerCase();
+  const hit = (t: Task) =>
+    [t.task, t.description, t.notes, t.linkLabel, t.expense, p.projects.find((x) => x.id === t.projectId)?.name ?? ''].some((v) => (v ?? '').toLowerCase().includes(needle));
+  const byId = new Map(p.tasks.map((t) => [t.id, t]));
+  const shown = !needle
+    ? p.tasks
+    : p.tasks.filter((t) => hit(t) || (t.parentId && byId.get(t.parentId) && hit(byId.get(t.parentId)!)) || p.tasks.some((s) => s.parentId === t.id && hit(s)));
+  const grouped = groupTasks(shown, p.today);
   // ALL counts what's still outstanding: not done, not deleted.
   const outstanding = Object.entries(grouped).reduce((n, [k, l]) => (k === 'deleted' || k === 'done' ? n : n + l.length), 0);
   // Arriving from the Launch Page: scroll to the task and light it up.
@@ -517,6 +570,7 @@ export function TasksPage(p: PageProps & { onOpenProjects: () => void; onClose: 
           Tasks
         </h2>
         <div className="panel-actions">
+          <SearchToggle value={q} onChange={setQ} placeholder="Search tasks" />
           <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={editor.add}>
             <Icon d={PLUS} />
           </button>
@@ -540,11 +594,11 @@ export function TasksPage(p: PageProps & { onOpenProjects: () => void; onClose: 
         key={view ?? 'all'}
         sections={view ? [view] : SECTIONS.map((s) => s.id)}
         grouped={grouped}
-        steps={stepsByParent(p.tasks)}
+        steps={stepsByParent(shown)}
         projects={p.projects}
         today={p.today}
         act={act}
-        collapsible={!view}
+        collapsible={!view && !needle}
         focusId={p.focusId ?? null}
       />
       {editor.sheet}
