@@ -7,10 +7,8 @@ import {
   emptyProfile,
   fiscalYear,
   fyLabel,
-  invoiceLines,
   invoiceTotals,
   lastFor,
-  longDate,
   money,
   newInvoice,
   nextNumber,
@@ -18,6 +16,7 @@ import {
   type Invoice,
   type InvoiceProfile
 } from '../lib/invoices';
+import { printInvoice } from '../lib/invoicePrint';
 
 const PLUS = 'M12 5v14M5 12h14';
 const CLOSE = 'M6 6l12 12M18 6L6 18';
@@ -191,7 +190,7 @@ export function InvoicesPage(p: Props) {
       </Sheet>
 
       <Sheet open={details} title="Your details and customers" wide onClose={() => setDetails(false)}>
-        {details && <DetailsForm profile={p.profile} customers={p.customers} onSaveProfile={p.onSaveProfile} onSaveCustomer={p.onSaveCustomer} onDeleteCustomer={p.onDeleteCustomer} />}
+        {details && <DetailsForm profile={p.profile} customers={p.customers} onSaveProfile={p.onSaveProfile} onSaveCustomer={p.onSaveCustomer} onDeleteCustomer={p.onDeleteCustomer} onDone={() => setDetails(false)} />}
       </Sheet>
     </section>
   );
@@ -359,13 +358,16 @@ function DetailsForm({
   customers,
   onSaveProfile,
   onSaveCustomer,
-  onDeleteCustomer
+  onDeleteCustomer,
+  onDone
 }: {
   profile: InvoiceProfile | null;
   customers: Customer[];
   onSaveProfile: (p: InvoiceProfile) => Promise<void>;
   onSaveCustomer: (c: Customer) => Promise<void>;
   onDeleteCustomer: (id: string) => Promise<void>;
+  /** Save closes the card (Oct 22: it used to stay open, so you had to save, then close). */
+  onDone: () => void;
 }) {
   const [pr, setPr] = useState<InvoiceProfile>(profile ?? emptyProfile());
   const [list, setList] = useState<Customer[]>(customers);
@@ -385,6 +387,7 @@ function DetailsForm({
         e.preventDefault();
         await onSaveProfile(pr);
         for (const c of list) if (c.name.trim()) await onSaveCustomer({ ...c, code: c.code.trim().toUpperCase() });
+        onDone();
       }}
     >
       <p className="field-hint">Prints at the top of every invoice. Kept in your account, not in the app's code.</p>
@@ -449,66 +452,4 @@ function DetailsForm({
       <FormActions formId={formId} />
     </form>
   );
-}
-
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
-
-/** Opens the invoice as a clean page in a new tab, laid out like the sheet, ready to print or save as PDF. */
-export function printInvoice(inv: Invoice, c: Customer | null, pr: InvoiceProfile | null) {
-  const t = invoiceTotals(inv);
-  const lines = invoiceLines(inv);
-  const row = (a: string, b: string, cc: string, dd: string) => `<tr><td>${a}</td><td>${b}</td><td class="r">${cc}</td><td class="r">${dd}</td></tr>`;
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(inv.number || 'Invoice')}</title>
-<style>
-body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:40px;font-size:13px}
-.top{display:flex;justify-content:space-between;gap:24px;margin-bottom:24px}
-h1{font-size:22px;margin:0 0 6px;letter-spacing:.04em}
-.muted{color:#555}
-.box{display:grid;grid-template-columns:auto auto;gap:2px 18px;align-content:start}
-.box b{font-size:11px;text-transform:uppercase;color:#555}
-table{width:100%;border-collapse:collapse;margin-top:12px}
-th{text-align:left;border-bottom:2px solid #111;padding:6px 4px;font-size:11px;text-transform:uppercase}
-td{border-bottom:1px solid #ddd;padding:5px 4px}
-.r{text-align:right}
-.tot{margin-left:auto;margin-top:12px;width:280px;display:grid;grid-template-columns:1fr auto;gap:4px}
-.tot .grand{font-weight:700;border-top:2px solid #111;padding-top:4px}
-.months{margin-top:18px;font-size:12px}
-@media print{body{margin:16mm}}
-</style></head><body>
-<div class="top">
-  <div>
-    <h1>${esc(pr?.business ?? '')}</h1>
-    <div>${esc([pr?.person, pr?.phone].filter(Boolean).join(' // '))}</div>
-    <div>${esc([pr?.email, pr?.web].filter(Boolean).join(' // '))}</div>
-    <div class="muted">${pr?.gstNumber ? `G.S.T. # ${esc(pr.gstNumber)}` : ''}</div>
-  </div>
-  <div class="box">
-    <b>Invoice #</b><span>${esc(inv.number)}</span>
-    <b>Start</b><span>${inv.start ? esc(longDate(inv.start)) : ''}</span>
-    <b>End</b><span>${inv.end ? esc(longDate(inv.end)) : ''}</span>
-    <b>Days</b><span>${daysWorked(inv).length}</span>
-    <b>Job ID</b><span>${esc(inv.jobId)}</span>
-  </div>
-  <div>
-    <b class="muted" style="font-size:11px;text-transform:uppercase">Customer</b>
-    <div><strong>${esc(c?.name ?? '')}</strong></div>
-    <div>${esc(c?.address ?? '')}</div>
-    <div>${esc(c?.city ?? '')}</div>
-    <div>${esc(c?.phone ?? '')}</div>
-    <div>${esc(c?.email ?? '')}</div>
-    <div style="margin-top:6px">${esc(inv.operator)}</div>
-    <div>${esc(inv.well)}</div>
-  </div>
-</div>
-<table><thead><tr><th>Date</th><th>Description</th><th class="r">Rate</th><th class="r">Total</th></tr></thead><tbody>
-${lines.map((l) => row(l.date ? esc(longDate(l.date)) : '', esc(l.desc), money(l.rate), money(l.total))).join('\n')}
-</tbody></table>
-<div class="tot"><span>Total</span><span>${money(t.total)}</span><span>G.S.T.</span><span>${money(t.gst)}</span><span class="grand">Sub Total</span><span class="grand">${money(t.subTotal)}</span></div>
-<div class="months">${daysByMonth(inv).map((m) => `${esc(m.month.split(' ')[0])}: ${m.days}`).join(' &nbsp; ')}</div>
-<script>window.onload=function(){window.print()}</script>
-</body></html>`;
-  const w = window.open('', '_blank');
-  if (!w) return;
-  w.document.write(html);
-  w.document.close();
 }
