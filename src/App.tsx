@@ -1218,6 +1218,7 @@ export default function App() {
         onClose={() => setEditor({ open: false, routine: null })}
         onSave={handleSaveRoutine}
         onDelete={handleDeleteRoutine}
+        shift={shift}
         baseline={() => activeNonNegs(nonnegs).map((n) => n.label)}
         onTimed={(title, time) => {
           const r = editor.routine;

@@ -16,6 +16,8 @@ type Props = {
   onTimed: (label: string, time: string | null) => void;
   /** Adds the step to the 26 Days non-negotiables template. */
   onNonNeg: (label: string) => void;
+  /** The shift showing now. On Nights, times are shown and typed as night times (Oct 23). */
+  shift?: 'days' | 'nights';
 };
 
 type EditItem = RoutineItem & { k: string };
@@ -38,7 +40,7 @@ const blank = (sort: number, baseline: string[]): Draft => ({
 });
 const toDraft = (r: Routine): Draft => ({ ...r, items: withKeys(r.items) });
 
-export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDelete, baseline, onTimed, onNonNeg }: Props) {
+export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDelete, baseline, onTimed, onNonNeg, shift = 'days' }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const clickOff = useClickOff(onClose);
   const [draft, setDraft] = useState<Draft>(() => (routine ? toDraft(routine) : blank(nextSort, [])));
@@ -94,7 +96,15 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
       items.splice(to, 0, it);
       return { ...d, items };
     });
-  const time = (v: string) => (v ? v : null);
+  // Oct 23: on Nights, a flipping routine's times show as they run (7:00 AM, not its Days 7:00 PM)
+  // and are stored back as Days times. Typing a night time into a Days field flipped it 12 hours.
+  const night = draft.flips && shift === 'nights';
+  const flip12 = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return `${String((h + 12) % 24).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`;
+  };
+  const show = (t: string | null) => (t ? (night ? flip12(t) : t) : '');
+  const keep = (v: string) => (v ? (night ? flip12(v) : v) : null);
 
   /** Re-sort: drag a row by its handle; the list reorders as you pass the middle of each row. */
   const onDragMove = (e: React.PointerEvent) => {
@@ -166,28 +176,32 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
           <input type="checkbox" checked={draft.flips} onChange={(e) => set('flips', e.target.checked)} />
           <span>Duplicate for Night Shift</span>
         </label>
-        {draft.flips && <p className="field-hint flip-hint">Write the day times. Night Shift runs the same steps 12 hours later.</p>}
+        {draft.flips && (
+          <p className="field-hint flip-hint">
+            {night ? 'Showing Night Shift times: write them as they happen on nights. Days runs the same steps 12 hours earlier.' : 'Write the day times. Night Shift runs the same steps 12 hours later.'}
+          </p>
+        )}
 
         <div className="time-grid">
           {draft.flips && (
             <>
               <label className="field">
                 <span>Shift starts</span>
-                <input type="time" value={draft.shiftStart ?? ''} onChange={(e) => set('shiftStart', time(e.target.value))} />
+                <input type="time" value={show(draft.shiftStart)} onChange={(e) => set('shiftStart', keep(e.target.value))} />
               </label>
               <label className="field">
                 <span>Shift ends</span>
-                <input type="time" value={draft.shiftEnd ?? ''} onChange={(e) => set('shiftEnd', time(e.target.value))} />
+                <input type="time" value={show(draft.shiftEnd)} onChange={(e) => set('shiftEnd', keep(e.target.value))} />
               </label>
             </>
           )}
           <label className="field">
             <span>Wake Up</span>
-            <input type="time" value={draft.wake ?? ''} onChange={(e) => set('wake', time(e.target.value))} />
+            <input type="time" value={show(draft.wake)} onChange={(e) => set('wake', keep(e.target.value))} />
           </label>
           <label className="field">
             <span>Bed</span>
-            <input type="time" value={draft.bed ?? ''} onChange={(e) => set('bed', time(e.target.value))} />
+            <input type="time" value={show(draft.bed)} onChange={(e) => set('bed', keep(e.target.value))} />
           </label>
         </div>
 
@@ -233,8 +247,8 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
                 <input
                   type="time"
                   aria-label={`Step ${i + 1} time (optional)`}
-                  value={it.time ?? ''}
-                  onChange={(e) => setItem(i, { time: time(e.target.value) })}
+                  value={show(it.time)}
+                  onChange={(e) => setItem(i, { time: keep(e.target.value) })}
                 />
                 <input
                   aria-label={`Step ${i + 1}`}
