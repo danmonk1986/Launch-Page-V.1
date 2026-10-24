@@ -1446,7 +1446,7 @@ input:-webkit-autofill:focus {
 /* ---------- Card by card scrolling (Settings › Scrolling) ---------- */
 html.snap-scroll { scroll-snap-type: y mandatory; scroll-padding-top: calc(var(--header-h, 160px) + 22px); }
 .app[data-scroll='cards'] .home-main > .panel { scroll-snap-align: start; }
-@media (min-width: 900px) {
+@media (min-width: 1100px) { /* Oct 24: pin the routine only once it sits beside the cards (the columns stack below ~1,000px) */
   .app[data-scroll='cards'] .home > .panel-today {
     position: sticky;
     top: calc(var(--header-h, 160px) + 22px);
@@ -1918,7 +1918,7 @@ dialog.crawl::backdrop { background: #000000; }
 .app[data-tone='light'] .colour-hex { background: #ffffff; color: #444242; }
 
 /* Card by card: a little room above the sticky NOW card so it isn't cut off at the top of the routine. */
-@media (min-width: 900px) {
+@media (min-width: 1100px) { /* Oct 24: pin the routine only once it sits beside the cards (the columns stack below ~1,000px) */
   .app[data-scroll='cards'] .panel-today .now-card { top: -12px; box-shadow: 0 -14px 0 0 var(--surface-solid), 0 10px 14px -8px var(--surface-solid); }
 }
 .swatches:has(.colour-field) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
@@ -1946,7 +1946,7 @@ dialog.crawl::backdrop { background: #000000; }
 
 /* Card by card (Oct 17, 11:35 PM): items scrolling up fade out under the NOW card instead of being sliced
    off at its edge, and the list has room at the bottom so the last step clears the card's edge. */
-@media (min-width: 900px) {
+@media (min-width: 1100px) { /* Oct 24: pin the routine only once it sits beside the cards (the columns stack below ~1,000px) */
   .app[data-scroll='cards'] .panel-today .now-card::after {
     content: ''; position: absolute; left: -24px; right: -24px; top: calc(100% + 1px); height: 40px; pointer-events: none;
     background: linear-gradient(var(--surface-solid) 55%, transparent);
@@ -1996,7 +1996,7 @@ dialog.crawl::backdrop { background: #000000; }
 }
 .mood-row { display: flex; gap: 6px; flex-wrap: wrap; max-width: calc(34px * 5 + 6px * 4); }
 /* Card by card: the routine card is solid so the fade band under NOW blends into it instead of showing as a strip. */
-@media (min-width: 900px) {
+@media (min-width: 1100px) { /* Oct 24: pin the routine only once it sits beside the cards (the columns stack below ~1,000px) */
   .app[data-scroll='cards'] .home > .panel-today { background: var(--surface-solid); }
 }
 
@@ -2027,7 +2027,7 @@ select:not([multiple]) {
   color: var(--beige);
   white-space: pre-line;
 }
-@media (min-width: 900px) {
+@media (min-width: 1100px) { /* Oct 24: pin the routine only once it sits beside the cards (the columns stack below ~1,000px) */
   .app[data-scroll='cards'] .panel-today .now-card { top: 0; }
   .app[data-scroll='cards'] .panel-today .now-card::before { display: none; }
 }
