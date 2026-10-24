@@ -258,7 +258,16 @@ export function Days26Page(p: Props) {
             key={activeRitual.id}
             ritual={activeRitual}
             isTicked={(i) => !!rec?.ticks.includes(ritualKey(activeRitual.id, i))}
-            onTick={(i, on) => toggle(ritualKey(activeRitual.id, i), on)}
+            onTick={(i, on) => {
+              const key = ritualKey(activeRitual.id, i);
+              const turningOn = on ?? !rec?.ticks.includes(key);
+              toggle(key, on);
+              // Oct 24: a ritual step that is really a log (H2O, a meal, a walk, leisure work)
+              // opens its log filled in when ticked, as the Non-Negotiables do.
+              const step = activeRitual.items[i];
+              const k = step && (step.type ?? 'step') === 'step' ? logKindFor(step.label) : null;
+              if (turningOn && !rec?.ticks.includes(key) && k) setLog({ entry: newLog(k.kind, k.fill), isNew: true });
+            }}
             onSaveRitual={p.onSaveRitual}
             checkinText={p.checkinText}
             onCheckin={p.onCheckin}
@@ -926,7 +935,11 @@ function logKindFor(label: string): { kind: LogKind; fill: Partial<LogEntry> } |
   const l = label.trim().toLowerCase();
   if (/\bh2o\b|\bwater\b/.test(l)) return { kind: 'h2o', fill: {} };
   const meal = MEALS.find((m) => new RegExp(`\\b${m.toLowerCase()}\\b`).test(l));
-  return meal ? { kind: 'food', fill: { note: meal } } : null;
+  if (meal) return { kind: 'food', fill: { note: meal } };
+  // Oct 24: moving and working steps log too (Walk → Activity, Leisure work → Productivity).
+  if (/\b(walk|run(?!\s+errands)|jog|hike|workout|gym|yoga|stretch|exercise|bike|swim|activity)\b/.test(l)) return { kind: 'activity', fill: { note: label.trim() } };
+  if (/\b(work|work block|productivity)\b/.test(l)) return { kind: 'productivity', fill: { note: label.trim() } };
+  return null;
 }
 
 /** A food note is saved as "Meal · Description" (the meal is optional). */
