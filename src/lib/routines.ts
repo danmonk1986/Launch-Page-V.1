@@ -9,7 +9,9 @@ export interface RoutineItem {
   time: string | null; // "HH:MM", 24-hour, as written for Days
   label: string;
   /** Ritual steps only. step = tick it; meditation = plays its script; checkin = a journal check-in. */
-  type?: 'step' | 'meditation' | 'checkin' | 'list';
+  type?: 'step' | 'meditation' | 'checkin' | 'list' | 'text';
+  /** Text steps (Oct 24): the words shown under the step ("Park, bring in what you need…"). */
+  text?: string;
   /** List: the choices (Chill time → Outdoor, Movie, Read) and the one picked last. */
   options?: string[];
   picked?: string;

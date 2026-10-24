@@ -244,6 +244,7 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
                   {!(s.options ?? []).length && <span className="rit-label">Add choices with the pencil.</span>}
                 </div>
               )}
+              {type === 'text' && s.text?.trim() && <div className="rit-body">{s.text}</div>}
               {type === 'checkin' && (
                 <SaveOnBlur
                   className="rit-text"
@@ -662,7 +663,8 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
           .map((r) => {
             const out: RoutineItem = { time: null, label: r.label.trim(), type: r.type ?? 'step' };
             if (r.url?.trim()) out.url = r.url.trim();
-            if (r.type === 'step' || r.type === 'checkin') out.log = r.log ?? 'none';
+            if (r.type === 'step' || r.type === 'checkin' || r.type === 'text') out.log = r.log ?? 'none';
+            if (r.type === 'text' && r.text?.trim()) out.text = r.text.trim();
             if (r.type === 'meditation') {
               out.script = r.script ?? '';
               // Into the library: a picked one is updated, a new one (+ or a typed script) is added.
@@ -724,6 +726,7 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
                   <option value="meditation">Meditation</option>
                   <option value="checkin">Journal check-in</option>
                   <option value="list">List</option>
+                  <option value="text">Text</option>
                 </select>
                 <span className="d26-edit-tools">
                   <button type="button" className="icon-btn tool-btn" aria-label="Move up" title="Move up" disabled={i === 0} onClick={() => move(i, -1)}>
@@ -746,6 +749,15 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
                   <RocketPicker single options={rockets} picked={r.url ? [r.url] : []} onChange={(urls) => set(i, { url: urls[0] || undefined })} onAddNew={onAddRocket} />
                   <LogSelect value={r.log ?? 'none'} onChange={(log) => set(i, { log, logSet: true })} label={`Step ${i + 1} logs to`} />
                 </div>
+              )}
+              {r.type === 'text' && (
+                <>
+                  <textarea value={r.text ?? ''} rows={3} onChange={(e) => set(i, { text: e.target.value })} placeholder="The words under this step: Park, bring in what you need…" aria-label={`Step ${i + 1} text`} />
+                  <div className="rit-edit-sub">
+                    <span />
+                    <LogSelect value={r.log ?? 'none'} onChange={(log) => set(i, { log, logSet: true })} label={`Step ${i + 1} logs to`} />
+                  </div>
+                </>
               )}
               {r.type === 'list' && <ListOptions value={r.options ?? []} logs={r.optionLogs ?? {}} onChange={(options, optionLogs) => set(i, { options, optionLogs })} />}
               {r.type === 'meditation' && (

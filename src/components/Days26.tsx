@@ -271,7 +271,7 @@ export function Days26Page(p: Props) {
               // Oct 24: the log is picked per step in Edit ritual (journal check-ins can log too).
               const step = activeRitual.items[i];
               const t = step ? stepType(step).type : null;
-              const k = step && (t === 'step' || t === 'checkin') ? logFor(step.label, step.log) : null;
+              const k = step && (t === 'step' || t === 'checkin' || t === 'text') ? logFor(step.label, step.log) : null;
               if (turningOn && !rec?.ticks.includes(key) && k) setLog({ entry: newLog(k.kind, k.fill), isNew: true });
             }}
             isPicked={(i, o) => !!rec?.ticks.includes(pickKey(activeRitual.id, i, o))}
