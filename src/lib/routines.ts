@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { StepLog } from './days26';
 
 export type Kind = 'routine' | 'ritual';
 export type Shift = 'days' | 'nights';
@@ -22,6 +23,10 @@ export interface RoutineItem {
   checkin?: number;
   /** Routine steps only: the Non-Negotiable this step is (kept in sync, see nnsync.ts). */
   nonNegId?: string;
+  /** Ritual steps and check-ins (Oct 24): the log ticking it opens. Unset = read from the name. */
+  log?: StepLog;
+  /** List steps (Oct 24): the log each choice opens. */
+  optionLogs?: Record<string, StepLog>;
 }
 
 export interface Routine {

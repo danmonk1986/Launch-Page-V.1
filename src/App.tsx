@@ -31,6 +31,7 @@ import {
   nonNegForRitual,
   nonNegStore,
   ritualKey,
+  pickKey,
   quoteStore,
   routineDay,
   snapshot,
@@ -1161,6 +1162,11 @@ export default function App() {
             ritual={popRitual}
             isTicked={(i) => isTickedToday(ritualKey(popRitual.id, i))}
             onTick={(i, on) => tickToday(ritualKey(popRitual.id, i), on)}
+            isPicked={(i, o) => isTickedToday(pickKey(popRitual.id, i, o))}
+            onPick={(i, o, on) => {
+              tickToday(pickKey(popRitual.id, i, o), on);
+              if (on) tickToday(ritualKey(popRitual.id, i), true);
+            }}
             onSaveRitual={(r) => void saveRitual(r)}
             checkinText={checkinText}
             onCheckin={setCheckin}

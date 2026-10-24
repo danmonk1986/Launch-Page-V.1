@@ -478,6 +478,35 @@ export function shuffleFrom(list: Quote[], current: string | null) {
 
 /** A ritual step's tick for today lives in the day record as "r:<ritual>:<step>". */
 export const ritualKey = (ritualId: string, i: number) => `r:${ritualId}:${i}`;
+/** A List step's picks for today (Oct 24: pick as many as you like), "r:<ritual>:<step>:pick:<choice>". */
+export const pickKey = (ritualId: string, i: number, choice: string) => `${ritualKey(ritualId, i)}:pick:${choice}`;
+
+// ---------- Which log a step opens ----------
+
+export const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+
+/** A step that is really a log, read from its name: H2O / water, a meal, moving, working. */
+export function logKindFor(label: string): { kind: LogKind; fill: Partial<LogEntry> } | null {
+  const l = label.trim().toLowerCase();
+  // Oct 24: "H20" with a zero counts too.
+  if (/\bh2o\b|\bh20\b|\bwater\b/.test(l)) return { kind: 'h2o', fill: {} };
+  const meal = MEALS.find((m) => new RegExp(`\\b${m.toLowerCase()}\\b`).test(l));
+  if (meal) return { kind: 'food', fill: { note: meal } };
+  // Oct 24: moving and working steps log too (Walk → Activity, Leisure work → Productivity).
+  if (/\b(walk|run(?!\s+errands)|jog|hike|workout|gym|yoga|stretch|exercise|bike|swim|activity)\b/.test(l)) return { kind: 'activity', fill: { note: label.trim() } };
+  if (/\b(work|work block|productivity)\b/.test(l)) return { kind: 'productivity', fill: { note: label.trim() } };
+  return null;
+}
+
+/** A ritual step's (or a list choice's) log: picked in Edit ritual, or read from its name for older steps. */
+export type StepLog = LogKind | 'none';
+export function logFor(label: string, set?: StepLog): { kind: LogKind; fill: Partial<LogEntry> } | null {
+  if (set === 'none') return null;
+  const guess = logKindFor(label);
+  if (!set) return guess;
+  if (guess && guess.kind === set) return guess;
+  return { kind: set, fill: set === 'h2o' ? {} : { note: label.trim() } };
+}
 
 /** The Non-Negotiable a ritual stands for: same name, or a name that contains it ("Rise to Shine Ritual"). */
 export function nonNegForRitual(list: NonNeg[], r: { id: string; name: string }) {

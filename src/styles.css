@@ -2129,3 +2129,22 @@ select:not([multiple]) {
 .rit-med-title { align-self: flex-start; }
 .rit-med-body { flex: 1 1 auto; min-height: 120px; overflow-y: auto; white-space: pre-wrap; line-height: 1.6; color: var(--mist); padding: 4px 2px; }
 .rit-med .rit-step.rit-medcard { flex: 1 1 0; min-height: 0; }
+
+/* Oct 24: below the side-by-side width the meditation card sits in the stack at its own height
+   (it was sized to fill the right column, so at half a screen it collapsed under its own bar). */
+@media (max-width: 1000px) {
+  .rit-med .rit-step.rit-medcard { flex: none; min-height: 0; }
+  .rit-med-body { flex: none; max-height: 320px; }
+}
+
+/* Edit ritual, Oct 24: row 2 is rocket · log; list choices each pick their log */
+.rit-edit-sub { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 6px; align-items: start; }
+.rit-edit-row .rit-log-pick { height: 44px; }
+.rit-opt-list { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 6px; }
+.rit-opt-row { display: grid; grid-template-columns: minmax(0, 1fr) 170px 40px; gap: 6px; align-items: center; }
+.rit-opt-name { overflow-wrap: anywhere; color: var(--beige); padding-left: 4px; }
+.rit-opt-row .icon-btn { width: 40px; height: 40px; }
+@media (max-width: 640px) {
+  .rit-edit-sub { grid-template-columns: minmax(0, 1fr); }
+  .rit-opt-row { grid-template-columns: minmax(0, 1fr) 130px 40px; }
+}

@@ -3,7 +3,7 @@ import { MeditationsContext } from '../lib/meditations';
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
 import type { Routine, RoutineItem } from '../lib/routines';
-import type { NonNeg } from '../lib/days26';
+import { logKindFor, type NonNeg, type StepLog } from '../lib/days26';
 import { RocketPicker, type RocketOption } from './Launchers';
 import { openCard } from '../lib/launchers';
 
@@ -32,25 +32,61 @@ export function stepType(s: RoutineItem): { type: StepType; checkin: number } {
   return { type: 'step', checkin: 1 };
 }
 
-/** A List step's choices in Edit ritual: each sits as a ticked box (untick to remove); type to add. */
-function ListOptions({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+const LOG_CHOICES: { v: StepLog; label: string }[] = [
+  { v: 'none', label: 'No log' },
+  { v: 'productivity', label: 'Productivity' },
+  { v: 'activity', label: 'Activity' },
+  { v: 'rest', label: 'Rest' },
+  { v: 'food', label: 'Food' },
+  { v: 'h2o', label: 'H2O' },
+  { v: 'vices', label: 'Vices' }
+];
+/** The log a step (or a list choice) opens when ticked (Oct 24). */
+function LogSelect({ value, onChange, label }: { value: StepLog; onChange: (v: StepLog) => void; label: string }) {
+  return (
+    <select className="rit-log-pick" value={value} onChange={(e) => onChange(e.target.value as StepLog)} aria-label={label} title="Logs to">
+      {LOG_CHOICES.map((c) => (
+        <option key={c.v} value={c.v}>
+          {c.v === 'none' ? c.label : `Log: ${c.label}`}
+        </option>
+      ))}
+    </select>
+  );
+}
+const guessLog = (label: string): StepLog => logKindFor(label)?.kind ?? 'none';
+
+/** A List step's choices in Edit ritual (Oct 24): each with the log it opens and a remove; type to add. */
+function ListOptions({ value, logs, onChange }: { value: string[]; logs: Record<string, StepLog>; onChange: (v: string[], logs: Record<string, StepLog>) => void }) {
   const [draft, setDraft] = useState('');
   const add = () => {
     const v = draft.trim();
-    if (v && !value.some((x) => x.toLowerCase() === v.toLowerCase())) onChange([...value, v]);
+    if (v && !value.some((x) => x.toLowerCase() === v.toLowerCase())) onChange([...value, v], { ...logs, [v]: guessLog(v) });
     setDraft('');
   };
   return (
     <div className="rocket-picker">
       {value.length > 0 && (
-        <div className="tab-picks">
+        <ul className="rit-opt-list">
           {value.map((o) => (
-            <label key={o} className="choice">
-              <input type="checkbox" checked onChange={() => onChange(value.filter((x) => x !== o))} aria-label={`Remove ${o}`} />
-              <span>{o}</span>
-            </label>
+            <li key={o} className="rit-opt-row">
+              <span className="rit-opt-name">{o}</span>
+              <LogSelect value={logs[o] ?? guessLog(o)} onChange={(v) => onChange(value, { ...logs, [o]: v })} label={`${o} logs to`} />
+              <button
+                type="button"
+                className="icon-btn tool-btn tool-btn-danger"
+                aria-label={`Remove ${o}`}
+                title="Remove this choice"
+                onClick={() => {
+                  const next = { ...logs };
+                  delete next[o];
+                  onChange(value.filter((x) => x !== o), next);
+                }}
+              >
+                <Icon d={CLOSE_X} />
+              </button>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
       <div className="rocket-new">
         <input
@@ -91,10 +127,13 @@ type RunnerProps = {
   linked: NonNeg | null;
   linkedDone: boolean;
   onDone: () => void;
+  /** List steps (Oct 24): today's picks, as many as you like. */
+  isPicked?: (i: number, choice: string) => boolean;
+  onPick?: (i: number, choice: string, on: boolean) => void;
 };
 
 /** The ritual's steps side by side: tick each one off, open its link, play the meditation, write the check-in. */
-export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinText, onCheckin, linked, linkedDone, onDone }: RunnerProps) {
+export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinText, onCheckin, linked, linkedDone, onDone, isPicked, onPick }: RunnerProps) {
   const steps = ritual.items.map((s, i) => ({ s, i })).filter(({ s }) => s.label.trim());
   const done = steps.filter(({ i }) => isTicked(i)).length;
   const [playing, setPlaying] = useState<number | null>(null);
@@ -182,10 +221,10 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
                 <span className="rit-label">{s.label}</span>
               )}
               {type === 'list' && (
-                // Pick one for today: it ticks the step (Oct 20).
-                <div className="rit-options" role="group" aria-label={`${s.label}: pick one`}>
+                // Oct 24: pick as many as you like for today; the first ticks the step, each opens its log.
+                <div className="rit-options" role="group" aria-label={`${s.label}: pick any`}>
                   {(s.options ?? []).map((o) => {
-                    const on = ok && s.picked === o;
+                    const on = isPicked ? isPicked(i, o) : ok && s.picked === o;
                     return (
                       <button
                         key={o}
@@ -193,6 +232,7 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
                         className={`btn btn-quiet rit-option${on ? ' is-picked' : ''}`}
                         aria-pressed={on}
                         onClick={() => {
+                          if (onPick) return onPick(i, o, !on);
                           onSaveRitual({ ...ritual, items: ritual.items.map((x, j) => (j === i ? { ...x, picked: o } : x)) });
                           if (!ok) onTick(i, true);
                         }}
@@ -583,7 +623,7 @@ export function RitualPicker({ rituals, activeId, onPick, onAdd, onEdit, onDupli
   );
 }
 
-type Draft = RoutineItem & { k: string };
+type Draft = RoutineItem & { k: string; /** The log was picked (not guessed from the name). */ logSet?: boolean };
 
 /** Name and steps; each step can be a plain step, a meditation or a journal check-in, with a link. */
 export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAddRocket }: { ritual: Routine; isNew: boolean; onSave: (r: Routine) => void; onDelete: () => void; /** What a step can open (Oct 20: pick a rocket, not type a link). */ rockets?: RocketOption[]; onAddRocket?: (url: string) => Promise<void> }) {
@@ -596,11 +636,13 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
     const list = ritual.items.map((s) => ({ ...s, ...(s.meditationId ? { script: med.list.find((m) => m.id === s.meditationId)?.script ?? s.script } : {}), ...(() => {
       const t = stepType(s);
       return { type: t.type, checkin: t.type === 'checkin' ? t.checkin : undefined };
-    })(), k: crypto.randomUUID() }));
-    return list.length ? list : [{ time: null, label: '', type: 'step', k: crypto.randomUUID() }];
+    })(), log: s.log ?? guessLog(s.label), logSet: !!s.log, k: crypto.randomUUID() }));
+    return list.length ? list : [{ time: null, label: '', type: 'step', log: 'none', k: crypto.randomUUID() }];
   });
   const formId = useId();
   const set = (i: number, patch: Partial<Draft>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const blank = (): Draft => ({ time: null, label: '', type: 'step', log: 'none', k: crypto.randomUUID() });
+  const addBelow = (i: number) => setRows((rs) => [...rs.slice(0, i + 1), blank(), ...rs.slice(i + 1)]);
   const move = (i: number, by: number) =>
     setRows((rs) => {
       const j = i + by;
@@ -620,6 +662,7 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
           .map((r) => {
             const out: RoutineItem = { time: null, label: r.label.trim(), type: r.type ?? 'step' };
             if (r.url?.trim()) out.url = r.url.trim();
+            if (r.type === 'step' || r.type === 'checkin') out.log = r.log ?? 'none';
             if (r.type === 'meditation') {
               out.script = r.script ?? '';
               // Into the library: a picked one is updated, a new one (+ or a typed script) is added.
@@ -633,6 +676,7 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
             if (r.type === 'checkin') out.checkin = Math.max(1, r.checkin ?? 1);
             if (r.type === 'list') {
               out.options = [...new Set((r.options ?? []).map((o) => o.trim()).filter(Boolean))];
+              out.optionLogs = Object.fromEntries(out.options.map((o) => [o, r.optionLogs?.[o] ?? guessLog(o)]));
               if (r.picked) out.picked = r.picked;
             }
             return out;
@@ -673,7 +717,8 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
           {rows.map((r, i) => (
             <li key={r.k} className="rit-edit-row">
               <div className="rit-edit-main">
-                <input value={r.label} onChange={(e) => set(i, { label: e.target.value })} placeholder={`Step ${i + 1}`} aria-label={`Step ${i + 1}`} />
+                {/* A log not picked yet follows the name (typing "Walk" sets Activity). */}
+                <input value={r.label} onChange={(e) => set(i, r.logSet ? { label: e.target.value } : { label: e.target.value, log: guessLog(e.target.value) })} placeholder={`Step ${i + 1}`} aria-label={`Step ${i + 1}`} />
                 <select value={r.type ?? 'step'} onChange={(e) => set(i, { type: e.target.value as StepType, checkin: e.target.value === 'checkin' ? r.checkin ?? 1 : undefined })} aria-label="Kind of step">
                   <option value="step">Step</option>
                   <option value="meditation">Meditation</option>
@@ -687,15 +732,22 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
                   <button type="button" className="icon-btn tool-btn" aria-label="Move down" title="Move down" disabled={i === rows.length - 1} onClick={() => move(i, 1)}>
                     <Icon d={DOWN} />
                   </button>
+                  <button type="button" className="icon-btn tool-btn" aria-label={`Add a step after step ${i + 1}`} title="Add a step below" onClick={() => addBelow(i)}>
+                    <Icon d={PLUS} />
+                  </button>
                   <button type="button" className="icon-btn tool-btn tool-btn-danger" aria-label="Remove step" title="Remove" onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}>
                     <Icon d={TRASH} />
                   </button>
                 </span>
               </div>
+              {/* Oct 24: row 2 is rocket · log (a check-in: its number · log). */}
               {(r.type ?? 'step') === 'step' && (
-                <RocketPicker single options={rockets} picked={r.url ? [r.url] : []} onChange={(urls) => set(i, { url: urls[0] || undefined })} onAddNew={onAddRocket} />
+                <div className="rit-edit-sub">
+                  <RocketPicker single options={rockets} picked={r.url ? [r.url] : []} onChange={(urls) => set(i, { url: urls[0] || undefined })} onAddNew={onAddRocket} />
+                  <LogSelect value={r.log ?? 'none'} onChange={(log) => set(i, { log, logSet: true })} label={`Step ${i + 1} logs to`} />
+                </div>
               )}
-              {r.type === 'list' && <ListOptions value={r.options ?? []} onChange={(options) => set(i, { options })} />}
+              {r.type === 'list' && <ListOptions value={r.options ?? []} logs={r.optionLogs ?? {}} onChange={(options, optionLogs) => set(i, { options, optionLogs })} />}
               {r.type === 'meditation' && (
                 <div className="rocket-new">
                   <select
@@ -723,15 +775,18 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
                 <textarea value={r.script ?? ''} rows={4} onChange={(e) => set(i, { script: e.target.value })} placeholder="The words that play up the screen" aria-label="Meditation script" />
               )}
               {r.type === 'checkin' && (
-                <label className="rit-edit-num">
-                  Journal check in #
-                  <input type="number" min={1} step={1} value={r.checkin ?? 1} onChange={(e) => set(i, { checkin: Number(e.target.value) || 1 })} />
-                </label>
+                <div className="rit-edit-sub">
+                  <label className="rit-edit-num">
+                    Journal check in #
+                    <input type="number" min={1} step={1} value={r.checkin ?? 1} onChange={(e) => set(i, { checkin: Number(e.target.value) || 1 })} />
+                  </label>
+                  <LogSelect value={r.log ?? 'none'} onChange={(log) => set(i, { log, logSet: true })} label={`Step ${i + 1} logs to`} />
+                </div>
               )}
             </li>
           ))}
         </ol>
-        <button type="button" className="journal-toggle" onClick={() => setRows((rs) => [...rs, { time: null, label: '', type: 'step', k: crypto.randomUUID() }])}>
+        <button type="button" className="journal-toggle" onClick={() => setRows((rs) => [...rs, blank()])}>
           <Icon d={PLUS} size={14} />
           Add a step
         </button>
