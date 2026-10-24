@@ -1,4 +1,4 @@
-import { useEffect, useState, useId, useRef } from 'react';
+import { useEffect, useLayoutEffect, useState, useId, useRef } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import {
   describeSchedule,
@@ -1044,6 +1044,34 @@ function TimedForm({
   );
 }
 
+/**
+ * Oct 24 (LP-045): a dropdown near the bottom of a form or pop-up opens upward when there isn't
+ * room below (its list is 280px tall), so every choice can be reached without scrolling.
+ */
+function useOpensUp(wrap: { current: HTMLElement | null }, open: boolean) {
+  const [up, setUp] = useState(false);
+  useLayoutEffect(() => {
+    const el = wrap.current;
+    if (!open || !el) return;
+    const r = el.getBoundingClientRect();
+    // The visible bottom: the window, or a scrolling box (a pop-up's body) that clips it sooner.
+    let bottom = window.innerHeight;
+    let top = 0;
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      const o = getComputedStyle(p).overflowY;
+      if (o === 'auto' || o === 'scroll' || o === 'hidden') {
+        const pr = p.getBoundingClientRect();
+        bottom = Math.min(bottom, pr.bottom);
+        top = Math.max(top, pr.top);
+      }
+    }
+    const below = bottom - r.bottom;
+    const above = r.top - top;
+    setUp(below < 290 && above > below);
+  }, [open, wrap]);
+  return up;
+}
+
 /** "What": type a new name, or open the list with ⌄ (or by typing) and pick one you've used before. */
 export function TitleCombo({ value, titles, onChange, placeholder = 'Work Block #1 - Launch Page Construction', required = true, autoFocus }: { value: string; titles: string[]; onChange: (v: string) => void; placeholder?: string; required?: boolean; autoFocus?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -1051,6 +1079,7 @@ export function TitleCombo({ value, titles, onChange, placeholder = 'Work Block 
   const [hi, setHi] = useState(0);
   const listId = useId();
   const wrap = useRef<HTMLDivElement>(null);
+  const up = useOpensUp(wrap, open);
   const q = value.trim().toLowerCase();
   const shown = (filtering && q ? titles.filter((t) => t.toLowerCase().includes(q)) : titles).filter((t) => t !== value);
   const pick = (t: string) => {
@@ -1112,7 +1141,7 @@ export function TitleCombo({ value, titles, onChange, placeholder = 'Work Block 
         </button>
       )}
       {open && shown.length > 0 && (
-        <ul className="combo-list" role="listbox" id={listId}>
+        <ul className={`combo-list${up ? ' is-up' : ''}`} role="listbox" id={listId}>
           {shown.map((t, i) => (
             <li key={t} role="option" aria-selected={i === hi}>
               <button type="button" className={`combo-opt combo-opt-plain ${i === hi ? 'is-hi' : ''}`} onMouseEnter={() => setHi(i)} onClick={() => pick(t)}>
@@ -1235,6 +1264,7 @@ function NameCombo({ value, options, onType, onPick, placeholder, required = tru
   const [filtering, setFiltering] = useState(false);
   const listId = useId();
   const wrap = useRef<HTMLDivElement>(null);
+  const up = useOpensUp(wrap, open);
   const q = value.trim().toLowerCase();
   const shown = filtering && q ? options.filter((o) => o.name.toLowerCase().includes(q) || o.note.toLowerCase().includes(q)) : options;
   const pick = (o: ComboOption) => {
@@ -1306,7 +1336,7 @@ function NameCombo({ value, options, onType, onPick, placeholder, required = tru
         </button>
       )}
       {open && shown.length > 0 && (
-        <ul className="combo-list" role="listbox" id={listId}>
+        <ul className={`combo-list${up ? ' is-up' : ''}`} role="listbox" id={listId}>
           {shown.map((o, i) => (
             <li key={`${o.kind}-${o.name}`} role="option" aria-selected={i === hi}>
               <button type="button" className={`combo-opt ${i === hi ? 'is-hi' : ''}`} onMouseEnter={() => setHi(i)} onClick={() => pick(o)}>
