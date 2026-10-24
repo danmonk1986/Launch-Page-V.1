@@ -2119,3 +2119,12 @@ select:not([multiple]) {
 .invoice-totals strong { color: var(--accent-teal); }
 .invoice-sub { margin: 20px 0 8px; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--beige); }
 .invoice-customer { padding: 12px 0; border-bottom: 1px solid var(--edge); }
+
+/* Meditation card (Oct 24): playlist bar on top, the meditation fills the rest */
+.rit-step.rit-medcard { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.rit-med-bar { display: flex; gap: 6px; align-items: center; }
+.rit-med-bar .rit-med-pick { flex: 1; min-width: 0; max-width: none; height: 36px; }
+.rit-med-bar .icon-btn { flex: none; width: 36px; height: 36px; }
+.rit-med-title { align-self: flex-start; }
+.rit-med-body { flex: 1 1 auto; min-height: 120px; overflow-y: auto; white-space: pre-wrap; line-height: 1.6; color: var(--mist); padding: 4px 2px; }
+.rit-med .rit-step.rit-medcard { flex: 1 1 0; min-height: 0; }

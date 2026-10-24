@@ -26,7 +26,8 @@ export const meditationStore = makeStore<Meditation, Row>({
 });
 
 /** The library, handed to every ritual (runner and editor) without threading it through pages. */
-export const MeditationsContext = createContext<{ list: Meditation[]; save: (m: Meditation) => Promise<void> }>({
+export const MeditationsContext = createContext<{ list: Meditation[]; save: (m: Meditation) => Promise<void>; remove: (id: string) => Promise<void> }>({
   list: [],
-  save: async () => {}
+  save: async () => {},
+  remove: async () => {}
 });

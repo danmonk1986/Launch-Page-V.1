@@ -1,6 +1,6 @@
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { MeditationsContext } from '../lib/meditations';
-import { FormActions } from './Sheet';
+import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
 import type { Routine, RoutineItem } from '../lib/routines';
 import type { NonNeg } from '../lib/days26';
@@ -16,6 +16,8 @@ const LINK = 'M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 10a5 5 0 0 0-7 0l-3
 const PLUS = 'M12 5v14M5 12h14';
 const UP = 'M12 19V5M5 12l7-7 7 7';
 const DOWN = 'M12 5v14M5 12l7 7 7-7';
+const CLOSE_X = 'M6 6l12 12M18 6L6 18';
+const PENCIL = 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4';
 const TRASH = 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3';
 
 export type StepType = NonNullable<RoutineItem['type']>;
@@ -100,19 +102,70 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
   const med = useContext(MeditationsContext);
   const libOf = (s?: RoutineItem) => (s?.meditationId ? med.list.find((m) => m.id === s.meditationId) : undefined);
   const scriptOf = (s?: RoutineItem) => libOf(s)?.script ?? s?.script ?? '';
-  // Editing under the player changes the library copy, so every ritual using it changes too.
-  const setScript = (i: number, script: string) => {
-    const s = ritual.items[i];
-    const lib = libOf(s);
-    if (lib) return void med.save({ ...lib, script });
-    onSaveRitual({ ...ritual, items: ritual.items.map((x, j) => (j === i ? { ...x, script } : x)) });
-  };
 
   const number = new Map(steps.map(({ i }, n) => [i, n + 1]));
+  // Oct 24: the meditation card. The playlist bar sits on top (pick, + new, edit, remove) and the
+  // meditation fills the rest; new and edit open a pop-up with a name and the text.
+  const [medEdit, setMedEdit] = useState<{ i: number; id: string; title: string; script: string; isNew: boolean } | null>(null);
+  const pickMed = (i: number, id: string) => {
+    const m = med.list.find((x) => x.id === id);
+    if (m) onSaveRitual({ ...ritual, items: ritual.items.map((x, j) => (j === i ? { ...x, meditationId: m.id, script: m.script } : x)) });
+  };
+  const renderMeditation = (s: RoutineItem, i: number, ok: boolean) => {
+    const lib = libOf(s);
+    const script = scriptOf(s);
+    return (
+      <li key={i} className={`rit-step is-meditation rit-medcard${ok ? ' is-done' : ''}`}>
+        <div className="rit-med-bar">
+          <button type="button" role="checkbox" aria-checked={ok} className="d26-check" aria-label={s.label} onClick={() => onTick(i)}>
+            {ok && <Icon d={CHECK} size={14} />}
+          </button>
+          <select className="rit-med-pick" aria-label="Meditation playlist" value={lib ? lib.id : ''} onChange={(e) => pickMed(i, e.target.value)}>
+            {!lib && <option value="">{s.script?.trim() ? `${s.label} (this ritual)` : 'Pick a meditation'}</option>}
+            {med.list.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.title || 'Untitled'}
+              </option>
+            ))}
+          </select>
+          <button type="button" className="icon-btn tool-btn" aria-label="New meditation" title="New meditation" onClick={() => setMedEdit({ i, id: crypto.randomUUID(), title: '', script: '', isNew: true })}>
+            <Icon d={PLUS} />
+          </button>
+          <button
+            type="button"
+            className="icon-btn tool-btn"
+            aria-label="Edit this meditation"
+            title="Edit"
+            disabled={!lib && !s.script?.trim()}
+            onClick={() => setMedEdit(lib ? { i, id: lib.id, title: lib.title, script: lib.script, isNew: false } : { i, id: crypto.randomUUID(), title: s.label, script: s.script ?? '', isNew: true })}
+          >
+            <Icon d={PENCIL} />
+          </button>
+          <button
+            type="button"
+            className="icon-btn tool-btn tool-btn-danger"
+            aria-label="Remove this meditation from the library"
+            title="Remove from the library"
+            disabled={!lib}
+            onClick={() => {
+              if (lib && window.confirm(`Remove "${lib.title || 'this meditation'}" from the library?`)) void med.remove(lib.id);
+            }}
+          >
+            <Icon d={CLOSE_X} />
+          </button>
+        </div>
+        <button type="button" className="rit-label is-link rit-med-title" onClick={() => setPlaying(i)} title="Play the meditation" disabled={!script.trim()}>
+          <Icon d={PLAY} size={14} /> {lib?.title || s.label}
+        </button>
+        <div className="rit-med-body">{script.trim() ? script : 'No words yet. Tap + to write one, or pick one from the playlist.'}</div>
+      </li>
+    );
+  };
   const renderStep = ({ s, i }: { s: RoutineItem; i: number }) => {
           const { type, checkin } = stepType(s);
           const ok = isTicked(i);
           const url = safeUrl(s.url);
+          if (type === 'meditation') return renderMeditation(s, i, ok);
           return (
             <li key={i} className={`rit-step is-${type}${ok ? ' is-done' : ''}`}>
               <div className="rit-step-top">
@@ -120,32 +173,8 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
                 <button type="button" role="checkbox" aria-checked={ok} className="d26-check" aria-label={s.label} onClick={() => onTick(i)}>
                   {ok && <Icon d={CHECK} size={14} />}
                 </button>
-                {/* Oct 22: swap today's meditation from the library right here, no Edit needed. */}
-                {type === 'meditation' && med.list.length > 1 && (
-                  <select
-                    className="rit-med-pick"
-                    aria-label={`Which meditation for ${s.label}`}
-                    title="Switch meditation"
-                    value={s.meditationId ?? ''}
-                    onChange={(e) => {
-                      const m = med.list.find((x) => x.id === e.target.value);
-                      if (m) onSaveRitual({ ...ritual, items: ritual.items.map((x, j) => (j === i ? { ...x, meditationId: m.id, script: m.script } : x)) });
-                    }}
-                  >
-                    {!s.meditationId && <option value="">This ritual's own</option>}
-                    {med.list.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.title || 'Untitled'}
-                      </option>
-                    ))}
-                  </select>
-                )}
               </div>
-              {type === 'meditation' ? (
-                <button type="button" className="rit-label is-link" onClick={() => setPlaying(i)} title="Play the meditation">
-                  <Icon d={PLAY} size={14} /> {s.label}
-                </button>
-              ) : url ? (
+              {url ? (
                 <a className="rit-label is-link" href={url} target="_blank" rel="noopener noreferrer" title={`Open ${url}`} onClick={(e) => openCard(url) && e.preventDefault()}>
                   {s.label} <Icon d={LINK} size={13} />
                 </a>
@@ -175,7 +204,6 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
                   {!(s.options ?? []).length && <span className="rit-label">Add choices with the pencil.</span>}
                 </div>
               )}
-              {type === 'meditation' && <SaveOnBlur className="rit-text rit-script" value={s.script ?? ''} placeholder="The words that play up the screen" label={`${s.label} script`} onSave={(v) => setScript(i, v)} />}
               {type === 'checkin' && (
                 <SaveOnBlur
                   className="rit-text"
@@ -225,6 +253,33 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
       <button type="button" className={`btn rit-done${all ? '' : ' btn-quiet'}`} onClick={onDone}>
         {linked ? (linkedDone ? `Done · ${linked.label} is ticked` : `Done · tick ${linked.label}`) : 'Done'}
       </button>
+      <Sheet open={!!medEdit} title={medEdit?.isNew ? 'New meditation' : 'Edit meditation'} wide onClose={() => setMedEdit(null)}>
+        {medEdit && (
+          <form
+            id="med-edit"
+            className="task-form"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const title = medEdit.title.trim() || 'Meditation';
+              const lib = med.list.find((x) => x.id === medEdit.id);
+              await med.save({ id: medEdit.id, title, script: medEdit.script, sort: lib?.sort ?? med.list.length });
+              // A new one plays in this step right away.
+              if (medEdit.isNew) onSaveRitual({ ...ritual, items: ritual.items.map((x, j) => (j === medEdit.i ? { ...x, meditationId: medEdit.id, script: medEdit.script } : x)) });
+              setMedEdit(null);
+            }}
+          >
+            <label className="field">
+              <span>Name</span>
+              <input autoFocus value={medEdit.title} placeholder="Midday reset" onChange={(e) => setMedEdit({ ...medEdit, title: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>Meditation</span>
+              <textarea rows={14} value={medEdit.script} placeholder="Type or paste the words that play up the screen" onChange={(e) => setMedEdit({ ...medEdit, script: e.target.value })} />
+            </label>
+            <FormActions formId="med-edit" saveDisabled={!medEdit.script.trim()} />
+          </form>
+        )}
+      </Sheet>
       {playing !== null && (
         <MeditationCrawl
           title={ritual.items[playing]?.label ?? 'Meditation'}

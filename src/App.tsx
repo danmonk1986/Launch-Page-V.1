@@ -369,6 +369,13 @@ export default function App() {
     const ok = await meditationStore.save(userId, m, next);
     if (!ok) setStatus(`${m.title || 'Meditation'} saved on this device only.`);
   }
+  async function removeMeditation(id: string) {
+    const next = medsRef.current.filter((x) => x.id !== id);
+    medsRef.current = next;
+    setMeditations(next);
+    await meditationStore.remove(userId, id, next);
+    setStatus('Meditation removed from the library.');
+  }
   const quoteOps = ops(quoteStore, quotes, setQuotes, () => 'Quote');
   const budgetOps = ops(budgetStore, budget, setBudget, (l) => l.description);
   const invoiceOps = ops(invoiceStore, invoices, setInvoices, (i) => i.number || 'Invoice');
@@ -867,7 +874,7 @@ export default function App() {
   }
 
   return (
-    <MeditationsContext.Provider value={{ list: meditations, save: saveMeditation }}>
+    <MeditationsContext.Provider value={{ list: meditations, save: saveMeditation, remove: removeMeditation }}>
     <div className={`${scrolled ? 'app is-scrolled' : 'app'}${bgImage ? ' has-bg-image' : ''}`} style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'} data-scroll={scrollMode}>
       <div className="sky" aria-hidden="true">
         <div className="sky-lines" />
