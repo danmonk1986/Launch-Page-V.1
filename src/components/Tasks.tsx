@@ -1,5 +1,7 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId } from 'react';
 import { FormActions, Sheet } from './Sheet';
+import { AddItemForm, type AddItemResult } from './AddItem';
+import type { BudgetLine } from '../lib/budget';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { normalizeUrl } from '../lib/launchers';
 import { projectLabel, projectTree, type Project } from '../lib/projects';
@@ -534,8 +536,18 @@ export function SearchToggle({ value, onChange, placeholder }: { value: string; 
   );
 }
 
-export function TasksPage(p: PageProps & { onOpenProjects: () => void; onClose: () => void; focusId?: string | null }) {
+export function TasksPage(
+  p: PageProps & {
+    onOpenProjects: () => void;
+    onClose: () => void;
+    focusId?: string | null;
+    /** Add item (LP-030): one pop-up for a task, a budget line, or both linked. */
+    budgetLines?: BudgetLine[];
+    onAddItem?: (r: AddItemResult) => Promise<void>;
+  }
+) {
   const editor = useTaskEditor(p);
+  const [adding, setAdding] = useState(false);
   const act = useActions(p, editor);
   const [view, setView] = useState<Section | null>(null);
   // Search: a task matches on its name, description, notes, info or project; its steps come with
@@ -571,7 +583,7 @@ export function TasksPage(p: PageProps & { onOpenProjects: () => void; onClose: 
         </h2>
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder="Search tasks" />
-          <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={editor.add}>
+          <button type="button" className="icon-btn tool-btn" aria-label="Add item" title="Add item: a task, a budget line, or both linked" onClick={() => (p.onAddItem ? setAdding(true) : editor.add())}>
             <Icon d={PLUS} />
           </button>
           <button type="button" className="icon-btn tool-btn" aria-label="Projects" title="Areas and projects" onClick={p.onOpenProjects}>
@@ -602,6 +614,26 @@ export function TasksPage(p: PageProps & { onOpenProjects: () => void; onClose: 
         focusId={p.focusId ?? null}
       />
       {editor.sheet}
+      {p.onAddItem && (
+        <Sheet open={adding} title="Add item" onClose={() => setAdding(false)} wide>
+          {adding && (
+            <AddItemForm
+              goesTo={{ tasks: true, budget: false }}
+              lines={p.budgetLines ?? []}
+              tasks={p.tasks}
+              projects={p.projects}
+              onSave={async (r) => {
+                await p.onAddItem!(r);
+                setAdding(false);
+              }}
+              onMoreTaskFields={(t) => {
+                setAdding(false);
+                editor.edit(t);
+              }}
+            />
+          )}
+        </Sheet>
+      )}
     </section>
   );
 }

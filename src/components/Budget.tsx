@@ -4,6 +4,7 @@ import { Icon, SearchToggle } from './Tasks';
 import { TitleCombo } from './Launchers';
 import { RepeatPicker } from './RepeatPicker';
 import { ExpensesView } from './Expenses';
+import { AddItemForm, type AddItemResult } from './AddItem';
 import type { Expense } from '../lib/expenses';
 import { planLinks, type LinkPlan } from '../lib/links';
 import type { Task } from '../lib/tasks';
@@ -20,7 +21,6 @@ import {
   linesToCsv,
   money,
   monthlyByCategory,
-  newBudgetLine,
   sumLines,
   type BudgetGroupBy,
   type BudgetLine,
@@ -58,6 +58,7 @@ type Props = {
   /** Link and dedupe (LP-030 step 3). */
   tasks: Task[];
   onApplyLinks: (plan: LinkPlan) => Promise<void>;
+  onAddItem: (r: AddItemResult) => Promise<void>;
 };
 
 type BudgetView = 'budget' | 'expenses';
@@ -123,6 +124,7 @@ export function BudgetPage(p: Props) {
   const file = useRef<HTMLInputElement>(null);
   const [linkPlan, setLinkPlan] = useState<LinkPlan | null>(null);
   const [linking, setLinking] = useState(false);
+  const [adding, setAdding] = useState(false);
   // Budget | Expenses (LP-030), remembered on this device.
   const [view, setViewState] = useState<BudgetView>(() => {
     try {
@@ -230,7 +232,7 @@ export function BudgetPage(p: Props) {
           <SearchToggle value={q} onChange={setQ} placeholder={view === 'expenses' ? 'Search expenses' : 'Search the budget'} />
           {view === 'budget' && (
           <>
-          <button type="button" className="icon-btn tool-btn" aria-label="Add a line" title="Add a line" onClick={() => setEditing(newBudgetLine(groupBy === 'section' && pick ? (pick as BudgetSection) : 'variable', p.lines.reduce((m, l) => Math.max(m, l.sort + 1), 0)))}>
+          <button type="button" className="icon-btn tool-btn" aria-label="Add item" title="Add item: a budget line, a task, or both linked" onClick={() => setAdding(true)}>
             <Icon d={PLUS} />
           </button>
           <button
@@ -424,6 +426,21 @@ export function BudgetPage(p: Props) {
             onDelete={async (id) => {
               await p.onDelete(id);
               setEditing(null);
+            }}
+          />
+        )}
+      </Sheet>
+
+      <Sheet open={adding} title="Add item" onClose={() => setAdding(false)} wide>
+        {adding && (
+          <AddItemForm
+            goesTo={{ tasks: false, budget: true }}
+            lines={p.lines}
+            tasks={p.tasks}
+            projects={p.projects}
+            onSave={async (r) => {
+              await p.onAddItem(r);
+              setAdding(false);
             }}
           />
         )}

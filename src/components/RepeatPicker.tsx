@@ -16,6 +16,8 @@ export function RepeatPicker({ value, onChange, from }: { value: Repeat; onChang
   const wk = r.match(/^(1ST|2ND|3RD|4TH|LAST)\s+([A-Z]{3})/);
   const mode: 'day' | 'weekday' = wk ? 'weekday' : 'day';
   const dayNum = /^\d{1,2}$/.test(r) ? Number(r) : 1;
+  // LP-030: "Last day" (M:LAST) lands on Oct 31, Nov 30, Feb 28.
+  const dayVal = r === 'LAST' ? 'LAST' : String(dayNum);
   const ord = wk ? wk[1] : '1ST';
   const dow = wk ? wk[2] : 'MON';
   const [mo, dy] = value.date.split('-').map(Number);
@@ -44,7 +46,7 @@ export function RepeatPicker({ value, onChange, from }: { value: Repeat; onChang
         <>
           <div className="choice-row repeat-row">
             <label className="choice">
-              <input type="radio" name={`${id}-mode`} checked={mode === 'day'} onChange={() => set({ rule: String(dayNum) })} />
+              <input type="radio" name={`${id}-mode`} checked={mode === 'day'} onChange={() => set({ rule: dayVal })} />
               <span>On a date</span>
             </label>
             <label className="choice">
@@ -54,7 +56,8 @@ export function RepeatPicker({ value, onChange, from }: { value: Repeat; onChang
           </div>
           {mode === 'day' ? (
             <div className="time-grid repeat-row">
-              <select aria-label="Day of the month" value={dayNum} onChange={(e) => set({ rule: e.target.value })}>
+              <select aria-label="Day of the month" value={dayVal} onChange={(e) => set({ rule: e.target.value })}>
+                <option value="LAST">the last day</option>
                 {Array.from({ length: 31 }, (_, i) => (
                   <option key={i} value={i + 1}>
                     the {nth(i + 1)}

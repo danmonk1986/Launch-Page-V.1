@@ -10,6 +10,7 @@ import { BudgetPage } from './components/Budget';
 import { budgetStore, type BudgetLine } from './lib/budget';
 import { expenseFromLine, expenseStore, type Expense } from './lib/expenses';
 import { fromLine, type LinkPlan } from './lib/links';
+import type { AddItemResult } from './components/AddItem';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
 import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
@@ -529,6 +530,13 @@ export default function App() {
     await budgetOps.remove(id);
     const linked = tasks.filter((t) => t.budgetLineId === id);
     if (linked.length) await taskOps.saveMany(linked.map((t) => ({ ...t, budgetLineId: null })));
+  }
+  /** Add item (LP-030 step 4): a task, a budget line, or both (already pointing at each other). */
+  async function addItem(r: AddItemResult) {
+    if (r.line) await budgetOps.save(r.line);
+    if (r.task) await taskOps.save(r.task);
+    const name = r.task?.task ?? r.line?.description ?? 'Item';
+    setStatus(r.task && r.line ? `${name} added to Tasks and Budget, linked.` : r.task ? `${name} added to Tasks.` : `${name} added to Budget.`);
   }
   /** Link and dedupe (LP-030 step 3): one save for every task it touches. */
   async function applyLinks(plan: LinkPlan) {
@@ -1210,6 +1218,8 @@ export default function App() {
               onOpenProjects={() => setProjectsOpen(true)}
               onClose={() => setPage('launch')}
               focusId={focusTask}
+              budgetLines={budget}
+              onAddItem={addItem}
             />
           ) : page === 'journal' ? (
             <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} full onClose={() => setPage('launch')} />
@@ -1265,6 +1275,7 @@ export default function App() {
               onReplace={replaceBudget}
               tasks={tasks}
               onApplyLinks={applyLinks}
+              onAddItem={addItem}
               expenses={expenses}
               onSaveExpense={editExpense}
               onDeleteExpense={removeExpense}
