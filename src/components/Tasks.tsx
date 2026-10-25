@@ -1,10 +1,8 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId } from 'react';
 import { FormActions, Sheet } from './Sheet';
-import { AddItemForm, type AddItemResult } from './AddItem';
 import { TasksMonth } from './TasksMonth';
 import { thisMonth } from './Expenses';
 import type { Expense } from '../lib/expenses';
-import type { BudgetLine } from '../lib/budget';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { normalizeUrl } from '../lib/launchers';
 import { projectLabel, projectTree, type Project } from '../lib/projects';
@@ -201,6 +199,27 @@ function InfoLink({ t }: { t: Task }) {
   );
 }
 
+/** Done ✓ and ⋯ for a task row (List and Month views). */
+function RowActions({ t, act, checked }: { t: Task; act: Actions; checked: boolean }) {
+  return (
+    <div className="timed-quick">
+      {!t.deletedAt && (
+        <button
+          type="button"
+          className="quick-btn quick-done task-quick"
+          aria-pressed={checked}
+          aria-label={checked ? `Undo done: ${t.task}` : `Check off ${t.task}`}
+          title={checked ? 'Undo' : 'Done'}
+          onClick={() => act.toggle(t)}
+        >
+          <Icon d="M5 12.5l4.5 4.5L19 7.5" />
+        </button>
+      )}
+      <RowMenu t={t} act={act} checked={checked} />
+    </div>
+  );
+}
+
 function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boolean; alt?: boolean; projects: Project[]; today: Date; act: Actions }) {
   const badge = dueBadge(t, today);
   const checked = isRecurring(t) ? doneToday(t, today) : t.done;
@@ -235,19 +254,7 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
       <td className="col-time col-center">{t.atTime ? formatMinutes(toMinutes(t.atTime)) : ''}</td>
       <td className="col-expense col-center">{t.expense}</td>
       <td className="col-actions">
-        <div className="timed-quick">
-          {!t.deletedAt && <button
-            type="button"
-            className="quick-btn quick-done task-quick"
-            aria-pressed={checked}
-            aria-label={checked ? `Undo done: ${t.task}` : `Check off ${t.task}`}
-            title={checked ? 'Undo' : 'Done'}
-            onClick={() => act.toggle(t)}
-          >
-            <Icon d="M5 12.5l4.5 4.5L19 7.5" />
-          </button>}
-          <RowMenu t={t} act={act} checked={checked} />
-        </div>
+        <RowActions t={t} act={act} checked={checked} />
       </td>
     </tr>
   );
@@ -347,6 +354,42 @@ function TaskTable({
 }
 
 type EditorProps = Common & { onSaveMany: (t: Task[]) => Promise<void> };
+
+/**
+ * The task form on its own (LP-030): Budget opens it for a budget line's linked task, so the
+ * task's details (description, status, steps, link, time) are filled in the usual form.
+ */
+export function TaskSheet(p: { task: Task | null; title: string; tasks: Task[]; projects: Project[]; onSave: (t: Task) => Promise<void>; onSaveMany: (t: Task[]) => Promise<void>; onClose: () => void }) {
+  const t = p.task;
+  return (
+    <Sheet open={!!t} title={p.title} onClose={p.onClose} wide>
+      {t && (
+        <TaskForm
+          key={t.id}
+          task={t}
+          isNew={false}
+          isStep={false}
+          existingSteps={stepsByParent(p.tasks).get(t.id) ?? []}
+          descriptions={[...new Set(p.tasks.map((x) => x.description.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
+          projects={p.projects}
+          onCancel={p.onClose}
+          onSave={async (next, newSteps) => {
+            const base = p.tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0);
+            const kids = newSteps.filter((x) => x.trim()).map((x, i) => newStep(next, x, base + i));
+            if (kids.length) await p.onSaveMany([next, ...kids]);
+            else await p.onSave(next);
+            p.onClose();
+          }}
+          onDelete={async (id) => {
+            const found = p.tasks.find((x) => x.id === id) ?? t;
+            await p.onSave({ ...found, deletedAt: new Date().toISOString() });
+            p.onClose();
+          }}
+        />
+      )}
+    </Sheet>
+  );
+}
 
 function useTaskEditor(p: EditorProps) {
   const [editing, setEditing] = useState<Task | null>(null);
@@ -544,15 +587,11 @@ export function TasksPage(
     onOpenProjects: () => void;
     onClose: () => void;
     focusId?: string | null;
-    /** Add item (LP-030): one pop-up for a task, a budget line, or both linked. */
-    budgetLines?: BudgetLine[];
-    onAddItem?: (r: AddItemResult) => Promise<void>;
     /** Month view (LP-030 step 6): Paid comes from Expenses. */
     expenses?: Expense[];
   }
 ) {
   const editor = useTaskEditor(p);
-  const [adding, setAdding] = useState(false);
   const [layout, setLayoutState] = useState<'list' | 'month'>(() => {
     try {
       return localStorage.getItem('launchpage.tasks.view') === 'month' ? 'month' : 'list';
@@ -612,7 +651,7 @@ export function TasksPage(
         </div>
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder="Search tasks" />
-          <button type="button" className="icon-btn tool-btn" aria-label="Add item" title="Add item: a task, a budget line, or both linked" onClick={() => (p.onAddItem ? setAdding(true) : editor.add())}>
+          <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={editor.add}>
             <Icon d={PLUS} />
           </button>
           <button type="button" className="icon-btn tool-btn" aria-label="Projects" title="Areas and projects" onClick={p.onOpenProjects}>
@@ -624,7 +663,16 @@ export function TasksPage(
         </div>
       </div>
       {layout === 'month' && (
-        <TasksMonth month={month} onMonth={setMonth} tasks={p.tasks} projects={p.projects} expenses={p.expenses ?? []} search={(t) => !needle || hit(t)} onOpen={editor.edit} onToggle={act.toggle} />
+        <TasksMonth
+          month={month}
+          onMonth={setMonth}
+          tasks={p.tasks}
+          projects={p.projects}
+          expenses={p.expenses ?? []}
+          search={(t) => !needle || hit(t)}
+          onOpen={editor.edit}
+          actions={(t) => <RowActions t={t} act={act} checked={isRecurring(t) ? doneToday(t, p.today) : t.done} />}
+        />
       )}
       {layout === 'list' && (
       <>
@@ -650,26 +698,6 @@ export function TasksPage(
       </>
       )}
       {editor.sheet}
-      {p.onAddItem && (
-        <Sheet open={adding} title="Add item" onClose={() => setAdding(false)} wide>
-          {adding && (
-            <AddItemForm
-              goesTo={{ tasks: true, budget: false }}
-              lines={p.budgetLines ?? []}
-              tasks={p.tasks}
-              projects={p.projects}
-              onSave={async (r) => {
-                await p.onAddItem!(r);
-                setAdding(false);
-              }}
-              onMoreTaskFields={(t) => {
-                setAdding(false);
-                editor.edit(t);
-              }}
-            />
-          )}
-        </Sheet>
-      )}
     </section>
   );
 }

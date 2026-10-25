@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { daysIn, monthKey, paidIn, type Expense } from '../lib/expenses';
 import { describeRepeat } from '../lib/repeat';
 import { repeatOf, repeatsOn, type Task } from '../lib/tasks';
 import type { Project } from '../lib/projects';
-import { MonthNav, dayLabel, monthLabel, thisMonth } from './Expenses';
+import { MonthNav, dayLabel, monthLabel } from './Expenses';
 
 type Row = { task: Task; dates: string[] };
 
@@ -30,10 +30,10 @@ export function TasksMonth(p: {
   expenses: Expense[];
   search: (t: Task) => boolean;
   onOpen: (t: Task) => void;
-  onToggle: (t: Task) => void;
+  /** Done ✓ and ⋯, the same as List view. */
+  actions: (t: Task) => ReactNode;
 }) {
   const rows = useMemo(() => tasksInMonth(p.tasks, p.month).filter((r) => p.search(r.task)), [p.tasks, p.month, p.search]);
-  const now = p.month === thisMonth();
   const statusOf = (t: Task) => {
     if (t.budgetLineId) return paidIn(p.expenses, t.budgetLineId, p.month).length ? 'PAID' : 'DUE';
     if (repeatOf(t).kind === 'none') return t.done ? 'DONE' : 'DUE';
@@ -82,13 +82,7 @@ export function TasksMonth(p: {
                     <td className="col-project">{pr ? <span className="chip" style={{ ['--chip' as string]: pr.color }}>{pr.name.replace(/^STARDVST\s+/i, '')}</span> : <span className="chip chip-empty">—</span>}</td>
                     <td>{rep.kind === 'none' ? 'Once' : describeRepeat(rep)}</td>
                     <td className="col-center">{st && <span className={`status${st === 'PAID' || st === 'DONE' ? ' status-three' : ''}`}>{st}</span>}</td>
-                    <td className="col-actions">
-                      {now && (
-                        <button type="button" className="quick-btn quick-done task-quick" aria-label={`Check off ${t.task}`} title="Check off" onClick={() => p.onToggle(t)}>
-                          ✓
-                        </button>
-                      )}
-                    </td>
+                    <td className="col-actions">{p.actions(t)}</td>
                   </tr>
                 );
               })}

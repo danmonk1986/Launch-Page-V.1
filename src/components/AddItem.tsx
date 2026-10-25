@@ -7,7 +7,7 @@ import { MONTHS, NO_REPEAT, repeatOn, writeRepeat, type Repeat } from '../lib/re
 import { newTask, type Task } from '../lib/tasks';
 import type { Project } from '../lib/projects';
 
-export type AddItemResult = { task: Task | null; line: BudgetLine | null };
+export type AddItemResult = { task: Task | null; line: BudgetLine };
 
 const short = (iso: string) => `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`;
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -25,22 +25,21 @@ export function nextDates(r: Repeat, n: number, from = new Date()): string[] {
 const sectionFor = (r: Repeat): BudgetSection => (r.kind === 'annual' ? 'annual' : r.kind === 'none' ? 'planned' : 'fixed');
 
 /**
- * Add item (LP-030 step 4): one pop-up on Tasks and Budget. Name, then where it goes. Both
- * ticked = one item, a linked task + budget line; ticking the task adds it to Expenses.
+ * Add item (LP-030, Oct 25): expenses start in Budget. Every budget item also gets a linked task
+ * (ticking it adds the item to Expenses) unless "Also add to Tasks" is unticked for that item;
+ * it starts unticked for Monthly variable lines (an allotment, nothing to tick). After saving,
+ * the full task form opens for the task's details.
  */
 export function AddItemForm(p: {
-  goesTo: { tasks: boolean; budget: boolean };
   lines: BudgetLine[];
   tasks: Task[];
   projects: Project[];
   onSave: (r: AddItemResult) => Promise<void>;
-  /** Tasks only: carry on in the full task form (steps, link, status, time). */
-  onMoreTaskFields?: (t: Task) => void;
 }) {
   const formId = useId();
   const [name, setName] = useState('');
-  const [toTasks, setToTasks] = useState(p.goesTo.tasks);
-  const [toBudget, setToBudget] = useState(p.goesTo.budget);
+  // null = follow the group (ticked, except Monthly variable); a tick sets it for this item.
+  const [taskPick, setTaskPick] = useState<boolean | null>(null);
   const [repeat, setRepeat] = useState<Repeat>(NO_REPEAT);
   const [date, setDate] = useState('');
   const [amount, setAmount] = useState('');
@@ -51,16 +50,16 @@ export function AddItemForm(p: {
   const [projectId, setProjectId] = useState('');
   const [notes, setNotes] = useState('');
   const group: BudgetSection = section || sectionFor(repeat);
+  const toTasks = taskPick ?? group !== 'variable';
   const picks = (f: (l: BudgetLine) => string) => [...new Set(p.lines.map(f).map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const preview = useMemo(() => (repeat.kind === 'none' ? (date ? [date] : []) : nextDates(repeat, 4)), [repeat, date]);
-  const where = toTasks && toBudget ? 'Tasks and Budget' : toTasks ? 'Tasks' : toBudget ? 'Budget' : '';
+  const where = toTasks ? 'Budget and Tasks' : 'Budget';
 
   const build = (): AddItemResult => {
     const rule = writeRepeat(repeat);
     const project = p.projects.find((x) => x.id === projectId) ?? null;
     const money = amount === '' ? null : Number(amount);
-    const line: BudgetLine | null = toBudget
-      ? {
+    const line: BudgetLine = {
           ...newBudgetLine(group, p.lines.reduce((m, l) => Math.max(m, l.sort + 1), 0)),
           description: name.trim(),
           project: project ? project.name.replace(/^STARDVST\s+/i, '') : '',
@@ -71,19 +70,18 @@ export function AddItemForm(p: {
           method: method.trim(),
           pmtCategory: pmtCategory.trim().toUpperCase(),
           notes: notes.trim()
-        }
-      : null;
+        };
     const task: Task | null = toTasks
       ? {
           ...newTask(p.tasks.reduce((m, t) => Math.max(m, t.sort + 1), 0), project?.id ?? null),
           task: name.trim(),
-          status: line ? 'PENDING' : 'WIP',
+          status: 'PENDING',
           description: category,
           endDate: rule ? null : date || null,
           repeatRule: rule,
           expense: money === null ? '' : String(money),
           notes: notes.trim(),
-          budgetLineId: line?.id ?? null
+          budgetLineId: line.id
         }
       : null;
     return { task, line };
@@ -95,7 +93,7 @@ export function AddItemForm(p: {
       className="task-form budget-form add-item"
       onSubmit={(e) => {
         e.preventDefault();
-        if (name.trim() && (toTasks || toBudget)) void p.onSave(build());
+        if (name.trim()) void p.onSave(build());
       }}
     >
       <div className="budget-grid">
@@ -103,26 +101,6 @@ export function AddItemForm(p: {
           <span>Name</span>
           <input value={name} autoFocus required placeholder="Rent" onChange={(e) => setName(e.target.value)} />
         </label>
-        <fieldset className="field budget-wide">
-          <legend>Goes to</legend>
-          <div className="choice-row add-item-goes">
-            <label className="choice">
-              <input type="checkbox" checked={toTasks} onChange={(e) => setToTasks(e.target.checked)} />
-              <span>Tasks</span>
-            </label>
-            <label className="choice">
-              <input type="checkbox" checked={toBudget} onChange={(e) => setToBudget(e.target.checked)} />
-              <span>Budget</span>
-            </label>
-          </div>
-          <p className="field-hint">
-            {toTasks && toBudget
-              ? 'Both ticked: one item, linked. Ticking the task adds it to Expenses for that month.'
-              : !toTasks && !toBudget
-                ? 'Tick at least one.'
-                : 'Tick both to link a task and a budget line.'}
-          </p>
-        </fieldset>
         <RepeatPicker value={repeat} from={date || null} onChange={setRepeat} />
         {repeat.kind === 'none' && (
           <label className="field">
@@ -143,7 +121,7 @@ export function AddItemForm(p: {
         </label>
       </div>
 
-      {toBudget && (
+      {(
         <fieldset className="add-item-box">
           <legend>Budget</legend>
           <div className="budget-grid">
@@ -181,7 +159,6 @@ export function AddItemForm(p: {
               <TitleCombo value={pmtCategory} titles={picks((l) => l.pmtCategory)} required={false} placeholder="RENT" onChange={setPmtCategory} list="budget:pmt" />
             </div>
           </div>
-          {group === 'variable' && toTasks && <p className="field-hint">Variable lines are an allotment; a linked task adds the planned amount when ticked.</p>}
         </fieldset>
       )}
 
@@ -195,12 +172,18 @@ export function AddItemForm(p: {
           Shows in <strong>{where}</strong>: {preview.length ? preview.map(short).join(' · ') + (repeat.kind !== 'none' ? ' …' : '') : 'no date yet'}
         </p>
       )}
-      {toTasks && !toBudget && p.onMoreTaskFields && (
-        <button type="button" className="btn btn-quiet add-item-more" disabled={!name.trim()} onClick={() => p.onMoreTaskFields!(build().task!)}>
-          More task fields (steps, link, time)…
-        </button>
-      )}
-      <FormActions formId={formId} saveDisabled={!name.trim() || (!toTasks && !toBudget)} />
+      <label className="choice add-item-task">
+        <input type="checkbox" checked={toTasks} onChange={(e) => setTaskPick(e.target.checked)} />
+        <span>Also add to Tasks</span>
+      </label>
+      <p className="field-hint add-item-task-hint">
+        {toTasks
+          ? 'Saves a linked task too, then opens the task form for its details. Ticking the task adds this to Expenses.'
+          : group === 'variable'
+            ? 'Monthly variable lines are an allotment, so no task by default.'
+            : 'Budget only: no task.'}
+      </p>
+      <FormActions formId={formId} saveDisabled={!name.trim()} />
     </form>
   );
 }

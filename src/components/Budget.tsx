@@ -1,14 +1,14 @@
 import { useId, useMemo, useRef, useState } from 'react';
 import { FormActions, Sheet } from './Sheet';
-import { Icon, SearchToggle } from './Tasks';
+import { Icon, SearchToggle, TaskSheet } from './Tasks';
 import { TitleCombo } from './Launchers';
 import { RepeatPicker } from './RepeatPicker';
 import { ExpensesView, thisMonth } from './Expenses';
 import { BudgetMonth } from './BudgetMonth';
 import { AddItemForm, type AddItemResult } from './AddItem';
 import type { Expense } from '../lib/expenses';
-import { planLinks, type LinkPlan } from '../lib/links';
-import type { Task } from '../lib/tasks';
+import { fromLine, planLinks, type LinkPlan } from '../lib/links';
+import { newTask, type Task } from '../lib/tasks';
 import { describeRepeat, readRepeat, writeRepeat } from '../lib/repeat';
 import type { Project } from '../lib/projects';
 import {
@@ -51,7 +51,9 @@ type Props = {
   /** ⋯ on a line (Oct 20): the same as a task's, with Add a task in place of Add a step. */
   onToCalendar: (l: BudgetLine, projectId: string | null) => void;
   onToLaunch: (l: BudgetLine) => void;
-  onToTask: (l: BudgetLine, projectId: string | null) => void;
+  /** The linked task's form opens here; saving goes through the usual task save. */
+  onSaveTask: (t: Task) => Promise<void>;
+  onSaveTasks: (t: Task[]) => Promise<void>;
   /** Expenses (LP-030): what was actually paid. */
   expenses: Expense[];
   onSaveExpense: (e: Expense) => Promise<void>;
@@ -65,7 +67,7 @@ type Props = {
 type BudgetView = 'master' | 'month' | 'expenses';
 
 /** The ⋯ menu on a budget line. */
-function LineMenu({ l, onEdit, onCalendar, onLaunch, onTask, onRemove }: { l: BudgetLine; onEdit: () => void; onCalendar: () => void; onLaunch: () => void; onTask: () => void; onRemove: () => void }) {
+function LineMenu({ l, hasTask, onEdit, onCalendar, onLaunch, onTask, onRemove }: { l: BudgetLine; hasTask: boolean; onEdit: () => void; onCalendar: () => void; onLaunch: () => void; onTask: () => void; onRemove: () => void }) {
   const [open, setOpen] = useState(false);
   const run = (fn: () => void) => () => {
     fn();
@@ -94,7 +96,7 @@ function LineMenu({ l, onEdit, onCalendar, onLaunch, onTask, onRemove }: { l: Bu
             Create launch
           </button>
           <button type="button" role="menuitem" onClick={run(onTask)}>
-            Add a task
+            {hasTask ? 'Open its task' : 'Add a task'}
           </button>
           <button type="button" role="menuitem" className="menu-danger" onClick={run(onRemove)}>
             Remove
@@ -126,6 +128,8 @@ export function BudgetPage(p: Props) {
   const [linkPlan, setLinkPlan] = useState<LinkPlan | null>(null);
   const [linking, setLinking] = useState(false);
   const [adding, setAdding] = useState(false);
+  // The linked task whose form is open, and whether it was just made.
+  const [taskOpen, setTaskOpen] = useState<{ task: Task; fresh: boolean } | null>(null);
   // Budget | Expenses (LP-030), remembered on this device.
   const [view, setViewState] = useState<BudgetView>(() => {
     try {
@@ -190,6 +194,15 @@ export function BudgetPage(p: Props) {
     if (!n) return undefined;
     return p.projects.find((x) => norm(x.name) === n) ?? p.projects.find((x) => norm(x.name).startsWith(n) || n.startsWith(norm(x.name)));
   };
+  /** ⋯ → Add a task: a linked task from the line, then its form. A linked line opens its task. */
+  async function openTaskFor(l: BudgetLine) {
+    const have = p.tasks.find((t) => t.budgetLineId === l.id && !t.deletedAt);
+    if (have) return setTaskOpen({ task: have, fresh: false });
+    const base = newTask(p.tasks.reduce((m, t) => Math.max(m, t.sort + 1), 0), projectFor(l.project)?.id ?? null);
+    const t = fromLine({ ...base, status: 'PENDING', description: l.category || l.pmtCategory || '', notes: l.notes }, l);
+    await p.onSaveTask(t);
+    setTaskOpen({ task: t, fresh: true });
+  }
   const linkedIds = new Set(p.tasks.filter((t) => t.budgetLineId && !t.deletedAt).map((t) => t.budgetLineId!));
   const picks = (f: (l: BudgetLine) => string) => [...new Set(p.lines.map(f).map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
@@ -406,7 +419,8 @@ export function BudgetPage(p: Props) {
                               onEdit={() => setEditing(l)}
                               onCalendar={() => p.onToCalendar(l, projectFor(l.project)?.id ?? null)}
                               onLaunch={() => p.onToLaunch(l)}
-                              onTask={() => p.onToTask(l, projectFor(l.project)?.id ?? null)}
+                              hasTask={linkedIds.has(l.id)}
+                              onTask={() => void openTaskFor(l)}
                               onRemove={() => void p.onDelete(l.id)}
                             />
                           </div>
@@ -444,17 +458,27 @@ export function BudgetPage(p: Props) {
       <Sheet open={adding} title="Add item" onClose={() => setAdding(false)} wide>
         {adding && (
           <AddItemForm
-            goesTo={{ tasks: false, budget: true }}
             lines={p.lines}
             tasks={p.tasks}
             projects={p.projects}
             onSave={async (r) => {
               await p.onAddItem(r);
               setAdding(false);
+              if (r.task) setTaskOpen({ task: r.task, fresh: true });
             }}
           />
         )}
       </Sheet>
+
+      <TaskSheet
+        task={taskOpen?.task ?? null}
+        title={taskOpen?.fresh ? 'Task details (linked to the budget)' : 'Linked task'}
+        tasks={p.tasks}
+        projects={p.projects}
+        onSave={p.onSaveTask}
+        onSaveMany={p.onSaveTasks}
+        onClose={() => setTaskOpen(null)}
+      />
 
       <Sheet open={!!linkPlan} title="Link to tasks" onClose={() => setLinkPlan(null)} wide>
         {linkPlan && (

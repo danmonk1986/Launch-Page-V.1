@@ -58,7 +58,7 @@ import { buildJournalImport, byNewest, checkinsOf, journalStore, newEntry, withC
 import { JournalPanel } from './components/Journal';
 import { Sheet } from './components/Sheet';
 import { RitualRunner } from './components/Rituals';
-import { buildImport, newTask, repeatOf, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
+import { buildImport, repeatOf, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
 import { addTaskToGoogle, googleConfigured, knownCalendars, wasConnected } from './lib/google';
 import {
   isDue,
@@ -1218,8 +1218,6 @@ export default function App() {
               onOpenProjects={() => setProjectsOpen(true)}
               onClose={() => setPage('launch')}
               focusId={focusTask}
-              budgetLines={budget}
-              onAddItem={addItem}
               expenses={expenses}
             />
           ) : page === 'journal' ? (
@@ -1303,15 +1301,8 @@ export default function App() {
                   n: Date.now()
                 });
               }}
-              onToTask={async (l, projectId) => {
-                // The line's repeat comes along, so a monthly bill is a monthly task.
-                const rep = readRepeat(l.repeat);
-                const t: Task = { ...newTask(tasks.length, projectId), task: l.description || 'Budget item', description: l.category || l.pmtCategory || '', endDate: rep.kind === 'none' ? l.date : null, repeatRule: writeRepeat(rep), expense: l.amount === null ? '' : String(l.amount), notes: l.notes };
-                await taskOps.save(t);
-                setFocusTask(t.id);
-                setPage('tasks');
-                setStatus(`${t.task} added to Tasks.`);
-              }}
+              onSaveTask={saveTask}
+              onSaveTasks={saveTasks}
             />
           ) : (
             <ComingSoon page={page} />
