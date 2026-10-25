@@ -391,6 +391,20 @@ export default function App() {
   }
   const launcherOps = ops(launcherStore, launchers, setLaunchers, (l) => l.name);
   const launchOps = ops(launchStore, launches, setLaunches, (l) => l.title);
+  // Oct 25: a launch saved with a new time drops its snooze, so it pops up at the new time
+  // (Snooze → Edit snoozes 10 minutes, which hid an edit to 3 minutes from now).
+  function saveLaunchEdit(l: Launch) {
+    const old = launches.find((x) => x.id === l.id);
+    const moved = !old || old.atTime !== l.atTime || old.onDate !== l.onDate || JSON.stringify(old.onceTime) !== JSON.stringify(l.onceTime) || old.repeat !== l.repeat;
+    if (moved && snoozed[l.id]) {
+      setSnoozed((m) => {
+        const next = { ...m };
+        delete next[l.id];
+        return next;
+      });
+    }
+    return launchOps.save(l);
+  }
   const eventOps = ops(eventStore, events, setEvents, (e) => e.title);
   const projectOps = ops(projectStore, projects, setProjects, (p) => p.name);
   const taskOps = ops(taskStore, tasks, setTasks, (t) => t.task);
@@ -1022,7 +1036,7 @@ export default function App() {
                   onSaveLauncher={launcherOps.save}
                   onSaveLaunchers={launcherOps.saveMany}
                   onDeleteLauncher={launcherOps.remove}
-                  onSaveLaunch={launchOps.save}
+                  onSaveLaunch={saveLaunchEdit}
                   onDeleteLaunch={launchOps.remove}
                   onStatus={setStatus}
                   handled={handled}
