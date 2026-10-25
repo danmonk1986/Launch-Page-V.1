@@ -91,26 +91,59 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone, tit
 type TimeUpProps = {
   launch: Launch | null;
   onDone: (l: Launch) => void;
-  onMore: (l: Launch) => void;
+  /** Oct 24: more time, like Snooze at the start: +10 / +30 / +60 and the description. */
+  onMore: (l: Launch, minutes: number, title?: string) => void;
   onTomorrow: (l: Launch) => void;
+  titles?: string[];
 };
 
 /** The end alarm: the time allotted for a launched launch has run out. */
-export function TimeUpReminder({ launch, onDone, onMore, onTomorrow }: TimeUpProps) {
+export function TimeUpReminder({ launch, onDone, onMore, onTomorrow, titles = [] }: TimeUpProps) {
+  const [more, setMore] = useState(false);
+  const [desc, setDesc] = useState('');
+  useEffect(() => {
+    setMore(false);
+    setDesc(launch ? splitTitle(launch.title).desc : '');
+  }, [launch?.id]);
+  const cat = launch ? splitTitle(launch.title).cat : '';
+  const descriptions = [...new Set(titles.map(splitTitle).filter((t) => launchListFor(t.cat) === launchListFor(cat) && t.desc).map((t) => t.desc))].sort((a, b) => a.localeCompare(b));
+  const addTime = (min: number) => {
+    if (!launch) return;
+    const title = joinTitle(cat, desc);
+    onMore(launch, min, title !== launch.title ? title : undefined);
+  };
   return (
-    <Sheet open={!!launch} title={launch ? `Time's up: ${launch.title}` : "Time's up"} onClose={() => launch && onMore(launch)}>
-      {launch && (
+    <Sheet open={!!launch} title={launch ? (more ? `More time · ${cat}` : `Time's up: ${launch.title}`) : "Time's up"} onClose={() => launch && onMore(launch, 10)}>
+      {launch && more && (
+        <div className="reminder">
+          <div className="field">
+            <span>Description · add to it or change it</span>
+            <TitleCombo value={desc} titles={descriptions} required={false} autoFocus placeholder="Launch Page Construction" onChange={setDesc} list={launchListFor(cat)} />
+          </div>
+          <div className="reminder-actions snooze-actions">
+            <button type="button" className="btn btn-quiet" onClick={() => setMore(false)}>
+              Back
+            </button>
+            {[10, 30, 60].map((m) => (
+              <button key={m} type="button" className="btn" onClick={() => addTime(m)}>
+                +{m} min
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {launch && !more && (
         <div className="reminder">
           <p className="reminder-time">
             {formatMinutes((toMinutes(timeFor(launch, new Date())) + launch.minutes) % 1440)} · {launch.minutes} minutes are up
           </p>
-          <p className="panel-empty">Did you finish? Check it off, take 10 more minutes, or move it to tomorrow.</p>
+          <p className="panel-empty">Did you finish? Check it off, take more time, or move it to tomorrow.</p>
           <div className="sheet-actions">
             <button type="button" className="btn btn-quiet" onClick={() => onTomorrow(launch)}>
               Move to tomorrow
             </button>
-            <button type="button" className="btn btn-quiet" onClick={() => onMore(launch)}>
-              +10 min
+            <button type="button" className="btn btn-quiet" onClick={() => setMore(true)}>
+              More time
             </button>
             <button type="button" className="btn" onClick={() => onDone(launch)}>
               Done ✓

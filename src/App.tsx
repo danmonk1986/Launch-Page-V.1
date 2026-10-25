@@ -1232,15 +1232,17 @@ export default function App() {
           setTimeUp(null);
           finishLaunch(l, 'done');
         }}
-        onMore={(l) => {
+        titles={launches.map((x) => x.title)}
+        onMore={(l, minutes, title) => {
           setTimeUp(null);
-          logLaunch(l, (g) => ({ extra: g.extra + 10 }));
+          logLaunch(l, (g) => ({ extra: g.extra + minutes }));
+          if (title) void launchOps.save({ ...l, title });
           setEndAlerted((m) => {
             const next = { ...m };
             delete next[runKey(l, new Date())];
             return next;
           });
-          setStatus(`${l.title}: 10 more minutes.`);
+          setStatus(`${title ?? l.title}: ${minutes} more minutes.`);
         }}
         onTomorrow={(l) => {
           setTimeUp(null);
