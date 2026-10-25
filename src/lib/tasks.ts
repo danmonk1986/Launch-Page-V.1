@@ -43,6 +43,8 @@ export interface Task {
   deletedAt: string | null;
   googleEventId: string | null;
   launchId: string | null;
+  /** The budget line this task pays (LP-030). Ticking it adds a line to Expenses. Column from 0031. */
+  budgetLineId?: string | null;
   sort: number;
 }
 
@@ -67,6 +69,7 @@ type Row = {
   deleted_at?: string | null;
   google_event_id: string | null;
   launch_id: string | null;
+  budget_line_id?: string | null;
   sort: number;
 };
 
@@ -76,12 +79,11 @@ export const taskStore = makeStore<Task, Row>({
   orderBy: 'sort',
   script: 'supabase/migrations/0008_projects_tasks.sql',
   seed: () => [],
-  latestScript: 'supabase/migrations/0010_task_trash.sql',
-  // Before 0009 / 0010 are run: save without the step link and trash date (kept on this device until then).
+  latestScript: 'supabase/migrations/0031_budget_links.sql',
+  // Before 0031 is run: save without the budget link (kept on this device until then).
   legacyRow: (r) => {
     const x = { ...r };
-    delete x.parent_id;
-    delete x.deleted_at;
+    delete x.budget_line_id;
     return x;
   },
   toRow: (t) => ({
@@ -105,6 +107,7 @@ export const taskStore = makeStore<Task, Row>({
     deleted_at: t.deletedAt,
     google_event_id: t.googleEventId,
     launch_id: t.launchId,
+    ...(t.budgetLineId !== undefined ? { budget_line_id: t.budgetLineId } : {}),
     sort: t.sort
   }),
   fromRow: (r) => ({
@@ -128,6 +131,7 @@ export const taskStore = makeStore<Task, Row>({
     deletedAt: r.deleted_at ?? null,
     googleEventId: r.google_event_id,
     launchId: r.launch_id,
+    budgetLineId: r.budget_line_id ?? null,
     sort: r.sort
   })
 });

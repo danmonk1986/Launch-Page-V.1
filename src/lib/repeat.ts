@@ -4,6 +4,7 @@
  *   Weekly     "W:1,4"        days of the week, 0 = Sunday
  *   Monthly    "M:17"         a date (past the end of a short month = its last day)
  *              "M:1ST THU"    a weekday (1ST–4TH or LAST)
+ *              "M:LAST"       the last day of every month (Oct 31, Nov 30, Feb 28)
  *   Quarterly  "Q1:15"        same as monthly, every 3 months starting in month 1–12
  *   Annually   "A:04-30"      month-day
  * Older tasks kept the kind in their status (MTH RCR / ANN RCR) with a bare rule ("17",
@@ -15,7 +16,7 @@ export interface Repeat {
   kind: RepeatKind;
   /** Weekly: 0 = Sunday … 6 = Saturday. */
   days: number[];
-  /** Monthly / Quarterly: "17" or "1ST THU". */
+  /** Monthly / Quarterly: "17", "1ST THU" or "LAST" (last day of the month). */
   rule: string;
   /** Quarterly: the first month, 1–12. */
   startMonth: number;
@@ -80,6 +81,7 @@ function monthRuleOn(rule: string, day: Date) {
   const r = rule.trim().toUpperCase();
   const last = new Date(day.getFullYear(), day.getMonth() + 1, 0).getDate();
   if (/^\d{1,2}$/.test(r)) return Math.min(Number(r), last) === day.getDate();
+  if (r === 'LAST') return day.getDate() === last;
   const m = r.match(/^(1ST|2ND|3RD|4TH|LAST)\s+([A-Z]{3})/);
   if (!m || DOW.indexOf(m[2]) !== day.getDay()) return false;
   if (m[1] === 'LAST') return day.getDate() + 7 > last;
@@ -123,6 +125,7 @@ export const nth = (n: number) => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 
 function describeMonthRule(rule: string) {
   const r = rule.trim().toUpperCase();
   if (/^\d{1,2}$/.test(r)) return nth(Number(r));
+  if (r === 'LAST') return 'Last day';
   const m = r.match(/^(1ST|2ND|3RD|4TH|LAST)\s+([A-Z]{3})/);
   return m ? `${ORD_LABEL[m[1]]} ${WEEKDAY_LABEL[m[2]] ?? m[2]}` : r;
 }
