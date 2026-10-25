@@ -2242,3 +2242,7 @@ select:not([multiple]) {
 .expenses-table { min-width: 980px; }
 .expense-link { font-size: 12px; opacity: 0.7; }
 .expense-from { margin: 0 0 12px; }
+.link-plan details { margin: 10px 0; }
+.link-plan summary { cursor: pointer; font-weight: 600; color: var(--accent-teal); }
+.link-plan ul { margin: 8px 0 0; padding-left: 20px; max-height: 240px; overflow: auto; display: grid; gap: 4px; font-size: 14px; }
+.link-plan-dim { color: var(--dim); }

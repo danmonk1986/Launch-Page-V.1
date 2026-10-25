@@ -5,6 +5,8 @@ import { TitleCombo } from './Launchers';
 import { RepeatPicker } from './RepeatPicker';
 import { ExpensesView } from './Expenses';
 import type { Expense } from '../lib/expenses';
+import { planLinks, type LinkPlan } from '../lib/links';
+import type { Task } from '../lib/tasks';
 import { describeRepeat, readRepeat, writeRepeat } from '../lib/repeat';
 import type { Project } from '../lib/projects';
 import {
@@ -34,6 +36,7 @@ const GROUP_ICON: Record<BudgetGroupBy, string> = {
   project: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   category: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'
 };
+const LINK = 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71';
 const IMPORT = 'M12 3v12M7 10l5 5 5-5M5 21h14';
 const EXPORT = 'M12 15V3M7 8l5-5 5 5M5 21h14';
 
@@ -52,6 +55,9 @@ type Props = {
   expenses: Expense[];
   onSaveExpense: (e: Expense) => Promise<void>;
   onDeleteExpense: (id: string) => Promise<void>;
+  /** Link and dedupe (LP-030 step 3). */
+  tasks: Task[];
+  onApplyLinks: (plan: LinkPlan) => Promise<void>;
 };
 
 type BudgetView = 'budget' | 'expenses';
@@ -115,6 +121,8 @@ export function BudgetPage(p: Props) {
   const [incoming, setIncoming] = useState<{ name: string; lines: BudgetLine[] } | null>(null);
   const [importError, setImportError] = useState('');
   const file = useRef<HTMLInputElement>(null);
+  const [linkPlan, setLinkPlan] = useState<LinkPlan | null>(null);
+  const [linking, setLinking] = useState(false);
   // Budget | Expenses (LP-030), remembered on this device.
   const [view, setViewState] = useState<BudgetView>(() => {
     try {
@@ -176,6 +184,7 @@ export function BudgetPage(p: Props) {
     if (!n) return undefined;
     return p.projects.find((x) => norm(x.name) === n) ?? p.projects.find((x) => norm(x.name).startsWith(n) || n.startsWith(norm(x.name)));
   };
+  const linkedIds = new Set(p.tasks.filter((t) => t.budgetLineId && !t.deletedAt).map((t) => t.budgetLineId!));
   const picks = (f: (l: BudgetLine) => string) => [...new Set(p.lines.map(f).map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
   const readFile = async (f: File) => {
@@ -223,6 +232,16 @@ export function BudgetPage(p: Props) {
           <>
           <button type="button" className="icon-btn tool-btn" aria-label="Add a line" title="Add a line" onClick={() => setEditing(newBudgetLine(groupBy === 'section' && pick ? (pick as BudgetSection) : 'variable', p.lines.reduce((m, l) => Math.max(m, l.sort + 1), 0)))}>
             <Icon d={PLUS} />
+          </button>
+          <button
+            type="button"
+            className="icon-btn tool-btn"
+            aria-label="Link to tasks"
+            title="Link budget lines to their tasks, clear duplicate tasks, add tasks for bills"
+            disabled={!p.lines.length}
+            onClick={() => setLinkPlan(planLinks(p.lines, p.tasks, { now: new Date().toISOString(), projectFor: (n) => projectFor(n)?.id ?? null }))}
+          >
+            <Icon d={LINK} />
           </button>
           <button type="button" className="icon-btn tool-btn" aria-label="Import" title="Import the BUDGET tab (CSV) or a JSON file" onClick={() => file.current?.click()}>
             <Icon d={IMPORT} />
@@ -357,6 +376,7 @@ export function BudgetPage(p: Props) {
                         <td className="col-task">
                           <button type="button" className="task-name" onClick={() => setEditing(l)}>
                             {l.description}
+                            {linkedIds.has(l.id) && <span className="expense-link" aria-label="linked to a task" title="Linked to a task: ticking it adds this line to Expenses"> 🔗</span>}
                           </button>
                         </td>
                         <td className="col-center">{l.method}</td>
@@ -406,6 +426,90 @@ export function BudgetPage(p: Props) {
               setEditing(null);
             }}
           />
+        )}
+      </Sheet>
+
+      <Sheet open={!!linkPlan} title="Link to tasks" onClose={() => setLinkPlan(null)} wide>
+        {linkPlan && (
+          <div className="reminder link-plan">
+            {linkPlan.remove.length + linkPlan.linked.length + linkPlan.created.length === 0 ? (
+              <p className="panel-empty">Everything is already linked, with no duplicate tasks.</p>
+            ) : (
+              <p className="panel-empty">
+                <strong>{linkPlan.linked.length}</strong> tasks linked to their budget line (the budget line's name, repeat and amount win) ·{' '}
+                <strong>{linkPlan.created.length}</strong> new tasks for bills with none · <strong>{linkPlan.remove.length}</strong> duplicate tasks to Recently deleted
+                (restore from ⋯ for 30 days). Variable lines stay budget-only.
+              </p>
+            )}
+            {linkPlan.linked.length > 0 && (
+              <details open>
+                <summary>Linked ({linkPlan.linked.length})</summary>
+                <ul>
+                  {linkPlan.linked.map(({ task, line }) => (
+                    <li key={task.id}>
+                      <strong>{line.description}</strong> ← {p.tasks.find((t) => t.id === task.id)?.task ?? task.task}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+            {linkPlan.created.length > 0 && (
+              <details>
+                <summary>New tasks ({linkPlan.created.length})</summary>
+                <ul>
+                  {linkPlan.created.map(({ task, line }) => (
+                    <li key={task.id}>
+                      {line.description} <span className="link-plan-dim">· {line.repeat ? describeRepeat(readRepeat(line.repeat)) : shortDate(line.date) || 'no date'}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+            {linkPlan.remove.length > 0 && (
+              <details>
+                <summary>Duplicates removed ({linkPlan.remove.length})</summary>
+                <ul>
+                  {linkPlan.remove.map((t) => (
+                    <li key={t.id}>
+                      {t.task} {t.description && <span className="link-plan-dim">· {t.description}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+            {linkPlan.gaps.length > 0 && (
+              <details>
+                <summary>Still missing ({linkPlan.gaps.length})</summary>
+                <ul>
+                  {linkPlan.gaps.map(({ line, missing }) => (
+                    <li key={line.id}>
+                      {line.description} <span className="link-plan-dim">· {missing.join(', ')}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+            <div className="reminder-actions">
+              <button type="button" className="btn btn-quiet" onClick={() => setLinkPlan(null)}>
+                Cancel
+              </button>
+              {linkPlan.remove.length + linkPlan.linked.length + linkPlan.created.length > 0 && (
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={linking}
+                  onClick={async () => {
+                    setLinking(true);
+                    await p.onApplyLinks(linkPlan);
+                    setLinking(false);
+                    setLinkPlan(null);
+                  }}
+                >
+                  {linking ? 'Linking…' : 'Link and clean up'}
+                </button>
+              )}
+            </div>
+          </div>
         )}
       </Sheet>
 

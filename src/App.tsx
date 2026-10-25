@@ -9,6 +9,7 @@ import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
 import { budgetStore, type BudgetLine } from './lib/budget';
 import { expenseFromLine, expenseStore, type Expense } from './lib/expenses';
+import { fromLine, type LinkPlan } from './lib/links';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
 import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
@@ -499,14 +500,42 @@ export default function App() {
       }
     }
   }
+  /** A linked task renamed or rescheduled: its budget line follows (name, repeat, date). */
+  async function lineFollowsTask(t: Task) {
+    const line = t.budgetLineId ? budget.find((l) => l.id === t.budgetLineId) : undefined;
+    if (!line || t.deletedAt) return;
+    const rep = writeRepeat(repeatOf(t));
+    const next: BudgetLine = { ...line, description: t.task.trim() || line.description, repeat: rep, date: rep ? line.date : t.endDate ?? line.date };
+    if (next.description !== line.description || (next.repeat ?? null) !== (line.repeat ?? null) || next.date !== line.date) await budgetOps.save(next);
+  }
   const saveTask = async (t: Task) => {
     await taskOps.save(t);
     await payFor([t]);
+    await lineFollowsTask(t);
   };
   const saveTasks = async (items: Task[]) => {
     await taskOps.saveMany(items);
     await payFor(items);
   };
+  /** A budget line saved: its linked task takes the shared fields (name, repeat / date, amount). */
+  async function saveBudgetLine(l: BudgetLine) {
+    await budgetOps.save(l);
+    const linked = tasks.filter((t) => t.budgetLineId === l.id && !t.deletedAt);
+    const changed = linked.map((t) => fromLine(t, l)).filter((t, i) => JSON.stringify(t) !== JSON.stringify(linked[i]));
+    if (changed.length) await taskOps.saveMany(changed);
+  }
+  /** A budget line removed: its task stays, unlinked. */
+  async function deleteBudgetLine(id: string) {
+    await budgetOps.remove(id);
+    const linked = tasks.filter((t) => t.budgetLineId === id);
+    if (linked.length) await taskOps.saveMany(linked.map((t) => ({ ...t, budgetLineId: null })));
+  }
+  /** Link and dedupe (LP-030 step 3): one save for every task it touches. */
+  async function applyLinks(plan: LinkPlan) {
+    const items = [...plan.remove, ...plan.linked.map((x) => x.task), ...plan.created.map((x) => x.task)];
+    await taskOps.saveMany(items);
+    setStatus(`Linked ${plan.linked.length}, added ${plan.created.length} tasks, moved ${plan.remove.length} duplicates to Recently deleted.`);
+  }
   /** An import: the budget becomes exactly this list. */
   async function replaceBudget(next: BudgetLine[]) {
     const old = budget;
@@ -1231,9 +1260,11 @@ export default function App() {
             <BudgetPage
               lines={budget}
               projects={projects}
-              onSave={budgetOps.save}
-              onDelete={budgetOps.remove}
+              onSave={saveBudgetLine}
+              onDelete={deleteBudgetLine}
               onReplace={replaceBudget}
+              tasks={tasks}
+              onApplyLinks={applyLinks}
               expenses={expenses}
               onSaveExpense={editExpense}
               onDeleteExpense={removeExpense}
