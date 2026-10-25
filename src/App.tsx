@@ -8,6 +8,7 @@ import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
 import { budgetStore, type BudgetLine } from './lib/budget';
+import { expenseFromLine, expenseStore, type Expense } from './lib/expenses';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
 import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
@@ -141,6 +142,7 @@ export default function App() {
   const [d26Logs, setD26Logs] = useState<LogEntry[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [budget, setBudget] = useState<BudgetLine[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [d26Config, setD26Config] = useState<Config>(DEFAULT_CONFIG);
   const [d26Ready, setD26Ready] = useState(false);
   const [meditations, setMeditations] = useState<Meditation[]>([]);
@@ -322,6 +324,9 @@ export default function App() {
       const b1 = await budgetStore.load(userId);
       if (!live) return;
       setBudget(b1.items);
+      const ex = await expenseStore.load(userId);
+      if (!live) return;
+      setExpenses(ex.items);
       const md = await meditationStore.load(userId);
       if (!live) return;
       setMeditations(md.items);
@@ -446,6 +451,62 @@ export default function App() {
   const invoiceOps = ops(invoiceStore, invoices, setInvoices, (i) => i.number || 'Invoice');
   const customerOps = ops(customerStore, customers, setCustomers, (c) => c.name);
   const profileOps = ops(profileStore, invoiceProfile, setInvoiceProfile, () => 'Your details');
+  // Expenses (LP-030) save from the newest copy: a tick and an edit can land together.
+  const expRef = useRef(expenses);
+  expRef.current = expenses;
+  async function saveExpense(e: Expense, quiet = false) {
+    const list = expRef.current;
+    const next = list.some((x) => x.id === e.id) ? list.map((x) => (x.id === e.id ? e : x)) : [...list, e];
+    expRef.current = next;
+    setExpenses(next);
+    const ok = await expenseStore.save(userId, e, next);
+    if (!ok) setStatus('Expense saved on this device only. Run supabase/migrations/0031_budget_links.sql to sync it.');
+    else if (!quiet) setStatus(`${e.description || 'Expense'} saved.`);
+  }
+  async function removeExpense(id: string) {
+    const next = expRef.current.filter((x) => x.id !== id);
+    expRef.current = next;
+    setExpenses(next);
+    await expenseStore.remove(userId, id, next);
+  }
+  /** An edited expense. A fixed line (rent) follows what was actually paid. */
+  async function editExpense(e: Expense) {
+    await saveExpense(e);
+    const line = e.budgetLineId ? budget.find((l) => l.id === e.budgetLineId) : undefined;
+    if (line && line.section === 'fixed' && e.amount !== null && e.amount !== line.amount) {
+      await budgetOps.save({ ...line, amount: e.amount });
+      setStatus(`${line.description}: budget updated to the amount paid.`);
+    }
+  }
+  /**
+   * Tick to pay (LP-030): ticking a task linked to a budget line adds that line to Expenses,
+   * dated the day it was ticked; unticking takes it back out.
+   */
+  async function payFor(items: Task[]) {
+    for (const t of items) {
+      if (!t.budgetLineId) continue;
+      const old = tasks.find((x) => x.id === t.id);
+      const newDay = t.doneAt ? isoDate(new Date(t.doneAt)) : null;
+      const oldDay = old?.doneAt ? isoDate(new Date(old.doneAt)) : null;
+      if (newDay && newDay !== oldDay) {
+        const line = budget.find((l) => l.id === t.budgetLineId);
+        if (!line || expRef.current.some((e) => e.taskId === t.id && e.date === newDay)) continue;
+        await saveExpense(expenseFromLine(line, newDay, t.id, expRef.current.reduce((m, e) => Math.max(m, e.sort + 1), 0)), true);
+        setStatus(`${line.description}: paid, added to Expenses.`);
+      } else if (oldDay && !newDay) {
+        for (const e of expRef.current.filter((x) => x.taskId === t.id && x.date === oldDay)) await removeExpense(e.id);
+        setStatus(`${t.task}: taken back out of Expenses.`);
+      }
+    }
+  }
+  const saveTask = async (t: Task) => {
+    await taskOps.save(t);
+    await payFor([t]);
+  };
+  const saveTasks = async (items: Task[]) => {
+    await taskOps.saveMany(items);
+    await payFor(items);
+  };
   /** An import: the budget becomes exactly this list. */
   async function replaceBudget(next: BudgetLine[]) {
     const old = budget;
@@ -1082,9 +1143,9 @@ export default function App() {
                   tasks={tasks}
                   projects={projects}
                   today={now}
-                  onSave={taskOps.save}
+                  onSave={saveTask}
                   onDelete={taskOps.remove}
-                  onSaveMany={taskOps.saveMany}
+                  onSaveMany={saveTasks}
                   onAddToCalendar={addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
                   onOpenAll={() => {
@@ -1112,9 +1173,9 @@ export default function App() {
               tasks={tasks}
               projects={projects}
               today={now}
-              onSave={taskOps.save}
+              onSave={saveTask}
               onDelete={taskOps.remove}
-                  onSaveMany={taskOps.saveMany}
+                  onSaveMany={saveTasks}
                   onAddToCalendar={addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
               onOpenProjects={() => setProjectsOpen(true)}
@@ -1173,6 +1234,9 @@ export default function App() {
               onSave={budgetOps.save}
               onDelete={budgetOps.remove}
               onReplace={replaceBudget}
+              expenses={expenses}
+              onSaveExpense={editExpense}
+              onDeleteExpense={removeExpense}
               onClose={() => setPage('launch')}
               onToCalendar={budgetToCalendar}
               onToLaunch={(l) => {

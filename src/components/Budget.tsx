@@ -3,6 +3,8 @@ import { FormActions, Sheet } from './Sheet';
 import { Icon, SearchToggle } from './Tasks';
 import { TitleCombo } from './Launchers';
 import { RepeatPicker } from './RepeatPicker';
+import { ExpensesView } from './Expenses';
+import type { Expense } from '../lib/expenses';
 import { describeRepeat, readRepeat, writeRepeat } from '../lib/repeat';
 import type { Project } from '../lib/projects';
 import {
@@ -46,7 +48,13 @@ type Props = {
   onToCalendar: (l: BudgetLine, projectId: string | null) => void;
   onToLaunch: (l: BudgetLine) => void;
   onToTask: (l: BudgetLine, projectId: string | null) => void;
+  /** Expenses (LP-030): what was actually paid. */
+  expenses: Expense[];
+  onSaveExpense: (e: Expense) => Promise<void>;
+  onDeleteExpense: (id: string) => Promise<void>;
 };
+
+type BudgetView = 'budget' | 'expenses';
 
 /** The ⋯ menu on a budget line. */
 function LineMenu({ l, onEdit, onCalendar, onLaunch, onTask, onRemove }: { l: BudgetLine; onEdit: () => void; onCalendar: () => void; onLaunch: () => void; onTask: () => void; onRemove: () => void }) {
@@ -107,6 +115,22 @@ export function BudgetPage(p: Props) {
   const [incoming, setIncoming] = useState<{ name: string; lines: BudgetLine[] } | null>(null);
   const [importError, setImportError] = useState('');
   const file = useRef<HTMLInputElement>(null);
+  // Budget | Expenses (LP-030), remembered on this device.
+  const [view, setViewState] = useState<BudgetView>(() => {
+    try {
+      return localStorage.getItem('launchpage.budget.view') === 'expenses' ? 'expenses' : 'budget';
+    } catch {
+      return 'budget';
+    }
+  });
+  const setView = (v: BudgetView) => {
+    setViewState(v);
+    try {
+      localStorage.setItem('launchpage.budget.view', v);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const bySection = useMemo(() => {
     const g = {} as Record<BudgetSection, BudgetLine[]>;
@@ -185,8 +209,18 @@ export function BudgetPage(p: Props) {
         <h2 id="h-budget" className="panel-title">
           Budget
         </h2>
+        <div className="d26-range budget-views" role="group" aria-label="View">
+          <button type="button" aria-pressed={view === 'budget'} onClick={() => setView('budget')}>
+            Budget
+          </button>
+          <button type="button" aria-pressed={view === 'expenses'} onClick={() => setView('expenses')}>
+            Expenses
+          </button>
+        </div>
         <div className="panel-actions">
-          <SearchToggle value={q} onChange={setQ} placeholder="Search the budget" />
+          <SearchToggle value={q} onChange={setQ} placeholder={view === 'expenses' ? 'Search expenses' : 'Search the budget'} />
+          {view === 'budget' && (
+          <>
           <button type="button" className="icon-btn tool-btn" aria-label="Add a line" title="Add a line" onClick={() => setEditing(newBudgetLine(groupBy === 'section' && pick ? (pick as BudgetSection) : 'variable', p.lines.reduce((m, l) => Math.max(m, l.sort + 1), 0)))}>
             <Icon d={PLUS} />
           </button>
@@ -203,6 +237,8 @@ export function BudgetPage(p: Props) {
           >
             <Icon d={EXPORT} />
           </button>
+          </>
+          )}
           <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
             <Icon d={CLOSE} />
           </button>
@@ -220,7 +256,9 @@ export function BudgetPage(p: Props) {
         </div>
       </div>
 
-      {p.lines.length > 0 && (
+      {view === 'expenses' && <ExpensesView expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} />}
+
+      {view === 'budget' && p.lines.length > 0 && (
         <div className="budget-stats" aria-label="A month of spending">
           <button
             type="button"
@@ -244,7 +282,7 @@ export function BudgetPage(p: Props) {
         </div>
       )}
 
-      {p.lines.length === 0 ? (
+      {view === 'expenses' ? null : p.lines.length === 0 ? (
         <div className="budget-empty">
           <p className="panel-empty">
             No budget yet. In the Launch Sheet, open the <strong>BUDGET</strong> tab, then <strong>File → Download → Comma-separated values (.csv)</strong>, and import that file here.

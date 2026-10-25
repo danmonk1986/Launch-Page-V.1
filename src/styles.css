@@ -2232,3 +2232,13 @@ select:not([multiple]) {
 .quick-pause:hover { background: color-mix(in srgb, var(--accent-teal) 18%, transparent); }
 .quick-pause.is-paused { background: var(--accent-teal); color: #120c2a; }
 .timed-item.is-launched:has(.quick-pause.is-paused) .timed-meta { color: var(--mist); }
+
+/* LP-030 · Budget | Expenses (Oct 25) */
+.panel-budget .panel-head .budget-views { margin-right: auto; margin-left: 14px; }
+.expenses-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.expenses-bar .d26-range button:nth-child(2) { min-width: 120px; font-family: var(--font-mono); }
+.expenses-add { display: inline-flex; align-items: center; gap: 6px; }
+.expenses .budget-stats { margin-bottom: 14px; }
+.expenses-table { min-width: 980px; }
+.expense-link { font-size: 12px; opacity: 0.7; }
+.expense-from { margin: 0 0 12px; }
