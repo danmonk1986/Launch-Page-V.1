@@ -2163,3 +2163,7 @@ select:not([multiple]) {
 .combo-row .combo-opt { flex: 1; min-width: 0; }
 .combo-x { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 8px; background: none; color: var(--dim); cursor: pointer; }
 .combo-x:hover, .combo-x:focus-visible { color: var(--accent-pink); background: color-mix(in srgb, var(--accent-pink) 12%, transparent); }
+
+/* Oct 24: snooze choices */
+.snooze-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 480px) { .snooze-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -1216,9 +1216,12 @@ export default function App() {
       <LaunchReminder
         launch={reminder}
         onLaunch={launchNow}
-        onSnooze={(l) => {
-          setSnoozed((m) => ({ ...m, [l.id]: Date.now() + 10 * 60_000 }));
+        titles={launches.map((l) => l.title)}
+        onSnooze={(l, minutes, title) => {
+          setSnoozed((m) => ({ ...m, [l.id]: Date.now() + minutes * 60_000 }));
           setReminder(null);
+          if (title) void launchOps.save({ ...l, title });
+          setStatus(`${title ?? l.title}: snoozed ${minutes} min.`);
         }}
         onSkip={(l) => finishLaunch(l, 'skipped')}
         onDone={(l) => finishLaunch(l, 'done')}

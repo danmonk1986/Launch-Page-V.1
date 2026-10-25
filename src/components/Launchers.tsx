@@ -702,11 +702,11 @@ function TileForm({
 
 /** The starting list for a timed launch's What; anything typed there joins it once saved. */
 const WHAT_CATEGORIES = ['Work Block #1', 'Work Block #2', 'Work Block #3', 'Expansion Work', 'Leisure Work'];
-function splitTitle(t: string) {
+export function splitTitle(t: string) {
   const i = t.indexOf(' - ');
   return i < 0 ? { cat: t.trim(), desc: '' } : { cat: t.slice(0, i).trim(), desc: t.slice(i + 3).trim() };
 }
-const joinTitle = (c: string, x: string) => (x.trim() ? `${c.trim()} - ${x.trim()}` : c.trim());
+export const joinTitle = (c: string, x: string) => (x.trim() ? `${c.trim()} - ${x.trim()}` : c.trim());
 /** The day after the latest date already picked, for + Add another date. */
 function nextFree(l: Launch) {
   const all = [l.onDate, ...(l.moreDates ?? [])].filter((x): x is string => !!x).sort();

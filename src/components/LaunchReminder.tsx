@@ -1,21 +1,59 @@
+import { useEffect, useState } from 'react';
 import { Sheet } from './Sheet';
+import { TitleCombo, joinTitle, splitTitle } from './Launchers';
+import { launchListFor } from '../lib/hiddenPicks';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { describeLog, describeOpens, opensSomething, timeFor, type Launch } from '../lib/launchers';
 
 type Props = {
   launch: Launch | null;
   onLaunch: (l: Launch) => void;
-  onSnooze: (l: Launch) => void;
+  /** Oct 24: snooze for this many minutes; a changed description saves to the launch. */
+  onSnooze: (l: Launch, minutes: number, title?: string) => void;
+  /** Every launch's title, for the description list. */
+  titles?: string[];
   onSkip: (l: Launch) => void;
   /** Nothing to open: LOG (or Done) logs it and checks it off. */
   onDone: (l: Launch) => void;
 };
 
 /** The reminder that pops up at a timed launch. Launching from here is a tap, so the browser allows the tabs. */
-export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone }: Props) {
+export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone, titles = [] }: Props) {
+  // Oct 24: Snooze opens its own choices (+10 / +30 / +60) with the description to add to.
+  const [snoozing, setSnoozing] = useState(false);
+  const [desc, setDesc] = useState('');
+  useEffect(() => {
+    setSnoozing(false);
+    setDesc(launch ? splitTitle(launch.title).desc : '');
+  }, [launch?.id]);
+  const cat = launch ? splitTitle(launch.title).cat : '';
+  const descriptions = [...new Set(titles.map(splitTitle).filter((t) => launchListFor(t.cat) === launchListFor(cat) && t.desc).map((t) => t.desc))].sort((a, b) => a.localeCompare(b));
+  const snooze = (min: number) => {
+    if (!launch) return;
+    const title = joinTitle(cat, desc);
+    onSnooze(launch, min, title !== launch.title ? title : undefined);
+  };
   return (
-    <Sheet open={!!launch} title={launch ? launch.title : 'Launch'} onClose={() => launch && onSnooze(launch)}>
-      {launch && (
+    <Sheet open={!!launch} title={launch ? (snoozing ? `Snooze · ${cat}` : launch.title) : 'Launch'} onClose={() => launch && onSnooze(launch, 10)}>
+      {launch && snoozing && (
+        <div className="reminder">
+          <div className="field">
+            <span>Description · add to it or change it</span>
+            <TitleCombo value={desc} titles={descriptions} required={false} autoFocus placeholder="Launch Page Construction" onChange={setDesc} list={launchListFor(cat)} />
+          </div>
+          <div className="reminder-actions snooze-actions">
+            <button type="button" className="btn btn-quiet" onClick={() => setSnoozing(false)}>
+              Back
+            </button>
+            {[10, 30, 60].map((m) => (
+              <button key={m} type="button" className="btn" onClick={() => snooze(m)}>
+                +{m} min
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {launch && !snoozing && (
         <div className="reminder">
           <p className="reminder-time">{formatMinutes(toMinutes(timeFor(launch, new Date())))} · Launch time</p>
           <p className="panel-empty">
@@ -31,7 +69,7 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone }: P
             <button type="button" className="btn btn-quiet" title={launch.repeat === 'hourly' ? 'Skip this hour' : 'Skip today: back tomorrow, same time'} onClick={() => onSkip(launch)}>
               Skip
             </button>
-            <button type="button" className="btn btn-quiet" title="Snooze 10 minutes" onClick={() => onSnooze(launch)}>
+            <button type="button" className="btn btn-quiet" title="Snooze: pick how long" onClick={() => setSnoozing(true)}>
               Snooze
             </button>
             {opensSomething(launch) ? (
