@@ -13,6 +13,7 @@ import { RoutineEditor } from './components/RoutineEditor';
 import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
 import { syncNonNegs } from './lib/nnsync';
 import { meditationStore, MeditationsContext, type Meditation } from './lib/meditations';
+import { hiddenPickStore, HiddenPicksContext, pickKey as hiddenKey, type HiddenPick } from './lib/hiddenPicks';
 import { customerStore, invoiceStore, profileStore, type Customer, type Invoice, type InvoiceProfile } from './lib/invoices';
 import { InvoicesPage } from './components/Invoices';
 import { nextRepeat, readRepeat, writeRepeat } from './lib/repeat';
@@ -143,6 +144,7 @@ export default function App() {
   const [d26Config, setD26Config] = useState<Config>(DEFAULT_CONFIG);
   const [d26Ready, setD26Ready] = useState(false);
   const [meditations, setMeditations] = useState<Meditation[]>([]);
+  const [hiddenPicks, setHiddenPicks] = useState<HiddenPick[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [invoiceProfile, setInvoiceProfile] = useState<InvoiceProfile[]>([]);
@@ -293,6 +295,9 @@ export default function App() {
       const md = await meditationStore.load(userId);
       if (!live) return;
       setMeditations(md.items);
+      const hp = await hiddenPickStore.load(userId);
+      if (!live) return;
+      setHiddenPicks(hp.items);
       const [iv, cu, pf] = await Promise.all([invoiceStore.load(userId), customerStore.load(userId), profileStore.load(userId)]);
       if (!live) return;
       setInvoices(iv.items);
@@ -376,6 +381,20 @@ export default function App() {
     setMeditations(next);
     await meditationStore.remove(userId, id, next);
     setStatus('Meditation removed from the library.');
+  }
+  // Oct 24: the ✕ in a description dropdown hides that item from its list.
+  const hiddenRef = useRef(hiddenPicks);
+  hiddenRef.current = hiddenPicks;
+  function hidePick(list: string, value: string) {
+    const v = hiddenKey(value);
+    if (!v || hiddenRef.current.some((h) => h.list === list && h.value === v)) return;
+    const h: HiddenPick = { id: crypto.randomUUID(), list, value: v, sort: hiddenRef.current.length };
+    const next = [...hiddenRef.current, h];
+    hiddenRef.current = next;
+    setHiddenPicks(next);
+    void hiddenPickStore.save(userId, h, next).then((ok) => {
+      if (!ok) setStatus('Removed on this device only. Run supabase/migrations/0030_hidden_picks.sql to sync it.');
+    });
   }
   const quoteOps = ops(quoteStore, quotes, setQuotes, () => 'Quote');
   const budgetOps = ops(budgetStore, budget, setBudget, (l) => l.description);
@@ -876,6 +895,7 @@ export default function App() {
 
   return (
     <MeditationsContext.Provider value={{ list: meditations, save: saveMeditation, remove: removeMeditation }}>
+    <HiddenPicksContext.Provider value={{ hidden: hiddenPicks, hide: hidePick }}>
     <div className={`${scrolled ? 'app is-scrolled' : 'app'}${bgImage ? ' has-bg-image' : ''}`} style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'} data-scroll={scrollMode}>
       <div className="sky" aria-hidden="true">
         <div className="sky-lines" />
@@ -1274,6 +1294,7 @@ export default function App() {
         }
       />
     </div>
+    </HiddenPicksContext.Provider>
     </MeditationsContext.Provider>
   );
 }

@@ -1017,7 +1017,7 @@ function LogForm({ entry, isNew, config, pastNotes, pastAmounts, onSave, onDelet
           </label>
           <div className="field">
             <span>Description · picking one you've had before fills its calories</span>
-            <TitleCombo value={food.desc} titles={pastNotes} required={false} autoFocus={isNew} placeholder="Bowl of Special K Red Berries with Oat Milk" onChange={(desc) => setFoodPart({ desc })} />
+            <TitleCombo value={food.desc} titles={pastNotes} required={false} autoFocus={isNew} placeholder="Bowl of Special K Red Berries with Oat Milk" onChange={(desc) => setFoodPart({ desc })} list="log:food" />
           </div>
         </>
       )}
@@ -1033,6 +1033,7 @@ function LogForm({ entry, isNew, config, pastNotes, pastAmounts, onSave, onDelet
             <TitleCombo
               value={d.note}
               titles={pastNotes}
+              list="log:vices"
               autoFocus={isNew}
               placeholder="A pack of gum, a heavy night…"
               onChange={(note) => {
@@ -1074,7 +1075,7 @@ function LogForm({ entry, isNew, config, pastNotes, pastAmounts, onSave, onDelet
       {d.kind !== 'vices' && d.kind !== 'food' && (
         <div className="field">
           <span>Note · matching a Non-Negotiable ticks it</span>
-          <TitleCombo value={d.note} titles={pastNotes} required={false} placeholder="Optional" onChange={(note) => set({ note })} />
+          <TitleCombo value={d.note} titles={pastNotes} required={false} placeholder="Optional" onChange={(note) => set({ note })} list={`log:${d.kind}`} />
         </div>
       )}
 

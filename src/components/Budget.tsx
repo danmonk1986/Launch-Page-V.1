@@ -468,7 +468,7 @@ function LineForm({
         </label>
         <div className="field">
           <span>Project</span>
-          <TitleCombo value={d.project} titles={projects} required={false} placeholder="APP SHOP" onChange={(project) => set({ project })} />
+          <TitleCombo value={d.project} titles={projects} required={false} placeholder="APP SHOP" onChange={(project) => set({ project })} list="budget:project" />
         </div>
         <label className="field budget-wide">
           <span>Description</span>
@@ -489,7 +489,7 @@ function LineForm({
         />
         <div className="field">
           <span>Pmt method</span>
-          <TitleCombo value={d.method} titles={methods} required={false} placeholder="ATB" onChange={(method) => set({ method })} />
+          <TitleCombo value={d.method} titles={methods} required={false} placeholder="ATB" onChange={(method) => set({ method })} list="budget:method" />
         </div>
         <label className="field">
           <span>Pmt type</span>
@@ -515,7 +515,7 @@ function LineForm({
         </label>
         <div className="field">
           <span>Pmt category</span>
-          <TitleCombo value={d.pmtCategory} titles={pmtCategories} required={false} placeholder="RENT" onChange={(pmtCategory) => set({ pmtCategory })} />
+          <TitleCombo value={d.pmtCategory} titles={pmtCategories} required={false} placeholder="RENT" onChange={(pmtCategory) => set({ pmtCategory })} list="budget:pmt" />
         </div>
         <label className="field budget-wide">
           <span>Notes</span>

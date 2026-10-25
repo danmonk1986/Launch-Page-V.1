@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useState, useId, useRef } from 'react';
+import { useContext, useEffect, useLayoutEffect, useState, useId, useRef } from 'react';
+import { HiddenPicksContext, launchListFor, pickKey as hiddenKey } from '../lib/hiddenPicks';
 import { FormActions, Sheet } from './Sheet';
 import {
   describeSchedule,
@@ -778,7 +779,8 @@ function TimedForm({
     set('title', joinTitle(c, x));
   };
   const categories = [...new Set([...WHAT_CATEGORIES, ...titles.map((t) => splitTitle(t).cat).filter(Boolean)])];
-  const descriptions = [...new Set(titles.map(splitTitle).filter((t) => t.cat === cat.trim() && t.desc).map((t) => t.desc))].sort((a, b) => a.localeCompare(b));
+  // Oct 24: one list per kind of work: Work Block #1, #2 and #3 share their descriptions.
+  const descriptions = [...new Set(titles.map(splitTitle).filter((t) => launchListFor(t.cat) === launchListFor(cat) && t.desc).map((t) => t.desc))].sort((a, b) => a.localeCompare(b));
   const toggleDay = (i: number) =>
     set('weekdays', d.weekdays.includes(i) ? d.weekdays.filter((x) => x !== i) : [...d.weekdays, i].sort());
 
@@ -835,11 +837,11 @@ function TimedForm({
       )}
       <label className="field">
         <span>What</span>
-        <TitleCombo value={cat} titles={categories} placeholder="Work Block #1" onChange={(v) => setWhat(v, desc)} />
+        <TitleCombo value={cat} titles={categories} placeholder="Work Block #1" onChange={(v) => setWhat(v, desc)} list="launch:what" />
       </label>
       <label className="field">
         <span>Description</span>
-        <TitleCombo value={desc} titles={descriptions} required={false} placeholder="Launch Page Construction" onChange={(v) => setWhat(cat, v)} />
+        <TitleCombo value={desc} titles={descriptions} required={false} placeholder="Launch Page Construction" onChange={(v) => setWhat(cat, v)} list={launchListFor(cat)} />
       </label>
       {rituals.length > 0 && (
         <label className="field">
@@ -1074,7 +1076,10 @@ function useOpensUp(wrap: { current: HTMLElement | null }, open: boolean) {
 }
 
 /** "What": type a new name, or open the list with ⌄ (or by typing) and pick one you've used before. */
-export function TitleCombo({ value, titles, onChange, placeholder = 'Work Block #1 - Launch Page Construction', required = true, autoFocus }: { value: string; titles: string[]; onChange: (v: string) => void; placeholder?: string; required?: boolean; autoFocus?: boolean }) {
+export function TitleCombo({ value, titles: allTitles, onChange, placeholder = 'Work Block #1 - Launch Page Construction', required = true, autoFocus, list }: { value: string; titles: string[]; onChange: (v: string) => void; placeholder?: string; required?: boolean; autoFocus?: boolean; /** Oct 24: names the list so its items get an ✕ that hides them (lib/hiddenPicks.ts). */ list?: string }) {
+  const picks = useContext(HiddenPicksContext);
+  const gone = new Set(list ? picks.hidden.filter((h) => h.list === list).map((h) => h.value) : []);
+  const titles = gone.size ? allTitles.filter((t) => !gone.has(hiddenKey(t))) : allTitles;
   const [open, setOpen] = useState(false);
   const [filtering, setFiltering] = useState(false);
   const [hi, setHi] = useState(0);
@@ -1144,10 +1149,17 @@ export function TitleCombo({ value, titles, onChange, placeholder = 'Work Block 
       {open && shown.length > 0 && (
         <ul className={`combo-list${up ? ' is-up' : ''}`} role="listbox" id={listId}>
           {shown.map((t, i) => (
-            <li key={t} role="option" aria-selected={i === hi}>
+            <li key={t} role="option" aria-selected={i === hi} className={list ? 'combo-row' : undefined}>
               <button type="button" className={`combo-opt combo-opt-plain ${i === hi ? 'is-hi' : ''}`} onMouseEnter={() => setHi(i)} onClick={() => pick(t)}>
                 {t}
               </button>
+              {list && (
+                <button type="button" className="combo-x" aria-label={`Remove ${t} from this list`} title="Remove from this list" onClick={() => picks.hide(list, t)}>
+                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              )}
             </li>
           ))}
         </ul>
