@@ -3,7 +3,8 @@ import { FormActions, Sheet } from './Sheet';
 import { Icon, SearchToggle } from './Tasks';
 import { TitleCombo } from './Launchers';
 import { RepeatPicker } from './RepeatPicker';
-import { ExpensesView } from './Expenses';
+import { ExpensesView, thisMonth } from './Expenses';
+import { BudgetMonth } from './BudgetMonth';
 import { AddItemForm, type AddItemResult } from './AddItem';
 import type { Expense } from '../lib/expenses';
 import { planLinks, type LinkPlan } from '../lib/links';
@@ -61,7 +62,7 @@ type Props = {
   onAddItem: (r: AddItemResult) => Promise<void>;
 };
 
-type BudgetView = 'budget' | 'expenses';
+type BudgetView = 'master' | 'month' | 'expenses';
 
 /** The ⋯ menu on a budget line. */
 function LineMenu({ l, onEdit, onCalendar, onLaunch, onTask, onRemove }: { l: BudgetLine; onEdit: () => void; onCalendar: () => void; onLaunch: () => void; onTask: () => void; onRemove: () => void }) {
@@ -128,11 +129,14 @@ export function BudgetPage(p: Props) {
   // Budget | Expenses (LP-030), remembered on this device.
   const [view, setViewState] = useState<BudgetView>(() => {
     try {
-      return localStorage.getItem('launchpage.budget.view') === 'expenses' ? 'expenses' : 'budget';
+      const v = localStorage.getItem('launchpage.budget.view');
+      return v === 'expenses' || v === 'month' ? v : 'master';
     } catch {
-      return 'budget';
+      return 'master';
     }
   });
+  // One month for Month and Expenses, so switching keeps your place.
+  const [month, setMonth] = useState(thisMonth);
   const setView = (v: BudgetView) => {
     setViewState(v);
     try {
@@ -221,8 +225,11 @@ export function BudgetPage(p: Props) {
           Budget
         </h2>
         <div className="d26-range budget-views" role="group" aria-label="View">
-          <button type="button" aria-pressed={view === 'budget'} onClick={() => setView('budget')}>
-            Budget
+          <button type="button" aria-pressed={view === 'master'} title="Every line and its repeat" onClick={() => setView('master')}>
+            Master
+          </button>
+          <button type="button" aria-pressed={view === 'month'} title="Only what lands this month" onClick={() => setView('month')}>
+            Month
           </button>
           <button type="button" aria-pressed={view === 'expenses'} onClick={() => setView('expenses')}>
             Expenses
@@ -230,11 +237,13 @@ export function BudgetPage(p: Props) {
         </div>
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder={view === 'expenses' ? 'Search expenses' : 'Search the budget'} />
-          {view === 'budget' && (
-          <>
-          <button type="button" className="icon-btn tool-btn" aria-label="Add item" title="Add item: a budget line, a task, or both linked" onClick={() => setAdding(true)}>
+          {view !== 'expenses' && (
+            <button type="button" className="icon-btn tool-btn" aria-label="Add item" title="Add item: a budget line, a task, or both linked" onClick={() => setAdding(true)}>
             <Icon d={PLUS} />
           </button>
+          )}
+          {view === 'master' && (
+          <>
           <button
             type="button"
             className="icon-btn tool-btn"
@@ -277,9 +286,10 @@ export function BudgetPage(p: Props) {
         </div>
       </div>
 
-      {view === 'expenses' && <ExpensesView expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} />}
+      {view === 'month' && <BudgetMonth month={month} onMonth={setMonth} lines={p.lines} expenses={p.expenses} linkedIds={linkedIds} search={q} onEdit={setEditing} />}
+      {view === 'expenses' && <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} />}
 
-      {view === 'budget' && p.lines.length > 0 && (
+      {view === 'master' && p.lines.length > 0 && (
         <div className="budget-stats" aria-label="A month of spending">
           <button
             type="button"
@@ -303,7 +313,7 @@ export function BudgetPage(p: Props) {
         </div>
       )}
 
-      {view === 'expenses' ? null : p.lines.length === 0 ? (
+      {view !== 'master' ? null : p.lines.length === 0 ? (
         <div className="budget-empty">
           <p className="panel-empty">
             No budget yet. In the Launch Sheet, open the <strong>BUDGET</strong> tab, then <strong>File → Download → Comma-separated values (.csv)</strong>, and import that file here.

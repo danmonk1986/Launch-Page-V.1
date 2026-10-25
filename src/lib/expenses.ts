@@ -1,5 +1,6 @@
 import { makeStore } from './store';
 import type { BudgetLine } from './budget';
+import { readRepeat, repeatOn, type Repeat } from './repeat';
 
 /**
  * Expenses (LP-030, Oct 25): what was actually paid. Same columns as the Launch Sheet
@@ -116,3 +117,61 @@ export const paidIn = (list: Expense[], lineId: string, month: string) => list.f
 /** Total spent in a month, optionally for one budget line. */
 export const spentIn = (list: Expense[], month: string, lineId?: string) =>
   list.filter((e) => monthKey(e.date) === month && (!lineId || e.budgetLineId === lineId)).reduce((a, e) => a + (e.amount ?? 0), 0);
+
+// ---------- Month view (LP-030 step 5) ----------
+
+/** The days of a month ("2026-11") a repeat lands on. */
+export function daysIn(month: string, landsOn: (d: Date) => boolean): string[] {
+  const [y, m] = month.split('-').map(Number);
+  const last = new Date(y, m, 0).getDate();
+  const out: string[] = [];
+  for (let d = 1; d <= last; d++) if (landsOn(new Date(y, m - 1, d, 12))) out.push(`${month}-${String(d).padStart(2, '0')}`);
+  return out;
+}
+
+export interface MonthLine {
+  line: BudgetLine;
+  /** The days it's due this month (empty for variable lines: an allotment for the whole month). */
+  dates: string[];
+  /** What's budgeted this month: the amount × the times it lands (weekly lines land 4–5 times). */
+  due: number;
+  /** Expenses for this line this month. */
+  spent: number;
+}
+
+/**
+ * What lands in a month: monthly lines, quarterly lines in their months, annual lines only in
+ * their month, one-offs dated that month, and variable lines (planned) every month.
+ */
+/**
+ * How a line repeats. Lines imported from the sheet often have no repeat yet: a fixed line with
+ * a date repeats on that day monthly, an annual line on that date yearly.
+ */
+export function lineRepeat(l: BudgetLine): Repeat {
+  const r = readRepeat(l.repeat);
+  if (r.kind !== 'none' || !l.date) return r;
+  if (l.section === 'fixed') return readRepeat(`M:${Number(l.date.slice(8, 10))}`);
+  if (l.section === 'annual') return readRepeat(`A:${l.date.slice(5, 10)}`);
+  return r;
+}
+
+/**
+ * What lands in a month: monthly lines, quarterly lines in their months, annual lines only in
+ * their month, one-offs dated that month. Variable lines, and fixed lines with no date, are a
+ * monthly allotment that shows every month.
+ */
+export function monthLines(lines: BudgetLine[], expenses: Expense[], month: string): MonthLine[] {
+  const out: MonthLine[] = [];
+  for (const l of lines) {
+    const amt = l.amount ?? 0;
+    const spent = spentIn(expenses, month, l.id);
+    const rep = lineRepeat(l);
+    if (rep.kind === 'none' && (l.section === 'variable' || (l.section === 'fixed' && !l.date))) {
+      out.push({ line: l, dates: [], due: amt, spent });
+      continue;
+    }
+    const dates = rep.kind !== 'none' ? daysIn(month, (d) => repeatOn(rep, d)) : l.date && monthKey(l.date) === month ? [l.date] : [];
+    if (dates.length || spent) out.push({ line: l, dates, due: amt * dates.length, spent });
+  }
+  return out.sort((a, b) => (a.dates[0] ?? '9999').localeCompare(b.dates[0] ?? '9999') || a.line.sort - b.line.sort);
+}

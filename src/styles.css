@@ -2256,3 +2256,10 @@ select:not([multiple]) {
 .add-item-preview strong { color: var(--accent-teal); }
 .add-item-more { justify-self: start; }
 .add-item .budget-grid > .field { align-self: start; }
+
+/* LP-030 · Budget Month (Oct 25) */
+.budget-month-table { min-width: 860px; }
+.budget-month-table .is-paid .task-name { color: var(--accent-teal); }
+.budget-over { color: #ff7a90; }
+.budget-stat-good { color: var(--accent-teal) !important; }
+.month-nav button:nth-child(2) { min-width: 120px; font-family: var(--font-mono); }

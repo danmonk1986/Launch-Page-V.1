@@ -8,15 +8,35 @@ import { monthKey, newExpense, type Expense } from '../lib/expenses';
 
 const PLUS = 'M12 5v14M5 12h14';
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const shiftMonth = (m: string, by: number) => {
+export const thisMonth = () => iso(new Date()).slice(0, 7);
+export const shiftMonth = (m: string, by: number) => {
   const [y, mo] = m.split('-').map(Number);
   const d = new Date(y, mo - 1 + by, 1, 12);
   return iso(d).slice(0, 7);
 };
-const monthLabel = (m: string) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`.toUpperCase();
-const dayLabel = (d: string) => `${MONTHS[Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}`;
+export const monthLabel = (m: string) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`.toUpperCase();
+export const dayLabel = (d: string) => `${MONTHS[Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}`;
+
+/** ‹ NOV 2026 › — tap the month to come back to this one. */
+export function MonthNav({ month, onChange }: { month: string; onChange: (m: string) => void }) {
+  return (
+    <div className="d26-range month-nav" role="group" aria-label="Month">
+      <button type="button" aria-label="Previous month" onClick={() => onChange(shiftMonth(month, -1))}>
+        ‹
+      </button>
+      <button type="button" aria-pressed="true" title="Back to this month" onClick={() => onChange(thisMonth())}>
+        {monthLabel(month)}
+      </button>
+      <button type="button" aria-label="Next month" onClick={() => onChange(shiftMonth(month, 1))}>
+        ›
+      </button>
+    </div>
+  );
+}
 
 type Props = {
+  month: string;
+  onMonth: (m: string) => void;
   expenses: Expense[];
   lines: BudgetLine[];
   search: string;
@@ -29,7 +49,7 @@ type Props = {
  * EXPENSES columns. Ticking a task linked to a budget line adds a row here.
  */
 export function ExpensesView(p: Props) {
-  const [month, setMonth] = useState(() => iso(new Date()).slice(0, 7));
+  const { month, onMonth: setMonth } = p;
   const [editing, setEditing] = useState<Expense | null>(null);
   const needle = p.search.trim().toLowerCase();
 
@@ -56,17 +76,7 @@ export function ExpensesView(p: Props) {
   return (
     <div className="expenses">
       <div className="expenses-bar">
-        <div className="d26-range" role="group" aria-label="Month">
-          <button type="button" aria-label="Previous month" onClick={() => setMonth((m) => shiftMonth(m, -1))}>
-            ‹
-          </button>
-          <button type="button" aria-pressed="true" title="Back to this month" onClick={() => setMonth(iso(new Date()).slice(0, 7))}>
-            {monthLabel(month)}
-          </button>
-          <button type="button" aria-label="Next month" onClick={() => setMonth((m) => shiftMonth(m, 1))}>
-            ›
-          </button>
-        </div>
+        <MonthNav month={month} onChange={setMonth} />
         <button
           type="button"
           className="btn btn-quiet expenses-add"
