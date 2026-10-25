@@ -1303,6 +1303,10 @@ export default function App() {
               }}
               onSaveTask={saveTask}
               onSaveTasks={saveTasks}
+              onGoToTask={(id) => {
+                setFocusTask(id);
+                setPage('tasks');
+              }}
             />
           ) : (
             <ComingSoon page={page} />

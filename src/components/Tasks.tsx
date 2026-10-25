@@ -626,13 +626,15 @@ export function TasksPage(
   // Arriving from the Launch Page: scroll to the task and light it up.
   useEffect(() => {
     if (!p.focusId) return;
+    // The task is found in List view (Month rows aren't the full list).
+    if (layout !== 'list') setLayoutState('list');
     const t = window.setTimeout(() => {
       const row = document.getElementById(`task-${p.focusId}`);
       if (!row) return;
       row.scrollIntoView({ behavior: 'smooth', block: 'center' });
       row.classList.add('is-focus');
       window.setTimeout(() => row.classList.remove('is-focus'), 2600);
-    }, 60);
+    }, 150);
     return () => window.clearTimeout(t);
   }, [p.focusId]);
   return (

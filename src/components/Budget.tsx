@@ -54,6 +54,8 @@ type Props = {
   /** The linked task's form opens here; saving goes through the usual task save. */
   onSaveTask: (t: Task) => Promise<void>;
   onSaveTasks: (t: Task[]) => Promise<void>;
+  /** ⋯ on a linked line: go to its task on the Tasks page. */
+  onGoToTask: (id: string) => void;
   /** Expenses (LP-030): what was actually paid. */
   expenses: Expense[];
   onSaveExpense: (e: Expense) => Promise<void>;
@@ -96,7 +98,7 @@ function LineMenu({ l, hasTask, onEdit, onCalendar, onLaunch, onTask, onRemove }
             Create launch
           </button>
           <button type="button" role="menuitem" onClick={run(onTask)}>
-            {hasTask ? 'Open its task' : 'Add a task'}
+            {hasTask ? 'Go to its task' : 'Add a task'}
           </button>
           <button type="button" role="menuitem" className="menu-danger" onClick={run(onRemove)}>
             Remove
@@ -194,10 +196,10 @@ export function BudgetPage(p: Props) {
     if (!n) return undefined;
     return p.projects.find((x) => norm(x.name) === n) ?? p.projects.find((x) => norm(x.name).startsWith(n) || n.startsWith(norm(x.name)));
   };
-  /** ⋯ → Add a task: a linked task from the line, then its form. A linked line opens its task. */
+  /** ⋯ → Add a task: a linked task from the line, then its form. A linked line goes to its task. */
   async function openTaskFor(l: BudgetLine) {
     const have = p.tasks.find((t) => t.budgetLineId === l.id && !t.deletedAt);
-    if (have) return setTaskOpen({ task: have, fresh: false });
+    if (have) return p.onGoToTask(have.id);
     const base = newTask(p.tasks.reduce((m, t) => Math.max(m, t.sort + 1), 0), projectFor(l.project)?.id ?? null);
     const t = fromLine({ ...base, status: 'PENDING', description: l.category || l.pmtCategory || '', notes: l.notes }, l);
     await p.onSaveTask(t);
