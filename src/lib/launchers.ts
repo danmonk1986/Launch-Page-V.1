@@ -390,6 +390,9 @@ export function setLaunchDayReset(min: number) {
   resetMin = ((Math.round(min) % 1440) + 1440) % 1440;
 }
 
+/** Oct 24: sort by the routine day, not the clock (on nights 9:30 PM comes before 12:30 AM). */
+export const dayOrder = (hhmmTime: string) => (toMinutes(hhmmTime) - resetMin + 1440) % 1440;
+
 /** The calendar date this launch's run falls on, inside the routine day that holds `ref`. */
 export function launchDate(l: Launch, ref: Date): Date {
   if (l.repeat === 'hourly') return ref;
@@ -616,7 +619,7 @@ export function orderLaunches(list: Launch[], today: Date, handled: Record<strin
     if (todays) return 1;
     return l.active ? 2 : 3;
   };
-  return [...list].sort((a, b) => rank(a) - rank(b) || timeFor(a, today).localeCompare(timeFor(b, today)));
+  return [...list].sort((a, b) => rank(a) - rank(b) || dayOrder(timeFor(a, today)) - dayOrder(timeFor(b, today)));
 }
 
 /** "2 tabs + Claude" */

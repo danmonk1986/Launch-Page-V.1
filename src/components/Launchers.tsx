@@ -25,7 +25,8 @@ import {
   opensSomething,
   describeLog,
   LOG_KINDS,
-  type LaunchLogKind
+  type LaunchLogKind,
+  dayOrder,
 } from '../lib/launchers';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
@@ -167,13 +168,13 @@ export function LaunchersPanel(p: Props) {
     ),
     tomorrow: [...p.launches]
       .filter((l) => l.active && happensToday(l, tomorrow))
-      .sort((a, b) => a.atTime.localeCompare(b.atTime)),
+      .sort((a, b) => dayOrder(a.atTime) - dayOrder(b.atTime)),
     // Scheduled (Oct 22): every launch that's on and still ahead, once each (not once per day),
     // soonest first, so you can look forward without the daily ones repeating.
     scheduled: p.launches
       .filter((l) => l.active && nextOf(l))
-      .sort((a, b) => (nextOf(a) ?? '').localeCompare(nextOf(b) ?? '') || a.atTime.localeCompare(b.atTime)),
-    all: [...p.launches].sort((a, b) => a.atTime.localeCompare(b.atTime)),
+      .sort((a, b) => (nextOf(a) ?? '').localeCompare(nextOf(b) ?? '') || dayOrder(a.atTime) - dayOrder(b.atTime)),
+    all: [...p.launches].sort((a, b) => dayOrder(a.atTime) - dayOrder(b.atTime)),
     history: []
   };
   // History (Oct 22): every finished run, newest first.
