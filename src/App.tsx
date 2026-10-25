@@ -1220,6 +1220,7 @@ export default function App() {
               focusId={focusTask}
               budgetLines={budget}
               onAddItem={addItem}
+              expenses={expenses}
             />
           ) : page === 'journal' ? (
             <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} full onClose={() => setPage('launch')} />

@@ -1,6 +1,9 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { AddItemForm, type AddItemResult } from './AddItem';
+import { TasksMonth } from './TasksMonth';
+import { thisMonth } from './Expenses';
+import type { Expense } from '../lib/expenses';
 import type { BudgetLine } from '../lib/budget';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { normalizeUrl } from '../lib/launchers';
@@ -544,10 +547,28 @@ export function TasksPage(
     /** Add item (LP-030): one pop-up for a task, a budget line, or both linked. */
     budgetLines?: BudgetLine[];
     onAddItem?: (r: AddItemResult) => Promise<void>;
+    /** Month view (LP-030 step 6): Paid comes from Expenses. */
+    expenses?: Expense[];
   }
 ) {
   const editor = useTaskEditor(p);
   const [adding, setAdding] = useState(false);
+  const [layout, setLayoutState] = useState<'list' | 'month'>(() => {
+    try {
+      return localStorage.getItem('launchpage.tasks.view') === 'month' ? 'month' : 'list';
+    } catch {
+      return 'list';
+    }
+  });
+  const setLayout = (v: 'list' | 'month') => {
+    setLayoutState(v);
+    try {
+      localStorage.setItem('launchpage.tasks.view', v);
+    } catch {
+      /* ignore */
+    }
+  };
+  const [month, setMonth] = useState(thisMonth);
   const act = useActions(p, editor);
   const [view, setView] = useState<Section | null>(null);
   // Search: a task matches on its name, description, notes, info or project; its steps come with
@@ -581,6 +602,14 @@ export function TasksPage(
         <h2 id="h-tasks-page" className="panel-title">
           Tasks
         </h2>
+        <div className="d26-range budget-views" role="group" aria-label="View">
+          <button type="button" aria-pressed={layout === 'list'} title="Everything, by status" onClick={() => setLayout('list')}>
+            List
+          </button>
+          <button type="button" aria-pressed={layout === 'month'} title="Only what lands this month" onClick={() => setLayout('month')}>
+            Month
+          </button>
+        </div>
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder="Search tasks" />
           <button type="button" className="icon-btn tool-btn" aria-label="Add item" title="Add item: a task, a budget line, or both linked" onClick={() => (p.onAddItem ? setAdding(true) : editor.add())}>
@@ -594,6 +623,11 @@ export function TasksPage(
           </button>
         </div>
       </div>
+      {layout === 'month' && (
+        <TasksMonth month={month} onMonth={setMonth} tasks={p.tasks} projects={p.projects} expenses={p.expenses ?? []} search={(t) => !needle || hit(t)} onOpen={editor.edit} onToggle={act.toggle} />
+      )}
+      {layout === 'list' && (
+      <>
       <PillRow
         pills={[
           { id: null, label: 'All', count: outstanding },
@@ -613,6 +647,8 @@ export function TasksPage(
         collapsible={!view && !needle}
         focusId={p.focusId ?? null}
       />
+      </>
+      )}
       {editor.sheet}
       {p.onAddItem && (
         <Sheet open={adding} title="Add item" onClose={() => setAdding(false)} wide>
