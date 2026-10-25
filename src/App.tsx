@@ -205,6 +205,36 @@ export default function App() {
     void launchLogStore.save(userId, item, next);
   }
   const extraToday = (id: string) => launchLog.find((g) => g.launchId === id && g.day === isoDate(now))?.extra ?? 0;
+  // Oct 25: pause a launched run (lunch, a call). Paused minutes push the end alarm back and don't
+  // count as time spent. Kept in this browser per run: { at: paused since (ms) or null, min: paused so far }.
+  const PAUSE_KEY = 'launchpage.paused.v1';
+  const [paused, setPaused] = useState<Record<string, { at: number | null; min: number }>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(PAUSE_KEY) ?? '{}');
+    } catch {
+      return {};
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(PAUSE_KEY, JSON.stringify(paused));
+    } catch {
+      /* ignore */
+    }
+  }, [paused]);
+  const pausedMin = (l: Launch, at = Date.now()) => {
+    const p = paused[runKey(l, new Date(at))];
+    return p ? p.min + (p.at ? (at - p.at) / 60_000 : 0) : 0;
+  };
+  const isPaused = (l: Launch) => !!paused[runKey(l, new Date())]?.at;
+  function togglePause(l: Launch) {
+    const key = runKey(l, new Date());
+    const cur = paused[key] ?? { at: null, min: 0 };
+    const t = Date.now();
+    const next = cur.at ? { at: null, min: cur.min + (t - cur.at) / 60_000 } : { ...cur, at: t };
+    setPaused((m) => ({ ...m, [key]: next }));
+    setStatus(next.at ? `${l.title}: paused. The clock stops until you resume.` : `${l.title}: resumed (${Math.round(next.min)} min paused).`);
+  }
   const [endAlerted, setEndAlerted] = useState<Record<string, true>>({});
 
   useEffect(() => unlockAudioOnFirstGesture(), []);
@@ -778,9 +808,9 @@ export default function App() {
     const nowMin = now.getHours() * 60 + now.getMinutes();
     const over = launches.find((l) => {
       const key = runKey(l, now);
-      if (handled[key] !== 'launched' || endAlerted[key]) return false;
+      if (handled[key] !== 'launched' || endAlerted[key] || paused[key]?.at) return false;
       const [h, m] = timeFor(l, now).split(':').map(Number);
-      const end = h * 60 + m + l.minutes + extraToday(l.id);
+      const end = h * 60 + m + l.minutes + extraToday(l.id) + Math.round(pausedMin(l, now.getTime()));
       return nowMin >= end;
     });
     if (!over) return;
@@ -788,7 +818,7 @@ export default function App() {
     setTimeUp(over);
     if (over.sound !== false) chime('end', over.tone);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [now, launches, handled, endAlerted, launchLog, timeUp, reminder]);
+  }, [now, launches, handled, endAlerted, launchLog, timeUp, reminder, paused]);
 
   async function finishLaunch(l: Launch, how: 'done' | 'skipped') {
     setHandled(markHandled(l, new Date(), how));
@@ -823,7 +853,7 @@ export default function App() {
     const base = { id, day: d26Today, at: new Date().toISOString(), note: l.title, mode: d26Mode, sort: 0, qty: 1 };
     if (kind === 'productivity') {
       const allowed = (run.planned || l.minutes) + run.extra;
-      const spent = run.launchedAt && opensSomething(l) ? (Date.now() - new Date(run.launchedAt).getTime()) / 60_000 : allowed;
+      const spent = run.launchedAt && opensSomething(l) ? (Date.now() - new Date(run.launchedAt).getTime()) / 60_000 - pausedMin(l) : allowed;
       const blocks = Math.round((Math.min(spent, allowed) / 90) * 4) / 4;
       if (blocks <= 0) return '';
       await saveLog({ ...base, kind, amount: 1, qty: blocks, unit: 'blocks' });
@@ -998,6 +1028,8 @@ export default function App() {
                   today={now}
                   onFinish={finishLaunch}
                   onLaunchNow={launchNow}
+                  isPaused={isPaused}
+                  onPause={togglePause}
                   log={launchLog}
                   preset={timedPreset}
                   onPresetUsed={() => setTimedPreset(null)}
