@@ -10,6 +10,8 @@ type Props = {
   onLaunch: (l: Launch) => void;
   /** Oct 24: snooze for this many minutes; a changed description saves to the launch. */
   onSnooze: (l: Launch, minutes: number, title?: string) => void;
+  /** Oct 25: Edit in the snooze choices: snoozes 10 and opens Edit timed launch. */
+  onEdit?: (l: Launch, title?: string) => void;
   /** Every launch's title, for the description list. */
   titles?: string[];
   onSkip: (l: Launch) => void;
@@ -18,7 +20,7 @@ type Props = {
 };
 
 /** The reminder that pops up at a timed launch. Launching from here is a tap, so the browser allows the tabs. */
-export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone, titles = [] }: Props) {
+export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone, onEdit, titles = [] }: Props) {
   // Oct 24: Snooze opens its own choices (+10 / +30 / +60) with the description to add to.
   const [snoozing, setSnoozing] = useState(false);
   const [desc, setDesc] = useState('');
@@ -45,11 +47,22 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone, tit
             <button type="button" className="btn btn-quiet" onClick={() => setSnoozing(false)}>
               Back
             </button>
-            {[10, 30, 60].map((m) => (
+            {[10, 30].map((m) => (
               <button key={m} type="button" className="btn" onClick={() => snooze(m)}>
                 +{m} min
               </button>
             ))}
+            {/* Oct 25: Edit in place of +60: change the time, rockets or anything else. */}
+            <button
+              type="button"
+              className="btn btn-quiet"
+              onClick={() => {
+                const title = joinTitle(cat, desc);
+                onEdit ? onEdit(launch, title !== launch.title ? title : undefined) : snooze(60);
+              }}
+            >
+              Edit
+            </button>
           </div>
         </div>
       )}

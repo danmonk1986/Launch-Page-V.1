@@ -61,6 +61,9 @@ type Props = {
   /** Runs of each launch: today's +10 minutes show on the row. */
   log?: LaunchLog[];
   onPresetUsed?: () => void;
+  /** Oct 25: opens Edit timed launch on this launch (from the reminder's Edit). */
+  editLaunch?: Launch | null;
+  onEditOpened?: () => void;
   /** Rituals a timed launch can open (26 Days). */
   rituals?: { id: string; name: string }[];
 };
@@ -118,6 +121,15 @@ export function LaunchersPanel(p: Props) {
     p.onPresetUsed?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.preset]);
+  useEffect(() => {
+    const l = p.editLaunch;
+    if (!l) return;
+    setFill(null);
+    setTimed(l);
+    setTimedOpen(true);
+    p.onEditOpened?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.editLaunch]);
   const [launched, setLaunched] = useState<{ count: number; blocked: number } | null>(null);
   // The rocket tiles start hidden; ⌄ beside the title shows them (remembered on this device).
   const [showTiles, setShowTiles] = useState(() => {

@@ -346,6 +346,7 @@ export default function App() {
   const activeRoutine = shownRoutines.find((r) => r.id === activeId) ?? shownRoutines[0] ?? null;
   // "+ Timed launch" from a routine step: opens Add timed launch on the Launch Page, filled in.
   const [timedPreset, setTimedPreset] = useState<TimedPreset | null>(null);
+  const [editLaunch, setEditLaunch] = useState<Launch | null>(null);
 
   function pickRoutine(id: string, s: Shift) {
     setActiveId(id);
@@ -1033,6 +1034,8 @@ export default function App() {
                   log={launchLog}
                   preset={timedPreset}
                   onPresetUsed={() => setTimedPreset(null)}
+                  editLaunch={editLaunch}
+                  onEditOpened={() => setEditLaunch(null)}
                 />
               }
               week={
@@ -1254,6 +1257,15 @@ export default function App() {
           setReminder(null);
           if (title) void launchOps.save({ ...l, title });
           setStatus(`${title ?? l.title}: snoozed ${minutes} min.`);
+        }}
+        onEdit={(l, title) => {
+          // Snoozed 10 so it doesn't pop straight back while you edit; a new time takes over.
+          setSnoozed((m) => ({ ...m, [l.id]: Date.now() + 10 * 60_000 }));
+          setReminder(null);
+          const next = title ? { ...l, title } : l;
+          if (title) void launchOps.save(next);
+          setPage('launch');
+          setEditLaunch(next);
         }}
         onSkip={(l) => finishLaunch(l, 'skipped')}
         onDone={(l) => finishLaunch(l, 'done')}
