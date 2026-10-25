@@ -829,7 +829,8 @@ function describe(e: LogEntry) {
   const note = e.kind !== 'vices' && e.note.trim() ? ` · ${e.note.trim()}` : '';
   switch (e.kind) {
     case 'productivity':
-      return plural(e.qty, 'block') + note;
+      // Oct 24: the real time too (a block is 1.5 hours): 1.5 blocks = 135 min.
+      return `${plural(e.qty, 'block')} = ${Math.round(e.qty * 90)} min${note}`;
     case 'activity':
       return (e.unit === 'steps' ? `${Math.round(total(e)).toLocaleString()} steps` : `${times}${num(e.amount)} min`) + note;
     case 'rest':
