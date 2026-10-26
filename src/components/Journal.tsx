@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type TextareaHTMLAttributes } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
 import { byNewest, checkinsOf, isBlank, MOODS, newEntry, shortDate, streak, withCheckins, type CheckIn, type JournalEntry } from '../lib/journal';
@@ -24,6 +24,33 @@ type Props = {
 };
 
 /** Launch Page: today's headline written in place, past days underneath. */
+/** A text box that grows to fit what's written in it (journal check-ins), so nothing hides behind a scroll bar. */
+function AutoTextarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const fit = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight + 2}px`;
+  };
+  useEffect(fit, [props.value]);
+  // Width changes (window resize, panel open) re-wrap the text.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let w = el.clientWidth;
+    const ro = new ResizeObserver(() => {
+      if (el.clientWidth !== w) {
+        w = el.clientWidth;
+        fit();
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return <textarea ref={ref} {...props} />;
+}
+
 export function JournalPanel({ entries, today, day, onSave, onDelete, onImport, full, onOpen, onClose }: Props) {
   const todayIso = day ?? isoDate(today);
   // Bumped when today's entry is moved to another date, so a fresh page opens for today.
@@ -218,7 +245,7 @@ function CheckIns({ list, onChange, onBlur, focusLast }: { list: CheckIn[]; onCh
             ✓ Check in #{i + 1}
             {c.at && <span className="checkin-time">{checkTime(c.at)}</span>}
           </span>
-          <textarea
+          <AutoTextarea
             className="journal-body"
             value={c.text}
             autoFocus={focusLast && i === list.length - 1 && !c.text}
