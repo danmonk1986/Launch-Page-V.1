@@ -27,9 +27,6 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
-        // The music player window is its own page, not the app.
-        // (Cloudflare serves it at /player as well as /player.html.)
-        navigateFallbackDenylist: [/^\/player(\.html)?(\/|\?|$)/],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {

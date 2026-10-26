@@ -13,20 +13,14 @@ registerSW({
   }
 });
 
-// The music player window (V12-019) is its own page. If an older offline copy of the app answered
-// for it, swap in the real player page instead of starting the app.
-const isPlayer = /^\/player(\.html)?\/?$/.test(location.pathname);
-if (isPlayer) {
-  void fetch(`/player.html${location.search ? `${location.search}&` : '?'}fresh=${Date.now()}`, { cache: 'reload' })
-    .then((r) => r.text())
-    .then((html) => {
-      document.open();
-      document.write(html);
-      document.close();
-    });
+// The headphones / music player was removed (Oct 26): clear what it kept on this device.
+try {
+  for (const k of ['launchpage.music.url', 'launchpage.music.saved', 'launchpage.music.spot']) localStorage.removeItem(k);
+} catch {
+  /* ignore */
 }
 
-if (!isPlayer) createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>

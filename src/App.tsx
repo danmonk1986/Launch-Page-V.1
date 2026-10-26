@@ -101,7 +101,6 @@ import {
 } from './lib/routines';
 import { SettingsPanel } from './components/SettingsPanel';
 import { GearMenu } from './components/GearMenu';
-import { MusicPlayer } from './components/MusicPlayer';
 import { SignIn } from './components/SignIn';
 
 export default function App() {
@@ -1070,7 +1069,6 @@ export default function App() {
                 e.target.value = '';
               }}
             />
-            <MusicPlayer />
             <GearMenu
               items={[
                 { label: 'Brand settings', onClick: () => setSettingsOpen('brand') },
