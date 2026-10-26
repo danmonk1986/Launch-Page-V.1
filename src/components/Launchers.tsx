@@ -24,6 +24,7 @@ import {
   type TileColor,
   runKey,
   opensSomething,
+  runsOnClock,
   describeLog,
   LOG_KINDS,
   type LaunchLogKind,
@@ -466,6 +467,12 @@ export function LaunchersPanel(p: Props) {
                         >
                           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                             <path d={p.isPaused?.(l) ? 'M7 4v16l13-8z' : 'M7 4h4v16H7zM13 4h4v16h-4z'} />
+                          </svg>
+                        </button>
+                      ) : runsOnClock(l) && !opensSomething(l) ? (
+                        <button type="button" className="quick-btn quick-launch" aria-label={`Start ${l.title} now`} title="Start the clock" onClick={() => p.onLaunchNow(l)}>
+                          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 4v16l13-8z" />
                           </svg>
                         </button>
                       ) : opensSomething(l) ? (

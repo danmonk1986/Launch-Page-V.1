@@ -970,17 +970,24 @@ export default function App() {
     const base = { id, day: d26Today, at: new Date().toISOString(), note: l.title, mode: d26Mode, sort: 0, qty: 1 };
     if (kind === 'productivity') {
       const allowed = (run.planned || l.minutes) + run.extra;
-      const spent = run.launchedAt && opensSomething(l) ? (Date.now() - new Date(run.launchedAt).getTime()) / 60_000 - pausedMin(l) : allowed;
+      // Launched or started: the time from then to Done (less any pause); checked off without starting: the time allotted.
+      const spent = run.launchedAt ? (Date.now() - new Date(run.launchedAt).getTime()) / 60_000 - pausedMin(l) : allowed;
       const blocks = Math.round((Math.min(spent, allowed) / 90) * 4) / 4;
       if (blocks <= 0) return '';
       await saveLog({ ...base, kind, amount: 1, qty: blocks, unit: 'blocks' });
       return `${blocks} block${blocks === 1 ? '' : 's'} of Productivity`;
     }
+    // Activity and Break: started → the minutes actually spent (up to the time allotted + extra).
+    const timed = () => {
+      if (!run.launchedAt) return l.minutes;
+      const allowed = (run.planned || l.minutes) + run.extra;
+      return Math.max(1, Math.round(Math.min((Date.now() - new Date(run.launchedAt).getTime()) / 60_000 - pausedMin(l), allowed)));
+    };
     const entry: LogEntry =
       kind === 'activity'
-        ? { ...base, kind, amount: l.minutes, unit: 'min' }
+        ? { ...base, kind, amount: timed(), unit: 'min' }
         : kind === 'rest'
-          ? { ...base, kind, amount: l.minutes, unit: 'min' }
+          ? { ...base, kind, amount: timed(), unit: 'min' }
           : kind === 'h2o'
             ? { ...base, kind, amount: l.logAmount ?? 500, unit: 'ml', note: '' }
             : kind === 'food'
@@ -988,6 +995,7 @@ export default function App() {
               : { ...base, kind, amount: l.logAmount ?? 1, unit: 'load' };
     if (!(entry.amount > 0)) return '';
     await saveLog(entry);
+    if (kind === 'activity' || kind === 'rest') return `${entry.amount} min of ${kind === 'activity' ? 'Activity' : 'Break'}`;
     return describeLog(l).replace(' · ', ' ');
   }
 
@@ -999,7 +1007,7 @@ export default function App() {
     setHandled(markHandled(l, new Date(), 'launched'));
     logLaunch(l, (g) => ({ outcome: 'launched', launchedAt: g.launchedAt ?? new Date().toISOString(), planned: l.minutes }));
     setReminder(null);
-    setStatus(blocked ? BLOCKED_HELP : `Launched ${l.title}.`);
+    setStatus(blocked ? BLOCKED_HELP : opensSomething(l) ? `Launched ${l.title}.` : `Started ${l.title}: the clock is running.`);
   }
 
   async function handleDeleteRoutine(id: string) {

@@ -117,11 +117,11 @@ export const LOG_KINDS: { kind: LaunchLogKind; label: string }[] = [
 export function describeLog(l: Launch) {
   switch (l.logKind) {
     case 'productivity':
-      return opensSomething(l) ? 'Productivity · time spent' : `Productivity · ${Math.round((l.minutes / 90) * 4) / 4} blocks`;
+      return 'Productivity · time spent';
     case 'activity':
-      return `Activity · ${l.minutes} min`;
+      return `Activity · time spent (up to ${l.minutes} min)`;
     case 'rest':
-      return `Break · ${l.minutes} min`;
+      return `Break · time spent (up to ${l.minutes} min)`;
     case 'food':
       return `Food · ${l.logAmount ?? 0} kcal`;
     case 'h2o':
@@ -135,6 +135,11 @@ export function describeLog(l: Launch) {
 
 /** Opens tabs, apps or a ritual. Launches that don't just remind (and log). */
 export const opensSomething = (l: Launch) => l.urls.length > 0 || !!l.ritualId;
+/**
+ * Runs on the clock (Oct 26): it opens something, or it logs time (Productivity, Activity, Break).
+ * These get Launch / Start, then the Time's up pop-up, and log the time actually spent.
+ */
+export const runsOnClock = (l: Launch) => opensSomething(l) || l.logKind === 'productivity' || l.logKind === 'activity' || l.logKind === 'rest';
 
 /** The next date a launch happens, from today (looks up to two months ahead). */
 export function nextDate(l: Launch, from: Date): string | null {

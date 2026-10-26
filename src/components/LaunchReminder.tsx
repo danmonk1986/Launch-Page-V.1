@@ -3,7 +3,7 @@ import { Sheet } from './Sheet';
 import { TitleCombo, joinTitle, splitTitle } from './Launchers';
 import { launchListFor } from '../lib/hiddenPicks';
 import { formatMinutes, toMinutes } from '../lib/routines';
-import { describeLog, describeOpens, opensSomething, timeFor, type Launch } from '../lib/launchers';
+import { describeLog, describeOpens, opensSomething, runsOnClock, timeFor, type Launch } from '../lib/launchers';
 
 type Props = {
   launch: Launch | null;
@@ -74,7 +74,9 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone, onE
               ? `Opens your ritual${launch.urls.length ? ` and ${describeOpens(launch.urls)}` : ''}. Time allotted: ${launch.minutes} minutes.`
               : launch.urls.length
                 ? `Opens ${describeOpens(launch.urls)}. Time allotted: ${launch.minutes} minutes.`
-                : launch.logKind
+                : runsOnClock(launch)
+                  ? `Start the clock: ${launch.minutes} minutes, then Time's up. Logs ${describeLog(launch)}.`
+                  : launch.logKind
                   ? `Logs ${describeLog(launch)}.`
                   : 'A reminder: nothing to open or log.'}
           </p>
@@ -88,6 +90,10 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone, onE
             {opensSomething(launch) ? (
               <button type="button" className="btn" title={launch.ritualId ? 'Open the ritual' : `Open ${describeOpens(launch.urls)}`} onClick={() => onLaunch(launch)}>
                 Launch
+              </button>
+            ) : runsOnClock(launch) ? (
+              <button type="button" className="btn" title={`Start the clock: ${launch.minutes} minutes`} onClick={() => onLaunch(launch)}>
+                Start
               </button>
             ) : (
               <button type="button" className="btn" title={launch.logKind ? `Log ${describeLog(launch)} and check it off` : 'Check it off'} onClick={() => onDone(launch)}>
@@ -191,9 +197,9 @@ export function MissedLaunches({ launches, onLaunch, onDone, onSkip, onClose }: 
               <span className="timed-time">{formatMinutes(toMinutes(timeFor(l, now)))}</span>
               <span className="missed-title">{l.title}</span>
               <span className="missed-actions">
-                {opensSomething(l) && (
-                  <button type="button" className="btn btn-quiet" title={l.ritualId ? 'Open the ritual' : `Open ${describeOpens(l.urls)}`} onClick={() => onLaunch(l)}>
-                    Launch
+                {runsOnClock(l) && (
+                  <button type="button" className="btn btn-quiet" title={opensSomething(l) ? (l.ritualId ? 'Open the ritual' : `Open ${describeOpens(l.urls)}`) : 'Start the clock'} onClick={() => onLaunch(l)}>
+                    {opensSomething(l) ? 'Launch' : 'Start'}
                   </button>
                 )}
                 <button type="button" className="btn btn-quiet" title={l.logKind ? `Log ${describeLog(l)} and check it off` : 'Check it off'} onClick={() => onDone(l)}>
