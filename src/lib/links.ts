@@ -57,7 +57,8 @@ export function fromLine(t: Task, l: BudgetLine): Task {
     // A repeating bill has no single due date; a one-off takes the line's date.
     endDate: rep.kind === 'none' ? l.date ?? t.endDate : null,
     status: rep.kind === 'none' ? t.status : t.status === 'MTH RCR' || t.status === 'ANN RCR' ? 'PENDING' : t.status,
-    expense: l.amount === null ? t.expense : String(l.amount),
+    // A price in another currency shows as the task's "1140 USD"; else the CAD amount.
+    expense: l.currency && l.currency !== 'CAD' && l.foreign != null ? `${l.foreign} ${l.currency}` : l.amount === null ? t.expense : String(l.amount),
     budgetLineId: l.id
   };
 }

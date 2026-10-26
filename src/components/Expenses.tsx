@@ -5,6 +5,8 @@ import { TitleCombo } from './Launchers';
 import { BUDGET_CATEGORIES, PMT_TYPES, money, type BudgetLine } from '../lib/budget';
 import { MONTHS } from '../lib/repeat';
 import { monthKey, newExpense, type Expense } from '../lib/expenses';
+import { MoneyField, settleMoney } from './MoneyField';
+import { originalLabel } from '../lib/currency';
 
 const PLUS = 'M12 5v14M5 12h14';
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -146,7 +148,10 @@ export function ExpensesView(p: Props) {
                   <td className="col-center">{e.type && <span className={`status${e.type === 'FIXED' ? ' status-three' : ''}`}>{e.type}</span>}</td>
                   <td className="col-center">{e.category}</td>
                   <td>{e.pmtCategory}</td>
-                  <td className="col-amount">{e.amount === null ? '' : money(e.amount)}</td>
+                  <td className="col-amount">
+                    {e.amount === null ? '' : money(e.amount)}
+                    {originalLabel(e) && <span className="money-orig">{originalLabel(e)}</span>}
+                  </td>
                   <td className="col-amount">{e.gst === null ? '' : money(e.gst)}</td>
                 </tr>
               ))}
@@ -201,6 +206,7 @@ function ExpenseForm({
   onDelete: (id: string) => void;
 }) {
   const [d, setD] = useState(expense);
+  const [err, setErr] = useState('');
   const formId = useId();
   const set = (patch: Partial<Expense>) => setD((x) => ({ ...x, ...patch }));
   const cats = [...new Set([...BUDGET_CATEGORIES, d.category].filter(Boolean))];
@@ -210,9 +216,17 @@ function ExpenseForm({
     <form
       id={formId}
       className="task-form budget-form"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        if (d.date) onSave({ ...d, description: d.description.trim(), project: d.project.trim(), method: d.method.trim(), pmtCategory: d.pmtCategory.trim().toUpperCase(), notes: d.notes.trim() });
+        if (!d.date) return;
+        setErr('');
+        let m = { amount: d.amount, foreign: d.foreign ?? null, currency: d.currency || 'CAD' };
+        try {
+          m = await settleMoney(m);
+        } catch (x) {
+          return setErr(x instanceof Error ? x.message : 'No rate right now.');
+        }
+        onSave({ ...d, amount: m.amount, description: d.description.trim(), project: d.project.trim(), method: d.method.trim(), pmtCategory: d.pmtCategory.trim().toUpperCase(), notes: d.notes.trim() });
       }}
     >
       {lineName && <p className="panel-empty expense-from">Paid from the budget line <strong>{lineName}</strong>. For a fixed line, a new total here updates the budget too.</p>}
@@ -229,10 +243,7 @@ function ExpenseForm({
           <span>Description</span>
           <input value={d.description} autoFocus={isNew} placeholder="Direct Energy - Office / Studio Power" onChange={(e) => set({ description: e.target.value })} />
         </label>
-        <label className="field">
-          <span>Total ($)</span>
-          <input type="number" inputMode="decimal" step="any" value={d.amount ?? ''} onChange={(e) => set({ amount: num(e.target.value) })} />
-        </label>
+        <MoneyField label="Total" value={{ amount: d.amount, foreign: d.foreign ?? null, currency: d.currency || 'CAD' }} onChange={(m) => set({ amount: m.amount, foreign: m.currency === 'CAD' ? null : m.foreign, currency: m.currency === 'CAD' ? '' : m.currency })} />
         <label className="field">
           <span>GST/HST ($)</span>
           <input type="number" inputMode="decimal" step="any" value={d.gst ?? ''} onChange={(e) => set({ gst: num(e.target.value) })} />
@@ -272,6 +283,7 @@ function ExpenseForm({
           <textarea rows={2} value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
         </label>
       </div>
+      {err && <p className="field-hint budget-over">{err}</p>}
       <FormActions formId={formId} saveDisabled={!d.date} onDelete={isNew ? undefined : () => onDelete(d.id)} deleteLabel="this expense" />
     </form>
   );

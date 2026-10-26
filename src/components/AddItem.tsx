@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react';
 import { FormActions } from './Sheet';
+import { MoneyField, settleMoney, type Money } from './MoneyField';
 import { TitleCombo } from './Launchers';
 import { RepeatPicker } from './RepeatPicker';
 import { BUDGET_CATEGORIES, BUDGET_SECTIONS, newBudgetLine, type BudgetLine, type BudgetSection } from '../lib/budget';
@@ -42,7 +43,8 @@ export function AddItemForm(p: {
   const [taskPick, setTaskPick] = useState<boolean | null>(null);
   const [repeat, setRepeat] = useState<Repeat>(NO_REPEAT);
   const [date, setDate] = useState('');
-  const [amount, setAmount] = useState('');
+  const [money, setMoney] = useState<Money>({ amount: null, foreign: null, currency: 'CAD' });
+  const [err, setErr] = useState('');
   const [section, setSection] = useState<BudgetSection | ''>('');
   const [category, setCategory] = useState('');
   const [method, setMethod] = useState('');
@@ -55,17 +57,18 @@ export function AddItemForm(p: {
   const preview = useMemo(() => (repeat.kind === 'none' ? (date ? [date] : []) : nextDates(repeat, 4)), [repeat, date]);
   const where = toTasks ? 'Budget and Tasks' : 'Budget';
 
-  const build = (): AddItemResult => {
+  const build = (m: Money): AddItemResult => {
     const rule = writeRepeat(repeat);
     const project = p.projects.find((x) => x.id === projectId) ?? null;
-    const money = amount === '' ? null : Number(amount);
+    const other = m.currency !== 'CAD' && m.foreign !== null;
     const line: BudgetLine = {
           ...newBudgetLine(group, p.lines.reduce((m, l) => Math.max(m, l.sort + 1), 0)),
           description: name.trim(),
           project: project ? project.name.replace(/^STARDVST\s+/i, '') : '',
           date: rule ? null : date || null,
           repeat: rule,
-          amount: money,
+          amount: m.amount,
+          ...(other ? { currency: m.currency, foreign: m.foreign } : {}),
           category,
           method: method.trim(),
           pmtCategory: pmtCategory.trim().toUpperCase(),
@@ -79,7 +82,7 @@ export function AddItemForm(p: {
           description: category,
           endDate: rule ? null : date || null,
           repeatRule: rule,
-          expense: money === null ? '' : String(money),
+          expense: other ? `${m.foreign} ${m.currency}` : m.amount === null ? '' : String(m.amount),
           notes: notes.trim(),
           budgetLineId: line.id
         }
@@ -93,7 +96,12 @@ export function AddItemForm(p: {
       className="task-form budget-form add-item"
       onSubmit={(e) => {
         e.preventDefault();
-        if (name.trim()) void p.onSave(build());
+        if (!name.trim()) return;
+        setErr('');
+        void settleMoney(money).then(
+          (m) => p.onSave(build(m)),
+          (x) => setErr(x instanceof Error ? x.message : 'No rate right now.')
+        );
       }}
     >
       <div className="budget-grid">
@@ -125,10 +133,7 @@ export function AddItemForm(p: {
         <fieldset className="add-item-box">
           <legend>Budget</legend>
           <div className="budget-grid">
-            <label className="field">
-              <span>Amount ($)</span>
-              <input type="number" inputMode="decimal" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} />
-            </label>
+            <MoneyField value={money} onChange={setMoney} />
             <label className="field">
               <span>Group</span>
               <select value={group} onChange={(e) => setSection(e.target.value as BudgetSection)}>
@@ -183,6 +188,7 @@ export function AddItemForm(p: {
             ? 'Monthly variable lines are an allotment, so no task by default.'
             : 'Budget only: no task.'}
       </p>
+      {err && <p className="field-hint budget-over">{err}</p>}
       <FormActions formId={formId} saveDisabled={!name.trim()} />
     </form>
   );

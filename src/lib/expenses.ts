@@ -27,6 +27,9 @@ export interface Expense {
   budgetLineId: string | null;
   taskId: string | null;
   sort: number;
+  /** Priced in another currency: the original price; `amount` is the CAD. Columns from 0032. */
+  foreign?: number | null;
+  currency?: string;
 }
 
 type Row = {
@@ -44,6 +47,8 @@ type Row = {
   budget_line_id: string | null;
   task_id: string | null;
   sort: number;
+  foreign_amount?: number | string | null;
+  currency?: string | null;
 };
 
 const num = (v: number | string | null | undefined) => (v === null || v === '' || v === undefined ? null : Number(v));
@@ -53,6 +58,13 @@ export const expenseStore = makeStore<Expense, Row>({
   localKey: 'launchpage.expenses.v1',
   orderBy: 'on_date',
   script: 'supabase/migrations/0031_budget_links.sql',
+  latestScript: 'supabase/migrations/0032_currency.sql',
+  legacyRow: (r) => {
+    const x = { ...r };
+    delete x.foreign_amount;
+    delete x.currency;
+    return x;
+  },
   seed: () => [],
   toRow: (e) => ({
     id: e.id,
@@ -68,7 +80,8 @@ export const expenseStore = makeStore<Expense, Row>({
     notes: e.notes,
     budget_line_id: e.budgetLineId,
     task_id: e.taskId,
-    sort: e.sort
+    sort: e.sort,
+    ...(e.currency ? { currency: e.currency, foreign_amount: e.foreign ?? null } : {})
   }),
   fromRow: (r) => ({
     id: r.id,
@@ -84,7 +97,8 @@ export const expenseStore = makeStore<Expense, Row>({
     notes: r.notes ?? '',
     budgetLineId: r.budget_line_id ?? null,
     taskId: r.task_id ?? null,
-    sort: r.sort ?? 0
+    sort: r.sort ?? 0,
+    ...(r.currency ? { currency: r.currency, foreign: num(r.foreign_amount) } : {})
   })
 });
 
@@ -103,6 +117,7 @@ export function expenseFromLine(line: BudgetLine, date: string, taskId: string |
     category: line.category,
     pmtCategory: line.pmtCategory,
     amount: line.amount,
+    ...(line.currency ? { currency: line.currency, foreign: line.foreign ?? null } : {}),
     budgetLineId: line.id,
     taskId
   };

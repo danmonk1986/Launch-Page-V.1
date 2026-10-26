@@ -4,6 +4,8 @@ import { Icon, SearchToggle, TaskSheet } from './Tasks';
 import { TitleCombo } from './Launchers';
 import { RepeatPicker } from './RepeatPicker';
 import { ExpensesView, thisMonth } from './Expenses';
+import { MoneyField, settleMoney } from './MoneyField';
+import { originalLabel } from '../lib/currency';
 import { BudgetMonth } from './BudgetMonth';
 import { AddItemForm, type AddItemResult } from './AddItem';
 import type { Expense } from '../lib/expenses';
@@ -422,7 +424,10 @@ export function BudgetPage(p: Props) {
                         <td className="col-center">{l.type && <span className={`status${l.type === 'FIXED' ? ' status-three' : ''}`}>{l.type}</span>}</td>
                         <td className="col-center">{l.category}</td>
                         <td>{l.pmtCategory}</td>
-                        <td className="col-amount">{l.amount === null ? '' : money(l.amount)}</td>
+                        <td className="col-amount">
+                          {l.amount === null ? '' : money(l.amount)}
+                          {originalLabel(l) && <span className="money-orig">{originalLabel(l)}</span>}
+                        </td>
                         <td className="col-notes" title={l.notes}>
                           {l.notes}
                         </td>
@@ -655,6 +660,7 @@ function LineForm({
   onDelete: (id: string) => void;
 }) {
   const [d, setD] = useState(line);
+  const [err, setErr] = useState('');
   const formId = useId();
   const set = (patch: Partial<BudgetLine>) => setD((x) => ({ ...x, ...patch }));
   const cats = [...new Set([...BUDGET_CATEGORIES, d.category].filter(Boolean))];
@@ -663,9 +669,17 @@ function LineForm({
     <form
       id={formId}
       className="task-form budget-form"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        if (d.description.trim()) onSave({ ...d, description: d.description.trim(), project: d.project.trim(), method: d.method.trim(), pmtCategory: d.pmtCategory.trim().toUpperCase(), notes: d.notes.trim() });
+        if (!d.description.trim()) return;
+        setErr('');
+        let m = { amount: d.amount, foreign: d.foreign ?? null, currency: d.currency || 'CAD' };
+        try {
+          m = await settleMoney(m);
+        } catch (x) {
+          return setErr(x instanceof Error ? x.message : 'No rate right now.');
+        }
+        onSave({ ...d, amount: m.amount, description: d.description.trim(), project: d.project.trim(), method: d.method.trim(), pmtCategory: d.pmtCategory.trim().toUpperCase(), notes: d.notes.trim() });
       }}
     >
       <div className="budget-grid">
@@ -687,10 +701,7 @@ function LineForm({
           <span>Description</span>
           <input value={d.description} autoFocus={isNew} required placeholder="Minto International Rent" onChange={(e) => set({ description: e.target.value })} />
         </label>
-        <label className="field">
-          <span>Amount ($)</span>
-          <input type="number" inputMode="decimal" step="any" value={d.amount ?? ''} onChange={(e) => set({ amount: e.target.value === '' ? null : Number(e.target.value) })} />
-        </label>
+        <MoneyField value={{ amount: d.amount, foreign: d.foreign ?? null, currency: d.currency || 'CAD' }} onChange={(m) => set({ amount: m.amount, foreign: m.currency === 'CAD' ? null : m.foreign, currency: m.currency === 'CAD' ? '' : m.currency })} />
         <label className="field">
           <span>Date</span>
           <input type="date" value={d.date ?? ''} onChange={(e) => set({ date: e.target.value || null })} />
@@ -735,6 +746,7 @@ function LineForm({
           <textarea rows={2} value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
         </label>
       </div>
+      {err && <p className="field-hint budget-over">{err}</p>}
       <FormActions formId={formId} saveDisabled={!d.description.trim()} onDelete={isNew ? undefined : () => onDelete(d.id)} deleteLabel="this line" />
     </form>
   );

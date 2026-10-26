@@ -35,6 +35,9 @@ export interface BudgetLine {
   sort: number;
   /** How it repeats (lib/repeat.ts), e.g. "M:1" for rent on the 1st. Column from 0026. */
   repeat?: string | null;
+  /** Priced in another currency (Oct 25): the original price, e.g. 15.69 USD; `amount` is the CAD. Columns from 0032. */
+  foreign?: number | null;
+  currency?: string;
 }
 
 export function newBudgetLine(section: BudgetSection, sort: number): BudgetLine {
@@ -55,6 +58,8 @@ type Row = {
   notes: string;
   sort: number;
   repeat_rule?: string | null;
+  foreign_amount?: number | string | null;
+  currency?: string | null;
 };
 
 export const budgetStore = makeStore<BudgetLine, Row>({
@@ -62,8 +67,16 @@ export const budgetStore = makeStore<BudgetLine, Row>({
   localKey: 'launchpage.budget.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0023_budget.sql',
+  latestScript: 'supabase/migrations/0032_currency.sql',
+  // Before 0032 is run: save without the original price (kept on this device until then).
+  legacyRow: (r) => {
+    const x = { ...r };
+    delete x.foreign_amount;
+    delete x.currency;
+    return x;
+  },
   seed: () => [],
-  toRow: (l) => ({ id: l.id, section: l.section, project: l.project, on_date: l.date, description: l.description, method: l.method, pmt_type: l.type, category: l.category, pmt_category: l.pmtCategory, amount: l.amount, notes: l.notes, sort: l.sort, ...(l.repeat !== undefined ? { repeat_rule: l.repeat } : {}) }),
+  toRow: (l) => ({ id: l.id, section: l.section, project: l.project, on_date: l.date, description: l.description, method: l.method, pmt_type: l.type, category: l.category, pmt_category: l.pmtCategory, amount: l.amount, notes: l.notes, sort: l.sort, ...(l.repeat !== undefined ? { repeat_rule: l.repeat } : {}), ...(l.currency ? { currency: l.currency, foreign_amount: l.foreign ?? null } : {}) }),
   fromRow: (r) => ({
     id: r.id,
     section: (BUDGET_SECTIONS.some((s) => s.id === r.section) ? r.section : 'variable') as BudgetSection,
@@ -77,7 +90,8 @@ export const budgetStore = makeStore<BudgetLine, Row>({
     amount: r.amount === null || r.amount === '' || r.amount === undefined ? null : Number(r.amount),
     notes: r.notes ?? '',
     sort: r.sort ?? 0,
-    ...(r.repeat_rule !== undefined ? { repeat: r.repeat_rule } : {})
+    ...(r.repeat_rule !== undefined ? { repeat: r.repeat_rule } : {}),
+    ...(r.currency ? { currency: r.currency, foreign: r.foreign_amount === null || r.foreign_amount === undefined || r.foreign_amount === '' ? null : Number(r.foreign_amount) } : {})
   })
 });
 

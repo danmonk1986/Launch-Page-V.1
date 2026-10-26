@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { money, type BudgetLine, type BudgetSection } from '../lib/budget';
 import { describeRepeat } from '../lib/repeat';
+import { originalLabel } from '../lib/currency';
 import { lineRepeat, monthLines, spentIn, type Expense, type MonthLine } from '../lib/expenses';
 import { MonthNav, dayLabel, monthLabel } from './Expenses';
 
@@ -115,7 +116,10 @@ export function BudgetMonth(p: {
                           </button>
                         </td>
                         <td>{rep.kind === 'none' ? (m.line.section === 'variable' || m.line.section === 'fixed' ? 'Every month' : 'Once') : `${rep.kind === 'monthly' ? 'Monthly' : rep.kind === 'quarterly' ? 'Quarterly' : rep.kind === 'annual' ? 'Annually' : 'Weekly'} · ${describeRepeat(rep)}`}</td>
-                        <td className="col-amount">{money(m.due)}</td>
+                        <td className="col-amount">
+                          {money(m.due)}
+                          {originalLabel(m.line) && <span className="money-orig">{originalLabel(m.line)}</span>}
+                        </td>
                         <td className="col-amount">{m.spent ? money(m.spent) : ''}</td>
                         <td className={`col-amount${diff < 0 ? ' budget-over' : ''}`}>{m.spent ? (diff < 0 ? `−${money(-diff)}` : money(diff)) : ''}</td>
                       </tr>
