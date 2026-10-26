@@ -13,13 +13,6 @@ registerSW({
   }
 });
 
-// The headphones / music player was removed (Oct 26): clear what it kept on this device.
-try {
-  for (const k of ['launchpage.music.url', 'launchpage.music.saved', 'launchpage.music.spot']) localStorage.removeItem(k);
-} catch {
-  /* ignore */
-}
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
