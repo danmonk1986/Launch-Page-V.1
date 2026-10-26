@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId } from 'react';
 import { FormActions, Sheet } from './Sheet';
+import { useOpensUp } from './Launchers';
 import { TasksMonth } from './TasksMonth';
 import { thisMonth } from './Expenses';
 import type { Expense } from '../lib/expenses';
@@ -91,6 +92,8 @@ const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padSta
 function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean }) {
   const [open, setOpen] = useState(false);
   const [picking, setPicking] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const up = useOpensUp(wrap, open);
   const tomorrow = isoOf(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 1, 12));
   const [date, setDate] = useState(t.endDate ?? tomorrow);
   const close = () => {
@@ -103,6 +106,7 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
   };
   return (
     <div
+      ref={wrap}
       className="row-menu"
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) close();
@@ -121,7 +125,7 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
         <Icon d="M5 12h.01M12 12h.01M19 12h.01" size={18} />
       </button>
       {open && t.deletedAt && (
-        <div className="row-menu-list" role="menu">
+        <div className={`row-menu-list${up ? ' is-up' : ''}`} role="menu">
           <button type="button" role="menuitem" onClick={run(() => act.restore(t))}>
             Restore
           </button>
@@ -131,7 +135,7 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
         </div>
       )}
       {open && !t.deletedAt && (
-        <div className="row-menu-list" role="menu">
+        <div className={`row-menu-list${up ? ' is-up' : ''}`} role="menu">
           <button type="button" role="menuitem" onClick={run(() => act.edit(t))}>
             Edit
           </button>

@@ -1080,7 +1080,8 @@ function TimedForm({
  * Oct 24 (LP-045): a dropdown near the bottom of a form or pop-up opens upward when there isn't
  * room below (its list is 280px tall), so every choice can be reached without scrolling.
  */
-function useOpensUp(wrap: { current: HTMLElement | null }, open: boolean) {
+/** A list near the bottom of the window or a scrolling table opens upward instead of being cut off. */
+export function useOpensUp(wrap: { current: HTMLElement | null }, open: boolean) {
   const [up, setUp] = useState(false);
   useLayoutEffect(() => {
     const el = wrap.current;

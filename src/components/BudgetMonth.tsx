@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { money, type BudgetLine, type BudgetSection } from '../lib/budget';
 import { describeRepeat } from '../lib/repeat';
 import { originalLabel } from '../lib/currency';
@@ -31,6 +31,8 @@ export function BudgetMonth(p: {
   linkedIds: Set<string>;
   search: string;
   onEdit: (l: BudgetLine) => void;
+  /** The line's ⋯ menu, the same as Master. */
+  menu: (l: BudgetLine) => ReactNode;
 }) {
   const needle = p.search.trim().toLowerCase();
   const rows = useMemo(
@@ -85,6 +87,7 @@ export function BudgetMonth(p: {
                 <th className="col-amount">Planned</th>
                 <th className="col-amount">Spent</th>
                 <th className="col-amount">Difference</th>
+                <th className="col-actions" aria-label="More" />
               </tr>
             </thead>
             {GROUPS.map((g) => {
@@ -100,6 +103,7 @@ export function BudgetMonth(p: {
                     </th>
                     <th className="col-amount budget-subtotal">{money(list.reduce((a, m) => a + m.due, 0))}</th>
                     <th className="col-amount budget-subtotal">{money(list.reduce((a, m) => a + m.spent, 0))}</th>
+                    <th />
                     <th />
                   </tr>
                   {list.map((m, i) => {
@@ -122,6 +126,9 @@ export function BudgetMonth(p: {
                         </td>
                         <td className="col-amount">{m.spent ? money(m.spent) : ''}</td>
                         <td className={`col-amount${diff < 0 ? ' budget-over' : ''}`}>{m.spent ? (diff < 0 ? `−${money(-diff)}` : money(diff)) : ''}</td>
+                        <td className="col-actions">
+                          <div className="timed-quick">{p.menu(m.line)}</div>
+                        </td>
                       </tr>
                     );
                   })}

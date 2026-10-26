@@ -1,7 +1,7 @@
 import { useId, useMemo, useRef, useState } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { Icon, SearchToggle, TaskSheet } from './Tasks';
-import { TitleCombo } from './Launchers';
+import { TitleCombo, useOpensUp } from './Launchers';
 import { RepeatPicker } from './RepeatPicker';
 import { ExpensesView, thisMonth } from './Expenses';
 import { MoneyField, settleMoney } from './MoneyField';
@@ -73,12 +73,15 @@ type BudgetView = 'master' | 'month' | 'expenses';
 /** The ⋯ menu on a budget line. */
 function LineMenu({ l, hasTask, onEdit, onCalendar, onLaunch, onTask, onRecalc, onRemove }: { l: BudgetLine; hasTask: boolean; onEdit: () => void; onCalendar: () => void; onLaunch: () => void; onTask: () => void; onRecalc: () => void; onRemove: () => void }) {
   const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const up = useOpensUp(wrap, open);
   const run = (fn: () => void) => () => {
     fn();
     setOpen(false);
   };
   return (
     <div
+      ref={wrap}
       className="row-menu"
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
@@ -89,7 +92,7 @@ function LineMenu({ l, hasTask, onEdit, onCalendar, onLaunch, onTask, onRecalc, 
         <Icon d="M5 12h.01M12 12h.01M19 12h.01" size={18} />
       </button>
       {open && (
-        <div className="row-menu-list" role="menu">
+        <div className={`row-menu-list${up ? ' is-up' : ''}`} role="menu">
           <button type="button" role="menuitem" onClick={run(onEdit)}>
             Edit
           </button>
@@ -238,6 +241,19 @@ export function BudgetPage(p: Props) {
     }
     window.setTimeout(() => setRecalcNote(''), 6000);
   }
+  /** A line's ⋯ menu (Master and Month). */
+  const lineMenu = (l: BudgetLine) => (
+    <LineMenu
+      l={l}
+      onEdit={() => setEditing(l)}
+      onCalendar={() => p.onToCalendar(l, projectFor(l.project)?.id ?? null)}
+      onLaunch={() => p.onToLaunch(l)}
+      hasTask={linkedIds.has(l.id)}
+      onTask={() => void openTaskFor(l)}
+      onRecalc={() => void recalc(l)}
+      onRemove={() => void p.onDelete(l.id)}
+    />
+  );
   const linkedIds = new Set(p.tasks.filter((t) => t.budgetLineId && !t.deletedAt).map((t) => t.budgetLineId!));
   const picks = (f: (l: BudgetLine) => string) => [...new Set(p.lines.map(f).map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
@@ -339,7 +355,7 @@ export function BudgetPage(p: Props) {
           {recalcNote}
         </p>
       )}
-      {view === 'month' && <BudgetMonth month={month} onMonth={setMonth} lines={p.lines} expenses={p.expenses} linkedIds={linkedIds} search={q} onEdit={setEditing} />}
+      {view === 'month' && <BudgetMonth month={month} onMonth={setMonth} lines={p.lines} expenses={p.expenses} linkedIds={linkedIds} search={q} onEdit={setEditing} menu={lineMenu} />}
       {view === 'expenses' && <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} />}
 
       {view === 'master' && p.lines.length > 0 && (
@@ -457,16 +473,7 @@ export function BudgetPage(p: Props) {
                         </td>
                         <td className="col-actions">
                           <div className="timed-quick">
-                            <LineMenu
-                              l={l}
-                              onEdit={() => setEditing(l)}
-                              onCalendar={() => p.onToCalendar(l, projectFor(l.project)?.id ?? null)}
-                              onLaunch={() => p.onToLaunch(l)}
-                              hasTask={linkedIds.has(l.id)}
-                              onTask={() => void openTaskFor(l)}
-                              onRecalc={() => void recalc(l)}
-                              onRemove={() => void p.onDelete(l.id)}
-                            />
+                            {lineMenu(l)}
                           </div>
                         </td>
                       </tr>
