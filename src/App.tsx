@@ -207,7 +207,11 @@ export default function App() {
     setLaunchLog(next);
     void launchLogStore.save(userId, item, next);
   }
-  const extraToday = (id: string) => launchLog.find((g) => g.launchId === id && g.day === isoDate(now))?.extra ?? 0;
+  // Oct 26: minutes added with More time, from the same day the log saved them under (the launch's
+  // routine day, not the calendar date, so a night block past midnight still finds them).
+  const extraToday = (l: Launch) => logFor(launchLog, l, now).extra;
+  // The launch log has loaded: until then the end alarm can't see minutes already added.
+  const [logReady, setLogReady] = useState(false);
   // Oct 25: pause a launched run (lunch, a call). Paused minutes push the end alarm back and don't
   // count as time spent. Kept in this browser per run: { at: paused since (ms) or null, min: paused so far }.
   const PAUSE_KEY = 'launchpage.paused.v1';
@@ -297,6 +301,7 @@ export default function App() {
       const [p1, t1, j1, g1] = await Promise.all([projectStore.load(userId), taskStore.load(userId), journalStore.load(userId), launchLogStore.load(userId)]);
       if (!live) return;
       setLaunchLog(g1.items);
+      setLogReady(true);
       setProjects(p1.items);
       setJournal(j1.items);
       // Recently deleted keeps tasks for 30 days, then they go for good.
@@ -916,13 +921,13 @@ export default function App() {
 
   // End alarm: a launched launch whose time allotted has run out.
   useEffect(() => {
-    if (timeUp || reminder) return;
+    if (timeUp || reminder || !logReady) return;
     const nowMin = now.getHours() * 60 + now.getMinutes();
     const over = launches.find((l) => {
       const key = runKey(l, now);
       if (handled[key] !== 'launched' || endAlerted[key] || paused[key]?.at) return false;
       const [h, m] = timeFor(l, now).split(':').map(Number);
-      const end = h * 60 + m + l.minutes + extraToday(l.id) + Math.round(pausedMin(l, now.getTime()));
+      const end = h * 60 + m + l.minutes + extraToday(l) + Math.round(pausedMin(l, now.getTime()));
       return nowMin >= end;
     });
     if (!over) return;
@@ -930,7 +935,7 @@ export default function App() {
     setTimeUp(over);
     if (over.sound !== false) chime('end', over.tone);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [now, launches, handled, endAlerted, launchLog, timeUp, reminder, paused]);
+  }, [now, launches, handled, endAlerted, launchLog, timeUp, reminder, paused, logReady]);
 
   async function finishLaunch(l: Launch, how: 'done' | 'skipped') {
     setHandled(markHandled(l, new Date(), how));
