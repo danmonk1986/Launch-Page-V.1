@@ -30,7 +30,8 @@ export function BudgetMonth(p: {
   expenses: Expense[];
   linkedIds: Set<string>;
   search: string;
-  onEdit: (l: BudgetLine) => void;
+  /** The item's name: goes to its task (Budget builds it). */
+  name: (l: BudgetLine) => ReactNode;
   /** The line's ⋯ menu, the same as Master. */
   menu: (l: BudgetLine) => ReactNode;
 }) {
@@ -114,10 +115,7 @@ export function BudgetMonth(p: {
                       <tr key={m.line.id} className={`task-row${i % 2 ? ' is-alt' : ''}${paid ? ' is-paid' : ''}`}>
                         <td className="col-date">{m.dates.length ? m.dates.map(dayLabel).join(', ') : '—'}</td>
                         <td className="col-task">
-                          <button type="button" className="task-name" onClick={() => p.onEdit(m.line)}>
-                            {m.line.description}
-                            {p.linkedIds.has(m.line.id) && <span className="expense-link" aria-label="linked to a task"> 🔗</span>}
-                          </button>
+                          {p.name(m.line)}
                         </td>
                         <td>{rep.kind === 'none' ? (m.line.section === 'variable' || m.line.section === 'fixed' ? 'Every month' : 'Once') : `${rep.kind === 'monthly' ? 'Monthly' : rep.kind === 'quarterly' ? 'Quarterly' : rep.kind === 'annual' ? 'Annually' : 'Weekly'} · ${describeRepeat(rep)}`}</td>
                         <td className="col-amount">

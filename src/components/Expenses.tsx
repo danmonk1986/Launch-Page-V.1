@@ -142,7 +142,7 @@ export function ExpensesView(p: Props) {
                   <td className="col-task">
                     <button type="button" className="task-name" onClick={() => setEditing(e)} title={lineName(e.budgetLineId) ? `Paid from the budget line ${lineName(e.budgetLineId)}` : undefined}>
                       {e.description || '(no description)'}
-                      {e.budgetLineId && <span className="expense-link" aria-label="linked to a budget line"> 🔗</span>}
+                      {e.budgetLineId && <span className="expense-link" aria-label="linked to a budget line"> $$$</span>}
                     </button>
                   </td>
                   <td className="col-center">{e.method}</td>

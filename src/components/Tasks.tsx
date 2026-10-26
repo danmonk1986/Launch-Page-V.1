@@ -684,7 +684,7 @@ export function TasksPage(
       <>
       <PillRow
         pills={[
-          { id: null, label: 'All', count: outstanding },
+          { id: null, label: 'Active', count: outstanding },
           ...SECTIONS.map((sec) => ({ id: sec.id, label: sec.pill ?? sec.title, count: grouped[sec.id].length, hint: sec.hint }))
         ]}
         value={view}

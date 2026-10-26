@@ -252,6 +252,20 @@ export function BudgetPage(p: Props) {
       onRemove={() => void p.onDelete(l.id)}
     />
   );
+  /** Oct 26: an item's name goes to its task (edit is in ⋯); with no task it's plain text. */
+  const itemName = (l: BudgetLine) => {
+    const t = p.tasks.find((x) => x.budgetLineId === l.id && !x.deletedAt);
+    return t ? (
+      <button type="button" className="task-name" title="Go to its task" onClick={() => p.onGoToTask(t.id)}>
+        {l.description}
+        <span className="expense-link" aria-label="linked to a task" title="Linked to a task: ticking it adds this line to Expenses">
+          {' '}$$$
+        </span>
+      </button>
+    ) : (
+      <span className="item-name">{l.description}</span>
+    );
+  };
   const linkedIds = new Set(p.tasks.filter((t) => t.budgetLineId && !t.deletedAt).map((t) => t.budgetLineId!));
   const picks = (f: (l: BudgetLine) => string) => [...new Set(p.lines.map(f).map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
@@ -350,7 +364,7 @@ export function BudgetPage(p: Props) {
           {recalcNote}
         </p>
       )}
-      {view === 'month' && <BudgetMonth month={month} onMonth={setMonth} lines={p.lines} expenses={p.expenses} linkedIds={linkedIds} search={q} onEdit={setEditing} menu={lineMenu} />}
+      {view === 'month' && <BudgetMonth month={month} onMonth={setMonth} lines={p.lines} expenses={p.expenses} linkedIds={linkedIds} search={q} name={itemName} menu={lineMenu} />}
 
       {view === 'master' && p.lines.length > 0 && (
         <div className="budget-stats" aria-label="A month of spending">
@@ -449,10 +463,7 @@ export function BudgetPage(p: Props) {
                           {l.repeat ? describeRepeat(readRepeat(l.repeat)) : shortDate(l.date)}
                         </td>
                         <td className="col-task">
-                          <button type="button" className="task-name" onClick={() => setEditing(l)}>
-                            {l.description}
-                            {linkedIds.has(l.id) && <span className="expense-link" aria-label="linked to a task" title="Linked to a task: ticking it adds this line to Expenses"> 🔗</span>}
-                          </button>
+                          {itemName(l)}
                         </td>
                         <td className="col-center">{l.method}</td>
                         <td className="col-center">{l.type && <span className={`status${l.type === 'FIXED' ? ' status-three' : ''}`}>{l.type}</span>}</td>

@@ -2187,7 +2187,9 @@ select:not([multiple]) {
 .expenses-add { display: inline-flex; align-items: center; gap: 6px; }
 .expenses .budget-stats { margin-bottom: 14px; }
 .expenses-table { min-width: 980px; }
-.expense-link { font-size: 12px; opacity: 0.7; }
+.expense-link { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--accent-teal); letter-spacing: 0.02em; }
+.item-name { font-weight: 600; color: var(--beige); }
+.app[data-tone='light'] .item-name { color: #444242; }
 .expense-from { margin: 0 0 12px; }
 .link-plan details { margin: 10px 0; }
 .link-plan summary { cursor: pointer; font-weight: 600; color: var(--accent-teal); }

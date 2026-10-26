@@ -76,7 +76,7 @@ export function TasksMonth(p: {
                     <td className="col-task">
                       <button type="button" className="task-name" onClick={() => p.onOpen(t)}>
                         {t.task}
-                        {t.budgetLineId && <span className="expense-link" aria-label="linked to a budget line"> 🔗</span>}
+                        {t.budgetLineId && <span className="expense-link" aria-label="linked to a budget line"> $$$</span>}
                       </button>
                     </td>
                     <td className="col-project">{pr ? <span className="chip" style={{ ['--chip' as string]: pr.color }}>{pr.name.replace(/^STARDVST\s+/i, '')}</span> : <span className="chip chip-empty">—</span>}</td>
