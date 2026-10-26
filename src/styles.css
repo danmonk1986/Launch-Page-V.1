@@ -2220,3 +2220,15 @@ select:not([multiple]) {
 .recalc-note { margin: 0 0 12px; color: var(--accent-teal); }
 .row-menu-list.is-up { top: auto; bottom: calc(100% + 6px); }
 .checkin .journal-body { resize: none; overflow: hidden; }
+
+/* Frozen headers (Oct 26): on the full Tasks, Budget and Records pages the table scrolls in its own
+   box sized to the screen, so the header row stays put (like a sheet's frozen row) at any width. */
+.panel-tasks-page .task-scroll, .panel-budget .task-scroll, .panel-records .task-scroll {
+  overflow: auto; max-height: calc(100dvh - var(--header-h, 160px) - 48px); min-height: 280px;
+}
+.panel-tasks-page .task-table thead th, .panel-budget .task-table thead th, .panel-records .task-table thead th {
+  position: sticky; top: 0; z-index: 3; background: var(--surface-solid); box-shadow: inset 0 -1px 0 var(--edge);
+}
+@media (max-width: 600px) {
+  .panel-tasks-page .task-scroll, .panel-budget .task-scroll, .panel-records .task-scroll { max-height: none; min-height: 0; overflow: visible; }
+}
