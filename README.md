@@ -9,7 +9,7 @@ Module 1 of LaunchPage, built clean-room (no code from the PM textbook repo or i
 
 | Page | What it does |
 | --- | --- |
-| Launch Page | Header (logo, mantra, clock, routine picker, 🎧 SoundCloud mini player, ⚙ settings), Rockets, timed launches (open links, run rituals, log, hourly repeats), today's routine (NOW card), week calendar with North Star themes, Due today + 3 key tasks, journal |
+| Launch Page | Header (logo, mantra, clock, routine picker, ⚙ settings), Rockets, timed launches (open links, run rituals, log, hourly repeats), today's routine (NOW card), week calendar with North Star themes, Due today + 3 key tasks, journal |
 | 26 Days | Quote, daily goal (= journal theme), Non-Negotiables, rituals (steps + meditation crawl + check-ins), logs (Productivity, Activity, Rest, Food, H2O, Vices), summary (7 / 26 days / all) |
 | Tasks | Launch Sheet TO-DO LIST as a table: groups, steps, recurring tasks, filters (one row, extras under ⌄), Recently deleted |
 | Budget | Launch Sheet BUDGET tab: import CSV/JSON, export CSV in the sheet's columns, monthly totals by group / pmt category / project / budget category (click a box to filter) |
@@ -57,7 +57,6 @@ src/
   components/
     Header.tsx            logo, mantra, page tabs
     Clock.tsx             header date + time
-    MusicPlayer.tsx       🎧 SoundCloud mini player
     GearMenu.tsx, SettingsPanel.tsx   brand + colour settings, import/export
     Dashboard.tsx         Launch Page layout
     Launchers.tsx         Rockets + timed launches
