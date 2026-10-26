@@ -5,7 +5,7 @@ import { TitleCombo } from './Launchers';
 import { RepeatPicker } from './RepeatPicker';
 import { ExpensesView, thisMonth } from './Expenses';
 import { MoneyField, settleMoney } from './MoneyField';
-import { originalLabel } from '../lib/currency';
+import { originalLabel, rateToCad, toCad } from '../lib/currency';
 import { BudgetMonth } from './BudgetMonth';
 import { AddItemForm, type AddItemResult } from './AddItem';
 import type { Expense } from '../lib/expenses';
@@ -71,7 +71,7 @@ type Props = {
 type BudgetView = 'master' | 'month' | 'expenses';
 
 /** The ⋯ menu on a budget line. */
-function LineMenu({ l, hasTask, onEdit, onCalendar, onLaunch, onTask, onRemove }: { l: BudgetLine; hasTask: boolean; onEdit: () => void; onCalendar: () => void; onLaunch: () => void; onTask: () => void; onRemove: () => void }) {
+function LineMenu({ l, hasTask, onEdit, onCalendar, onLaunch, onTask, onRecalc, onRemove }: { l: BudgetLine; hasTask: boolean; onEdit: () => void; onCalendar: () => void; onLaunch: () => void; onTask: () => void; onRecalc: () => void; onRemove: () => void }) {
   const [open, setOpen] = useState(false);
   const run = (fn: () => void) => () => {
     fn();
@@ -102,6 +102,11 @@ function LineMenu({ l, hasTask, onEdit, onCalendar, onLaunch, onTask, onRemove }
           <button type="button" role="menuitem" onClick={run(onTask)}>
             {hasTask ? 'Go to its task' : 'Add a task'}
           </button>
+          {originalLabel(l) && (
+            <button type="button" role="menuitem" title={`${originalLabel(l)} at today's rate`} onClick={run(onRecalc)}>
+              Recalc to today's rate
+            </button>
+          )}
           <button type="button" role="menuitem" className="menu-danger" onClick={run(onRemove)}>
             Remove
           </button>
@@ -219,6 +224,20 @@ export function BudgetPage(p: Props) {
     busy.current = false;
     setTaskOpen({ task: t, fresh: true });
   }
+  /** ⋯ Recalc: a line priced in another currency gets today's CAD amount. */
+  const [recalcNote, setRecalcNote] = useState('');
+  async function recalc(l: BudgetLine) {
+    if (l.foreign == null || !l.currency) return;
+    setRecalcNote(`Getting today's ${l.currency} rate…`);
+    try {
+      const amount = toCad(l.foreign, await rateToCad(l.currency));
+      await p.onSave({ ...l, amount });
+      setRecalcNote(`${l.description}: ${l.foreign} ${l.currency} is now ${money(amount)}${l.amount !== null ? ` (was ${money(l.amount)})` : ''}.`);
+    } catch (e) {
+      setRecalcNote(e instanceof Error ? e.message : 'No rate right now.');
+    }
+    window.setTimeout(() => setRecalcNote(''), 6000);
+  }
   const linkedIds = new Set(p.tasks.filter((t) => t.budgetLineId && !t.deletedAt).map((t) => t.budgetLineId!));
   const picks = (f: (l: BudgetLine) => string) => [...new Set(p.lines.map(f).map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
@@ -315,6 +334,11 @@ export function BudgetPage(p: Props) {
         </div>
       </div>
 
+      {recalcNote && (
+        <p className="field-hint recalc-note" role="status">
+          {recalcNote}
+        </p>
+      )}
       {view === 'month' && <BudgetMonth month={month} onMonth={setMonth} lines={p.lines} expenses={p.expenses} linkedIds={linkedIds} search={q} onEdit={setEditing} />}
       {view === 'expenses' && <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} />}
 
@@ -440,6 +464,7 @@ export function BudgetPage(p: Props) {
                               onLaunch={() => p.onToLaunch(l)}
                               hasTask={linkedIds.has(l.id)}
                               onTask={() => void openTaskFor(l)}
+                              onRecalc={() => void recalc(l)}
                               onRemove={() => void p.onDelete(l.id)}
                             />
                           </div>
