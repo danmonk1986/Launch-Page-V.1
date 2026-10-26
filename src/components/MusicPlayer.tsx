@@ -1,81 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 
-const KEY = 'launchpage.music.url';
-const read = () => {
-  try {
-    return localStorage.getItem(KEY) ?? '';
-  } catch {
-    return '';
-  }
-};
-
 /**
- * A SoundCloud link as the player accepts it: https://soundcloud.com/<artist>/<track or sets/name>,
- * without the share junk (?si=…&utm_…) or a #hash. Short on.soundcloud.com links can't be played.
+ * Music (V12-019, Oct 25). The user story: you're listening to music or a podcast in the browser,
+ * a thinking moment hits, and you want to pause and play without breaking your rhythm.
+ *
+ * 🎧 opens a small card: paste a link (SoundCloud, YouTube, Spotify, an audio file) or pick a
+ * saved one. LaunchPage opens its own player window (/player.html) with that link's official
+ * player; 🎧 then becomes a rocket that plays and pauses it. ▾ beside it changes the link, brings
+ * the window forward, or closes it. The two talk on the "launchpage-player" BroadcastChannel.
  */
-export function cleanLink(link: string): string | null {
-  // SoundCloud's Share → Embed code works too: take the player's url= out of it.
-  const embed = link.match(/w\.soundcloud\.com\/player\/\?[^"'\s>]*/i);
-  if (embed) {
-    const u = new URLSearchParams(embed[0].split('?')[1].replace(/&amp;/g, '&')).get('url');
-    if (u && /^https:\/\/api\.soundcloud\.com\/(tracks|playlists|users)\/[\w:%-]+/i.test(u)) return u.split('&')[0];
-    if (u) return cleanLink(u);
-  }
-  const m = link.trim().match(/^(?:https?:\/\/)?(?:www\.|m\.)?soundcloud\.com(\/[^?#\s]+)/i);
-  return m ? `https://soundcloud.com${m[1].replace(/\/+$/, '')}` : null;
-}
 
-/** A SoundCloud link (track, playlist or profile) as the embeddable player's address, or null. */
-export function soundcloudEmbed(link: string): string | null {
-  const v = cleanLink(link);
-  if (!v) return null;
-  const q = new URLSearchParams({ url: v, color: '#06f9c2', auto_play: 'false', hide_related: 'true', show_comments: 'false', show_user: 'true', show_reposts: 'false', visual: 'false' });
-  return `https://w.soundcloud.com/player/?${q.toString()}`;
-}
-
-// SoundCloud's Widget API: our buttons drive the (hidden) SoundCloud player.
-interface ScSound {
-  title?: string;
-  artwork_url?: string | null;
-  user?: { username?: string; avatar_url?: string };
-}
-interface ScWidget {
-  bind(event: string, cb: () => void): void;
-  play(): void;
-  pause(): void;
-  next(): void;
-  prev(): void;
-  getCurrentSound(cb: (s: ScSound | null) => void): void;
-  getSounds(cb: (s: ScSound[] | null) => void): void;
-  getPosition(cb: (ms: number) => void): void;
-  getCurrentSoundIndex(cb: (i: number) => void): void;
-  seekTo(ms: number): void;
-  skip(index: number): void;
-}
-type ScGlobal = { Widget: ((el: HTMLIFrameElement) => ScWidget) & { Events: Record<string, string> } };
-let apiLoad: Promise<ScGlobal> | null = null;
-function loadApi(): Promise<ScGlobal> {
-  const w = window as unknown as { SC?: ScGlobal };
-  if (w.SC) return Promise.resolve(w.SC);
-  apiLoad ??= new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://w.soundcloud.com/player/api.js';
-    s.async = true;
-    s.onload = () => (w.SC ? resolve(w.SC) : reject(new Error('no SC')));
-    s.onerror = () => {
-      apiLoad = null;
-      reject(new Error('SoundCloud did not load'));
-    };
-    document.head.appendChild(s);
-  });
-  return apiLoad;
-}
-
-// Saved playlists (per device) and where each one was left off.
+type PlayerState = 'loading' | 'playing' | 'paused' | 'needs-click' | 'error' | 'closed';
 type Saved = { name: string; link: string };
+
+const LINK_KEY = 'launchpage.music.url';
 const SAVED_KEY = 'launchpage.music.saved';
-const SPOT_KEY = 'launchpage.music.spot';
-type Spot = { link: string; index: number; ms: number };
+const WINDOW_NAME = 'launchpage-player';
+
 function readJson<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
@@ -91,12 +32,35 @@ function writeJson(key: string, v: unknown) {
     /* ignore */
   }
 }
+const readLink = () => {
+  try {
+    return localStorage.getItem(LINK_KEY) ?? '';
+  } catch {
+    return '';
+  }
+};
 
-/** "…/sets/2026-you-can-change-this-is" → "2026 you can change this is". */
+/** Which player a link opens in, or null when none can play it. */
+export function linkKind(link: string): 'SoundCloud' | 'YouTube' | 'Spotify' | 'Audio file' | null {
+  const s = link.trim();
+  if (/soundcloud\.com\//i.test(s)) return 'SoundCloud';
+  if (/(?:youtube\.com|youtu\.be)\/\S*(?:[?&](?:v|list)=|youtu\.be\/[\w-]{6,}|\/(?:shorts|live|embed)\/)/i.test(s)) return 'YouTube';
+  if (/open\.spotify\.com\/(?:intl-\w+\/)?(?:track|album|playlist|episode|show|artist)\//i.test(s)) return 'Spotify';
+  if (/^https?:\/\/\S+\.(mp3|m4a|aac|ogg|oga|opus|wav|flac)(\?\S*)?$/i.test(s)) return 'Audio file';
+  return null;
+}
+
+/** A short name for a link: the last part of its address, tidied. */
 function linkName(link: string) {
-  const parts = link.split('?')[0].split('/').filter(Boolean);
-  const last = parts[parts.length - 1] ?? '';
-  return decodeURIComponent(last).replace(/[-_]+/g, ' ').trim() || 'SoundCloud';
+  try {
+    const u = new URL(/^https?:/i.test(link) ? link : `https://${link}`);
+    const last = u.pathname.split('/').filter(Boolean).pop() ?? '';
+    const name = decodeURIComponent(last).replace(/\.\w{2,4}$/, '').replace(/[-_]+/g, ' ').trim();
+    if (name && !/^(watch|playlist)$/i.test(name)) return name.replace(/\b\w/g, (c) => c.toUpperCase());
+    return `${linkKind(link) ?? 'Music'} ${u.searchParams.get('list') ? 'playlist' : 'link'}`;
+  } catch {
+    return 'Music';
+  }
 }
 
 const Svg = ({ d, size = 16, fill = false }: { d: string; size?: number; fill?: boolean }) => (
@@ -104,142 +68,122 @@ const Svg = ({ d, size = 16, fill = false }: { d: string; size?: number; fill?: 
     <path d={d} />
   </svg>
 );
+const HEADPHONES = 'M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z';
+const ROCKET =
+  'M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5';
 const PLAY = 'M7 4v16l13-8z';
 const PAUSE = 'M7 4h3v16H7zM14 4h3v16h-3z';
-const PREV = 'M19 20 9 12l10-8zM5 19V5';
-const NEXT = 'M5 4l10 8-10 8zM19 5v14';
-const EDIT = 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4';
+const CARET = 'M6 9l6 6 6-6';
+const CLOSE = 'M6 6l12 12M18 6L6 18';
 
-/**
- * 🎧 beside ⚙: a mini player (artwork, title, ⏮ ▶ ⏭) slides out to the left in the header.
- * SoundCloud's own player runs hidden behind it, so music keeps playing when it's closed.
- * The link is kept per device.
- */
 export function MusicPlayer() {
-  const [open, setOpen] = useState(false);
-  const [link, setLink] = useState(read);
-  const [editing, setEditing] = useState(() => !read());
-  const [draft, setDraft] = useState(link);
-  const [playing, setPlaying] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [sound, setSound] = useState<ScSound | null>(null);
+  const [card, setCard] = useState(false);
+  const [draft, setDraft] = useState(readLink);
+  const [link, setLink] = useState(readLink);
   const [saved, setSaved] = useState<Saved[]>(() => readJson<Saved[]>(SAVED_KEY, []));
-  const [listOpen, setListOpen] = useState<false | { top: number; right: number }>(false);
-  const [resumed, setResumed] = useState('');
-  const frame = useRef<HTMLIFrameElement>(null);
-  const widget = useRef<ScWidget | null>(null);
-  const src = soundcloudEmbed(link);
+  const [state, setState] = useState<PlayerState>('closed');
+  const [title, setTitle] = useState('');
+  const [hint, setHint] = useState('');
+  const heard = useRef(0);
+  const win = useRef<Window | null>(null);
+  const chan = useRef<BroadcastChannel | null>(null);
+  const wrap = useRef<HTMLDivElement>(null);
 
+  // Listen to the player window; it says hello every 2 seconds while it's open.
   useEffect(() => {
-    setReady(false);
-    setPlaying(false);
-    setSound(null);
-    setFailed(false);
-    widget.current = null;
-    if (!src || !frame.current) return;
-    let live = true;
-    loadApi()
-      .then((SC) => {
-        if (!live || !frame.current) return;
-        const w = SC.Widget(frame.current);
-        const E = SC.Widget.Events;
-        // A playlist names its current track only once one plays: show its first track until then.
-        const refresh = () =>
-          w.getCurrentSound((s) => {
-            if (!live) return;
-            if (s?.title) return setSound(s);
-            w.getSounds((list) => live && setSound((list ?? []).find((x) => x?.title) ?? null));
-          });
-        w.bind(E.READY, () => {
-          if (!live) return;
-          widget.current = w;
-          setReady(true);
-          refresh();
-        });
-        // Pick up where this playlist was left off: on the first ▶ (browsers only allow sound
-        // after a press), jump to the saved track, then to the saved spot in it.
-        const spot = readJson<Spot | null>(SPOT_KEY, null);
-        let resume: Spot | null = spot && spot.link === link && (spot.index > 0 || spot.ms > 5000) ? spot : null;
-        let lastSave = 0;
-        w.bind(E.PLAY, () => {
-          if (!live) return;
-          setPlaying(true);
-          refresh();
-          if (!resume) return;
-          const r = resume;
-          w.getCurrentSoundIndex((i) => {
-            if (i !== r.index) {
-              w.skip(r.index); // plays the saved track; its own PLAY then seeks
-              return;
-            }
-            resume = null;
-            if (r.ms > 5000) w.seekTo(r.ms);
-            setResumed(`Picked up where you left off`);
-            setTimeout(() => live && setResumed(''), 4000);
-          });
-        });
-        if (E.PLAY_PROGRESS)
-          w.bind(E.PLAY_PROGRESS, () => {
-            const now = Date.now();
-            if (!live || now - lastSave < 5000) return;
-            lastSave = now;
-            w.getCurrentSoundIndex((index) => w.getPosition((ms) => writeJson(SPOT_KEY, { link, index, ms })));
-          });
-        w.bind(E.PAUSE, () => live && setPlaying(false));
-        w.bind(E.ERROR, () => live && setFailed(true));
-        w.bind(E.FINISH, () => live && setPlaying(false));
-        w.bind(E.PAUSE, () => w.getCurrentSoundIndex((index) => w.getPosition((ms) => writeJson(SPOT_KEY, { link, index, ms }))));
-      })
-      .catch(() => live && setFailed(true));
-    return () => {
-      live = false;
+    if (!('BroadcastChannel' in window)) return;
+    const c = new BroadcastChannel(WINDOW_NAME);
+    chan.current = c;
+    c.onmessage = (e: MessageEvent) => {
+      const m = (e.data ?? {}) as { state?: PlayerState; title?: string; url?: string };
+      if (!m.state) return;
+      if (m.state === 'closed') {
+        heard.current = 0;
+        setState('closed');
+        return;
+      }
+      heard.current = Date.now();
+      setState(m.state);
+      if (m.title) setTitle(m.title);
+      if (m.state === 'needs-click') setHint('Click Start once in the player window. After that the rocket plays and pauses.');
+      if (m.state === 'playing') setHint('');
     };
-  }, [src]);
+    c.postMessage({ cmd: 'hello' }); // a player window left open from before
+    const tick = window.setInterval(() => {
+      if (heard.current && Date.now() - heard.current > 6000) {
+        heard.current = 0;
+        setState('closed');
+      }
+    }, 2000);
+    return () => {
+      window.clearInterval(tick);
+      c.close();
+      chan.current = null;
+    };
+  }, []);
 
-  const save = () => {
-    const raw = draft.trim();
-    if (raw && !soundcloudEmbed(raw)) return;
-    const v = raw ? (cleanLink(raw) ?? '') : '';
-    setLink(v);
-    try {
-      localStorage.setItem(KEY, v);
-    } catch {
-      /* ignore */
-    }
-    setEditing(false);
-  };
-  // The playlists menu closes on a click anywhere else, or when the page scrolls.
+  // The card closes on a click outside it.
   useEffect(() => {
-    if (!listOpen) return;
+    if (!card) return;
     const off = (e: MouseEvent) => {
-      const t = e.target as HTMLElement;
-      if (!t.closest('.music-list') && !t.closest('[aria-label="Your playlists"]')) setListOpen(false);
+      if (wrap.current && !wrap.current.contains(e.target as Node)) setCard(false);
     };
-    const shut = () => setListOpen(false);
     document.addEventListener('mousedown', off);
-    window.addEventListener('resize', shut);
-    return () => {
-      document.removeEventListener('mousedown', off);
-      window.removeEventListener('resize', shut);
-    };
-  }, [listOpen]);
-  const useLink = (v: string) => {
+    return () => document.removeEventListener('mousedown', off);
+  }, [card]);
+
+  const open = state !== 'closed';
+  const send = (cmd: string, url?: string) => chan.current?.postMessage({ cmd, url });
+
+  /** Opens (or reuses) the player window with this link. */
+  const launch = (raw: string) => {
+    const v = raw.trim();
+    if (!linkKind(v)) return setHint('Paste a SoundCloud, YouTube, Spotify or audio-file link.');
     setLink(v);
     setDraft(v);
     try {
-      localStorage.setItem(KEY, v);
+      localStorage.setItem(LINK_KEY, v);
     } catch {
       /* ignore */
     }
-    setEditing(false);
-    setListOpen(false);
+    const url = `/player.html?url=${encodeURIComponent(v)}`;
+    if (open) {
+      send('load', v);
+      win.current?.focus();
+    } else {
+      const w = window.open(url, WINDOW_NAME, 'popup,width=460,height=560');
+      if (!w) return setHint('The browser blocked the player window. Allow pop-ups for LaunchPage, then try again.');
+      win.current = w;
+      heard.current = Date.now();
+      setState('loading');
+    }
+    setTitle('');
+    setHint('');
+    setCard(false);
   };
+
+  const front = () => {
+    // After a reload LaunchPage no longer holds the window: reopening by name finds it without reloading it.
+    const w = win.current && !win.current.closed ? win.current : window.open('', WINDOW_NAME);
+    if (w) {
+      win.current = w;
+      w.focus();
+    }
+  };
+  const close = () => {
+    const w = win.current && !win.current.closed ? win.current : window.open('', WINDOW_NAME);
+    w?.close();
+    heard.current = 0;
+    setState('closed');
+    setTitle('');
+    setHint('');
+    setCard(false);
+  };
+
   const isSaved = saved.some((x) => x.link === link);
-  const saveCurrent = () => {
+  const saveLink = () => {
     if (!link || isSaved) return;
-    const name = linkName(link);
-    const next = [...saved, { name: name.replace(/\b\w/g, (c) => c.toUpperCase()), link }];
+    const next = [...saved, { name: title ? title.split(' · ')[0] : linkName(link), link }];
     setSaved(next);
     writeJson(SAVED_KEY, next);
   };
@@ -248,139 +192,109 @@ export function MusicPlayer() {
     setSaved(next);
     writeJson(SAVED_KEY, next);
   };
-  const tab = open ? 0 : -1;
-  const art = sound?.artwork_url || sound?.user?.avatar_url || '';
-  const title = sound?.title ?? (failed ? 'SoundCloud can’t play this link · ✎ to change it' : ready ? linkName(link) : 'Loading…');
-  const who = sound?.user?.username ?? '';
+
+  const playing = state === 'playing';
+  const rocketLabel = state === 'needs-click' ? 'Start the music in the player window' : playing ? `Pause${title ? `: ${title}` : ''}` : `Play${title ? `: ${title}` : ''}`;
 
   return (
-    <div className={`music${open ? ' is-open' : ''}${playing ? ' is-playing' : ''}`}>
-      <div className="music-panel" aria-hidden={!open}>
-        {editing || !src ? (
+    <div className={`music${open ? ' is-live' : ''}${playing ? ' is-playing' : ''}`} ref={wrap}>
+      {open ? (
+        <div className="music-rocket-group">
+          <button
+            type="button"
+            className={`icon-btn tool-btn gear-btn music-btn music-rocket${playing ? ' is-on' : ''}`}
+            aria-label={rocketLabel}
+            title={rocketLabel}
+            onClick={() => (state === 'needs-click' ? front() : send('toggle'))}
+          >
+            <Svg d={ROCKET} />
+            <span className="music-badge" aria-hidden="true">
+              <Svg d={playing ? PAUSE : PLAY} size={9} fill />
+            </span>
+          </button>
+          <button type="button" className="icon-btn tool-btn music-caret" aria-label="Music options" aria-expanded={card} title="Change the link, show or close the player" onClick={() => setCard((o) => !o)}>
+            <Svg d={CARET} size={14} />
+          </button>
+        </div>
+      ) : (
+        <button type="button" className={`icon-btn tool-btn gear-btn music-btn${card ? ' is-on' : ''}`} aria-label="Music" aria-expanded={card} title="Music: open a player you can pause from here" onClick={() => setCard((o) => !o)}>
+          <Svg d={HEADPHONES} />
+        </button>
+      )}
+
+      {card && (
+        <div className="music-card" role="dialog" aria-label="Music">
+          {open && (
+            <div className="music-now">
+              <span className="music-now-title" title={title || linkName(link)}>
+                {playing ? '▶ ' : '❚❚ '}
+                {title || linkName(link)}
+              </span>
+              <span className="music-now-actions">
+                <button type="button" className="btn btn-quiet" onClick={front}>
+                  Show player
+                </button>
+                <button
+                  type="button"
+                  className={`music-ctl music-save${isSaved ? ' is-on' : ''}`}
+                  aria-pressed={isSaved}
+                  aria-label={isSaved ? 'Saved to your list' : 'Save this link'}
+                  title={isSaved ? 'Saved to your list' : 'Save this link'}
+                  onClick={saveLink}
+                >
+                  <Svg d="M6 3h12v18l-6-4-6 4z" size={14} fill={isSaved} />
+                </button>
+                <button type="button" className="btn btn-quiet music-stop" onClick={close}>
+                  Close player
+                </button>
+              </span>
+            </div>
+          )}
           <form
             className="music-form"
             onSubmit={(e) => {
               e.preventDefault();
-              save();
+              launch(draft);
             }}
           >
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Paste the soundcloud.com link (or Share → Embed code)" aria-label="SoundCloud link" tabIndex={tab} />
-            <button type="submit" className="icon-btn tool-btn tool-btn-go" aria-label="Use this link" title="Use this link" tabIndex={tab} disabled={!!draft.trim() && !soundcloudEmbed(draft)}>
-              <Svg d={PLAY} />
+            <input
+              value={draft}
+              autoFocus
+              onChange={(e) => {
+                setDraft(e.target.value);
+                setHint('');
+              }}
+              placeholder="Paste a SoundCloud, YouTube, Spotify or audio link"
+              aria-label="Music link"
+            />
+            <button type="submit" className="icon-btn tool-btn tool-btn-go" aria-label={open ? 'Play this instead' : 'Open the player'} title={open ? 'Play this instead' : 'Open the player'} disabled={!linkKind(draft)}>
+              <Svg d={ROCKET} size={15} />
             </button>
           </form>
-        ) : (
-          <div className="music-mini">
-            <span className="music-art" aria-hidden="true">
-              {art ? <img src={art.replace('-large', '-t67x67')} alt="" /> : <Svg d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />}
-            </span>
-            <span className="music-meta" title={who ? `${title} · ${who}` : title}>
-              <span className="music-title">{title}</span>
-              {resumed ? <span className="music-who music-resumed">{resumed}</span> : who && <span className="music-who">{who}</span>}
-            </span>
-            <span className="music-controls">
-              <button type="button" className="music-ctl" aria-label="Previous" title="Previous" tabIndex={tab} disabled={!ready} onClick={() => widget.current?.prev()}>
-                <Svg d={PREV} size={14} fill />
-              </button>
-              <button type="button" className="music-ctl music-play" aria-label={playing ? 'Pause' : 'Play'} title={playing ? 'Pause' : 'Play'} tabIndex={tab} disabled={!ready} onClick={() => (playing ? widget.current?.pause() : widget.current?.play())}>
-                <Svg d={playing ? PAUSE : PLAY} size={14} fill />
-              </button>
-              <button type="button" className="music-ctl" aria-label="Next" title="Next" tabIndex={tab} disabled={!ready} onClick={() => widget.current?.next()}>
-                <Svg d={NEXT} size={14} fill />
-              </button>
-            </span>
-            <button
-              type="button"
-              className={`music-ctl music-save${isSaved ? ' is-on' : ''}`}
-              aria-label={isSaved ? 'Saved to your playlists' : 'Save this playlist'}
-              title={isSaved ? 'Saved to your playlists' : 'Save this playlist'}
-              tabIndex={tab}
-              aria-pressed={isSaved}
-              onClick={saveCurrent}
-            >
-              <Svg d="M6 3h12v18l-6-4-6 4z" size={14} fill={isSaved} />
-            </button>
-            <button
-              type="button"
-              className="music-ctl"
-              aria-label="Your playlists"
-              title="Your playlists"
-              aria-expanded={!!listOpen}
-              tabIndex={tab}
-              onClick={(e) => {
-                const r = e.currentTarget.getBoundingClientRect();
-                setListOpen((o) => (o ? false : { top: r.bottom + 8, right: window.innerWidth - r.right - 60 }));
-              }}
-            >
-              <Svg d="M4 6h11M4 12h11M4 18h7M19 9v9M15.5 14.5 19 18l3.5-3.5" size={15} />
-            </button>
-            <button
-              type="button"
-              className="icon-btn tool-btn music-change"
-              aria-label="Change the music link"
-              title="Change the music link"
-              tabIndex={tab}
-              onClick={() => {
-                setDraft(link);
-                setEditing(true);
-              }}
-            >
-              <Svg d={EDIT} size={14} />
-            </button>
-          </div>
-        )}
-      </div>
-      {open && listOpen && (
-        <div className="music-list" role="menu" aria-label="Your playlists" style={{ top: listOpen.top, right: listOpen.right }}>
-          {saved.length === 0 && <p className="music-list-empty">No saved playlists yet. Play one and press the bookmark to save it.</p>}
-          {saved.map((x) => (
-            <div key={x.link} className={`music-list-row${x.link === link ? ' is-current' : ''}`}>
-              <button type="button" role="menuitem" className="music-list-pick" onClick={() => useLink(x.link)} title={x.link}>
-                {x.name}
-              </button>
-              <button type="button" className="music-ctl" aria-label={`Remove ${x.name}`} title="Remove from your playlists" onClick={() => forget(x.link)}>
-                <Svg d="M6 6l12 12M18 6L6 18" size={12} />
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            className="music-list-new"
-            onClick={() => {
-              setListOpen(false);
-              setDraft('');
-              setEditing(true);
-            }}
-          >
-            + Add a playlist link
-          </button>
+          <p className="field-hint music-kind">{draft.trim() ? (linkKind(draft) ? `${linkKind(draft)} · opens in its own small window` : 'That link can’t be played here.') : 'Find the playlist or video, copy its link, paste it here.'}</p>
+          {saved.length > 0 && (
+            <ul className="music-saved" aria-label="Saved links">
+              {saved.map((x) => (
+                <li key={x.link} className={x.link === link && open ? 'is-current' : ''}>
+                  <button type="button" className="music-saved-pick" title={x.link} onClick={() => launch(x.link)}>
+                    {x.name}
+                    <span className="music-saved-kind">{linkKind(x.link) ?? ''}</span>
+                  </button>
+                  <button type="button" className="music-ctl" aria-label={`Remove ${x.name}`} title="Remove from your list" onClick={() => forget(x.link)}>
+                    <Svg d={CLOSE} size={12} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {hint && <p className="field-hint music-hint-text">{hint}</p>}
         </div>
       )}
-      {/* SoundCloud's own player: always loaded, so music survives closing the panel. Shown under 🎧
-          while the panel is open: browsers only let music start from a press inside it, and after
-          that the mini player's buttons drive it. */}
-      {src && (
-        <iframe
-          key={src}
-          ref={frame}
-          className={`music-engine${open && !editing ? ' is-shown' : ''}`}
-          title="SoundCloud player"
-          src={src}
-          allow="autoplay; encrypted-media"
-          tabIndex={open && !editing ? 0 : -1}
-          aria-hidden={!(open && !editing)}
-        />
+      {!card && hint && (
+        <p className="music-toast" role="status">
+          {hint}
+        </p>
       )}
-      <button
-        type="button"
-        className={`icon-btn tool-btn gear-btn music-btn${open ? ' is-on' : ''}`}
-        aria-label={open ? 'Hide the music player' : 'Music'}
-        aria-expanded={open}
-        title={open ? 'Hide the music player (it keeps playing)' : playing ? 'Music · playing' : 'Music'}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <Svg d="M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-      </button>
     </div>
   );
 }

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#110c29" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<title>LaunchPage · Player</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Roboto+Mono:wght@500;700&display=swap" />
+<style>
+  :root { --bg: #110c29; --panel: #1b1440; --edge: #3a2f6b; --teal: #06f9c2; --mist: #c9c2e8; --dim: #8f86b8; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--mist); font-family: 'Space Grotesk', system-ui, sans-serif; }
+  body { display: grid; grid-template-rows: auto 1fr auto; }
+  header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--edge); }
+  header b { color: var(--teal); letter-spacing: 0.14em; font-size: 12px; text-transform: uppercase; }
+  #title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+  #state { font-family: 'Roboto Mono', monospace; font-size: 12px; color: var(--dim); }
+  main { position: relative; min-height: 0; }
+  #stage, #stage iframe, #stage > div { width: 100%; height: 100%; border: 0; display: block; }
+  #stage audio { width: calc(100% - 32px); margin: 40px 16px; }
+  #start { position: absolute; inset: 0; display: none; place-items: center; background: rgb(17 12 41 / 0.86); }
+  #start.on { display: grid; }
+  #start button { font: inherit; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 16px 26px; border-radius: 14px; border: 1px solid var(--teal); color: var(--bg); background: var(--teal); cursor: pointer; }
+  #start p { margin: 12px 0 0; text-align: center; font-size: 13px; color: var(--dim); }
+  #msg { padding: 24px; line-height: 1.5; }
+  footer { padding: 8px 14px; font-size: 12px; color: var(--dim); border-top: 1px solid var(--edge); }
+</style>
+</head>
+<body>
+<header><b>Player</b><span id="title">Loading…</span><span id="state"></span></header>
+<main>
+  <div id="stage"></div>
+  <div id="start"><div><button id="startBtn" type="button">▶ Start</button><p>One click here to start. After that, the rocket in LaunchPage plays and pauses.</p></div></div>
+</main>
+<footer>Keep this window open (it can sit behind others). The rocket in LaunchPage plays and pauses it.</footer>
+<script>
+/*
+ * LaunchPage player window (V12-019, Oct 25). LaunchPage opens this with ?url=<link>. It holds the
+ * link's official player (SoundCloud, YouTube, Spotify, or an audio file) and talks to LaunchPage on
+ * the "launchpage-player" BroadcastChannel: LaunchPage sends { cmd: 'toggle' | 'play' | 'pause' |
+ * 'load', url }, this window sends { state, title } and a heartbeat every 2 seconds.
+ */
+(function () {
+  var bc = 'BroadcastChannel' in window ? new BroadcastChannel('launchpage-player') : null;
+  var $ = function (id) { return document.getElementById(id); };
+  var player = null; // { play(), pause(), isPlaying() }
+  var state = 'loading';
+  var title = '';
+  var link = new URLSearchParams(location.search).get('url') || '';
+
+  function send(extra) {
+    var m = { state: state, title: title, url: link, at: Date.now() };
+    for (var k in extra || {}) m[k] = extra[k];
+    if (bc) bc.postMessage(m);
+  }
+  function setState(s) {
+    state = s;
+    $('state').textContent = s === 'playing' ? '▶ playing' : s === 'paused' ? '❚❚ paused' : s === 'needs-click' ? 'click Start' : s === 'error' ? 'can’t play' : '';
+    if (s === 'playing') $('start').classList.remove('on');
+    if (title) document.title = (s === 'playing' ? '▶ ' : '') + title + ' · LaunchPage';
+    send();
+  }
+  function setTitle(t) {
+    if (!t) return;
+    title = t;
+    $('title').textContent = t;
+    document.title = (state === 'playing' ? '▶ ' : '') + t + ' · LaunchPage';
+    send();
+  }
+  function fail(text) {
+    $('stage').innerHTML = '<div id="msg"></div>';
+    $('msg').textContent = text;
+    $('title').textContent = 'Can’t play this link';
+    setState('error');
+  }
+  // The first play may need a click in this window (a browser rule). If it hasn't started, show Start.
+  function wantStart(ms) {
+    setTimeout(function () {
+      if (state !== 'playing') { $('start').classList.add('on'); setState('needs-click'); }
+    }, ms || 2500);
+  }
+  $('startBtn').onclick = function () { if (player) player.play(); $('start').classList.remove('on'); };
+
+  function loadScript(src) {
+    return new Promise(function (res, rej) { var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  }
+
+  // ---------- link → kind ----------
+  function kindOf(u) {
+    var s = (u || '').trim();
+    var m;
+    if (/soundcloud\.com\//i.test(s)) {
+      var e = s.match(/w\.soundcloud\.com\/player\/\?[^"'\s>]*/i);
+      if (e) { var inner = new URLSearchParams(e[0].split('?')[1].replace(/&amp;/g, '&')).get('url'); if (inner) s = inner; }
+      if (/^https:\/\/api\.soundcloud\.com\//i.test(s)) return { kind: 'sc', url: s.split('&')[0] };
+      m = s.match(/^(?:https?:\/\/)?(?:www\.|m\.)?soundcloud\.com(\/[^?#\s]+)/i);
+      return m ? { kind: 'sc', url: 'https://soundcloud.com' + m[1].replace(/\/+$/, '') } : null;
+    }
+    if (/(?:youtube\.com|youtu\.be)\//i.test(s)) {
+      var url; try { url = new URL(/^https?:/i.test(s) ? s : 'https://' + s); } catch (x) { return null; }
+      var list = url.searchParams.get('list');
+      var id = url.searchParams.get('v');
+      if (!id && /youtu\.be$/i.test(url.hostname)) id = url.pathname.slice(1);
+      if (!id) { m = url.pathname.match(/\/(?:shorts|live|embed)\/([\w-]{6,})/); if (m) id = m[1]; }
+      if (!id && !list) return null;
+      return { kind: 'yt', id: id, list: list };
+    }
+    m = s.match(/open\.spotify\.com\/(?:intl-\w+\/)?(track|album|playlist|episode|show|artist)\/([A-Za-z0-9]+)/i);
+    if (m) return { kind: 'sp', uri: 'spotify:' + m[1].toLowerCase() + ':' + m[2] };
+    if (/^https?:\/\/\S+\.(mp3|m4a|aac|ogg|oga|opus|wav|flac)(\?\S*)?$/i.test(s)) return { kind: 'audio', url: s };
+    return null;
+  }
+
+  // ---------- players ----------
+  function soundcloud(k) {
+    var q = new URLSearchParams({ url: k.url, color: '#06f9c2', auto_play: 'true', hide_related: 'true', show_comments: 'false', show_user: 'true', show_reposts: 'false', visual: 'true' });
+    $('stage').innerHTML = '<iframe id="sc" allow="autoplay; encrypted-media" src="https://w.soundcloud.com/player/?' + q + '"></iframe>';
+    loadScript('https://w.soundcloud.com/player/api.js').then(function () {
+      var w = window.SC.Widget($('sc'));
+      var E = window.SC.Widget.Events;
+      var playing = false;
+      player = { play: function () { w.play(); }, pause: function () { w.pause(); }, isPlaying: function () { return playing; } };
+      var name = function () { w.getCurrentSound(function (s) { if (s && s.title) setTitle(s.title + (s.user && s.user.username ? ' · ' + s.user.username : '')); }); };
+      w.bind(E.READY, function () { setState('paused'); name(); w.play(); wantStart(); });
+      w.bind(E.PLAY, function () { playing = true; setState('playing'); name(); });
+      w.bind(E.PAUSE, function () { playing = false; setState('paused'); });
+      w.bind(E.FINISH, function () { playing = false; setState('paused'); });
+      w.bind(E.ERROR, function () { fail('SoundCloud can’t play this link. Try the track or playlist page link.'); });
+    }, function () { fail('SoundCloud didn’t load. Check the connection.'); });
+  }
+
+  function youtube(k) {
+    $('stage').innerHTML = '<div id="yt"></div>';
+    window.onYouTubeIframeAPIReady = function () {
+      var vars = { autoplay: 1, playsinline: 1, rel: 0, origin: location.origin };
+      if (k.list) { vars.listType = 'playlist'; vars.list = k.list; }
+      var p = new window.YT.Player('yt', {
+        width: '100%', height: '100%', videoId: k.id || undefined, playerVars: vars,
+        events: {
+          onReady: function () { setState('paused'); var d = p.getVideoData && p.getVideoData(); if (d && d.title) setTitle(d.title); p.playVideo(); wantStart(); },
+          onStateChange: function (e) {
+            var S = window.YT.PlayerState;
+            if (e.data === S.PLAYING) { setState('playing'); var d = p.getVideoData(); if (d && d.title) setTitle(d.title + (d.author ? ' · ' + d.author : '')); }
+            else if (e.data === S.PAUSED || e.data === S.ENDED) setState('paused');
+          },
+          onError: function () { fail('YouTube won’t play this one outside YouTube (the owner turned that off). Try another video or playlist.'); }
+        }
+      });
+      player = { play: function () { p.playVideo(); }, pause: function () { p.pauseVideo(); }, isPlaying: function () { return state === 'playing'; } };
+    };
+    loadScript('https://www.youtube.com/iframe_api').catch(function () { fail('YouTube didn’t load. Check the connection.'); });
+  }
+
+  function spotify(k) {
+    $('stage').innerHTML = '<div id="sp"></div>';
+    window.onSpotifyIframeApiReady = function (API) {
+      API.createController($('sp'), { uri: k.uri, width: '100%', height: '100%' }, function (c) {
+        var paused = true;
+        player = { play: function () { if (paused) c.togglePlay(); }, pause: function () { if (!paused) c.togglePlay(); }, isPlaying: function () { return !paused; } };
+        c.addListener('ready', function () { setState('paused'); setTitle('Spotify'); c.play(); wantStart(); });
+        c.addListener('playback_update', function (e) { paused = e.data.isPaused; setState(paused ? 'paused' : 'playing'); });
+      });
+    };
+    loadScript('https://open.spotify.com/embed/iframe-api/v1').catch(function () { fail('Spotify didn’t load. Check the connection.'); });
+  }
+
+  function audio(k) {
+    $('stage').innerHTML = '<audio id="au" controls autoplay preload="auto"></audio>';
+    var a = $('au');
+    a.src = k.url;
+    player = { play: function () { a.play().catch(function () { $('start').classList.add('on'); setState('needs-click'); }); }, pause: function () { a.pause(); }, isPlaying: function () { return !a.paused; } };
+    a.onplay = function () { setState('playing'); };
+    a.onpause = function () { setState('paused'); };
+    a.onerror = function () { fail('This audio file couldn’t be played.'); };
+    setTitle(decodeURIComponent(k.url.split('?')[0].split('/').pop() || 'Audio'));
+    player.play();
+  }
+
+  function load(u) {
+    link = u || '';
+    player = null;
+    title = '';
+    $('start').classList.remove('on');
+    var k = kindOf(link);
+    if (!k) return fail('Paste a SoundCloud, YouTube, Spotify or audio-file link in LaunchPage.');
+    setState('loading');
+    $('title').textContent = 'Loading…';
+    ({ sc: soundcloud, yt: youtube, sp: spotify, audio: audio })[k.kind](k);
+    try { history.replaceState(null, '', '?url=' + encodeURIComponent(link)); } catch (x) {}
+  }
+
+  // Keyboard play/pause keys and the system media controls.
+  if ('mediaSession' in navigator) {
+    try {
+      navigator.mediaSession.setActionHandler('play', function () { if (player) player.play(); });
+      navigator.mediaSession.setActionHandler('pause', function () { if (player) player.pause(); });
+    } catch (x) {}
+  }
+
+  if (bc) {
+    bc.onmessage = function (e) {
+      var m = e.data || {};
+      if (m.cmd === 'hello') return send();
+      if (m.cmd === 'load') return load(m.url);
+      if (!player) return;
+      var wantPlay = m.cmd === 'play' || (m.cmd === 'toggle' && !player.isPlaying());
+      if (wantPlay) player.play(); else player.pause();
+      // Asked to play but it didn't start: the browser wants a click here first.
+      if (wantPlay) setTimeout(function () { if (state !== 'playing' && !player.isPlaying()) { $('start').classList.add('on'); setState('needs-click'); } }, 1500);
+    };
+  }
+  setInterval(function () { send({ beat: true }); }, 2000);
+  window.addEventListener('pagehide', function () { state = 'closed'; send(); });
+  load(link);
+})();
+</script>
+</body>
+</html>

@@ -27,6 +27,8 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
+        // The music player window is its own page, not the app.
+        navigateFallbackDenylist: [/^\/player\.html/],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
