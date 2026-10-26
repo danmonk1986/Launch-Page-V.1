@@ -392,7 +392,7 @@ export function BudgetPage(p: Props) {
               <tr>
                 <th className="col-project">Project</th>
                 <th className="col-date">Date</th>
-                <th className="col-task">Description</th>
+                <th className="col-task">Item</th>
                 <th className="col-center">Method</th>
                 <th className="col-center">Type</th>
                 <th className="col-center">Category</th>
@@ -724,7 +724,7 @@ function LineForm({
           <TitleCombo value={d.project} titles={projects} required={false} placeholder="APP SHOP" onChange={(project) => set({ project })} list="budget:project" />
         </div>
         <label className="field budget-wide">
-          <span>Description</span>
+          <span>Item</span>
           <input value={d.description} autoFocus={isNew} required placeholder="Minto International Rent" onChange={(e) => set({ description: e.target.value })} />
         </label>
         <MoneyField value={{ amount: d.amount, foreign: d.foreign ?? null, currency: d.currency || 'CAD' }} onChange={(m) => set({ amount: m.amount, foreign: m.currency === 'CAD' ? null : m.foreign, currency: m.currency === 'CAD' ? '' : m.currency })} />

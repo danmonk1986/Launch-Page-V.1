@@ -230,7 +230,6 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
   return (
     <tr id={`task-${t.id}`} className={`task-row${checked ? ' is-done' : ''}${step ? ' is-step' : ''}${alt ? ' is-alt' : ''}`}>
       <td className="col-project">{step ? <span className="step-mark" aria-hidden="true">↳</span> : <ProjectChip projects={projects} id={t.projectId} />}</td>
-      <td className="col-desc">{step ? '' : t.description}</td>
       <td className="col-task">
         <span className="task-cell">
           <button type="button" className="task-name" onClick={() => act.open(t)}>
@@ -243,6 +242,7 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
           )}
         </span>
       </td>
+      <td className="col-desc">{step ? '' : t.description}</td>
       <td className="col-status col-center">
         {!step && (() => {
           // Recurring tasks show how they repeat (WEEKLY, MONTHLY…) in place of a status.
@@ -297,8 +297,8 @@ function TaskTable({
         <thead>
           <tr>
             <th className="col-project">Project</th>
-            <th className="col-desc">Description</th>
             <th className="col-task">Task</th>
+            <th className="col-desc">Description</th>
             <th className="col-center">Status</th>
             <th className="col-info col-center">Info</th>
             <th className="col-start col-center">Start</th>
