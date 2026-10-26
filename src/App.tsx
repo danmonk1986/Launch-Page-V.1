@@ -18,7 +18,7 @@ import { syncNonNegs } from './lib/nnsync';
 import { meditationStore, MeditationsContext, type Meditation } from './lib/meditations';
 import { hiddenPickStore, HiddenPicksContext, pickKey as hiddenKey, type HiddenPick } from './lib/hiddenPicks';
 import { customerStore, invoiceStore, profileStore, type Customer, type Invoice, type InvoiceProfile } from './lib/invoices';
-import { InvoicesPage } from './components/Invoices';
+import { RecordsPage } from './components/Records';
 import { nextRepeat, readRepeat, writeRepeat } from './lib/repeat';
 import { Days26Page } from './components/Days26';
 import {
@@ -112,6 +112,7 @@ export default function App() {
   // A page in the address (#tasks, #budget…) opens there: card rockets from a timed launch use it.
   const [page, setPage] = useState<PageId>(() => {
     const h = window.location.hash.replace('#', '');
+    if (h === 'records') return 'invoices';
     return (['launch', 'tasks', 'days26', 'budget', 'invoices', 'journal'] as PageId[]).includes(h as PageId) ? (h as PageId) : 'launch';
   });
   useEffect(() => {
@@ -1265,7 +1266,11 @@ export default function App() {
               onCheckin={setCheckin}
             />
           ) : page === 'invoices' ? (
-            <InvoicesPage
+            <RecordsPage
+              expenses={expenses}
+              lines={budget}
+              onSaveExpense={editExpense}
+              onDeleteExpense={removeExpense}
               invoices={invoices}
               customers={customers}
               profile={invoiceProfile[0] ?? null}
@@ -1287,8 +1292,6 @@ export default function App() {
               onApplyLinks={applyLinks}
               onAddItem={addItem}
               expenses={expenses}
-              onSaveExpense={editExpense}
-              onDeleteExpense={removeExpense}
               onClose={() => setPage('launch')}
               onToCalendar={budgetToCalendar}
               onToLaunch={(l) => {

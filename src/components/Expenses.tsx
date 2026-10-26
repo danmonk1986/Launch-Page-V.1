@@ -6,6 +6,7 @@ import { BUDGET_CATEGORIES, PMT_TYPES, money, type BudgetLine } from '../lib/bud
 import { MONTHS } from '../lib/repeat';
 import { monthKey, newExpense, type Expense } from '../lib/expenses';
 import { MoneyField, settleMoney } from './MoneyField';
+import { AmountInput } from './AmountInput';
 import { originalLabel } from '../lib/currency';
 
 const PLUS = 'M12 5v14M5 12h14';
@@ -211,7 +212,6 @@ function ExpenseForm({
   const set = (patch: Partial<Expense>) => setD((x) => ({ ...x, ...patch }));
   const cats = [...new Set([...BUDGET_CATEGORIES, d.category].filter(Boolean))];
   const types = [...new Set([...PMT_TYPES, d.type].filter(Boolean))];
-  const num = (v: string) => (v === '' ? null : Number(v));
   return (
     <form
       id={formId}
@@ -246,7 +246,7 @@ function ExpenseForm({
         <MoneyField label="Total" value={{ amount: d.amount, foreign: d.foreign ?? null, currency: d.currency || 'CAD' }} onChange={(m) => set({ amount: m.amount, foreign: m.currency === 'CAD' ? null : m.foreign, currency: m.currency === 'CAD' ? '' : m.currency })} />
         <label className="field">
           <span>GST/HST ($)</span>
-          <input type="number" inputMode="decimal" step="any" value={d.gst ?? ''} onChange={(e) => set({ gst: num(e.target.value) })} />
+          <AmountInput label="GST/HST" value={d.gst} onChange={(gst) => set({ gst })} />
         </label>
         <div className="field">
           <span>Pmt method</span>

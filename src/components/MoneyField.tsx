@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { CURRENCIES, HOME, rateToCad, toCad } from '../lib/currency';
+import { AmountInput } from './AmountInput';
 
 export type Money = { amount: number | null; foreign: number | null; currency: string };
 
-const num = (v: string) => (v.trim() === '' ? null : Number(v));
 const CALC = 'M7 4h10a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8.5 7.5h7M9 11h.01M12 11h.01M15 11h.01M9 14h.01M12 14h.01M15 14h.01M9 17h.01M12 17h.01M15 17h.01';
 
 /**
@@ -42,15 +42,12 @@ export function MoneyField({ value, onChange, label = 'Amount' }: { value: Money
         {label} ({editingForeign ? value.currency : '$ CAD'})
       </span>
       <div className="money-row">
-        <input
-          type="number"
-          inputMode="decimal"
-          step="any"
-          aria-label={label}
-          value={(editingForeign ? value.foreign : value.amount) ?? ''}
-          onChange={(e) =>
+        <AmountInput
+          label={label}
+          value={editingForeign ? value.foreign : value.amount}
+          onChange={(n) =>
             // A new original price needs converting again, so the CAD clears until it is.
-            editingForeign ? onChange({ ...value, foreign: num(e.target.value), amount: null }) : onChange({ ...value, amount: num(e.target.value) })
+            editingForeign ? onChange({ ...value, foreign: n, amount: null }) : onChange({ ...value, amount: n })
           }
         />
         <select

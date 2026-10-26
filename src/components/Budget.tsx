@@ -3,7 +3,7 @@ import { FormActions, Sheet } from './Sheet';
 import { Icon, SearchToggle, TaskSheet } from './Tasks';
 import { TitleCombo, useOpensUp } from './Launchers';
 import { RepeatPicker } from './RepeatPicker';
-import { ExpensesView, thisMonth } from './Expenses';
+import { thisMonth } from './Expenses';
 import { MoneyField, settleMoney } from './MoneyField';
 import { originalLabel, rateToCad, toCad } from '../lib/currency';
 import { BudgetMonth } from './BudgetMonth';
@@ -60,15 +60,13 @@ type Props = {
   onGoToTask: (id: string) => void;
   /** Expenses (LP-030): what was actually paid. */
   expenses: Expense[];
-  onSaveExpense: (e: Expense) => Promise<void>;
-  onDeleteExpense: (id: string) => Promise<void>;
   /** Link and dedupe (LP-030 step 3). */
   tasks: Task[];
   onApplyLinks: (plan: LinkPlan) => Promise<void>;
   onAddItem: (r: AddItemResult) => Promise<void>;
 };
 
-type BudgetView = 'master' | 'month' | 'expenses';
+type BudgetView = 'master' | 'month';
 
 /** The ⋯ menu on a budget line. */
 function LineMenu({ l, hasTask, onEdit, onCalendar, onLaunch, onTask, onRecalc, onRemove }: { l: BudgetLine; hasTask: boolean; onEdit: () => void; onCalendar: () => void; onLaunch: () => void; onTask: () => void; onRecalc: () => void; onRemove: () => void }) {
@@ -148,7 +146,7 @@ export function BudgetPage(p: Props) {
   const [view, setViewState] = useState<BudgetView>(() => {
     try {
       const v = localStorage.getItem('launchpage.budget.view');
-      return v === 'expenses' || v === 'month' ? v : 'master';
+      return v === 'month' ? v : 'master';
     } catch {
       return 'master';
     }
@@ -295,13 +293,10 @@ export function BudgetPage(p: Props) {
           <button type="button" aria-pressed={view === 'month'} title="Only what lands this month" onClick={() => setView('month')}>
             Month
           </button>
-          <button type="button" aria-pressed={view === 'expenses'} onClick={() => setView('expenses')}>
-            Expenses
-          </button>
         </div>
         <div className="panel-actions">
-          <SearchToggle value={q} onChange={setQ} placeholder={view === 'expenses' ? 'Search expenses' : 'Search the budget'} />
-          {view !== 'expenses' && (
+          <SearchToggle value={q} onChange={setQ} placeholder="Search the budget" />
+          {(
             <button type="button" className="icon-btn tool-btn" aria-label="Add item" title="Add item: a budget line, a task, or both linked" onClick={() => setAdding(true)}>
             <Icon d={PLUS} />
           </button>
@@ -356,7 +351,6 @@ export function BudgetPage(p: Props) {
         </p>
       )}
       {view === 'month' && <BudgetMonth month={month} onMonth={setMonth} lines={p.lines} expenses={p.expenses} linkedIds={linkedIds} search={q} onEdit={setEditing} menu={lineMenu} />}
-      {view === 'expenses' && <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} />}
 
       {view === 'master' && p.lines.length > 0 && (
         <div className="budget-stats" aria-label="A month of spending">

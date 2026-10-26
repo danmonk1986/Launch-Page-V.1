@@ -9,7 +9,8 @@ const PAGES: { id: PageId; label: string }[] = [
   { id: 'days26', label: '26 Days' },
   { id: 'tasks', label: 'Tasks' },
   { id: 'budget', label: 'Budget' },
-  { id: 'invoices', label: 'Invoices' }
+  // Records (Oct 26): Expenses + Invoices; the id stays 'invoices' so saved card rockets keep working.
+  { id: 'invoices', label: 'Records' }
 ];
 
 type Props = {

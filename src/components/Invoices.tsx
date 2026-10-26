@@ -1,5 +1,6 @@
-import { Fragment, useId, useMemo, useState } from 'react';
+import { Fragment, useId, useMemo, useState, type ReactNode } from 'react';
 import { FormActions, Sheet } from './Sheet';
+import { AmountInput } from './AmountInput';
 import { Icon } from './Tasks';
 import {
   daysByMonth,
@@ -32,6 +33,9 @@ type Props = {
   onDeleteCustomer: (id: string) => Promise<void>;
   onSaveProfile: (p: InvoiceProfile) => Promise<void>;
   onClose: () => void;
+  /** Records (Oct 26): the page title and the Expenses | Invoices switch. */
+  title?: string;
+  views?: ReactNode;
 };
 
 const shortDate = (s: string | null) => (s ? new Date(`${s}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '');
@@ -60,11 +64,12 @@ export function InvoicesPage(p: Props) {
   const customer = (id: string | null) => p.customers.find((c) => c.id === id) ?? null;
 
   return (
-    <section className="panel panel-budget" aria-labelledby="h-invoices">
+    <section className="panel panel-budget panel-records" aria-labelledby="h-invoices">
       <div className="panel-head">
         <h2 id="h-invoices" className="panel-title">
-          Invoices
+          {p.title ?? 'Invoices'}
         </h2>
+        {p.views}
         <div className="panel-actions">
           <button type="button" className="icon-btn tool-btn" aria-label="New invoice" title="New invoice" onClick={() => setEditing(newInvoice(p.invoices.length))}>
             <Icon d={PLUS} />
@@ -196,35 +201,9 @@ export function InvoicesPage(p: Props) {
   );
 }
 
-function num(v: string): number | null {
-  const x = Number(v.replace(/[$,\s]/g, ''));
-  return v.trim() === '' || !isFinite(x) ? null : x;
-}
 
-/**
- * A money/number box that keeps what you type ("1." while typing 1.20) and hands back the number.
- * Oct 22: the boxes showed the parsed number, so the decimal point vanished as you typed it.
- */
-function NumInput({ value, onChange, placeholder, label }: { value: number | null; onChange: (n: number | null) => void; placeholder?: string; label?: string }) {
-  const [text, setText] = useState(value === null ? '' : String(value));
-  // A value set from outside (Use last) shows; one we just typed stays as typed.
-  if (num(text) !== value && !(text.trim() === '' && value === null)) {
-    const next = value === null ? '' : String(value);
-    if (next !== text) setText(next);
-  }
-  return (
-    <input
-      inputMode="decimal"
-      aria-label={label}
-      value={text}
-      placeholder={placeholder}
-      onChange={(e) => {
-        setText(e.target.value);
-        onChange(num(e.target.value));
-      }}
-    />
-  );
-}
+/** Money boxes take a number or a formula (=12*8): see AmountInput. */
+const NumInput = AmountInput;
 
 function InvoiceForm({
   invoice,
