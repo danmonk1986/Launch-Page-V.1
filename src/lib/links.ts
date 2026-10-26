@@ -24,6 +24,18 @@ const amountOf = (expense: string) => {
   return expense && Number.isFinite(n) ? n : null;
 };
 
+/**
+ * The task a budget line should use instead of making a new one (no duplicates): the one already
+ * linked to it, else a live, unlinked task with the same name.
+ */
+export function taskFor(l: BudgetLine, tasks: Task[]): Task | undefined {
+  const linked = tasks.find((t) => t.budgetLineId === l.id && !t.deletedAt);
+  if (linked) return linked;
+  const n = norm(l.description);
+  if (!n) return undefined;
+  return tasks.find((t) => live(t) && !t.budgetLineId && norm(t.task) === n);
+}
+
 export interface LinkPlan {
   /** Duplicates going to Recently deleted. */
   remove: Task[];

@@ -7,7 +7,7 @@ import { ExpensesView, thisMonth } from './Expenses';
 import { BudgetMonth } from './BudgetMonth';
 import { AddItemForm, type AddItemResult } from './AddItem';
 import type { Expense } from '../lib/expenses';
-import { fromLine, planLinks, type LinkPlan } from '../lib/links';
+import { fromLine, planLinks, taskFor, type LinkPlan } from '../lib/links';
 import { newTask, type Task } from '../lib/tasks';
 import { describeRepeat, readRepeat, writeRepeat } from '../lib/repeat';
 import type { Project } from '../lib/projects';
@@ -131,6 +131,8 @@ export function BudgetPage(p: Props) {
   const [linking, setLinking] = useState(false);
   const [adding, setAdding] = useState(false);
   // The linked task whose form is open, and whether it was just made.
+  // One Add a task at a time (a double tap made two tasks).
+  const busy = useRef(false);
   const [taskOpen, setTaskOpen] = useState<{ task: Task; fresh: boolean } | null>(null);
   // Budget | Expenses (LP-030), remembered on this device.
   const [view, setViewState] = useState<BudgetView>(() => {
@@ -198,11 +200,21 @@ export function BudgetPage(p: Props) {
   };
   /** ⋯ → Add a task: a linked task from the line, then its form. A linked line goes to its task. */
   async function openTaskFor(l: BudgetLine) {
-    const have = p.tasks.find((t) => t.budgetLineId === l.id && !t.deletedAt);
-    if (have) return p.onGoToTask(have.id);
+    if (busy.current) return;
+    const have = taskFor(l, p.tasks);
+    if (have?.budgetLineId === l.id) return p.onGoToTask(have.id);
+    busy.current = true;
+    if (have) {
+      // A task with the same name already exists: link that one rather than adding a second.
+      const t = fromLine(have, l);
+      await p.onSaveTask(t);
+      busy.current = false;
+      return setTaskOpen({ task: t, fresh: false });
+    }
     const base = newTask(p.tasks.reduce((m, t) => Math.max(m, t.sort + 1), 0), projectFor(l.project)?.id ?? null);
     const t = fromLine({ ...base, status: 'PENDING', description: l.category || l.pmtCategory || '', notes: l.notes }, l);
     await p.onSaveTask(t);
+    busy.current = false;
     setTaskOpen({ task: t, fresh: true });
   }
   const linkedIds = new Set(p.tasks.filter((t) => t.budgetLineId && !t.deletedAt).map((t) => t.budgetLineId!));
@@ -464,9 +476,15 @@ export function BudgetPage(p: Props) {
             tasks={p.tasks}
             projects={p.projects}
             onSave={async (r) => {
-              await p.onAddItem(r);
+              if (busy.current) return;
+              busy.current = true;
+              // A task with this name already in Tasks gets linked instead of a second one.
+              const same = r.task ? taskFor(r.line, p.tasks) : undefined;
+              const task = same ? { ...fromLine(same, r.line), projectId: same.projectId ?? r.task!.projectId } : r.task;
+              await p.onAddItem({ line: r.line, task });
+              busy.current = false;
               setAdding(false);
-              if (r.task) setTaskOpen({ task: r.task, fresh: true });
+              if (task) setTaskOpen({ task, fresh: !same });
             }}
           />
         )}
