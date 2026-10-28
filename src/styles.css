@@ -2253,14 +2253,8 @@ select.status-pick option { background: var(--surface-solid); color: var(--text,
 /* Oct 28: the Status pick fits THREE / ON DECK / PENDING with its arrow */
 select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-width: 96px; background-position: right 8px center !important; background-size: 12px !important; }
 
-/* V12-040 · the row you're on: its item underlines in teal (every table: Tasks, Budget, Records, and new ones). */
+/* V12-040 · the row you're on: a teal line under the whole row, like the line under the header (every table: Tasks, Budget, Records, and new ones). */
 @media (hover: hover) {
-  .task-table .task-row:hover .task-name,
-  .task-table .task-row:hover .item-name {
-    text-decoration: underline;
-    text-decoration-color: var(--row-hover-line, var(--accent-teal));
-    text-decoration-thickness: 2px;
-    text-underline-offset: 4px;
-  }
+  .task-table .task-row:hover td { box-shadow: inset 0 -2px 0 var(--row-hover-line, var(--accent-teal)); }
 }
 .app[data-tone='light'] { --row-hover-line: #3f8f80; }
