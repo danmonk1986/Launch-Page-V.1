@@ -39,16 +39,8 @@ export function TasksMonth(p: {
     if (repeatOf(t).kind === 'none') return t.done ? 'DONE' : 'DUE';
     return '';
   };
-  const paid = rows.filter((r) => statusOf(r.task) === 'PAID').length;
-  const bills = rows.filter((r) => r.task.budgetLineId).length;
   return (
     <div className="budget-month tasks-month">
-      <div className="expenses-bar">
-        <span className="tasks-month-count">
-          {rows.length} in {monthLabel(p.month)}
-          {bills > 0 && ` · bills paid ${paid} of ${bills}`}
-        </span>
-      </div>
       {rows.length === 0 ? (
         <p className="panel-empty">Nothing lands in {monthLabel(p.month)}.</p>
       ) : (
