@@ -2240,3 +2240,5 @@ select:not([multiple]) {
 .amount-input input { width: 100%; }
 .amount-preview { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-family: var(--font-mono); font-size: 12px; color: var(--accent-teal); pointer-events: none; }
 .amount-preview.is-bad { color: var(--dim); }
+.panel-head .view-toggle { margin-right: auto; margin-left: 14px; width: 40px; height: 40px; }
+.panel-head .view-toggle { margin-right: auto; margin-left: 14px; width: 40px; height: 40px; }

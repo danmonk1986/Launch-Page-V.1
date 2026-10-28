@@ -120,7 +120,7 @@ export function AddItemForm(p: {
           <span>Project</span>
           <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
             <option value="">—</option>
-            {p.projects.map((x) => (
+            {[...p.projects].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map((x) => (
               <option key={x.id} value={x.id}>
                 {x.name}
               </option>
@@ -148,7 +148,7 @@ export function AddItemForm(p: {
               <span>Budget category</span>
               <select value={category} onChange={(e) => setCategory(e.target.value)}>
                 <option value="">—</option>
-                {BUDGET_CATEGORIES.map((c) => (
+                {[...BUDGET_CATEGORIES].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>

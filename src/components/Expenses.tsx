@@ -210,8 +210,8 @@ function ExpenseForm({
   const [err, setErr] = useState('');
   const formId = useId();
   const set = (patch: Partial<Expense>) => setD((x) => ({ ...x, ...patch }));
-  const cats = [...new Set([...BUDGET_CATEGORIES, d.category].filter(Boolean))];
-  const types = [...new Set([...PMT_TYPES, d.type].filter(Boolean))];
+  const cats = [...new Set([...BUDGET_CATEGORIES, d.category].filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  const types = [...new Set([...PMT_TYPES, d.type].filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   return (
     <form
       id={formId}

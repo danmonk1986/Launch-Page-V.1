@@ -36,6 +36,19 @@ type Common = {
   onDelete: (id: string) => Promise<void>;
 };
 
+const LIST_ICON = 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01';
+const CAL_ICON = 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16M9 3v4M15 3v4';
+
+/** Oct 28: one square button flips a page between its list and Month (calendar) views. */
+export function ViewToggle({ month, listName, onToggle }: { month: boolean; listName: string; onToggle: () => void }) {
+  const label = month ? `Month view: tap for ${listName}` : `${listName}: tap for Month view`;
+  return (
+    <button type="button" className="icon-btn tool-btn view-toggle" aria-label={label} title={label} onClick={onToggle}>
+      <Icon d={month ? CAL_ICON : LIST_ICON} size={18} />
+    </button>
+  );
+}
+
 export function Icon({ d, size = 16 }: { d: string; size?: number }) {
   return (
     <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -647,14 +660,7 @@ export function TasksPage(
         <h2 id="h-tasks-page" className="panel-title">
           Tasks
         </h2>
-        <div className="d26-range budget-views" role="group" aria-label="View">
-          <button type="button" aria-pressed={layout === 'list'} title="Everything, by status" onClick={() => setLayout('list')}>
-            List
-          </button>
-          <button type="button" aria-pressed={layout === 'month'} title="Only what lands this month" onClick={() => setLayout('month')}>
-            Month
-          </button>
-        </div>
+        <ViewToggle month={layout === 'month'} listName="List" onToggle={() => setLayout(layout === 'month' ? 'list' : 'month')} />
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder="Search tasks" />
           <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={editor.add}>

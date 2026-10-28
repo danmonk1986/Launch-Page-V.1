@@ -83,7 +83,7 @@ export function BudgetMonth(p: {
             <thead>
               <tr>
                 <th className="col-date">Date</th>
-                <th className="col-task">Item</th>
+                <th className="col-task">Line item</th>
                 <th>Repeats</th>
                 <th className="col-amount">Planned</th>
                 <th className="col-amount">Spent</th>

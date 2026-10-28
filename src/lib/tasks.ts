@@ -235,9 +235,10 @@ export function groupTasks(list: Task[], today: Date) {
     if (underParent && !(t.deletedAt && !deleted.has(t.parentId!))) continue;
     out[sectionOf(t, today)].push(t);
   }
-  const byDate = (a: Task, b: Task) =>
-    (a.endDate ?? '9999').localeCompare(b.endDate ?? '9999') || (a.atTime ?? '99').localeCompare(b.atTime ?? '99') || a.sort - b.sort;
-  for (const k of Object.keys(out) as Section[]) out[k].sort(byDate);
+  // Oct 28: every group reads A-Z (Task, then Description); steps stay in their own order.
+  const az = (x: string, y: string) => x.localeCompare(y, undefined, { sensitivity: 'base' });
+  const byName = (a: Task, b: Task) => az(a.task, b.task) || az(a.description, b.description) || a.sort - b.sort;
+  for (const k of Object.keys(out) as Section[]) out[k].sort(byName);
   return out;
 }
 

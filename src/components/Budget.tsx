@@ -1,6 +1,6 @@
 import { useId, useMemo, useRef, useState } from 'react';
 import { FormActions, Sheet } from './Sheet';
-import { Icon, SearchToggle, TaskSheet } from './Tasks';
+import { Icon, SearchToggle, TaskSheet, ViewToggle } from './Tasks';
 import { TitleCombo, useOpensUp } from './Launchers';
 import { RepeatPicker } from './RepeatPicker';
 import { thisMonth } from './Expenses';
@@ -164,7 +164,7 @@ export function BudgetPage(p: Props) {
 
   const bySection = useMemo(() => {
     const g = {} as Record<BudgetSection, BudgetLine[]>;
-    for (const s of BUDGET_SECTIONS) g[s.id] = p.lines.filter((l) => l.section === s.id).sort((a, b) => a.sort - b.sort);
+    for (const s of BUDGET_SECTIONS) g[s.id] = p.lines.filter((l) => l.section === s.id).sort((a, b) => a.description.localeCompare(b.description, undefined, { sensitivity: 'base' }));
     return g;
   }, [p.lines]);
   const [groupBy, setGroupByState] = useState<BudgetGroupBy>(() => {
@@ -300,14 +300,7 @@ export function BudgetPage(p: Props) {
         <h2 id="h-budget" className="panel-title">
           Budget
         </h2>
-        <div className="d26-range budget-views" role="group" aria-label="View">
-          <button type="button" aria-pressed={view === 'master'} title="Every line and its repeat" onClick={() => setView('master')}>
-            Master
-          </button>
-          <button type="button" aria-pressed={view === 'month'} title="Only what lands this month" onClick={() => setView('month')}>
-            Month
-          </button>
-        </div>
+        <ViewToggle month={view === 'month'} listName="Master" onToggle={() => setView(view === 'month' ? 'master' : 'month')} />
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder="Search the budget" />
           {(
@@ -406,7 +399,7 @@ export function BudgetPage(p: Props) {
               <tr>
                 <th className="col-project">Project</th>
                 <th className="col-date">Date</th>
-                <th className="col-task">Item</th>
+                <th className="col-task">Line item</th>
                 <th className="col-center">Method</th>
                 <th className="col-center">Type</th>
                 <th className="col-center">Category</th>
@@ -700,8 +693,8 @@ function LineForm({
   const [err, setErr] = useState('');
   const formId = useId();
   const set = (patch: Partial<BudgetLine>) => setD((x) => ({ ...x, ...patch }));
-  const cats = [...new Set([...BUDGET_CATEGORIES, d.category].filter(Boolean))];
-  const types = [...new Set([...PMT_TYPES, d.type].filter(Boolean))];
+  const cats = [...new Set([...BUDGET_CATEGORIES, d.category].filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  const types = [...new Set([...PMT_TYPES, d.type].filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   return (
     <form
       id={formId}
@@ -735,7 +728,7 @@ function LineForm({
           <TitleCombo value={d.project} titles={projects} required={false} placeholder="APP SHOP" onChange={(project) => set({ project })} list="budget:project" />
         </div>
         <label className="field budget-wide">
-          <span>Item</span>
+          <span>Line item</span>
           <input value={d.description} autoFocus={isNew} required placeholder="Minto International Rent" onChange={(e) => set({ description: e.target.value })} />
         </label>
         <MoneyField value={{ amount: d.amount, foreign: d.foreign ?? null, currency: d.currency || 'CAD' }} onChange={(m) => set({ amount: m.amount, foreign: m.currency === 'CAD' ? null : m.foreign, currency: m.currency === 'CAD' ? '' : m.currency })} />
