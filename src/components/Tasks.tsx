@@ -14,6 +14,7 @@ import {
   isRecurring,
   newStep,
   newTask,
+  taskName,
   OLD_REPEAT_STATUSES,
   repeatOf,
   SECTIONS,
@@ -134,7 +135,7 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
         className="quick-btn quick-skip task-quick"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`More for ${t.task}`}
+        aria-label={`More for ${taskName(t)}`}
         title="More"
         onClick={() => setOpen((o) => !o)}
       >
@@ -228,7 +229,7 @@ function RowActions({ t, act, checked }: { t: Task; act: Actions; checked: boole
           type="button"
           className="quick-btn quick-done task-quick"
           aria-pressed={checked}
-          aria-label={checked ? `Undo done: ${t.task}` : `Check off ${t.task}`}
+          aria-label={checked ? `Undo done: ${taskName(t)}` : `Check off ${taskName(t)}`}
           title={checked ? 'Undo' : 'Done'}
           onClick={() => act.toggle(t)}
         >
@@ -249,10 +250,11 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
       <td className="col-task">
         <span className="task-cell">
           <button type="button" className="task-name" onClick={() => act.open(t)}>
-            {t.task}
+            {t.task || t.description}
+            {!step && t.task && t.description && <span className="task-desc-inline"> · {t.description}</span>}
           </button>
           {!step && (
-            <button type="button" className="step-add" aria-label={`Add a step under ${t.task}`} title="Add a step" onClick={() => act.addStep(t)}>
+            <button type="button" className="step-add" aria-label={`Add a step under ${taskName(t)}`} title="Add a step" onClick={() => act.addStep(t)}>
               +
             </button>
           )}
@@ -390,7 +392,7 @@ export function TaskSheet(p: { task: Task | null; title: string; tasks: Task[]; 
           isNew={false}
           isStep={false}
           existingSteps={stepsByParent(p.tasks).get(t.id) ?? []}
-          descriptions={[...new Set(p.tasks.map((x) => x.description.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
+          descriptions={[...new Set(p.tasks.filter((x) => !x.parentId && !x.deletedAt).map((x) => x.task.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
           projects={p.projects}
           onCancel={p.onClose}
           onSave={async (next, newSteps) => {
@@ -459,7 +461,7 @@ function useTaskEditor(p: EditorProps) {
   const sheet = (
     <>
     {askSheet}
-    <Sheet open={open} title={parent ? (isNew ? `Add a step to ${parent.task}` : 'Edit step') : isNew ? 'Add task' : 'Edit task'} onClose={() => setOpen(false)} wide>
+    <Sheet open={open} title={parent ? (isNew ? `Add a step to ${taskName(parent)}` : 'Edit step') : isNew ? 'Add task' : 'Edit task'} onClose={() => setOpen(false)} wide>
       {editing && (
         <TaskForm
           key={editing.id}
@@ -467,7 +469,7 @@ function useTaskEditor(p: EditorProps) {
           isNew={isNew}
           isStep={!!editing.parentId}
           existingSteps={stepsByParent(p.tasks).get(editing.id) ?? []}
-          descriptions={[...new Set(p.tasks.map((x) => x.description.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
+          descriptions={[...new Set(p.tasks.filter((x) => !x.parentId && !x.deletedAt).map((x) => x.task.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
           projects={p.projects}
           onCancel={() => setOpen(false)}
           onSave={async (t, newSteps) => {
@@ -787,7 +789,14 @@ function TaskForm({
       </div>
       <label className="field">
         <span>{isStep ? 'Step' : 'Task'}</span>
-        <input required value={d.task} onChange={(e) => set('task', e.target.value)} placeholder={isStep ? 'Next step' : 'Relocate Brand Shop'} />
+        <input required={isStep || !d.description.trim()} list={isStep ? undefined : 'task-kinds'} autoComplete="off" value={d.task} onChange={(e) => set('task', e.target.value)} placeholder={isStep ? 'Next step' : "General: EOM BILL, Appointment… new, or pick one you've used"} />
+        {!isStep && (
+          <datalist id="task-kinds">
+            {descriptions.map((x) => (
+              <option key={x} value={x} />
+            ))}
+          </datalist>
+        )}
       </label>
       {!isStep && (
         <div className="field steps-field">
@@ -826,18 +835,7 @@ function TaskForm({
       )}
       <label className="field">
         <span>Description</span>
-        <input
-          list="task-descriptions"
-          autoComplete="off"
-          value={d.description}
-          onChange={(e) => set('description', e.target.value)}
-          placeholder="New, or pick one you've used"
-        />
-        <datalist id="task-descriptions">
-          {descriptions.map((x) => (
-            <option key={x} value={x} />
-          ))}
-        </datalist>
+        <input autoComplete="off" value={d.description} onChange={(e) => set('description', e.target.value)} placeholder="Specific: Wix, Dentist, Minto Rent" />
       </label>
       <div className="time-grid">
         <label className="field">

@@ -9,7 +9,7 @@ import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
 import { budgetStore, type BudgetLine } from './lib/budget';
 import { expenseFromLine, expenseStore, type Expense } from './lib/expenses';
-import { fromLine, type LinkPlan } from './lib/links';
+import { billName, fromLine, type LinkPlan } from './lib/links';
 import type { AddItemResult } from './components/AddItem';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
@@ -58,7 +58,7 @@ import { buildJournalImport, byNewest, checkinsOf, journalStore, newEntry, withC
 import { JournalPanel } from './components/Journal';
 import { Sheet } from './components/Sheet';
 import { RitualRunner } from './components/Rituals';
-import { buildImport, repeatOf, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
+import { buildImport, repeatOf, taskName, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
 import { addTaskToGoogle, googleConfigured, knownCalendars, wasConnected } from './lib/google';
 import {
   isDue,
@@ -419,7 +419,7 @@ export default function App() {
   }
   const eventOps = ops(eventStore, events, setEvents, (e) => e.title);
   const projectOps = ops(projectStore, projects, setProjects, (p) => p.name);
-  const taskOps = ops(taskStore, tasks, setTasks, (t) => t.task);
+  const taskOps = ops(taskStore, tasks, setTasks, (t) => taskName(t));
   const nonNegOps = ops(nonNegStore, nonnegs, setNonnegs, (n) => n.label);
   // Meditations save from the newest copy (several can change in one ritual save).
   const medsRef = useRef(meditations);
@@ -502,7 +502,7 @@ export default function App() {
         setStatus(`${line.description}: paid, added to Expenses.`);
       } else if (oldDay && !newDay) {
         for (const e of expRef.current.filter((x) => x.taskId === t.id && x.date === oldDay)) await removeExpense(e.id);
-        setStatus(`${t.task}: taken back out of Expenses.`);
+        setStatus(`${taskName(t)}: taken back out of Expenses.`);
       }
     }
   }
@@ -511,8 +511,11 @@ export default function App() {
     const line = t.budgetLineId ? budget.find((l) => l.id === t.budgetLineId) : undefined;
     if (!line || t.deletedAt) return;
     const rep = writeRepeat(repeatOf(t));
-    const next: BudgetLine = { ...line, description: t.task.trim() || line.description, repeat: rep, date: rep ? line.date : t.endDate ?? line.date };
+    const next: BudgetLine = { ...line, description: t.description.trim() || line.description, repeat: rep, date: rep ? line.date : t.endDate ?? line.date };
     if (next.description !== line.description || (next.repeat ?? null) !== (line.repeat ?? null) || next.date !== line.date) await budgetOps.save(next);
+    // A new repeat can change the kind of bill (MM / EOM / ANN…).
+    const kind = billName(next);
+    if (kind !== t.task) await taskOps.save({ ...t, task: kind });
   }
   const saveTask = async (t: Task) => {
     await taskOps.save(t);
@@ -540,7 +543,7 @@ export default function App() {
   async function addItem(r: AddItemResult) {
     if (r.line) await budgetOps.save(r.line);
     if (r.task) await taskOps.save(r.task);
-    const name = r.task?.task ?? r.line?.description ?? 'Item';
+    const name = r.line?.description ?? (r.task ? taskName(r.task) : 'Item');
     setStatus(r.task && r.line ? `${name} added to Tasks and Budget, linked.` : r.task ? `${name} added to Tasks.` : `${name} added to Budget.`);
   }
   /** Link and dedupe (LP-030 step 3): one save for every task it touches. */
@@ -803,14 +806,14 @@ export default function App() {
     try {
       const id = await addTaskToGoogle({
         calendarId,
-        title: t.task,
+        title: taskName(t),
         date,
         time: t.atTime,
         details: [t.description, t.link].filter(Boolean).join('\n')
       });
       await taskOps.save({ ...t, googleEventId: id });
       const cal = knownCalendars().find((c) => c.id === calendarId)?.summary ?? 'your calendar';
-      setStatus(`${t.task} added to ${cal} on ${new Date(`${date}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`);
+      setStatus(`${taskName(t)} added to ${cal} on ${new Date(`${date}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`);
     } catch (err) {
       setStatus((err as Error).message || 'Could not add it to Google Calendar.');
     }
@@ -845,7 +848,7 @@ export default function App() {
     setPage('launch');
     setTimedPreset({
       fill: {
-        title: t.task,
+        title: taskName(t),
         atTime: t.atTime ?? '09:30',
         repeat: monthly ? 'monthly' : weekly ? 'weekly' : 'once',
         weekdays: weekly ? rep.days : [],

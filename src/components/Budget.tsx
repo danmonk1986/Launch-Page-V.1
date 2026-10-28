@@ -10,7 +10,7 @@ import { BudgetMonth } from './BudgetMonth';
 import { AddItemForm, type AddItemResult } from './AddItem';
 import type { Expense } from '../lib/expenses';
 import { fromLine, planLinks, taskFor, type LinkPlan } from '../lib/links';
-import { newTask, type Task } from '../lib/tasks';
+import { newTask, taskName, type Task } from '../lib/tasks';
 import { describeRepeat, readRepeat, writeRepeat } from '../lib/repeat';
 import type { Project } from '../lib/projects';
 import {
@@ -220,7 +220,7 @@ export function BudgetPage(p: Props) {
       return setTaskOpen({ task: t, fresh: false });
     }
     const base = newTask(p.tasks.reduce((m, t) => Math.max(m, t.sort + 1), 0), projectFor(l.project)?.id ?? null);
-    const t = fromLine({ ...base, status: 'PENDING', description: l.category || l.pmtCategory || '', notes: l.notes }, l);
+    const t = fromLine({ ...base, status: 'PENDING', notes: l.notes }, l);
     await p.onSaveTask(t);
     busy.current = false;
     setTaskOpen({ task: t, fresh: true });
@@ -553,7 +553,7 @@ export function BudgetPage(p: Props) {
                 <ul>
                   {linkPlan.linked.map(({ task, line }) => (
                     <li key={task.id}>
-                      <strong>{line.description}</strong> ← {p.tasks.find((t) => t.id === task.id)?.task ?? task.task}
+                      <strong>{line.description}</strong> ← {taskName(p.tasks.find((t) => t.id === task.id) ?? task)}
                     </li>
                   ))}
                 </ul>

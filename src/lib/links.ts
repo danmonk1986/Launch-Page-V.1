@@ -1,6 +1,7 @@
 import type { BudgetLine } from './budget';
 import { readRepeat, writeRepeat } from './repeat';
 import { newTask, repeatOf, type Task } from './tasks';
+import { lineRepeat as repeatForLine } from './expenses';
 
 /**
  * Budget ↔ Tasks linking (LP-030 step 3, Oct 25).
@@ -33,7 +34,29 @@ export function taskFor(l: BudgetLine, tasks: Task[]): Task | undefined {
   if (linked) return linked;
   const n = norm(l.description);
   if (!n) return undefined;
-  return tasks.find((t) => live(t) && !t.budgetLineId && norm(t.task) === n);
+  return tasks.find((t) => live(t) && !t.budgetLineId && (norm(t.description) === n || norm(t.task) === n));
+}
+
+/**
+ * Oct 28: a bill's Task says what kind of bill it is (general); its Description is the line item
+ * (specific). Monthly bills due the 1st–15th are MM BILL, the 16th to the last day EOM BILL.
+ */
+export function billName(l: BudgetLine): string {
+  const r = repeatForLine(l);
+  if (r.kind === 'monthly') return midOrEnd(r.rule);
+  if (r.kind === 'quarterly') return 'QTR BILL';
+  if (r.kind === 'annual') return 'ANN BILL';
+  if (r.kind === 'weekly') return 'WK BILL';
+  if (l.section === 'planned') return 'PLAN EXP';
+  if (l.section === 'annual') return 'ANN BILL';
+  return 'EOM BILL';
+}
+function midOrEnd(rule: string): string {
+  const r = rule.trim().toUpperCase();
+  const day = r.match(/^(\d+)/);
+  if (day) return Number(day[1]) <= 15 ? 'MM BILL' : 'EOM BILL';
+  if (/^(1ST|2ND)\b/.test(r)) return 'MM BILL';
+  return 'EOM BILL';
 }
 
 export interface LinkPlan {
@@ -52,7 +75,8 @@ export function fromLine(t: Task, l: BudgetLine): Task {
   const rep = readRepeat(l.repeat);
   return {
     ...t,
-    task: l.description || t.task,
+    task: billName(l),
+    description: l.description || t.description,
     repeatRule: rep.kind === 'none' ? (l.date ? null : t.repeatRule) : writeRepeat(rep),
     // A repeating bill has no single due date; a one-off takes the line's date.
     endDate: rep.kind === 'none' ? l.date ?? t.endDate : null,
@@ -71,7 +95,7 @@ export function planLinks(lines: BudgetLine[], tasks: Task[], opts: { now: strin
   const groups = new Map<string, Task[]>();
   for (const t of tasks.filter(live)) {
     const k = dupKey(t);
-    if (!norm(t.task)) continue;
+    if (!norm(t.task) && !norm(t.description)) continue;
     groups.set(k, [...(groups.get(k) ?? []), t]);
   }
   const remove: Task[] = [];
@@ -94,7 +118,7 @@ export function planLinks(lines: BudgetLine[], tasks: Task[], opts: { now: strin
     if (ln.length < 3) continue;
     for (const t of pool) {
       if (taken.has(t.id)) continue;
-      const names = [norm(t.task), norm(t.linkLabel), norm(`${t.task}${t.linkLabel}`)].filter((x) => x.length >= 3);
+      const names = [norm(t.description), norm(t.task), norm(t.linkLabel), norm(`${t.description}${t.linkLabel}`)].filter((x) => x.length >= 3);
       const exact = names.some((n) => n === ln);
       const near = !exact && names.some((n) => n.includes(ln) || ln.includes(n));
       if (!exact && !near) continue;
@@ -130,7 +154,7 @@ export function planLinks(lines: BudgetLine[], tasks: Task[], opts: { now: strin
   const created: LinkPlan['created'] = [];
   for (const l of lines) {
     if (done.has(l.id) || l.section === 'variable' || !l.description.trim()) continue;
-    const t = fromLine({ ...newTask(sort++, opts.projectFor(l.project)), status: 'PENDING', description: l.category || l.pmtCategory || '', notes: l.notes }, l);
+    const t = fromLine({ ...newTask(sort++, opts.projectFor(l.project)), status: 'PENDING', notes: l.notes }, l);
     created.push({ task: t, line: l });
     done.add(l.id);
   }

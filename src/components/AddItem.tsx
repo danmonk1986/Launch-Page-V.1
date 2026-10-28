@@ -6,6 +6,7 @@ import { RepeatPicker } from './RepeatPicker';
 import { BUDGET_CATEGORIES, BUDGET_SECTIONS, newBudgetLine, type BudgetLine, type BudgetSection } from '../lib/budget';
 import { MONTHS, NO_REPEAT, repeatOn, writeRepeat, type Repeat } from '../lib/repeat';
 import { newTask, type Task } from '../lib/tasks';
+import { billName } from '../lib/links';
 import type { Project } from '../lib/projects';
 
 export type AddItemResult = { task: Task | null; line: BudgetLine };
@@ -77,9 +78,9 @@ export function AddItemForm(p: {
     const task: Task | null = toTasks
       ? {
           ...newTask(p.tasks.reduce((m, t) => Math.max(m, t.sort + 1), 0), project?.id ?? null),
-          task: name.trim(),
+          task: billName(line),
           status: 'PENDING',
-          description: category,
+          description: name.trim(),
           endDate: rule ? null : date || null,
           repeatRule: rule,
           expense: other ? `${m.foreign} ${m.currency}` : m.amount === null ? '' : String(m.amount),

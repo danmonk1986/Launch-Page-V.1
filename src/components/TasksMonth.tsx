@@ -74,7 +74,8 @@ export function TasksMonth(p: {
                     <td className="col-date">{dates.length > 3 ? `${dayLabel(dates[0])} · ×${dates.length}` : dates.map(dayLabel).join(', ')}</td>
                     <td className="col-task">
                       <button type="button" className="task-name" onClick={() => p.onOpen(t)}>
-                        {t.task}
+                        {t.task || t.description}
+                        {t.task && t.description && <span className="task-desc-dim"> · {t.description}</span>}
                         {t.budgetLineId && <span className="expense-link" aria-label="linked to a budget line"> $$$</span>}
                       </button>
                     </td>

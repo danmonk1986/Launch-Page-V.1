@@ -2158,6 +2158,7 @@ select:not([multiple]) {
   .task-row .col-status { grid-area: status; }
   .task-row td.col-date:not(.col-start) { grid-area: due; text-align: left; font-family: var(--font-mono); font-size: 12px; color: var(--mist); }
   .task-row .col-actions { grid-area: act; }
+  .task-row .task-desc-inline { display: inline; }
   .task-row .col-desc, .task-row .col-link, .task-row .col-start, .task-row .col-time, .task-row .col-expense { display: none; }
   .task-table .chip { width: auto; max-width: 120px; }
   .task-row .timed-quick { flex-direction: row; }
@@ -2242,3 +2243,7 @@ select:not([multiple]) {
 .amount-preview.is-bad { color: var(--dim); }
 .panel-head .view-switch { margin-right: auto; margin-left: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .panel-head .view-toggle { width: 40px; height: 40px; }
+
+/* Oct 28: Task (general) · Description (specific) */
+.task-desc-inline { display: none; font-weight: 400; color: var(--mist); }
+.task-desc-dim { font-weight: 400; color: var(--mist); }

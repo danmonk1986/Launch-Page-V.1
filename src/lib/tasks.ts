@@ -136,6 +136,9 @@ export const taskStore = makeStore<Task, Row>({
   })
 });
 
+/** Oct 28: Task is general (EOM BILL, Appointment), Description specific (Wix, Dentist). Shown together. */
+export const taskName = (t: Pick<Task, 'task' | 'description'>) => [t.task.trim(), t.description.trim()].filter(Boolean).join(' · ') || 'Untitled';
+
 export function newTask(sort: number, projectId: string | null = null): Task {
   return {
     id: crypto.randomUUID(),
