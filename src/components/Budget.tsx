@@ -1,25 +1,23 @@
-import { useId, useMemo, useRef, useState } from 'react';
-import { FormActions, Sheet } from './Sheet';
+import { useMemo, useRef, useState } from 'react';
+import { Sheet } from './Sheet';
 import { Icon, SearchToggle, TaskSheet, ViewToggle } from './Tasks';
-import { TitleCombo, useOpensUp } from './Launchers';
-import { RepeatPicker } from './RepeatPicker';
+import { useOpensUp } from './Launchers';
 import { thisMonth } from './Expenses';
-import { MoneyField, settleMoney } from './MoneyField';
 import { originalLabel, rateToCad, toCad } from '../lib/currency';
 import { BudgetMonth } from './BudgetMonth';
-import { AddItemForm, type AddItemResult } from './AddItem';
+import { LineCard, type LinePicks } from './LineCard';
 import { lineDateKey, type Expense } from '../lib/expenses';
 import { fromLine, planLinks, taskFor, type LinkPlan } from '../lib/links';
 import { newTask, taskName, type Task } from '../lib/tasks';
-import { describeRepeat, readRepeat, writeRepeat } from '../lib/repeat';
+import { describeRepeat, readRepeat } from '../lib/repeat';
 import type { Project } from '../lib/projects';
 import {
   BUDGET_CATEGORIES,
   BUDGET_SECTIONS,
   GROUP_BY,
   groupKey,
-  PMT_TYPES,
   download,
+  newBudgetLine,
   linesFromFile,
   linesToCsv,
   money,
@@ -63,7 +61,6 @@ type Props = {
   /** Link and dedupe (LP-030 step 3). */
   tasks: Task[];
   onApplyLinks: (plan: LinkPlan) => Promise<void>;
-  onAddItem: (r: AddItemResult) => Promise<void>;
 };
 
 type BudgetView = 'master' | 'month';
@@ -225,6 +222,28 @@ export function BudgetPage(p: Props) {
     busy.current = false;
     setTaskOpen({ task: t, fresh: true });
   }
+  /**
+   * Oct 28 · line card save: the line, then its task. Every line has a linked task unless it's
+   * withheld (an existing task with the same name gets linked, not doubled); withholding a line
+   * that had one sends that task to Recently deleted.
+   */
+  async function saveLine(l: BudgetLine, withhold: boolean) {
+    if (busy.current) return;
+    busy.current = true;
+    try {
+      await p.onSave(l);
+      const linked = p.tasks.find((t) => t.budgetLineId === l.id && !t.deletedAt);
+      if (withhold && linked) await p.onSaveTask({ ...linked, budgetLineId: null, deletedAt: new Date().toISOString() });
+      if (!withhold && !linked) {
+        const same = taskFor(l, p.tasks);
+        const base = same ?? { ...newTask(p.tasks.reduce((m, t) => Math.max(m, t.sort + 1), 0), projectFor(l.project)?.id ?? null), status: 'PENDING', notes: l.notes };
+        await p.onSaveTask({ ...fromLine(base, l), projectId: base.projectId ?? projectFor(l.project)?.id ?? null });
+      }
+    } finally {
+      busy.current = false;
+    }
+  }
+
   /** ⋯ Recalc: a line priced in another currency gets today's CAD amount. */
   const [recalcNote, setRecalcNote] = useState('');
   async function recalc(l: BudgetLine) {
@@ -268,6 +287,17 @@ export function BudgetPage(p: Props) {
   };
   const linkedIds = new Set(p.tasks.filter((t) => t.budgetLineId && !t.deletedAt).map((t) => t.budgetLineId!));
   const picks = (f: (l: BudgetLine) => string) => [...new Set(p.lines.map(f).map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const linePicks: LinePicks = useMemo(() => {
+    const links = new Map<string, string>();
+    for (const x of [...p.tasks.filter((t) => !t.deletedAt), ...p.lines]) if ((x.linkLabel ?? '').trim() && (x.link ?? '').trim()) links.set(x.linkLabel!.trim(), x.link!.trim());
+    return {
+      projects: [...new Set([...picks((l) => l.project), ...p.projects.map((x) => x.name.replace(/^STARDVST\s+/i, ''))])].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+      methods: picks((l) => l.method),
+      pmtCategories: picks((l) => l.pmtCategory),
+      links: [...links].map(([label, link]) => ({ label, link })).sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }))
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.tasks, p.lines, p.projects]);
 
   const readFile = async (f: File) => {
     setImportError('');
@@ -304,7 +334,7 @@ export function BudgetPage(p: Props) {
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder="Search the budget" />
           {(
-            <button type="button" className="icon-btn tool-btn" aria-label="Add item" title="Add item: a budget line, a task, or both linked" onClick={() => setAdding(true)}>
+            <button type="button" className="icon-btn tool-btn" aria-label="Add line" title="Add a budget line (it goes to Tasks too, unless withheld)" onClick={() => setAdding(true)}>
             <Icon d={PLUS} />
           </button>
           )}
@@ -483,46 +513,33 @@ export function BudgetPage(p: Props) {
         </div>
       )}
 
-      <Sheet open={!!editing} title={editing && p.lines.some((l) => l.id === editing.id) ? 'Edit line' : 'Add a line'} onClose={() => setEditing(null)} wide>
-        {editing && (
-          <LineForm
-            key={editing.id}
-            line={editing}
-            isNew={!p.lines.some((l) => l.id === editing.id)}
-            projects={[...new Set([...picks((l) => l.project), ...p.projects.map((x) => x.name.replace(/^STARDVST\s+/i, ''))])].sort((a, b) => a.localeCompare(b))}
-            methods={picks((l) => l.method)}
-            pmtCategories={picks((l) => l.pmtCategory)}
-            onSave={async (l) => {
-              await p.onSave(l);
-              setEditing(null);
-            }}
-            onDelete={async (id) => {
-              await p.onDelete(id);
-              setEditing(null);
-            }}
-          />
-        )}
-      </Sheet>
-
-      <Sheet open={adding} title="Add item" onClose={() => setAdding(false)} wide>
-        {adding && (
-          <AddItemForm
-            lines={p.lines}
-            tasks={p.tasks}
-            projects={p.projects}
-            onSave={async (r) => {
-              if (busy.current) return;
-              busy.current = true;
-              // A task with this name already in Tasks gets linked instead of a second one.
-              const same = r.task ? taskFor(r.line, p.tasks) : undefined;
-              const task = same ? { ...fromLine(same, r.line), projectId: same.projectId ?? r.task!.projectId } : r.task;
-              await p.onAddItem({ line: r.line, task });
-              busy.current = false;
-              setAdding(false);
-              if (task) setTaskOpen({ task, fresh: !same });
-            }}
-          />
-        )}
+      <Sheet open={!!editing || adding} title={adding ? 'Add line' : 'Edit line'} onClose={() => (adding ? setAdding(false) : setEditing(null))} wide>
+        {(adding || editing) && (() => {
+          const line = adding ? newBudgetLine('planned', p.lines.reduce((m, l) => Math.max(m, l.sort + 1), 0)) : editing!;
+          const hasTask = p.tasks.some((t) => t.budgetLineId === line.id && !t.deletedAt);
+          return (
+            <LineCard
+              key={adding ? 'new' : line.id}
+              line={adding ? { ...line, type: '' } : line}
+              isNew={adding}
+              hasTask={hasTask}
+              picks={linePicks}
+              onSave={async (l, withhold) => {
+                await saveLine(l, withhold);
+                if (adding) setAdding(false);
+                else setEditing(null);
+              }}
+              onDelete={
+                adding
+                  ? undefined
+                  : async () => {
+                      await p.onDelete(line.id);
+                      setEditing(null);
+                    }
+              }
+            />
+          );
+        })()}
       </Sheet>
 
       <TaskSheet
@@ -672,112 +689,3 @@ export function BudgetPage(p: Props) {
   );
 }
 
-function LineForm({
-  line,
-  isNew,
-  projects,
-  methods,
-  pmtCategories,
-  onSave,
-  onDelete
-}: {
-  line: BudgetLine;
-  isNew: boolean;
-  projects: string[];
-  methods: string[];
-  pmtCategories: string[];
-  onSave: (l: BudgetLine) => void;
-  onDelete: (id: string) => void;
-}) {
-  const [d, setD] = useState(line);
-  const [err, setErr] = useState('');
-  const formId = useId();
-  const set = (patch: Partial<BudgetLine>) => setD((x) => ({ ...x, ...patch }));
-  const cats = [...new Set([...BUDGET_CATEGORIES, d.category].filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-  const types = [...new Set([...PMT_TYPES, d.type].filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-  return (
-    <form
-      id={formId}
-      className="task-form budget-form"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        if (!d.description.trim()) return;
-        setErr('');
-        let m = { amount: d.amount, foreign: d.foreign ?? null, currency: d.currency || 'CAD' };
-        try {
-          m = await settleMoney(m);
-        } catch (x) {
-          return setErr(x instanceof Error ? x.message : 'No rate right now.');
-        }
-        onSave({ ...d, amount: m.amount, description: d.description.trim(), project: d.project.trim(), method: d.method.trim(), pmtCategory: d.pmtCategory.trim().toUpperCase(), notes: d.notes.trim() });
-      }}
-    >
-      <div className="budget-grid">
-        <label className="field">
-          <span>Group</span>
-          <select value={d.section} onChange={(e) => set({ section: e.target.value as BudgetSection })}>
-            {BUDGET_SECTIONS.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.title}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="field">
-          <span>Project</span>
-          <TitleCombo value={d.project} titles={projects} required={false} placeholder="APP SHOP" onChange={(project) => set({ project })} list="budget:project" />
-        </div>
-        <label className="field budget-wide">
-          <span>Line item</span>
-          <input value={d.description} autoFocus={isNew} required placeholder="Minto International Rent" onChange={(e) => set({ description: e.target.value })} />
-        </label>
-        <MoneyField value={{ amount: d.amount, foreign: d.foreign ?? null, currency: d.currency || 'CAD' }} onChange={(m) => set({ amount: m.amount, foreign: m.currency === 'CAD' ? null : m.foreign, currency: m.currency === 'CAD' ? '' : m.currency })} />
-        <label className="field">
-          <span>Date</span>
-          <input type="date" value={d.date ?? ''} onChange={(e) => set({ date: e.target.value || null })} />
-        </label>
-        <RepeatPicker
-          value={readRepeat(d.repeat)}
-          from={d.date}
-          onChange={(r) => set({ repeat: writeRepeat(r) })}
-        />
-        <div className="field">
-          <span>Pmt method</span>
-          <TitleCombo value={d.method} titles={methods} required={false} placeholder="ATB" onChange={(method) => set({ method })} list="budget:method" />
-        </div>
-        <label className="field">
-          <span>Pmt type</span>
-          <select value={d.type} onChange={(e) => set({ type: e.target.value })}>
-            <option value="">—</option>
-            {types.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>Budget group</span>
-          <select value={d.category} onChange={(e) => set({ category: e.target.value })}>
-            <option value="">—</option>
-            {cats.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="field">
-          <span>Payment category</span>
-          <TitleCombo value={d.pmtCategory} titles={pmtCategories} required={false} placeholder="RENT" onChange={(pmtCategory) => set({ pmtCategory })} list="budget:pmt" />
-        </div>
-        <label className="field budget-wide">
-          <span>Notes</span>
-          <textarea rows={2} value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
-        </label>
-      </div>
-      {err && <p className="field-hint budget-over">{err}</p>}
-      <FormActions formId={formId} saveDisabled={!d.description.trim()} onDelete={isNew ? undefined : () => onDelete(d.id)} deleteLabel="this line" />
-    </form>
-  );
-}

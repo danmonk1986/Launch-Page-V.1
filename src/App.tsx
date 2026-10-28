@@ -11,7 +11,6 @@ import { budgetStore, newBudgetLine, type BudgetLine } from './lib/budget';
 import { rateToCad, toCad } from './lib/currency';
 import { expenseFromLine, expenseStore, type Expense } from './lib/expenses';
 import { billName, fromLine, moneyIn, sectionForTask, type LinkPlan } from './lib/links';
-import type { AddItemResult } from './components/AddItem';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
 import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
@@ -558,8 +557,8 @@ export default function App() {
     const line = t.budgetLineId ? budget.find((l) => l.id === t.budgetLineId) : undefined;
     if (!line || t.deletedAt) return;
     const rep = writeRepeat(repeatOf(t));
-    const next: BudgetLine = { ...line, description: t.description.trim() || line.description, repeat: rep, date: rep ? line.date : t.endDate ?? line.date };
-    if (next.description !== line.description || (next.repeat ?? null) !== (line.repeat ?? null) || next.date !== line.date) await budgetOps.save(next);
+    const next: BudgetLine = { ...line, description: t.description.trim() || line.description, repeat: rep, date: rep ? line.date : t.endDate ?? line.date, link: t.link, linkLabel: t.linkLabel };
+    if (next.description !== line.description || (next.repeat ?? null) !== (line.repeat ?? null) || next.date !== line.date || (next.link ?? '') !== (line.link ?? '') || (next.linkLabel ?? '') !== (line.linkLabel ?? '')) await budgetOps.save(next);
     // A new repeat can change the kind of bill (MM / EOM / ANN…).
     const kind = billName(next);
     if (kind !== t.task) await taskOps.save({ ...t, task: kind });
@@ -585,13 +584,6 @@ export default function App() {
     await budgetOps.remove(id);
     const linked = tasks.filter((t) => t.budgetLineId === id);
     if (linked.length) await taskOps.saveMany(linked.map((t) => ({ ...t, budgetLineId: null })));
-  }
-  /** Add item (LP-030 step 4): a task, a budget line, or both (already pointing at each other). */
-  async function addItem(r: AddItemResult) {
-    if (r.line) await budgetOps.save(r.line);
-    if (r.task) await taskOps.save(r.task);
-    const name = r.line?.description ?? (r.task ? taskName(r.task) : 'Item');
-    setStatus(r.task && r.line ? `${name} added to Tasks and Budget, linked.` : r.task ? `${name} added to Tasks.` : `${name} added to Budget.`);
   }
   /** Link and dedupe (LP-030 step 3): one save for every task it touches. */
   async function applyLinks(plan: LinkPlan) {
@@ -1342,7 +1334,6 @@ export default function App() {
               onReplace={replaceBudget}
               tasks={tasks}
               onApplyLinks={applyLinks}
-              onAddItem={addItem}
               expenses={expenses}
               onClose={() => setPage('launch')}
               onToCalendar={budgetToCalendar}

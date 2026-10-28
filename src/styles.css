@@ -2199,16 +2199,6 @@ select:not([multiple]) {
 .link-plan ul { margin: 8px 0 0; padding-left: 20px; max-height: 240px; overflow: auto; display: grid; gap: 4px; font-size: 14px; }
 .link-plan-dim { color: var(--dim); }
 
-/* LP-030 · Add item (Oct 25) */
-.add-item { display: grid; gap: 14px; }
-.add-item-goes .choice { min-width: 140px; }
-.add-item-box { border: 1px solid var(--edge); border-radius: 14px; padding: 12px 14px 14px; margin: 0; }
-.add-item-box legend { padding: 0 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mist); }
-.add-item-preview { margin: 0; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--accent-teal) 8%, transparent); font-size: 14px; }
-.add-item-preview strong { color: var(--accent-teal); }
-.add-item-more { justify-self: start; }
-.add-item .budget-grid > .field { align-self: start; }
-
 /* LP-030 · Budget Month (Oct 25) */
 .budget-month-table { min-width: 860px; }
 .budget-month-table .is-paid .task-name { color: var(--accent-teal); }

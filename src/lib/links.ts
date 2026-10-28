@@ -84,6 +84,9 @@ export function fromLine(t: Task, l: BudgetLine): Task {
     status: rep.kind === 'none' ? t.status : t.status === 'MTH RCR' || t.status === 'ANN RCR' ? 'PENDING' : t.status,
     // A price in another currency shows as the task's "1140 USD"; else the CAD amount.
     expense: l.currency && l.currency !== 'CAD' && l.foreign != null ? `${l.foreign} ${l.currency}` : l.amount === null ? t.expense : String(l.amount),
+    // The line's info link wins when it has one.
+    link: l.link?.trim() ? l.link : t.link,
+    linkLabel: l.linkLabel?.trim() ? l.linkLabel : t.linkLabel,
     budgetLineId: l.id
   };
 }

@@ -38,6 +38,9 @@ export interface BudgetLine {
   /** Priced in another currency (Oct 25): the original price, e.g. 15.69 USD; `amount` is the CAD. Columns from 0032. */
   foreign?: number | null;
   currency?: string;
+  /** Info link and its name (Oct 28), like a task's. Columns from 0034. */
+  link?: string;
+  linkLabel?: string;
 }
 
 export function newBudgetLine(section: BudgetSection, sort: number): BudgetLine {
@@ -60,6 +63,8 @@ type Row = {
   repeat_rule?: string | null;
   foreign_amount?: number | string | null;
   currency?: string | null;
+  link?: string | null;
+  link_label?: string | null;
 };
 
 export const budgetStore = makeStore<BudgetLine, Row>({
@@ -67,16 +72,18 @@ export const budgetStore = makeStore<BudgetLine, Row>({
   localKey: 'launchpage.budget.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0023_budget.sql',
-  latestScript: 'supabase/migrations/0032_currency.sql',
-  // Before 0032 is run: save without the original price (kept on this device until then).
+  latestScript: 'supabase/migrations/0034_budget_links_info.sql',
+  // Before 0032 / 0034 are run: save without the original price and info link (kept on this device until then).
   legacyRow: (r) => {
     const x = { ...r };
     delete x.foreign_amount;
     delete x.currency;
+    delete x.link;
+    delete x.link_label;
     return x;
   },
   seed: () => [],
-  toRow: (l) => ({ id: l.id, section: l.section, project: l.project, on_date: l.date, description: l.description, method: l.method, pmt_type: l.type, category: l.category, pmt_category: l.pmtCategory, amount: l.amount, notes: l.notes, sort: l.sort, ...(l.repeat !== undefined ? { repeat_rule: l.repeat } : {}), ...(l.currency ? { currency: l.currency, foreign_amount: l.foreign ?? null } : {}) }),
+  toRow: (l) => ({ id: l.id, section: l.section, project: l.project, on_date: l.date, description: l.description, method: l.method, pmt_type: l.type, category: l.category, pmt_category: l.pmtCategory, amount: l.amount, notes: l.notes, sort: l.sort, ...(l.repeat !== undefined ? { repeat_rule: l.repeat } : {}), ...(l.currency ? { currency: l.currency, foreign_amount: l.foreign ?? null } : {}), ...(l.link || l.linkLabel ? { link: l.link ?? '', link_label: l.linkLabel ?? '' } : {}) }),
   fromRow: (r) => ({
     id: r.id,
     section: (BUDGET_SECTIONS.some((s) => s.id === r.section) ? r.section : 'variable') as BudgetSection,
@@ -91,7 +98,8 @@ export const budgetStore = makeStore<BudgetLine, Row>({
     notes: r.notes ?? '',
     sort: r.sort ?? 0,
     ...(r.repeat_rule !== undefined ? { repeat: r.repeat_rule } : {}),
-    ...(r.currency ? { currency: r.currency, foreign: r.foreign_amount === null || r.foreign_amount === undefined || r.foreign_amount === '' ? null : Number(r.foreign_amount) } : {})
+    ...(r.currency ? { currency: r.currency, foreign: r.foreign_amount === null || r.foreign_amount === undefined || r.foreign_amount === '' ? null : Number(r.foreign_amount) } : {}),
+    ...(r.link || r.link_label ? { link: r.link ?? '', linkLabel: r.link_label ?? '' } : {})
   })
 });
 
