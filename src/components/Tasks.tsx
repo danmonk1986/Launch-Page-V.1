@@ -2,7 +2,7 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId } from 'r
 import { FormActions, Sheet } from './Sheet';
 import { useOpensUp } from './Launchers';
 import { TasksMonth } from './TasksMonth';
-import { thisMonth } from './Expenses';
+import { MonthNav, thisMonth } from './Expenses';
 import type { Expense } from '../lib/expenses';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { normalizeUrl } from '../lib/launchers';
@@ -40,12 +40,15 @@ const LIST_ICON = 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01';
 const CAL_ICON = 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16M9 3v4M15 3v4';
 
 /** Oct 28: one square button flips a page between its list and Month (calendar) views. */
-export function ViewToggle({ month, listName, onToggle }: { month: boolean; listName: string; onToggle: () => void }) {
+export function ViewToggle({ month, listName, onToggle, nav }: { month: boolean; listName: string; onToggle: () => void; nav?: { month: string; onMonth: (m: string) => void } }) {
   const label = month ? `Month view: tap for ${listName}` : `${listName}: tap for Month view`;
   return (
-    <button type="button" className="icon-btn tool-btn view-toggle" aria-label={label} title={label} onClick={onToggle}>
-      <Icon d={month ? CAL_ICON : LIST_ICON} size={18} />
-    </button>
+    <div className="view-switch">
+      <button type="button" className="icon-btn tool-btn view-toggle" aria-label={label} title={label} onClick={onToggle}>
+        <Icon d={month ? CAL_ICON : LIST_ICON} size={18} />
+      </button>
+      {month && nav && <MonthNav month={nav.month} onChange={nav.onMonth} />}
+    </div>
   );
 }
 
@@ -660,7 +663,7 @@ export function TasksPage(
         <h2 id="h-tasks-page" className="panel-title">
           Tasks
         </h2>
-        <ViewToggle month={layout === 'month'} listName="List" onToggle={() => setLayout(layout === 'month' ? 'list' : 'month')} />
+        <ViewToggle month={layout === 'month'} listName="List" onToggle={() => setLayout(layout === 'month' ? 'list' : 'month')} nav={{ month, onMonth: setMonth }} />
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder="Search tasks" />
           <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={editor.add}>

@@ -3,7 +3,7 @@ import { money, type BudgetLine, type BudgetSection } from '../lib/budget';
 import { describeRepeat } from '../lib/repeat';
 import { originalLabel } from '../lib/currency';
 import { lineRepeat, monthLines, spentIn, type Expense, type MonthLine } from '../lib/expenses';
-import { MonthNav, dayLabel, monthLabel } from './Expenses';
+import { dayLabel, monthLabel } from './Expenses';
 
 const GROUPS: { id: BudgetSection; title: string }[] = [
   { id: 'fixed', title: 'Monthly fixed' },
@@ -51,9 +51,6 @@ export function BudgetMonth(p: {
 
   return (
     <div className="budget-month">
-      <div className="expenses-bar">
-        <MonthNav month={p.month} onChange={p.onMonth} />
-      </div>
       <div className="budget-stats" aria-label={`${monthLabel(p.month)} totals`}>
         <div className="budget-stat budget-stat-total">
           <span className="budget-stat-label">Due · {monthLabel(p.month)}</span>

@@ -3,7 +3,7 @@ import { daysIn, monthKey, paidIn, type Expense } from '../lib/expenses';
 import { describeRepeat } from '../lib/repeat';
 import { repeatOf, repeatsOn, type Task } from '../lib/tasks';
 import type { Project } from '../lib/projects';
-import { MonthNav, dayLabel, monthLabel } from './Expenses';
+import { dayLabel, monthLabel } from './Expenses';
 
 type Row = { task: Task; dates: string[] };
 
@@ -44,7 +44,6 @@ export function TasksMonth(p: {
   return (
     <div className="budget-month tasks-month">
       <div className="expenses-bar">
-        <MonthNav month={p.month} onChange={p.onMonth} />
         <span className="tasks-month-count">
           {rows.length} in {monthLabel(p.month)}
           {bills > 0 && ` · bills paid ${paid} of ${bills}`}

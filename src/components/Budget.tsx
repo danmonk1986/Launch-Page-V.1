@@ -300,7 +300,7 @@ export function BudgetPage(p: Props) {
         <h2 id="h-budget" className="panel-title">
           Budget
         </h2>
-        <ViewToggle month={view === 'month'} listName="Master" onToggle={() => setView(view === 'month' ? 'master' : 'month')} />
+        <ViewToggle month={view === 'month'} listName="Master" onToggle={() => setView(view === 'month' ? 'master' : 'month')} nav={{ month, onMonth: setMonth }} />
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder="Search the budget" />
           {(
