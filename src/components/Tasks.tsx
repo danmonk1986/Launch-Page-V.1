@@ -202,7 +202,7 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
 const PHONE = /^\+?[\d\s().-]{7,}$/;
 
 /** Info: a link, or a phone number you can tap to call. */
-function InfoLink({ t }: { t: Task }) {
+export function InfoLink({ t }: { t: Task }) {
   const v = t.link.trim();
   if (!v) return <>{t.linkLabel}</>;
   if (PHONE.test(v)) return <a href={`tel:${v.replace(/[^\d+]/g, '')}`}>{t.linkLabel || v}</a>;

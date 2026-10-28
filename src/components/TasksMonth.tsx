@@ -1,9 +1,9 @@
 import { useMemo, type ReactNode } from 'react';
 import { daysIn, monthKey, paidIn, type Expense } from '../lib/expenses';
-import { describeRepeat } from '../lib/repeat';
 import { repeatOf, repeatsOn, type Task } from '../lib/tasks';
 import type { Project } from '../lib/projects';
 import { dayLabel, monthLabel } from './Expenses';
+import { InfoLink } from './Tasks';
 
 type Row = { task: Task; dates: string[] };
 
@@ -51,8 +51,8 @@ export function TasksMonth(p: {
                 <th className="col-date">Date</th>
                 <th className="col-task">Task</th>
                 <th className="col-project">Project</th>
-                <th>Repeats</th>
                 <th className="col-center">Status</th>
+                <th className="col-center">Info</th>
                 <th className="col-actions" aria-label="Done" />
               </tr>
             </thead>
@@ -60,7 +60,6 @@ export function TasksMonth(p: {
               {rows.map(({ task: t, dates }, i) => {
                 const pr = p.projects.find((x) => x.id === t.projectId);
                 const st = statusOf(t);
-                const rep = repeatOf(t);
                 return (
                   <tr key={t.id} className={`task-row${i % 2 ? ' is-alt' : ''}${st === 'PAID' || st === 'DONE' ? ' is-paid' : ''}`}>
                     <td className="col-date">{dates.length > 3 ? `${dayLabel(dates[0])} · ×${dates.length}` : dates.map(dayLabel).join(', ')}</td>
@@ -72,8 +71,10 @@ export function TasksMonth(p: {
                       </button>
                     </td>
                     <td className="col-project">{pr ? <span className="chip" style={{ ['--chip' as string]: pr.color }}>{pr.name.replace(/^STARDVST\s+/i, '')}</span> : <span className="chip chip-empty">—</span>}</td>
-                    <td>{rep.kind === 'none' ? 'Once' : describeRepeat(rep)}</td>
                     <td className="col-center">{st && <span className={`status${st === 'PAID' || st === 'DONE' ? ' status-three' : ''}`}>{st}</span>}</td>
+                    <td className="col-link col-info col-center">
+                      <InfoLink t={t} />
+                    </td>
                     <td className="col-actions">{p.actions(t)}</td>
                   </tr>
                 );

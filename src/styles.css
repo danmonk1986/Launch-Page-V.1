@@ -2250,3 +2250,5 @@ select:not([multiple]) {
 select.status-pick { appearance: none; -webkit-appearance: none; border: 0; cursor: pointer; font-family: inherit; text-align: center; text-align-last: center; }
 select.status-pick:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
 select.status-pick option { background: var(--surface-solid); color: var(--text, inherit); }
+/* Oct 28: the Status pick fits THREE / ON DECK / PENDING with its arrow */
+select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-width: 96px; background-position: right 8px center !important; background-size: 12px !important; }
