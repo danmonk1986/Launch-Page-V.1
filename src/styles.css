@@ -2255,7 +2255,7 @@ select:not([multiple]) {
 
 /* Oct 28 · task card: Notes with Push to Budget beside it; Status cell picks THREE */
 .notes-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: end; }
-.notes-row .push-pick { padding-bottom: 10px; white-space: nowrap; }
+.notes-row .push-pick { align-self: end; margin-bottom: 14px; box-sizing: border-box; min-height: 44px; padding-top: 0; padding-bottom: 0; white-space: nowrap; }
 .task-when.is-recurring { grid-template-columns: 1fr; }
 select.status-pick { appearance: none; -webkit-appearance: none; border: 0; cursor: pointer; font-family: inherit; text-align: center; text-align-last: center; }
 select.status-pick:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }

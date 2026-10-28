@@ -1,6 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
 import { money, type BudgetLine, type BudgetSection } from '../lib/budget';
-import { describeRepeat } from '../lib/repeat';
 import { originalLabel } from '../lib/currency';
 import { lineRepeat, monthLines, spentIn, type Expense, type MonthLine } from '../lib/expenses';
 import { dayLabel, monthLabel } from './Expenses';
@@ -81,7 +80,8 @@ export function BudgetMonth(p: {
               <tr>
                 <th className="col-date">Date</th>
                 <th className="col-task">Line item</th>
-                <th>Repeats</th>
+                <th className="col-center">Method</th>
+                <th className="col-center">Type</th>
                 <th className="col-amount">Planned</th>
                 <th className="col-amount">Spent</th>
                 <th className="col-amount">Difference</th>
@@ -94,7 +94,7 @@ export function BudgetMonth(p: {
               return (
                 <tbody key={g.id}>
                   <tr className="task-section">
-                    <th colSpan={3} scope="rowgroup">
+                    <th colSpan={4} scope="rowgroup">
                       <span className="section-btn">
                         {g.title} <span className="section-count">{list.length}</span>
                       </span>
@@ -106,7 +106,6 @@ export function BudgetMonth(p: {
                   </tr>
                   {list.map((m, i) => {
                     const diff = m.due - m.spent;
-                    const rep = lineRepeat(m.line);
                     const paid = m.line.section !== 'variable' && m.due > 0 && m.spent >= m.due;
                     return (
                       <tr key={m.line.id} className={`task-row${i % 2 ? ' is-alt' : ''}${paid ? ' is-paid' : ''}`}>
@@ -114,7 +113,8 @@ export function BudgetMonth(p: {
                         <td className="col-task">
                           {p.name(m.line)}
                         </td>
-                        <td>{rep.kind === 'none' ? (m.line.section === 'variable' || m.line.section === 'fixed' ? 'Every month' : 'Once') : `${rep.kind === 'monthly' ? 'Monthly' : rep.kind === 'quarterly' ? 'Quarterly' : rep.kind === 'annual' ? 'Annually' : 'Weekly'} · ${describeRepeat(rep)}`}</td>
+                        <td className="col-center">{m.line.method}</td>
+                        <td className="col-center">{m.line.type && <span className={`status${m.line.type === 'FIXED' ? ' status-three' : ''}`}>{m.line.type}</span>}</td>
                         <td className="col-amount">
                           {money(m.due)}
                           {originalLabel(m.line) && <span className="money-orig">{originalLabel(m.line)}</span>}
