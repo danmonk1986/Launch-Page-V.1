@@ -5,7 +5,7 @@
 -- Task is now the general one (EOM BILL, Appointment) and Description the specific one (Wix, Dentist).
 -- 1. Every task (not steps) swaps the two. Steps keep their name.
 -- 2. Tasks linked to a budget line: Description = the line item, Task = the kind of bill:
---    MM BILL (due 1st–15th), EOM BILL (16th–last), QTR BILL, ANN BILL, PLAN EXP (one-off), WK BILL.
+--    MM BILL (due 8th–23rd), EOM BILL (24th–7th), QTR BILL, ANN BILL, PLAN EXP (one-off), WK BILL.
 
 update public.tasks
 set task = description, description = task, updated_at = now()
@@ -24,9 +24,9 @@ set description = case when k.description <> '' then k.description else t.descri
     task = case
       when k.r like 'M:%' then
         case
-          when substr(k.r, 3) ~ '^\d+' then
-            case when (substring(substr(k.r, 3) from '^\d+'))::int <= 15 then 'MM BILL' else 'EOM BILL' end
-          when substr(k.r, 3) ~ '^(1ST|2ND)' then 'MM BILL'
+          when substr(k.r, 3) ~ '^\d+($|[^0-9A-Z])' then
+            case when (substring(substr(k.r, 3) from '^\d+'))::int between 8 and 23 then 'MM BILL' else 'EOM BILL' end
+          when substr(k.r, 3) ~ '^(2ND|3RD)' then 'MM BILL'
           else 'EOM BILL'
         end
       when k.r ~ '^Q\d' then 'QTR BILL'
@@ -34,7 +34,7 @@ set description = case when k.description <> '' then k.description else t.descri
       when k.r like 'W:%' then 'WK BILL'
       -- No repeat: a fixed line with a date repeats on that day; annual is yearly; planned is a one-off.
       when k.section = 'fixed' and k.on_date is not null then
-        case when extract(day from k.on_date) <= 15 then 'MM BILL' else 'EOM BILL' end
+        case when extract(day from k.on_date) between 8 and 23 then 'MM BILL' else 'EOM BILL' end
       when k.section = 'annual' then 'ANN BILL'
       when k.section = 'planned' then 'PLAN EXP'
       else 'EOM BILL'

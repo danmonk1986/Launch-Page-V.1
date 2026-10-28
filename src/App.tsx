@@ -507,6 +507,22 @@ export default function App() {
     }
   }
   /** A linked task renamed or rescheduled: its budget line follows (name, repeat, date). */
+  // Oct 28: a linked bill's Task is its kind (MM / EOM / ANN BILL…). When the rule for that changes,
+  // bills already swapped (Description = the line item) take the new name by themselves.
+  const relabeling = useRef(false);
+  useEffect(() => {
+    if (relabeling.current || !tasks.length || !budget.length) return;
+    const fix = tasks.flatMap((t) => {
+      const line = t.budgetLineId && !t.deletedAt && !t.parentId ? budget.find((l) => l.id === t.budgetLineId) : undefined;
+      if (!line || t.description.trim() !== line.description.trim()) return [];
+      const kind = billName(line);
+      return kind === t.task ? [] : [{ ...t, task: kind }];
+    });
+    if (!fix.length) return;
+    relabeling.current = true;
+    void taskOps.saveMany(fix).finally(() => (relabeling.current = false));
+  }, [tasks, budget]);
+
   async function lineFollowsTask(t: Task) {
     const line = t.budgetLineId ? budget.find((l) => l.id === t.budgetLineId) : undefined;
     if (!line || t.deletedAt) return;

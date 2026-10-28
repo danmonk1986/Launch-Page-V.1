@@ -39,7 +39,7 @@ export function taskFor(l: BudgetLine, tasks: Task[]): Task | undefined {
 
 /**
  * Oct 28: a bill's Task says what kind of bill it is (general); its Description is the line item
- * (specific). Monthly bills due the 1st–15th are MM BILL, the 16th to the last day EOM BILL.
+ * (specific). Monthly bills due the 8th–23rd are MM BILL, the 24th to the 7th EOM BILL.
  */
 export function billName(l: BudgetLine): string {
   const r = repeatForLine(l);
@@ -53,9 +53,10 @@ export function billName(l: BudgetLine): string {
 }
 function midOrEnd(rule: string): string {
   const r = rule.trim().toUpperCase();
-  const day = r.match(/^(\d+)/);
-  if (day) return Number(day[1]) <= 15 ? 'MM BILL' : 'EOM BILL';
-  if (/^(1ST|2ND)\b/.test(r)) return 'MM BILL';
+  const day = r.match(/^(\d+)(?![A-Z])/);
+  if (day) return Number(day[1]) >= 8 && Number(day[1]) <= 23 ? 'MM BILL' : 'EOM BILL';
+  // 2nd and 3rd weekdays land 8th–21st; 1st, 4th and last ones land at the turn of the month.
+  if (/^(2ND|3RD)\b/.test(r)) return 'MM BILL';
   return 'EOM BILL';
 }
 

@@ -8,7 +8,7 @@ import { MoneyField, settleMoney } from './MoneyField';
 import { originalLabel, rateToCad, toCad } from '../lib/currency';
 import { BudgetMonth } from './BudgetMonth';
 import { AddItemForm, type AddItemResult } from './AddItem';
-import type { Expense } from '../lib/expenses';
+import { lineDateKey, type Expense } from '../lib/expenses';
 import { fromLine, planLinks, taskFor, type LinkPlan } from '../lib/links';
 import { newTask, taskName, type Task } from '../lib/tasks';
 import { describeRepeat, readRepeat, writeRepeat } from '../lib/repeat';
@@ -164,7 +164,7 @@ export function BudgetPage(p: Props) {
 
   const bySection = useMemo(() => {
     const g = {} as Record<BudgetSection, BudgetLine[]>;
-    for (const s of BUDGET_SECTIONS) g[s.id] = p.lines.filter((l) => l.section === s.id).sort((a, b) => a.description.localeCompare(b.description, undefined, { sensitivity: 'base' }));
+    for (const s of BUDGET_SECTIONS) g[s.id] = p.lines.filter((l) => l.section === s.id).sort((a, b) => lineDateKey(a) - lineDateKey(b) || a.description.localeCompare(b.description, undefined, { sensitivity: 'base' }));
     return g;
   }, [p.lines]);
   const [groupBy, setGroupByState] = useState<BudgetGroupBy>(() => {

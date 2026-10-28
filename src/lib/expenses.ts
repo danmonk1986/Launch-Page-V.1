@@ -170,6 +170,27 @@ export function lineRepeat(l: BudgetLine): Repeat {
   return r;
 }
 
+/** Oct 28: where a line sits in its month (or year), for sorting Budget by date. Undated lines go last. */
+export function lineDateKey(l: BudgetLine): number {
+  const r = lineRepeat(l);
+  const dayOf = (rule: string) => {
+    const u = rule.trim().toUpperCase();
+    const n = u.match(/^(\d+)(?![A-Z])/);
+    if (n) return Number(n[1]);
+    if (u.startsWith('LAST')) return 31;
+    const ord = ['1ST', '2ND', '3RD', '4TH', '5TH'].findIndex((o) => u.startsWith(o));
+    return ord >= 0 ? ord * 7 + 4 : 32;
+  };
+  if (r.kind === 'monthly' || r.kind === 'quarterly') return dayOf(r.rule);
+  if (r.kind === 'weekly') return r.days.length ? Math.min(...r.days) + 1 : 32;
+  if (r.kind === 'annual') {
+    const [m, d] = r.date.split('-').map(Number);
+    return m * 100 + d;
+  }
+  if (l.date) return Number(l.date.replace(/-/g, ''));
+  return Number.MAX_SAFE_INTEGER;
+}
+
 /**
  * What lands in a month: monthly lines, quarterly lines in their months, annual lines only in
  * their month, one-offs dated that month. Variable lines, and fixed lines with no date, are a
