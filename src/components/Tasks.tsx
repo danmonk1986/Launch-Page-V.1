@@ -15,12 +15,10 @@ import {
   newStep,
   newTask,
   taskName,
-  OLD_REPEAT_STATUSES,
   repeatOf,
   SECTIONS,
-  STATUS_LABEL,
-  STATUSES,
   stepsByParent,
+  autoStatus,
   type Section,
   type Task
 } from '../lib/tasks';
@@ -35,6 +33,8 @@ type Common = {
   today: Date;
   onSave: (t: Task) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  /** Push to Budget: a budget line for this task, linked (amount from Notes). */
+  onPushToBudget?: (t: Task) => Promise<void>;
 };
 
 const LIST_ICON = 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01';
@@ -97,6 +97,7 @@ type Actions = {
   moveTo: (t: Task, iso: string) => void;
   remove: (t: Task) => void;
   restore: (t: Task) => void;
+  setStatus: (t: Task, status: string) => void;
   purge: (t: Task) => void;
   clear: (t: Task) => void;
   toCalendar: (t: Task) => void;
@@ -198,14 +199,6 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
   );
 }
 
-const CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP', 'AUD', 'MXN', 'JPY'];
-/** "1140 USD" ⇄ { amount: "1140", currency: "USD" }; plain numbers are CAD. */
-function splitExpense(v: string) {
-  const m = v.trim().match(/^(.*?)\s*([A-Za-z]{3})$/);
-  return m && CURRENCIES.includes(m[2].toUpperCase()) ? { amount: m[1].trim(), currency: m[2].toUpperCase() } : { amount: v.trim(), currency: 'CAD' };
-}
-const joinExpense = (amount: string, currency: string) => (amount.trim() ? `${amount.trim()} ${currency}` : '');
-
 const PHONE = /^\+?[\d\s().-]{7,}$/;
 
 /** Info: a link, or a phone number you can tap to call. */
@@ -276,8 +269,26 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
       <td className="col-status col-center">
         {!step && (() => {
           // Recurring tasks show how they repeat (WEEKLY, MONTHLY…) in place of a status.
-          const shown = badge ?? (isRecurring(t) ? REPEAT_BADGE[repeatOf(t).kind] : t.status);
-          return <span className={`status status-${shown.replace(/\s+/g, '-').toLowerCase()}`}>{shown}</span>;
+          if (isRecurring(t)) {
+            const shown = badge ?? REPEAT_BADGE[repeatOf(t).kind];
+            return <span className={`status status-${shown.replace(/\s+/g, '-').toLowerCase()}`}>{shown}</span>;
+          }
+          // Oct 28: status is automatic; this dropdown only picks a key task (THREE).
+          const auto = autoStatus(t, today);
+          const key = t.status === 'THREE';
+          const shown = key ? 'THREE' : auto;
+          return (
+            <select
+              className={`status status-pick status-${shown.replace(/\s+/g, '-').toLowerCase()}`}
+              aria-label={`Status: ${shown}`}
+              title={key ? 'Key task: pick the other to take it off' : 'Worked out from the date: pick THREE for a key task'}
+              value={key ? 'THREE' : 'AUTO'}
+              onChange={(e) => act.setStatus(t, e.target.value === 'THREE' ? 'THREE' : 'PENDING')}
+            >
+              <option value="AUTO">{auto}</option>
+              <option value="THREE">THREE</option>
+            </select>
+          );
         })()}
       </td>
       <td className="col-link col-info col-center">
@@ -393,7 +404,7 @@ type EditorProps = Common & { onSaveMany: (t: Task[]) => Promise<void> };
  * The task form on its own (LP-030): Budget opens it for a budget line's linked task, so the
  * task's details (description, status, steps, link, time) are filled in the usual form.
  */
-export function TaskSheet(p: { task: Task | null; title: string; tasks: Task[]; projects: Project[]; onSave: (t: Task) => Promise<void>; onSaveMany: (t: Task[]) => Promise<void>; onClose: () => void }) {
+export function TaskSheet(p: { task: Task | null; title: string; tasks: Task[]; projects: Project[]; onSave: (t: Task) => Promise<void>; onSaveMany: (t: Task[]) => Promise<void>; onPushToBudget?: (t: Task) => Promise<void>; onClose: () => void }) {
   const t = p.task;
   return (
     <Sheet open={!!t} title={p.title} onClose={p.onClose} wide>
@@ -404,14 +415,15 @@ export function TaskSheet(p: { task: Task | null; title: string; tasks: Task[]; 
           isNew={false}
           isStep={false}
           existingSteps={stepsByParent(p.tasks).get(t.id) ?? []}
-          descriptions={[...new Set(p.tasks.filter((x) => !x.parentId && !x.deletedAt).map((x) => x.task.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
+          picks={formPicks(p.tasks)}
           projects={p.projects}
           onCancel={p.onClose}
-          onSave={async (next, newSteps) => {
+          onSave={async (next, newSteps, push) => {
             const base = p.tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0);
             const kids = newSteps.filter((x) => x.trim()).map((x, i) => newStep(next, x, base + i));
             if (kids.length) await p.onSaveMany([next, ...kids]);
             else await p.onSave(next);
+            if (push) await p.onPushToBudget?.(next);
             p.onClose();
           }}
           onDelete={async (id) => {
@@ -437,7 +449,7 @@ function useTaskEditor(p: EditorProps) {
       {ask && (
         <div className="reminder">
           <p className="panel-empty">
-            <strong>{ask.task.task}</strong> has {ask.open.length} open {ask.open.length === 1 ? 'step' : 'steps'}: {ask.open.map((x) => x.task).join(', ')}. Are they done too?
+            <strong>{taskName(ask.task)}</strong> has {ask.open.length} open {ask.open.length === 1 ? 'step' : 'steps'}: {ask.open.map((x) => x.task).join(', ')}. Are they done too?
           </p>
           <div className="reminder-actions">
             <button type="button" className="btn btn-quiet" onClick={() => setAsk(null)}>
@@ -481,14 +493,15 @@ function useTaskEditor(p: EditorProps) {
           isNew={isNew}
           isStep={!!editing.parentId}
           existingSteps={stepsByParent(p.tasks).get(editing.id) ?? []}
-          descriptions={[...new Set(p.tasks.filter((x) => !x.parentId && !x.deletedAt).map((x) => x.task.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
+          picks={formPicks(p.tasks)}
           projects={p.projects}
           onCancel={() => setOpen(false)}
-          onSave={async (t, newSteps) => {
+          onSave={async (t, newSteps, push) => {
             const base = p.tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0);
             const kids = newSteps.filter((s) => s.trim()).map((s, i) => newStep(t, s, base + i));
             if (kids.length) await p.onSaveMany([t, ...kids]);
             else await p.onSave(t);
+            if (push) await p.onPushToBudget?.(t);
             setOpen(false);
           }}
           onDelete={async (id) => {
@@ -540,6 +553,7 @@ function useActions(p: PageProps, editor: ReturnType<typeof useTaskEditor>, open
     moveTo: (t, iso) => p.onSave({ ...t, endDate: iso, startDate: t.startDate && t.startDate > iso ? iso : t.startDate }),
     remove: (t) => p.onSave({ ...t, deletedAt: new Date().toISOString() }),
     restore: (t) => p.onSave({ ...t, deletedAt: null }),
+    setStatus: (t, status) => p.onSave({ ...t, status }),
     purge: (t) => p.onDelete(t.id),
     clear: (t) => p.onSave({ ...t, cleared: true }),
     toCalendar: p.onAddToCalendar,
@@ -731,12 +745,27 @@ export function TasksPage(
   );
 }
 
+/** Oct 28: what the pick-lists offer — Task kinds, Descriptions and Info names you've used, A→Z. */
+export type FormPicks = { kinds: string[]; specifics: string[]; links: { label: string; link: string }[] };
+export function formPicks(tasks: Task[]): FormPicks {
+  const top = tasks.filter((x) => !x.parentId && !x.deletedAt);
+  const uniq = (xs: string[]) => [...new Set(xs.map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  const links = new Map<string, string>();
+  for (const t of [...top].sort((a, b) => a.sort - b.sort)) if (t.linkLabel.trim() && t.link.trim()) links.set(t.linkLabel.trim(), t.link.trim());
+  return { kinds: uniq(top.map((x) => x.task)), specifics: uniq(top.map((x) => x.description)), links: [...links].map(([label, link]) => ({ label, link })).sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })) };
+}
+
+/**
+ * The Add / Edit task card (Oct 28 wireframe): Project | Task, Description, Steps, Date required | Repeat,
+ * Start | Time, Info link | Link name, Notes + Push to Budget. Status is worked out from the dates
+ * (3 key tasks are picked in the table); an expense goes to Budget, written in Notes.
+ */
 function TaskForm({
   task,
   isNew,
   isStep,
   existingSteps,
-  descriptions,
+  picks,
   projects,
   onSave,
   onDelete
@@ -745,163 +774,176 @@ function TaskForm({
   isNew: boolean;
   isStep: boolean;
   existingSteps: Task[];
-  descriptions: string[];
+  picks: FormPicks;
   projects: Project[];
   onCancel?: () => void;
-  /** newSteps: names typed into the Steps list, created underneath on save. */
-  onSave: (t: Task, newSteps: string[]) => Promise<void>;
+  /** newSteps: names typed into the Steps list, created underneath on save. push: also put it in Budget. */
+  onSave: (t: Task, newSteps: string[], push: boolean) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
   const [d, setD] = useState<Task>(task);
   const [steps, setSteps] = useState<string[]>([]);
+  const [push, setPush] = useState(false);
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setD((x) => ({ ...x, [k]: v }));
   const [rep, setRep] = useState(() => repeatOf(task));
   const recurring = rep.kind !== 'none';
   const tree = projectTree(projects);
   const formId = useId();
+  const linked = !!task.budgetLineId;
+  const named = isStep ? !!d.task.trim() : !!(d.task.trim() || d.description.trim());
+  // Picking an Info name you've used fills in its link (if the link box is empty).
+  const pickLabel = (label: string) => {
+    const hit = picks.links.find((x) => x.label.toLowerCase() === label.trim().toLowerCase());
+    setD((x) => ({ ...x, linkLabel: label, link: hit && !x.link.trim() ? hit.link : x.link }));
+  };
   return (
-    <form id={formId}
+    <form
+      id={formId}
+      className="task-form task-card"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (!d.task.trim()) return;
+        if (!named) return;
         const endDate = d.endDate && d.startDate && d.endDate < d.startDate ? d.startDate : d.endDate;
         const repeatRule = writeRepeat(rep);
-        // The old repeat statuses become ON DECK; Repeat carries the rhythm now.
-        const status = OLD_REPEAT_STATUSES.includes(d.status) ? 'ON DECK' : d.status;
-        await onSave({ ...d, task: d.task.trim(), description: d.description.trim(), endDate, repeatRule, status }, steps);
+        // Status is automatic now; only THREE (a key task) is kept.
+        const status = d.status === 'THREE' ? 'THREE' : 'PENDING';
+        await onSave({ ...d, task: d.task.trim(), description: d.description.trim(), notes: d.notes.trim(), endDate: recurring ? null : endDate, repeatRule, status }, steps, push && !linked);
       }}
     >
-      <div className="time-grid">
+      {isStep ? (
         <label className="field">
-          <span>Project</span>
-          <select value={d.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || null)}>
-            <option value="">No project</option>
-            {tree.map(({ area, children }) => (
-              <optgroup key={area.id} label={area.name}>
-                <option value={area.id}>{area.name}</option>
-                {children.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {area.name} › {c.name}
-                  </option>
+          <span>Step</span>
+          <input required value={d.task} onChange={(e) => set('task', e.target.value)} placeholder="Next step" />
+        </label>
+      ) : (
+        <>
+          <div className="time-grid">
+            <label className="field">
+              <span>Project</span>
+              <select value={d.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || null)}>
+                <option value="">No project</option>
+                {tree.map(({ area, children }) => (
+                  <optgroup key={area.id} label={area.name}>
+                    <option value={area.id}>{area.name}</option>
+                    {children.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {area.name} › {c.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>Status</span>
-          <select value={OLD_REPEAT_STATUSES.includes(d.status) ? 'ON DECK' : d.status} onChange={(e) => set('status', e.target.value)}>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABEL[s] ?? s}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <label className="field">
-        <span>{isStep ? 'Step' : 'Task'}</span>
-        <input required={isStep || !d.description.trim()} list={isStep ? undefined : 'task-kinds'} autoComplete="off" value={d.task} onChange={(e) => set('task', e.target.value)} placeholder={isStep ? 'Next step' : "General: EOM BILL, Appointment… new, or pick one you've used"} />
-        {!isStep && (
-          <datalist id="task-kinds">
-            {descriptions.map((x) => (
-              <option key={x} value={x} />
-            ))}
-          </datalist>
-        )}
-      </label>
-      {!isStep && (
-        <div className="field steps-field">
-          <span>Steps</span>
-          {existingSteps.length > 0 && (
-            <ul className="steps-list">
-              {existingSteps.map((st) => (
-                <li key={st.id} className={st.done ? 'is-done' : ''}>
-                  ↳ {st.task}
-                </li>
-              ))}
-            </ul>
-          )}
-          {steps.map((text, i) => (
-            <div key={i} className="step-input">
-              <span aria-hidden="true">↳</span>
-              <input
-                aria-label={`Step ${existingSteps.length + i + 1}`}
-                value={text}
-                autoFocus={i === steps.length - 1}
-                onChange={(e) => setSteps((list) => list.map((x, j) => (j === i ? e.target.value : x)))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    setSteps((list) => [...list, '']);
-                  }
-                }}
-                placeholder="Next step"
-              />
-            </div>
-          ))}
-          <button type="button" className="link-btn link-btn-inline step-more" onClick={() => setSteps((list) => [...list, ''])}>
-            + Add a step
-          </button>
-        </div>
-      )}
-      <label className="field">
-        <span>Description</span>
-        <input autoComplete="off" value={d.description} onChange={(e) => set('description', e.target.value)} placeholder="Specific: Wix, Dentist, Minto Rent" />
-      </label>
-      <div className="time-grid">
-        <label className="field">
-          <span>Info (link or phone)</span>
-          <input value={d.link} onChange={(e) => set('link', e.target.value)} placeholder="https://www.rentfaster.ca or 780-555-0123" />
-        </label>
-        <label className="field">
-          <span>Info name</span>
-          <input value={d.linkLabel} onChange={(e) => set('linkLabel', e.target.value)} placeholder="RENTFASTER" />
-        </label>
-      </div>
-      <RepeatPicker value={rep} onChange={setRep} from={d.endDate ?? d.startDate} />
-      {recurring ? null : (
-        <div className="time-grid">
+              </select>
+            </label>
+            <label className="field">
+              <span>Task</span>
+              <input list="task-kinds" autoComplete="off" value={d.task} onChange={(e) => set('task', e.target.value)} placeholder="Appointment, EOM BILL…" />
+              <datalist id="task-kinds">
+                {picks.kinds.map((x) => (
+                  <option key={x} value={x} />
+                ))}
+              </datalist>
+            </label>
+          </div>
           <label className="field">
-            <span>Start</span>
-            <input type="date" value={d.startDate ?? ''} onChange={(e) => set('startDate', e.target.value || null)} />
+            <span>Description</span>
+            <input list="task-specifics" autoComplete="off" value={d.description} onChange={(e) => set('description', e.target.value)} placeholder="Dentist, Wix, Find Garage Rental" />
+            <datalist id="task-specifics">
+              {picks.specifics.map((x) => (
+                <option key={x} value={x} />
+              ))}
+            </datalist>
           </label>
+          <div className="field steps-field">
+            <span>Steps</span>
+            {existingSteps.length > 0 && (
+              <ul className="steps-list">
+                {existingSteps.map((st) => (
+                  <li key={st.id} className={st.done ? 'is-done' : ''}>
+                    ↳ {st.task}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {steps.map((text, i) => (
+              <div key={i} className="step-input">
+                <span aria-hidden="true">↳</span>
+                <input
+                  aria-label={`Step ${existingSteps.length + i + 1}`}
+                  value={text}
+                  autoFocus={i === steps.length - 1}
+                  onChange={(e) => setSteps((list) => list.map((x, j) => (j === i ? e.target.value : x)))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      setSteps((list) => [...list, '']);
+                    }
+                  }}
+                  placeholder="Next step"
+                />
+              </div>
+            ))}
+            <button type="button" className="link-btn link-btn-inline step-more" onClick={() => setSteps((list) => [...list, ''])}>
+              + Add a step
+            </button>
+          </div>
+        </>
+      )}
+      <div className={`time-grid task-when${recurring ? ' is-recurring' : ''}`}>
+        {!recurring && (
           <label className="field">
             <span>Date required</span>
             <input type="date" min={d.startDate ?? undefined} value={d.endDate ?? ''} onChange={(e) => set('endDate', e.target.value || null)} />
           </label>
-        </div>
-      )}
+        )}
+        <RepeatPicker value={rep} onChange={setRep} from={d.endDate ?? d.startDate} />
+      </div>
       <div className="time-grid">
+        {!recurring ? (
+          <label className="field">
+            <span>Date start</span>
+            <input type="date" value={d.startDate ?? ''} onChange={(e) => set('startDate', e.target.value || null)} />
+          </label>
+        ) : null}
         <label className="field">
-          <span>Time (optional)</span>
+          <span>Time</span>
           <input type="time" value={d.atTime ?? ''} onChange={(e) => set('atTime', e.target.value || null)} />
         </label>
-        <label className="field">
-          <span>Expense (optional)</span>
-          <div className="expense-row">
-            <input
-              inputMode="decimal"
-              aria-label="Amount"
-              value={splitExpense(d.expense).amount}
-              onChange={(e) => set('expense', joinExpense(e.target.value, splitExpense(d.expense).currency))}
-              placeholder="1140"
-            />
-            <select aria-label="Currency" value={splitExpense(d.expense).currency} onChange={(e) => set('expense', joinExpense(splitExpense(d.expense).amount, e.target.value))}>
-              {CURRENCIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-        </label>
       </div>
-      <label className="field">
-        <span>Notes</span>
-        <input value={d.notes} onChange={(e) => set('notes', e.target.value)} />
-      </label>
-      <FormActions formId={formId} saveDisabled={!d.task.trim()} onDelete={!isNew ? () => onDelete(task.id) : undefined} deleteLabel={task.task} />
+      {!isStep && (
+        <div className="time-grid">
+          <label className="field">
+            <span>Info link</span>
+            <input value={d.link} onChange={(e) => set('link', e.target.value)} placeholder="https://… or 780-555-0123" />
+          </label>
+          <label className="field">
+            <span>Link name</span>
+            <input list="task-link-names" autoComplete="off" value={d.linkLabel} onChange={(e) => pickLabel(e.target.value)} placeholder="RENTFASTER" />
+            <datalist id="task-link-names">
+              {picks.links.map((x) => (
+                <option key={x.label} value={x.label} />
+              ))}
+            </datalist>
+          </label>
+        </div>
+      )}
+      <div className="notes-row">
+        <label className="field">
+          <span>Notes</span>
+          <input value={d.notes} onChange={(e) => set('notes', e.target.value)} placeholder={isStep ? '' : 'e.g. 1140 USD'} />
+        </label>
+        {!isStep &&
+          (linked ? (
+            <span className="choice push-pick is-on" title="Linked to a budget line">
+              <span className="expense-link">$$$</span> In Budget
+            </span>
+          ) : (
+            <label className="choice push-pick" title="Adds a budget line for this, with the amount written in Notes (e.g. 1140 USD)">
+              <input type="checkbox" checked={push} onChange={(e) => setPush(e.target.checked)} />
+              <span>Push to Budget</span>
+            </label>
+          ))}
+      </div>
+      <FormActions formId={formId} saveDisabled={!named} onDelete={!isNew ? () => onDelete(task.id) : undefined} deleteLabel={taskName(task)} />
     </form>
   );
 }

@@ -173,3 +173,24 @@ export function planLinks(lines: BudgetLine[], tasks: Task[], opts: { now: strin
   }
   return { remove, linked, created, gaps };
 }
+
+/**
+ * Oct 28 · Push to Budget: the amount written in a task's Notes ("1140 USD", "$80", "80 AUD").
+ * Only a number with a $ or a currency counts, so phone or account numbers are left alone.
+ */
+export function moneyIn(text: string): { amount: number; currency: string } | null {
+  const cur = 'CAD|USD|EUR|GBP|AUD|MXN|JPY';
+  const withCode = text.match(new RegExp(`\\$?\\s*(\\d[\\d,]*(?:\\.\\d+)?)\\s*(${cur})\\b`, 'i'));
+  if (withCode) return { amount: Number(withCode[1].replace(/,/g, '')), currency: withCode[2].toUpperCase() };
+  const dollars = text.match(/\$\s*(\d[\d,]*(?:\.\d+)?)/);
+  if (dollars) return { amount: Number(dollars[1].replace(/,/g, '')), currency: 'CAD' };
+  return null;
+}
+
+/** Which budget group a pushed task lands in: a one-off is Planned, monthly is Fixed, yearly / quarterly Annual. */
+export function sectionForTask(t: Task): BudgetLine['section'] {
+  const k = repeatOf(t).kind;
+  if (k === 'none') return 'planned';
+  if (k === 'annual' || k === 'quarterly') return 'annual';
+  return 'fixed';
+}

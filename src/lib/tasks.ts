@@ -181,10 +181,10 @@ export type Section = 'due' | 'key' | 'wip' | 'appts' | 'ondeck' | 'monthly' | '
 
 export const SECTIONS: { id: Section; title: string; hint: string; pill?: string }[] = [
   { id: 'due', title: 'Due today', hint: 'Date required is today or earlier' },
-  { id: 'key', title: '3 key tasks', hint: 'Status THREE' },
-  { id: 'wip', title: 'In progress', hint: 'Status WIP, or due within 30 days' },
-  { id: 'appts', title: 'Appointments', hint: 'Status APPOINTMENT' },
-  { id: 'ondeck', title: 'On deck (+30 days)', hint: 'Due more than 30 days out, or ON DECK', pill: 'On deck' },
+  { id: 'key', title: '3 key tasks', hint: 'Picked in the Status cell: THREE' },
+  { id: 'wip', title: 'In progress', hint: 'Due within 30 days' },
+  { id: 'appts', title: 'Appointments', hint: '"Appointment" in the Task or Description' },
+  { id: 'ondeck', title: 'On deck (+30 days)', hint: 'Due more than 30 days out', pill: 'On deck' },
   { id: 'monthly', title: 'Recurring: weekly, monthly, quarterly', hint: 'Repeat: weekly, monthly or quarterly', pill: 'Monthly' },
   { id: 'annual', title: 'Annual recurring', hint: 'Repeat: annually', pill: 'Annual' },
   { id: 'pending', title: 'Pending (no date)', hint: 'Anything without a date', pill: 'Pending' },
@@ -210,12 +210,20 @@ export function sectionOf(t: Task, today: Date): Section {
   if (t.done) return 'done';
   const due = t.endDate ?? null;
   if (due && dayDiff(due, today) <= 0) return 'due';
+  // Oct 28: only THREE (a key task) is picked by hand; the rest comes from the task itself.
   if (t.status === 'THREE') return 'key';
-  if (t.status === 'WIP') return 'wip';
-  if (t.status === 'APPTS') return 'appts';
-  if (t.status === 'ON DECK') return 'ondeck';
+  if (isAppointment(t)) return 'appts';
   if (!due) return 'pending';
   return dayDiff(due, today) <= 30 ? 'wip' : 'ondeck';
+}
+
+/** "Appointment" in the Task or Description. */
+export const isAppointment = (t: Task) => /\bappointment/i.test(`${t.task} ${t.description}`);
+
+/** The status a task gets without THREE: what the Status cell shows. */
+export function autoStatus(t: Task, today: Date): string {
+  const s = sectionOf({ ...t, status: 'PENDING' }, today);
+  return s === 'due' ? (dueBadge(t, today) ?? 'DUE') : s === 'wip' ? 'WIP' : s === 'appts' ? 'APPT' : s === 'ondeck' ? 'ON DECK' : s === 'pending' ? 'PENDING' : s === 'done' ? 'DONE' : '';
 }
 
 /** DUE / OVERDUE badge for rows in Due today. */

@@ -2252,3 +2252,11 @@ select:not([multiple]) {
 .step-cell { display: flex; align-items: center; gap: 6px; }
 .step-cell .step-mark { padding-right: 0; }
 .task-row.is-step .col-desc { max-width: none; }
+
+/* Oct 28 · task card: Notes with Push to Budget beside it; Status cell picks THREE */
+.notes-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: end; }
+.notes-row .push-pick { padding-bottom: 10px; white-space: nowrap; }
+.task-when.is-recurring { grid-template-columns: 1fr; }
+select.status-pick { appearance: none; -webkit-appearance: none; border: 0; cursor: pointer; font-family: inherit; text-align: center; text-align-last: center; }
+select.status-pick:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
+select.status-pick option { background: var(--surface-solid); color: var(--text, inherit); }

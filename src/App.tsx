@@ -7,9 +7,10 @@ import { Header, type PageId } from './components/Header';
 import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
-import { budgetStore, type BudgetLine } from './lib/budget';
+import { budgetStore, newBudgetLine, type BudgetLine } from './lib/budget';
+import { rateToCad, toCad } from './lib/currency';
 import { expenseFromLine, expenseStore, type Expense } from './lib/expenses';
-import { billName, fromLine, type LinkPlan } from './lib/links';
+import { billName, fromLine, moneyIn, sectionForTask, type LinkPlan } from './lib/links';
 import type { AddItemResult } from './components/AddItem';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
@@ -522,6 +523,36 @@ export default function App() {
     relabeling.current = true;
     void taskOps.saveMany(fix).finally(() => (relabeling.current = false));
   }, [tasks, budget]);
+
+  /** Oct 28 · Push to Budget (task card): a budget line for the task, linked; the amount comes from Notes. */
+  async function pushToBudget(t: Task) {
+    const found = moneyIn(t.notes) ?? moneyIn(t.expense) ?? (t.expense.trim() && Number.isFinite(Number(t.expense)) ? { amount: Number(t.expense), currency: 'CAD' } : null);
+    let amount: number | null = found && found.currency === 'CAD' ? found.amount : null;
+    if (found && found.currency !== 'CAD') {
+      try {
+        amount = toCad(found.amount, await rateToCad(found.currency));
+      } catch {
+        amount = null;
+      }
+    }
+    const proj = projects.find((x) => x.id === t.projectId);
+    const section = sectionForTask(t);
+    const line: BudgetLine = {
+      ...newBudgetLine(section, budget.reduce((m, l) => Math.max(m, l.sort + 1), 0)),
+      description: t.description.trim() || t.task.trim(),
+      project: proj ? proj.name.replace(/^STARDVST\s+/i, '') : '',
+      date: repeatOf(t).kind === 'none' ? t.endDate : null,
+      repeat: writeRepeat(repeatOf(t)),
+      amount,
+      ...(found && found.currency !== 'CAD' ? { currency: found.currency, foreign: found.amount } : {}),
+      notes: t.notes
+    };
+    await budgetOps.save(line);
+    await taskOps.save(fromLine({ ...t, notes: t.notes }, line));
+    setStatus(
+      `${line.description} pushed to Budget (${section === 'planned' ? 'Planned' : section === 'annual' ? 'Annual' : 'Monthly fixed'})${amount !== null ? '.' : found ? `: couldn't get today's ${found.currency} rate, use ⋯ Recalc there.` : ': no amount in Notes (e.g. 1140 USD), add it in Budget.'}`
+    );
+  }
 
   async function lineFollowsTask(t: Task) {
     const line = t.budgetLineId ? budget.find((l) => l.id === t.budgetLineId) : undefined;
@@ -1209,6 +1240,7 @@ export default function App() {
               tasks={
                 <TasksPanel
                   tasks={tasks}
+                  onPushToBudget={pushToBudget}
                   projects={projects}
                   today={now}
                   onSave={saveTask}
@@ -1239,6 +1271,7 @@ export default function App() {
           ) : page === 'tasks' ? (
             <TasksPage
               tasks={tasks}
+                  onPushToBudget={pushToBudget}
               projects={projects}
               today={now}
               onSave={saveTask}
