@@ -37,7 +37,8 @@ const GROUP_ICON: Record<BudgetGroupBy, string> = {
   project: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   category: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'
 };
-const LINK = 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71';
+// Oct 28: the same Sync icon as the calendar.
+const SYNC = 'M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18.5 3v4h-4M5.5 21v-4h4';
 const IMPORT = 'M12 3v12M7 10l5 5 5-5M5 21h14';
 const EXPORT = 'M12 15V3M7 8l5-5 5 5M5 21h14';
 
@@ -277,9 +278,6 @@ export function BudgetPage(p: Props) {
     return t ? (
       <button type="button" className="task-name" title="Go to its task" onClick={() => p.onGoToTask(t.id)}>
         {l.description}
-        <span className="expense-link" aria-label="linked to a task" title="Linked to a task: ticking it adds this line to Expenses">
-          {' '}$$$
-        </span>
       </button>
     ) : (
       <span className="item-name">{l.description}</span>
@@ -343,12 +341,12 @@ export function BudgetPage(p: Props) {
           <button
             type="button"
             className="icon-btn tool-btn"
-            aria-label="Link to tasks"
-            title="Link budget lines to their tasks, clear duplicate tasks, add tasks for bills"
+            aria-label="Sync with Tasks"
+            title="Sync with Tasks: link budget lines to their tasks, clear duplicate tasks, add tasks for bills"
             disabled={!p.lines.length}
             onClick={() => setLinkPlan(planLinks(p.lines, p.tasks, { now: new Date().toISOString(), projectFor: (n) => projectFor(n)?.id ?? null }))}
           >
-            <Icon d={LINK} />
+            <Icon d={SYNC} />
           </button>
           <button type="button" className="icon-btn tool-btn" aria-label="Import" title="Import the BUDGET tab (CSV) or a JSON file" onClick={() => file.current?.click()}>
             <Icon d={IMPORT} />
@@ -552,7 +550,7 @@ export function BudgetPage(p: Props) {
         onClose={() => setTaskOpen(null)}
       />
 
-      <Sheet open={!!linkPlan} title="Link to tasks" onClose={() => setLinkPlan(null)} wide>
+      <Sheet open={!!linkPlan} title="Sync with Tasks" onClose={() => setLinkPlan(null)} wide>
         {linkPlan && (
           <div className="reminder link-plan">
             {linkPlan.remove.length + linkPlan.linked.length + linkPlan.created.length === 0 ? (
