@@ -2159,11 +2159,13 @@ select:not([multiple]) {
   .task-row td.col-date:not(.col-start) { grid-area: due; text-align: left; font-family: var(--font-mono); font-size: 12px; color: var(--mist); }
   .task-row .col-actions { grid-area: act; }
   .task-row .task-desc-inline { display: inline; }
-  .task-row .col-desc, .task-row .col-link, .task-row .col-start, .task-row .col-time, .task-row .col-expense { display: none; }
+  .task-table .task-row td.col-desc, .task-table .task-row td.col-link, .task-table .task-row td.col-start, .task-table .task-row td.col-time, .task-table .task-row td.col-expense { display: none; }
   .task-table .chip { width: auto; max-width: 120px; }
   .task-row .timed-quick { flex-direction: row; }
   .task-row .step-add { opacity: 1; }
   .task-row.is-step { margin-left: 18px; }
+  .task-row.is-step .col-task { display: none; }
+  .task-table .task-row.is-step td.col-desc { display: block; grid-area: task; }
 
   /* M-003 Meditation: row 1 tick + Play; row 2 playlist + ✎ ✕; the words fill the rest */
   .rit-step.rit-medcard { display: grid; grid-template-columns: minmax(0, 1fr) 44px 44px 44px; gap: 8px; align-items: center; }
@@ -2247,3 +2249,6 @@ select:not([multiple]) {
 /* Oct 28: Task (general) · Description (specific) */
 .task-desc-inline { display: none; font-weight: 400; color: var(--mist); }
 .task-desc-dim { font-weight: 400; color: var(--mist); }
+.step-cell { display: flex; align-items: center; gap: 6px; }
+.step-cell .step-mark { padding-right: 0; }
+.task-row.is-step .col-desc { max-width: none; }

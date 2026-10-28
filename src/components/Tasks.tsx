@@ -246,21 +246,33 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
   const checked = isRecurring(t) ? doneToday(t, today) : t.done;
   return (
     <tr id={`task-${t.id}`} className={`task-row${checked ? ' is-done' : ''}${step ? ' is-step' : ''}${alt ? ' is-alt' : ''}`}>
-      <td className="col-project">{step ? <span className="step-mark" aria-hidden="true">↳</span> : <ProjectChip projects={projects} id={t.projectId} />}</td>
+      <td className="col-project">{step ? null : <ProjectChip projects={projects} id={t.projectId} />}</td>
       <td className="col-task">
-        <span className="task-cell">
-          <button type="button" className="task-name" onClick={() => act.open(t)}>
-            {t.task || t.description}
-            {!step && t.task && t.description && <span className="task-desc-inline"> · {t.description}</span>}
-          </button>
-          {!step && (
+        {!step && (
+          <span className="task-cell">
+            <button type="button" className="task-name" onClick={() => act.open(t)}>
+              {t.task || t.description}
+              {t.task && t.description && <span className="task-desc-inline"> · {t.description}</span>}
+            </button>
             <button type="button" className="step-add" aria-label={`Add a step under ${taskName(t)}`} title="Add a step" onClick={() => act.addStep(t)}>
               +
             </button>
-          )}
-        </span>
+          </span>
+        )}
       </td>
-      <td className="col-desc">{step ? '' : t.description}</td>
+      {/* Oct 28: steps are the specific part, so they sit under Description. */}
+      <td className="col-desc">
+        {step ? (
+          <span className="task-cell step-cell">
+            <span className="step-mark" aria-hidden="true">↳</span>
+            <button type="button" className="task-name" onClick={() => act.open(t)}>
+              {t.task}
+            </button>
+          </span>
+        ) : (
+          t.description
+        )}
+      </td>
       <td className="col-status col-center">
         {!step && (() => {
           // Recurring tasks show how they repeat (WEEKLY, MONTHLY…) in place of a status.
