@@ -32,7 +32,7 @@ import {
 
 const PLUS = 'M12 5v14M5 12h14';
 const CLOSE = 'M6 6l12 12M18 6L6 18';
-// One square button cycles the totals: layers (group), a list (pmt category), a folder (project), four boxes (budget category).
+// One square button cycles the totals: layers (section), a list (payment category), a folder (project), four boxes (budget group).
 const GROUP_ICON: Record<BudgetGroupBy, string> = {
   section: 'M12 3 2 8l10 5 10-5zM2 12l10 5 10-5M2 16l10 5 10-5',
   pmtCategory: 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01',
@@ -402,8 +402,8 @@ export function BudgetPage(p: Props) {
                 <th className="col-task">Line item</th>
                 <th className="col-center">Method</th>
                 <th className="col-center">Type</th>
-                <th className="col-center">Category</th>
-                <th>Pmt category</th>
+                <th className="col-center">Group</th>
+                <th>Category</th>
                 <th className="col-amount">Amount</th>
                 <th className="col-notes">Notes</th>
                 <th className="col-actions" aria-label="More" />
@@ -757,7 +757,7 @@ function LineForm({
           </select>
         </label>
         <label className="field">
-          <span>Budget category</span>
+          <span>Budget group</span>
           <select value={d.category} onChange={(e) => set({ category: e.target.value })}>
             <option value="">—</option>
             {cats.map((c) => (
@@ -768,7 +768,7 @@ function LineForm({
           </select>
         </label>
         <div className="field">
-          <span>Pmt category</span>
+          <span>Payment category</span>
           <TitleCombo value={d.pmtCategory} titles={pmtCategories} required={false} placeholder="RENT" onChange={(pmtCategory) => set({ pmtCategory })} list="budget:pmt" />
         </div>
         <label className="field budget-wide">

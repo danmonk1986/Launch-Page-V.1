@@ -145,7 +145,7 @@ export function AddItemForm(p: {
               </select>
             </label>
             <label className="field">
-              <span>Budget category</span>
+              <span>Budget group</span>
               <select value={category} onChange={(e) => setCategory(e.target.value)}>
                 <option value="">—</option>
                 {[...BUDGET_CATEGORIES].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).map((c) => (
@@ -160,7 +160,7 @@ export function AddItemForm(p: {
               <TitleCombo value={method} titles={picks((l) => l.method)} required={false} placeholder="e-Transfer" onChange={setMethod} list="budget:method" />
             </div>
             <div className="field">
-              <span>Pmt category</span>
+              <span>Payment category</span>
               <TitleCombo value={pmtCategory} titles={picks((l) => l.pmtCategory)} required={false} placeholder="RENT" onChange={setPmtCategory} list="budget:pmt" />
             </div>
           </div>

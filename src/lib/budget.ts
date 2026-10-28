@@ -102,10 +102,10 @@ export const sumLines = (list: BudgetLine[]) => list.reduce((a, l) => a + lineTo
 
 export type BudgetGroupBy = 'section' | 'pmtCategory' | 'project' | 'category';
 export const GROUP_BY: { id: BudgetGroupBy; label: string }[] = [
-  { id: 'section', label: 'Group' },
-  { id: 'pmtCategory', label: 'Pmt category' },
+  { id: 'section', label: 'Section' },
+  { id: 'pmtCategory', label: 'Payment category' },
   { id: 'project', label: 'Project' },
-  { id: 'category', label: 'Budget category' }
+  { id: 'category', label: 'Budget group' }
 ];
 
 /** Which box a line counts in: its group (fixed, variable…) or its pmt category / project / budget category. */

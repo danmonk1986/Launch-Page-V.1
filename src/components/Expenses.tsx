@@ -128,8 +128,8 @@ export function ExpensesView(p: Props) {
                 <th className="col-task">Description</th>
                 <th className="col-center">Method</th>
                 <th className="col-center">Type</th>
-                <th className="col-center">Category</th>
-                <th>Pmt category</th>
+                <th className="col-center">Group</th>
+                <th>Category</th>
                 <th className="col-amount">Total</th>
                 <th className="col-amount">GST/HST</th>
               </tr>
@@ -264,7 +264,7 @@ function ExpenseForm({
           </select>
         </label>
         <label className="field">
-          <span>Expense category</span>
+          <span>Budget group</span>
           <select value={d.category} onChange={(e) => set({ category: e.target.value })}>
             <option value="">—</option>
             {cats.map((c) => (
@@ -275,7 +275,7 @@ function ExpenseForm({
           </select>
         </label>
         <div className="field">
-          <span>Pmt category</span>
+          <span>Payment category</span>
           <TitleCombo value={d.pmtCategory} titles={pmtCategories} required={false} placeholder="RENT" onChange={(pmtCategory) => set({ pmtCategory })} list="budget:pmt" />
         </div>
         <label className="field budget-wide">
