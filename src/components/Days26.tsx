@@ -239,12 +239,13 @@ export function Days26Page(p: Props) {
         routine={routine}
         shift={shift}
         onToggle={(n) => {
-          if (isPast) return p.onTickDay(viewDay, n.id);
-          const turningOn = !rec?.ticks.includes(n.id);
-          toggle(n.id);
+          // V12-044: a past day ticks onto that day; the log it opens lands there too.
+          const turningOn = !viewRec?.ticks.includes(n.id);
+          if (isPast) p.onTickDay(viewDay, n.id);
+          else toggle(n.id);
           // Oct 22: ticking H2O or a meal opens its log, filled in, so the tick and the log match.
           const k = logKindFor(n.label);
-          if (turningOn && k && !n.log) setLog({ entry: newLog(k.kind, k.fill), isNew: true });
+          if (turningOn && k && !n.log) setLog({ entry: newLog(k.kind, k.fill, viewDay), isNew: true });
         }}
         onLog={(n) => setLog({ entry: newLog(n.log!, undefined, viewDay), isNew: true })}
         ritualFor={(label) => (isPast ? null : ritualFor(label))}
