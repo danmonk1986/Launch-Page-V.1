@@ -198,6 +198,19 @@ export function Days26Page(p: Props) {
   const [editList, setEditList] = useState(false);
   const toggle = (id: string, on?: boolean) => p.onTick(id, on);
 
+  /**
+   * V12-047: a clock time placed inside a routine day (which can span two dates: on Nights,
+   * 7:00 AM belongs to the night that started the evening before). Falls back to `d` itself.
+   */
+  const timeInDay = (day: string, d: Date): Date => {
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    for (const o of [0, 1, -1]) {
+      const c = new Date(`${addDays(day, o)}T${hh}:${mm}:00`);
+      if (routineDay(c, routine, shift, flip) === day) return c;
+    }
+    return d;
+  };
   const newLog = (kind: LogKind, fill?: Partial<LogEntry>, day: string = today): LogEntry => {
     const d = {
       productivity: { amount: 1, unit: 'blocks', qty: 1 },
@@ -207,8 +220,8 @@ export function Days26Page(p: Props) {
       h2o: { amount: 500, unit: 'ml', qty: 1 },
       vices: { amount: 1, unit: 'load', qty: 1 }
     }[kind];
-    // A log added to a past day sits at noon that day.
-    const at = day === today ? new Date().toISOString() : new Date(`${day}T12:00:00`).toISOString();
+    // A log added to a past day starts at this clock time within that day.
+    const at = day === today ? new Date().toISOString() : timeInDay(day, new Date()).toISOString();
     return { id: crypto.randomUUID(), day, at, kind, note: '', mode, sort: 0, ...d, ...fill };
   };
   const ritualFor = (label: string) => {
@@ -358,28 +371,35 @@ export function Days26Page(p: Props) {
                 .map((l) => [(l.kind === 'food' ? splitMeal(l.note).desc : l.note.trim()).toLowerCase(), l.amount])
             )}
             onSave={(e) => {
-              // The chosen time decides the day; × quantity saves one line each (Productivity stays one line).
-              const day = routineDay(new Date(e.at), routine, shift, flip);
+              // Today: the chosen time decides the day. A past day's log (V12-047) stays on that day,
+              // its time placed inside it. × quantity saves one line each (Productivity stays one line).
+              const pinned = log.entry.day !== today;
+              const day = pinned ? log.entry.day : routineDay(new Date(e.at), routine, shift, flip);
+              const at0 = pinned ? timeInDay(day, new Date(e.at)) : new Date(e.at);
               const n = e.kind !== 'productivity' && Number.isInteger(e.qty) && e.qty > 1 ? e.qty : 1;
               for (let i = 0; i < n; i += 1) {
-                p.onSaveLog({ ...e, day, qty: n > 1 ? 1 : e.qty, id: i === 0 ? e.id : crypto.randomUUID(), at: new Date(new Date(e.at).getTime() + i * 1000).toISOString() });
+                p.onSaveLog({ ...e, day, qty: n > 1 ? 1 : e.qty, id: i === 0 ? e.id : crypto.randomUUID(), at: new Date(at0.getTime() + i * 1000).toISOString() });
               }
               // A note that matches a Non-Negotiable ticks it, as a timed launch does. Oct 22: an H2O
               // log ticks the H2O / water one, and a food log ticks its meal (Breakfast…), note or not.
               const note = e.note.trim().toLowerCase();
-              if (day === today && e.kind !== 'vices') {
+              // The log ticks its matching Non-Negotiable on the day it landed (today, or the past day open).
+              const dayRec = day === today ? rec : records.find((r) => r.day === day) ?? null;
+              const dayItems = day === viewDay ? viewItems : items;
+              const tickOn = (id: string) => (day === today ? p.onTick(id, true) : p.onTickDay(day, id, true));
+              if ((day === today || day === viewDay) && e.kind !== 'vices') {
                 const meal = e.kind === 'food' ? splitMeal(e.note).meal.toLowerCase() : '';
                 let waterTicked = false;
-                for (const n of items) {
+                for (const n of dayItems) {
                   if (n.log) continue;
                   const label = n.label.trim().toLowerCase();
                   const k = logKindFor(n.label);
                   const byNote = note.length >= 3 && label.length >= 3 && (note.includes(label) || label.includes(note));
                   // One glass ticks the next water Non-Negotiable not yet ticked, not all of them.
-                  const water = !!k && k.kind === 'h2o' && e.kind === 'h2o' && !waterTicked && !rec?.ticks.includes(n.id);
+                  const water = !!k && k.kind === 'h2o' && e.kind === 'h2o' && !waterTicked && !dayRec?.ticks.includes(n.id);
                   const byMeal = !!k && k.kind === 'food' && e.kind === 'food' && !!meal && label.includes(meal);
                   if (water) waterTicked = true;
-                  if (byNote || water || byMeal) p.onTick(n.id, true);
+                  if (byNote || water || byMeal) tickOn(n.id);
                 }
               }
               if (e.kind === 'vices' && e.note.trim()) {
