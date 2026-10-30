@@ -5,8 +5,6 @@ export const BACKGROUNDS = ['synthwave', 'night', 'navy', 'damascus', 'snow', 'w
 export type Background = (typeof BACKGROUNDS)[number];
 export const LIGHT_BACKGROUNDS: readonly Background[] = ['damascus', 'snow', 'white'];
 /** The backgrounds Supabase accepted before 0012_backgrounds.sql. */
-const LEGACY_BACKGROUNDS = ['synthwave', 'night', 'plain'];
-const BG_LOCAL_KEY = 'launchpage.settings.bgLocal';
 
 /** Plain was retired for Navy (Oct 16); anything unknown falls back to Synthwave. */
 function normalizeBackground(b: string): Background {
@@ -105,22 +103,6 @@ type Row = {
   day_bg_image?: string | null;
 };
 
-function hasLocalBg() {
-  try {
-    return localStorage.getItem(BG_LOCAL_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-function setLocalBg(on: boolean) {
-  try {
-    if (on) localStorage.setItem(BG_LOCAL_KEY, '1');
-    else localStorage.removeItem(BG_LOCAL_KEY);
-  } catch {
-    /* ignore */
-  }
-}
-
 const toRow = (s: BrandSettings): Row => ({
   display_name: s.displayName,
   logo_text: s.logoText,
@@ -146,8 +128,7 @@ const fromRow = (r: Row): BrandSettings => ({
   logoUrl: r.logo_url,
   goal: r.goal,
   mantra: r.mantra,
-  // Until 0012 is run, a newer background lives on this device only.
-  background: hasLocalBg() ? readLocal().background : normalizeBackground(r.background),
+  background: normalizeBackground(r.background),
   accentPurple: r.accent_purple,
   accentTeal: r.accent_teal,
   // Before 0007 is run these columns are missing: keep this device's choice.
@@ -191,46 +172,8 @@ export async function saveSettings(
 ): Promise<{ synced: boolean }> {
   writeLocal(s);
   if (!supabase || !userId) return { synced: false };
-  const row = toRow(s);
-  const { error } = await supabase.from('settings').upsert({ user_id: userId, ...row });
-  if (!error) {
-    setLocalBg(false);
-    return { synced: true };
-  }
-  // 0007, 0012 or 0021 not run yet: save everything else; what's new stays on this device.
-  const noImages = { ...row };
-  delete noImages.night_bg_image;
-  delete noImages.day_bg_image;
-  if (!(await supabase.from('settings').upsert({ user_id: userId, ...noImages })).error) {
-    setLocalBg(false);
-    return { synced: false };
-  }
-  const noDay = { ...noImages };
-  delete noDay.day_purple;
-  delete noDay.day_teal;
-  delete noDay.day_green;
-  delete noDay.day_pink;
-  if (!(await supabase.from('settings').upsert({ user_id: userId, ...noDay })).error) {
-    setLocalBg(false);
-    return { synced: false };
-  }
-  delete row.night_bg_image;
-  delete row.day_bg_image;
-  delete row.day_purple;
-  delete row.day_teal;
-  delete row.day_green;
-  delete row.day_pink;
-  delete row.accent_green;
-  delete row.accent_pink;
-  const keepLocalBg = !LEGACY_BACKGROUNDS.includes(row.background);
-  if (keepLocalBg) row.background = 'synthwave';
-  const { error: e2 } = await supabase.from('settings').upsert({ user_id: userId, ...row });
-  setLocalBg(keepLocalBg);
-  if (e2 && keepLocalBg) {
-    // The legacy shape failed too: try again with just the old columns minus the background.
-    const rest: Partial<Row> = { ...row };
-    delete rest.background;
-    await supabase.from('settings').upsert({ user_id: userId, ...rest });
-  }
-  return { synced: false };
+  // V20-008: every column, every time (the old fallbacks that dropped images and day colours
+  // when a save failed are gone now that every setup script is run).
+  const { error } = await supabase.from('settings').upsert({ user_id: userId, ...toRow(s) });
+  return { synced: !error };
 }

@@ -79,16 +79,9 @@ export const taskStore = makeStore<Task, Row>({
   orderBy: 'sort',
   script: 'supabase/migrations/0008_projects_tasks.sql',
   seed: () => [],
-  latestScript: 'supabase/migrations/0031_budget_links.sql',
-  // Before 0031 is run: save without the budget link (kept on this device until then).
-  legacyRow: (r) => {
-    const x = { ...r };
-    delete x.budget_line_id;
-    return x;
-  },
   toRow: (t) => ({
     id: t.id,
-    ...(t.parentId ? { parent_id: t.parentId } : {}),
+    parent_id: t.parentId ?? null,
     project_id: t.projectId,
     description: t.description,
     task: t.task,
@@ -107,7 +100,7 @@ export const taskStore = makeStore<Task, Row>({
     deleted_at: t.deletedAt,
     google_event_id: t.googleEventId,
     launch_id: t.launchId,
-    ...(t.budgetLineId !== undefined ? { budget_line_id: t.budgetLineId } : {}),
+    budget_line_id: t.budgetLineId ?? null,
     sort: t.sort
   }),
   fromRow: (r) => ({

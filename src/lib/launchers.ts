@@ -295,15 +295,8 @@ export const launcherStore = makeStore<Launcher, LauncherRow>({
   localKey: 'launchpage.launchers.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0003_launchers_events.sql',
-  latestScript: 'supabase/migrations/0028_rocket_hidden.sql',
-  // Before 0006 is run, pink is refused (saved as purple); before 0028, hidden stays on this device.
-  legacyRow: (r) => {
-    const x: Partial<LauncherRow> = r.color === 'pink' ? { ...r, color: 'purple' } : { ...r };
-    delete x.hidden;
-    return x;
-  },
   seed: seedLaunchers,
-  toRow: (l) => ({ id: l.id, name: l.name, note: l.note, url: l.url, color: l.color, routine_ids: l.routineIds, sort: l.sort, ...(l.hidden !== undefined ? { hidden: l.hidden } : {}) }),
+  toRow: (l) => ({ id: l.id, name: l.name, note: l.note, url: l.url, color: l.color, routine_ids: l.routineIds, sort: l.sort, hidden: !!l.hidden }),
   fromRow: (r) => ({ id: r.id, name: r.name, note: r.note, url: r.url, color: r.color, routineIds: r.routine_ids, sort: r.sort, hidden: !!r.hidden })
 });
 
@@ -312,23 +305,6 @@ export const launchStore = makeStore<Launch, LaunchRow>({
   localKey: 'launchpage.launches.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0003_launchers_events.sql',
-  latestScript: 'supabase/migrations/0020_launch_logging_hourly.sql',
-  // Before 0004/0005/0013/0016/0019 are run: save without moved_to, sound, notify, tone, once_time and ritual_id.
-  legacyRow: (r) => {
-    const x = { ...r };
-    delete x.ritual_id;
-    delete x.log_kind;
-    delete x.log_amount;
-    delete x.until_time;
-    // Before 0020, hourly isn't allowed in the cloud: keep it as every day there (this device keeps hourly).
-    if (x.repeat === 'hourly') x.repeat = 'weekly';
-    delete x.once_time;
-    delete x.tone;
-    delete x.moved_to;
-    delete x.sound;
-    delete x.notify;
-    return x;
-  },
   seed: seedLaunches,
   toRow: (l) => ({
     id: l.id,
@@ -341,17 +317,17 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     minutes: l.minutes,
     urls: l.urls,
     active: l.active,
-    ...(l.movedTo ? { moved_to: l.movedTo } : {}),
+    moved_to: l.movedTo ?? null,
     sound: l.sound,
     notify: l.notify,
     tone: l.tone ?? 'marimba',
     once_time: l.onceTime ?? null,
-    // Only sent once the column exists (0019) or a ritual is picked, so older setups keep saving cleanly.
-    ...('ritualId' in l ? { ritual_id: l.ritualId ?? null } : {}),
-    ...('logKind' in l ? { log_kind: l.logKind ?? null, log_amount: l.logAmount ?? null } : {}),
-    ...('untilTime' in l ? { until_time: l.untilTime ?? null } : {}),
-    // Only sent when there are more dates (needs 0024), so older setups keep saving cleanly.
-    ...(l.moreDates && l.moreDates.length ? { more_dates: l.moreDates } : 'moreDates' in l && l.moreDates ? { more_dates: [] } : {}),
+    // Oct 30 (V20-008): every column is always sent, so clearing a field clears it in the cloud too.
+    ritual_id: l.ritualId ?? null,
+    log_kind: l.logKind ?? null,
+    log_amount: l.logAmount ?? null,
+    until_time: l.untilTime ?? null,
+    more_dates: l.moreDates ?? [],
     sort: l.sort
   }),
   fromRow: (r) => ({

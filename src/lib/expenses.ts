@@ -58,13 +58,6 @@ export const expenseStore = makeStore<Expense, Row>({
   localKey: 'launchpage.expenses.v1',
   orderBy: 'on_date',
   script: 'supabase/migrations/0031_budget_links.sql',
-  latestScript: 'supabase/migrations/0032_currency.sql',
-  legacyRow: (r) => {
-    const x = { ...r };
-    delete x.foreign_amount;
-    delete x.currency;
-    return x;
-  },
   seed: () => [],
   toRow: (e) => ({
     id: e.id,
@@ -81,7 +74,8 @@ export const expenseStore = makeStore<Expense, Row>({
     budget_line_id: e.budgetLineId,
     task_id: e.taskId,
     sort: e.sort,
-    ...(e.currency ? { currency: e.currency, foreign_amount: e.foreign ?? null } : {})
+    currency: e.currency ?? '',
+    foreign_amount: e.currency ? e.foreign ?? null : null
   }),
   fromRow: (r) => ({
     id: r.id,

@@ -19,13 +19,6 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
   fromRow: (r: R) => T;
   seed: () => T[];
   script: string;
-  /**
-   * The row without columns added by later setup scripts. If a save fails because a
-   * script has not been run yet, the record still saves in this shape.
-   */
-  legacyRow?: (r: R) => Partial<R>;
-  /** The newest setup script, named in the message when only the legacy shape saved. */
-  latestScript?: string;
 }): Store<T> {
   const readLocal = (): T[] | null => {
     try {
@@ -72,22 +65,14 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
     if (on) p[kind].push(id);
     writePending(p);
   };
-  let legacyOnly = false;
-
-  /** Upsert one record; falls back to the legacy shape when a newer column is missing. */
-  const push = async (item: T): Promise<'full' | 'legacy' | false> => {
+  /**
+   * Upsert one record, every column (V20-008: the old fallback that retried without newer
+   * columns is gone now that every setup script is run; it could drop fields without a word).
+   */
+  const push = async (item: T): Promise<'full' | false> => {
     if (!supabase) return 'full';
-    const row = opts.toRow(item);
-    const { error } = await supabase.from(opts.table).upsert(row);
-    if (!error) return 'full';
-    if (opts.legacyRow) {
-      const retry = await supabase.from(opts.table).upsert(opts.legacyRow(row));
-      if (!retry.error) {
-        legacyOnly = true;
-        return 'legacy';
-      }
-    }
-    return false;
+    const { error } = await supabase.from(opts.table).upsert(opts.toRow(item));
+    return error ? false : 'full';
   };
 
   return {
@@ -106,10 +91,8 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
               mark('upserts', id, false);
               continue;
             }
-            const how = await push(item);
-            // A legacy save stays pending, so this device's full version keeps winning.
-            if (how === 'full') mark('upserts', id, false);
-            else if (!how) stuck += 1;
+            if (await push(item)) mark('upserts', id, false);
+            else stuck += 1;
             list = list.some((x) => x.id === id) ? list.map((x) => (x.id === id ? item : x)) : [...list, item];
           }
           for (const id of pending.deletes) {
@@ -120,11 +103,7 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
           }
           if (list.length > 0) {
             writeLocal(list);
-            const problem = stuck
-              ? `${stuck} change${stuck === 1 ? '' : 's'} saved on this device only. Run ${opts.latestScript ?? opts.script} in Supabase, then reload.`
-              : legacyOnly
-                ? `Some settings saved on this device only. Run ${opts.latestScript ?? opts.script} in Supabase.`
-                : null;
+            const problem = stuck ? `${stuck} change${stuck === 1 ? '' : 's'} saved on this device only (${opts.table}). They'll retry on the next load.` : null;
             return { items: list, problem };
           }
           const seed = readLocal() ?? opts.seed();
@@ -150,9 +129,9 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
     async save(userId, item, all) {
       writeLocal(all);
       if (!supabase || !userId) return true;
-      const how = await push(item);
-      mark('upserts', item.id, how !== 'full');
-      return how !== false;
+      const ok = await push(item);
+      mark('upserts', item.id, !ok);
+      return !!ok;
     },
 
     async remove(userId, id, all) {

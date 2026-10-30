@@ -42,14 +42,6 @@ export const journalStore = makeStore<JournalEntry, Row>({
   localKey: 'launchpage.journal.v1',
   orderBy: 'entry_date',
   script: 'supabase/migrations/0011_journal.sql',
-  latestScript: 'supabase/migrations/0017_journal_mood.sql',
-  // Before 0015/0017: save without the check-ins and mood columns (body still holds the check-ins' text).
-  legacyRow: (r) => {
-    const x = { ...r };
-    delete x.checkins;
-    delete x.mood;
-    return x;
-  },
   seed: () => [],
   toRow: (j) => ({ id: j.id, entry_date: j.date, headline: j.headline, theme: j.theme, body: j.body, checkins: j.checkins ?? checkinsOf(j), mood: j.mood ?? '', sort: j.sort }),
   fromRow: (r) => ({ id: r.id, date: r.entry_date, headline: r.headline, theme: r.theme, body: r.body, checkins: Array.isArray(r.checkins) ? r.checkins : undefined, mood: r.mood ?? '', sort: r.sort })
