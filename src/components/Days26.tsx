@@ -121,6 +121,8 @@ type Props = {
   onAddRocket?: (url: string) => Promise<void>;
   /** Ticks something for today: a Non-Negotiable's id or a ritual step's key. */
   onTick: (key: string, on?: boolean) => void;
+  /** V12-044: tick on a past day (from the 7-day strip). */
+  onTickDay: (day: string, key: string, on?: boolean) => void;
   /** Today's journal check-ins, for a ritual's check-in step. */
   checkinText: (n: number) => string;
   onCheckin: (n: number, text: string) => void;
@@ -137,6 +139,15 @@ export function Days26Page(p: Props) {
   const reset = resetMinutes(routine, shift, flip);
   const rec = records.find((r) => r.day === today) ?? null;
   const items = activeNonNegs(nonnegs);
+  // V12-044: a day picked from the 7-day strip (null = today). Past days are ticked and logged too.
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  const viewDay = pickedDay && pickedDay < today && pickedDay >= addDays(today, -6) ? pickedDay : today;
+  const isPast = viewDay !== today;
+  const viewRec = isPast ? records.find((r) => r.day === viewDay) ?? null : rec;
+  // A past day shows the list it was scored on (its snapshot), so items removed since still show.
+  const viewItems = isPast && viewRec?.items.length
+    ? viewRec.items.map((s, i) => nonnegs.find((n) => n.id === s.id) ?? { id: s.id, label: s.label, section: 'morning' as Section, time: null, timeFrom: null, log: s.log as NonNeg['log'], target: s.target, perWeek: null, archived: false, sort: i })
+    : items;
   const [log, setLog] = useState<{ entry: LogEntry; isNew: boolean } | null>(null);
   const [ritualEdit, setRitualEdit] = useState<{ r: Routine; isNew: boolean } | null>(null);
   const [shownRitual, setShownRitual] = useState<string | null>(readShownRitual);
@@ -186,7 +197,7 @@ export function Days26Page(p: Props) {
   const [editList, setEditList] = useState(false);
   const toggle = (id: string, on?: boolean) => p.onTick(id, on);
 
-  const newLog = (kind: LogKind, fill?: Partial<LogEntry>): LogEntry => {
+  const newLog = (kind: LogKind, fill?: Partial<LogEntry>, day: string = today): LogEntry => {
     const d = {
       productivity: { amount: 1, unit: 'blocks', qty: 1 },
       activity: { amount: 10, unit: 'min', qty: 1 },
@@ -195,7 +206,9 @@ export function Days26Page(p: Props) {
       h2o: { amount: 500, unit: 'ml', qty: 1 },
       vices: { amount: 1, unit: 'load', qty: 1 }
     }[kind];
-    return { id: crypto.randomUUID(), day: today, at: new Date().toISOString(), kind, note: '', mode, sort: 0, ...d, ...fill };
+    // A log added to a past day sits at noon that day.
+    const at = day === today ? new Date().toISOString() : new Date(`${day}T12:00:00`).toISOString();
+    return { id: crypto.randomUUID(), day, at, kind, note: '', mode, sort: 0, ...d, ...fill };
   };
   const ritualFor = (label: string) => {
     const l = label.trim().toLowerCase();
@@ -210,8 +223,10 @@ export function Days26Page(p: Props) {
       </div>
 
       <NonNegCard
-        items={items}
-        rec={rec}
+        items={viewItems}
+        rec={viewRec}
+        day={viewDay}
+        onPickDay={(d) => setPickedDay(d === today ? null : d)}
         records={records}
         logs={logs}
         config={config}
@@ -223,14 +238,15 @@ export function Days26Page(p: Props) {
         routine={routine}
         shift={shift}
         onToggle={(n) => {
+          if (isPast) return p.onTickDay(viewDay, n.id);
           const turningOn = !rec?.ticks.includes(n.id);
           toggle(n.id);
           // Oct 22: ticking H2O or a meal opens its log, filled in, so the tick and the log match.
           const k = logKindFor(n.label);
           if (turningOn && k && !n.log) setLog({ entry: newLog(k.kind, k.fill), isNew: true });
         }}
-        onLog={(n) => setLog({ entry: newLog(n.log!), isNew: true })}
-        ritualFor={ritualFor}
+        onLog={(n) => setLog({ entry: newLog(n.log!, undefined, viewDay), isNew: true })}
+        ritualFor={(label) => (isPast ? null : ritualFor(label))}
         onOpenRitual={(r) => {
           showRitual(r.id);
           ritualCard.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -552,6 +568,9 @@ function GoalCard({ goal, onGoal }: { goal: string; onGoal: (g: string) => void 
 type NonNegCardProps = {
   items: NonNeg[];
   rec: DayRecord | null;
+  /** The day shown: today, or a past day picked from the strip. */
+  day: string;
+  onPickDay: (day: string) => void;
   records: DayRecord[];
   logs: LogEntry[];
   config: Config;
@@ -569,26 +588,33 @@ type NonNegCardProps = {
   onEdit: () => void;
 };
 
-function NonNegCard({ items, rec, records, logs, config, today, now, flip, reset, mode, routine, shift, onToggle, onLog, ritualFor, onOpenRitual, onEdit }: NonNegCardProps) {
-  const done = (n: NonNeg) => isDone({ id: n.id, label: n.label, log: n.log, target: n.target }, rec, logs, today);
+function NonNegCard({ items, rec, day, onPickDay, records, logs, config, today, now, flip, reset, mode, routine, shift, onToggle, onLog, ritualFor, onOpenRitual, onEdit }: NonNegCardProps) {
+  const isPast = day !== today;
+  const done = (n: NonNeg) => isDone({ id: n.id, label: n.label, log: n.log, target: n.target }, rec, logs, day);
   const count = items.filter(done).length;
-  const cur = currentSection(now, reset, flip);
+  const cur = isPast ? null : currentSection(now, reset, flip);
+  const dayName = new Date(`${day}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' });
   const weekDays = [...Array(7).keys()].map((i) => addDays(today, i - 6));
   // Last 7 routine days: on baseline, a dip, or nothing recorded; today is the ring.
   const results = finished(records, logs, config, today, null);
   const run = currentRun(results);
   const needed = Math.max(1, items.length - ALLOWED_MISSES);
-  const vice = sum(logsOn(logs, today, 'vices'));
-  const limit = viceLimit(config, mode);
+  const vice = sum(logsOn(logs, day, 'vices'));
+  const limit = viceLimit(config, rec?.mode ?? mode);
   const inDip = results.length > 0 && !run.on;
 
   return (
     <section className="panel d26-nonneg" aria-labelledby="h-nonneg">
       <div className="panel-head">
         <h2 id="h-nonneg" className="panel-title">
-          Non-Negotiables <span className="d26-count">{count}/{items.length} today</span>
+          Non-Negotiables <span className="d26-count">{count}/{items.length} {isPast ? dayName : 'today'}</span>
         </h2>
         <div className="panel-actions">
+          {isPast && (
+            <button type="button" className="btn btn-quiet d26-back-today" onClick={() => onPickDay(today)} title="Back to today">
+              ← Today
+            </button>
+          )}
           <button type="button" className="icon-btn tool-btn" aria-label="Edit Non-Negotiables" title="Edit Non-Negotiables" onClick={onEdit}>
             <Icon d={PEN} />
           </button>
@@ -616,7 +642,7 @@ function NonNegCard({ items, rec, records, logs, config, today, now, flip, reset
                   const ok = done(n);
                   const r = n.log ? null : ritualFor(n.label);
                   const time = itemTime(n, routine, shift, flip);
-                  const got = n.log ? loggedFor(n, logs, today) : 0;
+                  const got = n.log ? loggedFor(n, logs, day) : 0;
                   const week = n.perWeek ? weekDays.filter((d) => loggedFor(n, logs, d) >= (n.target || 1)).length : 0;
                   return (
                     <li key={n.id} className={`d26-item${ok ? ' is-done' : ''}`}>
@@ -679,15 +705,24 @@ function NonNegCard({ items, rec, records, logs, config, today, now, flip, reset
             const state = d === today ? 'today' : res ? (res.full ? 'full' : res.on ? 'on' : 'dip') : 'none';
             const letter = new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { weekday: 'narrow' });
             return (
-              <li key={d} title={`${d}: ${state === 'full' ? 'all ticked' : state === 'on' ? 'on baseline, one missed' : state === 'dip' ? 'a dip' : state === 'today' ? 'today' : 'no record'}`}>
-                <span className={`d26-dot is-${state}`} />
-                <span className="d26-dot-day">{letter}</span>
+              <li key={d}>
+                <button
+                  type="button"
+                  className={`d26-dot-btn${d === day ? ' is-picked' : ''}`}
+                  aria-pressed={d === day}
+                  aria-label={`${new Date(`${d}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'long', month: 'short', day: 'numeric' })}: ${state === 'full' ? 'all ticked' : state === 'on' ? 'on baseline, one missed' : state === 'dip' ? 'a dip' : state === 'today' ? 'today' : 'no record'}. Open this day`}
+                  title={d === today ? 'Today' : 'Open this day to tick or log what you did'}
+                  onClick={() => onPickDay(d)}
+                >
+                  <span className={`d26-dot is-${state}`} />
+                  <span className="d26-dot-day">{letter}</span>
+                </button>
               </li>
             );
           })}
         </ol>
         <div>
-          <p className="d26-bounce-title">{inDip ? 'Bounce back today' : 'Stay on baseline'}</p>
+          <p className="d26-bounce-title">{isPast ? `Catching up ${dayName}` : inDip ? 'Bounce back today' : 'Stay on baseline'}</p>
           <p className="d26-bounce-sub">
             {count}/{needed} needed · vice load {num(vice)}/{num(limit)}
             {inDip ? ` · dip ${plural(run.n, 'day')}` : run.n ? ` · ${plural(run.n, 'day')} on baseline` : ''}

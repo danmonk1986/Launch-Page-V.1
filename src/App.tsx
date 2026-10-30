@@ -779,7 +779,11 @@ export default function App() {
 
   /** Ticks (or unticks) something for today: a Non-Negotiable or a ritual step. */
   function tickToday(key: string, on?: boolean) {
-    const cur = daysRef.current.find((d) => d.day === d26Today) ?? { id: dayId(d26Today), day: d26Today, mode: d26Mode, shift: d26Shift, ticks: [], items: snapshot(nonnegs), sort: 0 };
+    tickDay(d26Today, key, on);
+  }
+  /** V12-044: tick on any routine day (a past day opened from the 7-day strip, or today). */
+  function tickDay(day: string, key: string, on?: boolean) {
+    const cur = daysRef.current.find((d) => d.day === day) ?? { id: dayId(day), day, mode: d26Mode, shift: d26Shift, ticks: [], items: snapshot(nonnegs), sort: 0 };
     const has = cur.ticks.includes(key);
     const want = on ?? !has;
     if (want === has) return;
@@ -1306,6 +1310,7 @@ export default function App() {
                 await launcherOps.save({ id: crypto.randomUUID(), name: nameFromUrl(url), note: '', url, color: 'teal', routineIds: activeRoutine ? [activeRoutine.id] : null, sort: launchers.length });
               }}
               onTick={tickToday}
+              onTickDay={tickDay}
               checkinText={checkinText}
               onCheckin={setCheckin}
             />

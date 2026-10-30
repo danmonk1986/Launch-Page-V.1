@@ -2261,3 +2261,12 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
   .task-table .task-row:hover td { box-shadow: inset 0 -1px 0 var(--row-hover-line, var(--accent-teal)); }
 }
 .app[data-tone='light'] { --row-hover-line: #3f8f80; }
+
+/* V12-044 · tap a day in the 7-day strip to open it */
+.d26-dot-btn { all: unset; display: grid; justify-items: center; gap: 4px; cursor: pointer; padding: 4px 2px; border-radius: 10px; }
+.d26-dot-btn:hover .d26-dot { transform: scale(1.12); }
+.d26-dot-btn:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
+.d26-dot-btn.is-picked:not(:has(.is-today)) { background: color-mix(in srgb, var(--accent-teal) 14%, transparent); }
+.d26-dot-btn.is-picked .d26-dot-day { color: var(--accent-teal); font-weight: 700; }
+.d26-dot { transition: transform 0.12s ease; }
+.d26-back-today { white-space: nowrap; }
