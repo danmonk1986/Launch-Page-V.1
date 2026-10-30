@@ -254,7 +254,7 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
         )}
       </td>
       {/* Oct 28: steps are the specific part, so they sit under Description. */}
-      <td className="col-desc">
+      <td className="col-desc" title={step ? undefined : t.description || undefined}>
         {step ? (
           <span className="task-cell step-cell">
             <span className="step-mark" aria-hidden="true">↳</span>

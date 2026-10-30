@@ -18,6 +18,8 @@ export function MoneyField({ value, onChange, label = 'Amount' }: { value: Money
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const editingForeign = foreignCur && !showCad;
+  // Oct 30: the rate used, shown so a conversion can be checked.
+  const [usedRate, setUsedRate] = useState<number | null>(null);
 
   const convert = async () => {
     if (!foreignCur) return;
@@ -28,6 +30,7 @@ export function MoneyField({ value, onChange, label = 'Amount' }: { value: Money
     try {
       const rate = await rateToCad(value.currency);
       onChange({ ...value, amount: toCad(value.foreign, rate) });
+      setUsedRate(rate);
       setShowCad(true);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'No rate right now.');
@@ -96,7 +99,7 @@ export function MoneyField({ value, onChange, label = 'Amount' }: { value: Money
             : err
               ? err
               : showCad
-                ? `From ${value.foreign ?? '?'} ${value.currency}. Tap the calculator to see it.`
+                ? `From ${value.foreign ?? '?'} ${value.currency}${usedRate ? ` at ${usedRate.toFixed(4)} (today's rate)` : ''}. Tap the calculator to see it.`
                 : value.amount !== null
                   ? `= $${value.amount.toFixed(2)} CAD`
                   : 'Tap the calculator to convert to CAD (or it converts when you save).'}

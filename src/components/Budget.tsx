@@ -251,9 +251,16 @@ export function BudgetPage(p: Props) {
     if (l.foreign == null || !l.currency) return;
     setRecalcNote(`Getting today's ${l.currency} rate…`);
     try {
-      const amount = toCad(l.foreign, await rateToCad(l.currency));
+      const rate = await rateToCad(l.currency);
+      const amount = toCad(l.foreign, rate);
       await p.onSave({ ...l, amount });
-      setRecalcNote(`${l.description}: ${l.foreign} ${l.currency} is now ${money(amount)}${l.amount !== null ? ` (was ${money(l.amount)})` : ''}.`);
+      // Oct 30: say the rate, and say plainly when nothing moved (rates change once a business day).
+      const at = `1 ${l.currency} = ${rate.toFixed(4)} CAD today`;
+      setRecalcNote(
+        l.amount !== null && Math.abs(l.amount - amount) < 0.005
+          ? `${l.description}: no change, still ${money(amount)} (${at}). Rates update once a business day.`
+          : `${l.description}: ${l.foreign} ${l.currency} is now ${money(amount)}${l.amount !== null ? ` (was ${money(l.amount)})` : ''} · ${at}.`
+      );
     } catch (e) {
       setRecalcNote(e instanceof Error ? e.message : 'No rate right now.');
     }
