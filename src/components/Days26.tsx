@@ -224,6 +224,20 @@ export function Days26Page(p: Props) {
     const at = day === today ? new Date().toISOString() : timeInDay(day, new Date()).toISOString();
     return { id: crypto.randomUUID(), day, at, kind, note: '', mode, sort: 0, ...d, ...fill };
   };
+  // V12-049: the same item in a ritual and in the Non-Negotiables (Power Up Stretch) is one thing:
+  // ticking either ticks both, and the log pops up once.
+  const same = (a: string) => a.trim().toLowerCase().replace(/\s+/g, ' ');
+  const twinSteps = (label: string) =>
+    p.rituals.flatMap((r) =>
+      r.items.flatMap((it, i) => {
+        const t = stepType(it).type;
+        return (t === 'step' || t === 'text') && same(it.label) === same(label) ? [{ key: ritualKey(r.id, i), step: it }] : [];
+      })
+    );
+  const twinNonNeg = (label: string) => items.find((n) => !n.log && same(n.label) === same(label)) ?? null;
+  /** A log of this kind and note already on that day (so ticking the twin doesn't log it twice). */
+  const alreadyLogged = (day: string, kind: LogKind, note?: string) =>
+    logs.some((l) => l.day === day && l.kind === kind && (!note || same(l.note).includes(same(note))));
   const ritualFor = (label: string) => {
     const l = label.trim().toLowerCase();
     return p.rituals.find((r) => r.name.trim() && (l === r.name.trim().toLowerCase() || l.includes(r.name.trim().toLowerCase()))) ?? null;
@@ -254,11 +268,15 @@ export function Days26Page(p: Props) {
         onToggle={(n) => {
           // V12-044: a past day ticks onto that day; the log it opens lands there too.
           const turningOn = !viewRec?.ticks.includes(n.id);
-          if (isPast) p.onTickDay(viewDay, n.id);
-          else toggle(n.id);
+          const tickHere = (key: string, on?: boolean) => (isPast ? p.onTickDay(viewDay, key, on) : toggle(key, on));
+          tickHere(n.id);
+          // V12-049: its twin in a ritual follows.
+          const twins = twinSteps(n.label);
+          for (const t of twins) tickHere(t.key, turningOn);
           // Oct 22: ticking H2O or a meal opens its log, filled in, so the tick and the log match.
-          const k = logKindFor(n.label);
-          if (turningOn && k && !n.log) setLog({ entry: newLog(k.kind, k.fill, viewDay), isNew: true });
+          // The ritual step's own log choice wins when it has one (Power Up Stretch → Activity).
+          const k = twins.map((t) => logFor(t.step.label, t.step.log)).find(Boolean) ?? logKindFor(n.label);
+          if (turningOn && k && !n.log && !alreadyLogged(viewDay, k.kind, k.fill.note)) setLog({ entry: newLog(k.kind, k.fill, viewDay), isNew: true });
         }}
         onLog={(n) => setLog({ entry: newLog(n.log!, undefined, viewDay), isNew: true })}
         ritualFor={(label) => (isPast ? null : ritualFor(label))}
@@ -309,13 +327,18 @@ export function Days26Page(p: Props) {
               const key = ritualKey(activeRitual.id, i);
               const turningOn = on ?? !rec?.ticks.includes(key);
               toggle(key, on);
+              // V12-049: the same item in the Non-Negotiables (and other rituals) follows.
+              const label = activeRitual.items[i]?.label ?? '';
+              const twin = twinNonNeg(label);
+              if (twin) toggle(twin.id, turningOn);
+              for (const t of twinSteps(label)) if (t.key !== key) toggle(t.key, turningOn);
               // Oct 24: a ritual step that is really a log (H2O, a meal, a walk, leisure work)
               // opens its log filled in when ticked, as the Non-Negotiables do.
               // Oct 24: the log is picked per step in Edit ritual (journal check-ins can log too).
               const step = activeRitual.items[i];
               const t = step ? stepType(step).type : null;
               const k = step && (t === 'step' || t === 'checkin' || t === 'text') ? logFor(step.label, step.log) : null;
-              if (turningOn && !rec?.ticks.includes(key) && k) setLog({ entry: newLog(k.kind, k.fill), isNew: true });
+              if (turningOn && !rec?.ticks.includes(key) && k && !alreadyLogged(today, k.kind, k.fill.note)) setLog({ entry: newLog(k.kind, k.fill), isNew: true });
             }}
             isPicked={(i, o) => !!rec?.ticks.includes(pickKey(activeRitual.id, i, o))}
             onPick={(i, o, on) => {
@@ -399,7 +422,11 @@ export function Days26Page(p: Props) {
                   const water = !!k && k.kind === 'h2o' && e.kind === 'h2o' && !waterTicked && !dayRec?.ticks.includes(n.id);
                   const byMeal = !!k && k.kind === 'food' && e.kind === 'food' && !!meal && label.includes(meal);
                   if (water) waterTicked = true;
-                  if (byNote || water || byMeal) tickOn(n.id);
+                  if (byNote || water || byMeal) {
+                    tickOn(n.id);
+                    // V12-049: and its twin in a ritual.
+                    if (byNote) for (const t of twinSteps(n.label)) tickOn(t.key);
+                  }
                 }
               }
               if (e.kind === 'vices' && e.note.trim()) {
