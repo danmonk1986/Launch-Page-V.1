@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { selectAll, supabase } from './supabase';
 import type { StepLog } from './days26';
 
 export type Kind = 'routine' | 'ritual';
@@ -281,7 +281,7 @@ export interface LoadResult {
 
 export async function loadRoutines(userId: string | null): Promise<LoadResult> {
   if (supabase && userId) {
-    const { data, error } = await supabase.from('routines').select('*').order('sort');
+    const { data, error } = await selectAll<Row>('routines', 'sort');
     if (!error && data) {
       if (data.length > 0) {
         const list = (data as Row[]).map(fromRow);

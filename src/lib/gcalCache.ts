@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { selectAll, supabase } from './supabase';
 import type { CalEvent } from './events';
 
 /**
@@ -79,7 +79,7 @@ const overlaps = (e: CalEvent, from: string, to: string) => e.endDate >= from &&
 /** What's kept: Supabase when it's set up, else this browser. */
 export async function loadCached(userId: string | null): Promise<CalEvent[]> {
   if (supabase && userId) {
-    const { data, error } = await supabase.from('gcal_events').select('*');
+    const { data, error } = await selectAll<Row>('gcal_events');
     if (!error && data) {
       const list = (data as Row[]).map(fromRow);
       writeLocal(list);

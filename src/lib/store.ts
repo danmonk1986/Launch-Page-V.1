@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { selectAll, supabase } from './supabase';
 
 /**
  * One list of records kept in a Supabase table when signed in, mirrored in this
@@ -93,7 +93,7 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
   return {
     async load(userId) {
       if (supabase && userId) {
-        const { data, error } = await supabase.from(opts.table).select('*').order(opts.orderBy);
+        const { data, error } = await selectAll<R>(opts.table, opts.orderBy);
         if (!error && data) {
           // Retry anything that failed last time before trusting the Supabase copy.
           const pending = readPending();
