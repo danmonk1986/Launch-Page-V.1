@@ -7,8 +7,14 @@ import { selectAll, supabase } from './supabase';
  */
 export interface Store<T extends { id: string }> {
   load(userId: string | null): Promise<{ items: T[]; problem: string | null }>;
-  save(userId: string | null, item: T, all: T[]): Promise<boolean>;
+  /** true = saved; false = this device only (retries later); 'newer' = another device's newer copy won. */
+  save(userId: string | null, item: T, all: T[]): Promise<boolean | 'newer'>;
   remove(userId: string | null, id: string, all: T[]): Promise<boolean>;
+  /**
+   * V20-009: called when a save found the record changed (or deleted) on another device since this
+   * device last saw it. The newer copy wins and is handed here (null = deleted) to show instead.
+   */
+  onNewer(fn: (id: string, newer: T | null) => void): void;
 }
 
 export function makeStore<T extends { id: string }, R extends { id: string }>(opts: {
@@ -65,15 +71,69 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
     if (on) p[kind].push(id);
     writePending(p);
   };
-  /**
-   * Upsert one record, every column (V20-008: the old fallback that retried without newer
-   * columns is gone now that every setup script is run; it could drop fields without a word).
-   */
-  const push = async (item: T): Promise<'full' | false> => {
-    if (!supabase) return 'full';
-    const { error } = await supabase.from(opts.table).upsert(opts.toRow(item));
-    return error ? false : 'full';
+  // V20-009 · versions: the updated_at this device last saw for each record (the database stamps it
+  // on every change). A save only goes through if the record is still at that version; otherwise
+  // another device changed it since, and its newer copy wins instead of being overwritten.
+  const verKey = `${opts.localKey}.ver`;
+  const versions: Record<string, string> = (() => {
+    try {
+      return JSON.parse(localStorage.getItem(verKey) ?? '{}');
+    } catch {
+      return {};
+    }
+  })();
+  const keepVersions = () => {
+    try {
+      localStorage.setItem(verKey, JSON.stringify(versions));
+    } catch {
+      /* ignore */
+    }
   };
+  const seen = (r: unknown) => {
+    const x = r as { id?: string; updated_at?: string };
+    if (x?.id && x.updated_at) versions[x.id] = x.updated_at;
+  };
+  let newer: (id: string, item: T | null) => void = () => {};
+  // Saves of one record run one after another, so a quick second change never races the first.
+  const lanes = new Map<string, Promise<unknown>>();
+  const inLane = <X,>(id: string, job: () => Promise<X>): Promise<X> => {
+    const run = (lanes.get(id) ?? Promise.resolve()).then(job, job);
+    lanes.set(id, run.catch(() => undefined));
+    return run;
+  };
+
+  /**
+   * Upsert one record, every column (V20-008: no legacy fallback). Returns false when it didn't
+   * reach Supabase, 'newer' when another device's newer copy won (V20-009).
+   */
+  const push = (item: T, opts2: { force?: boolean } = {}): Promise<'full' | 'newer' | false> =>
+    inLane(item.id, async () => {
+      if (!supabase) return 'full';
+      const row = opts.toRow(item);
+      const known = versions[item.id];
+      if (known && !opts2.force) {
+        const { data, error } = await supabase.from(opts.table).update(row).eq('id', item.id).eq('updated_at', known).select('*');
+        if (error) return false;
+        if (data && data.length) {
+          seen(data[0]);
+          keepVersions();
+          return 'full';
+        }
+        // Not at the version this device saw: changed or deleted elsewhere. Theirs wins.
+        const cur = await supabase.from(opts.table).select('*').eq('id', item.id).maybeSingle();
+        if (cur.error) return false;
+        if (cur.data) seen(cur.data);
+        else delete versions[item.id];
+        keepVersions();
+        newer(item.id, cur.data ? opts.fromRow(cur.data as R) : null);
+        return 'newer';
+      }
+      const { data, error } = await supabase.from(opts.table).upsert(row).select('*');
+      if (error) return false;
+      if (data && data[0]) seen(data[0]);
+      keepVersions();
+      return 'full';
+    });
 
   return {
     async load(userId) {
@@ -83,6 +143,8 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
           // Retry anything that failed last time before trusting the Supabase copy.
           const pending = readPending();
           const local = readLocal() ?? [];
+          for (const r of data) seen(r);
+          keepVersions();
           let list = (data as R[]).map(opts.fromRow);
           let stuck = 0;
           for (const id of pending.upserts) {
@@ -91,7 +153,8 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
               mark('upserts', id, false);
               continue;
             }
-            if (await push(item)) mark('upserts', id, false);
+            // A change made offline on this device: it was made on purpose, so it goes in over the cloud copy.
+            if (await push(item, { force: true })) mark('upserts', id, false);
             else stuck += 1;
             list = list.some((x) => x.id === id) ? list.map((x) => (x.id === id ? item : x)) : [...list, item];
           }
@@ -129,9 +192,9 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
     async save(userId, item, all) {
       writeLocal(all);
       if (!supabase || !userId) return true;
-      const ok = await push(item);
-      mark('upserts', item.id, !ok);
-      return !!ok;
+      const how = await push(item);
+      mark('upserts', item.id, !how);
+      return how === 'newer' ? 'newer' : !!how;
     },
 
     async remove(userId, id, all) {
@@ -139,7 +202,15 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
       if (!supabase || !userId) return true;
       const { error } = await supabase.from(opts.table).delete().eq('id', id);
       mark('deletes', id, !!error);
+      if (!error) {
+        delete versions[id];
+        keepVersions();
+      }
       return !error;
+    },
+
+    onNewer(fn) {
+      newer = fn;
     }
   };
 }

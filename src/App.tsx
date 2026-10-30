@@ -391,13 +391,49 @@ export default function App() {
   }
 
   // One save/delete pair per list: update the screen first, then the cloud.
+  // V20-009: when a save finds the record changed (or deleted) on another device, the newer copy
+  // wins: it replaces this device's copy on screen, and the status line says so.
+  useEffect(() => {
+    const swap =
+      <T extends { id: string }>(set: (fn: (prev: T[]) => T[]) => void, ref?: { current: T[] }) =>
+      (id: string, item: T | null) => {
+        set((prev) => {
+          const next = item ? (prev.some((x) => x.id === id) ? prev.map((x) => (x.id === id ? item : x)) : [...prev, item]) : prev.filter((x) => x.id !== id);
+          if (ref) ref.current = next;
+          return next;
+        });
+        setStatus(item ? 'Changed on another device, so the newer version is showing. Make your change again if it still needs it.' : 'That was deleted on another device.');
+      };
+    launcherStore.onNewer(swap(setLaunchers));
+    launchStore.onNewer(swap(setLaunches));
+    eventStore.onNewer(swap(setEvents));
+    projectStore.onNewer(swap(setProjects));
+    taskStore.onNewer(swap(setTasks, tasksRef));
+    nonNegStore.onNewer(swap(setNonnegs));
+    quoteStore.onNewer(swap(setQuotes));
+    budgetStore.onNewer(swap(setBudget));
+    invoiceStore.onNewer(swap(setInvoices));
+    customerStore.onNewer(swap(setCustomers));
+    profileStore.onNewer(swap(setInvoiceProfile));
+    meditationStore.onNewer(swap(setMeditations, medsRef));
+    hiddenPickStore.onNewer(swap(setHiddenPicks, hiddenRef));
+    expenseStore.onNewer(swap(setExpenses, expRef));
+    dayStore.onNewer(swap(setD26Days, daysRef));
+    logStore.onNewer(swap(setD26Logs, logsRef));
+    journalStore.onNewer(swap(setJournal, journalRef));
+    launchLogStore.onNewer(swap(setLaunchLog, logRef));
+    configStore.onNewer((_id, c) => c && setD26Config(c));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function ops<T extends { id: string }>(store: Store<T>, list: T[], setList: (l: T[]) => void, name: (t: T) => string) {
     return {
       save: async (item: T) => {
         const next = list.some((x) => x.id === item.id) ? list.map((x) => (x.id === item.id ? item : x)) : [...list, item];
         setList(next);
         const ok = await store.save(userId, item, next);
-        setStatus(ok ? `${name(item)} saved.` : `${name(item)} saved on this device only.`);
+        // 'newer': the newer copy from another device is showing, with its own message.
+        if (ok !== 'newer') setStatus(ok ? `${name(item)} saved.` : `${name(item)} saved on this device only.`);
       },
       /** Several at once (a reorder), so no save works from a stale list. */
       saveMany: async (items: T[]) => {
@@ -405,8 +441,13 @@ export default function App() {
         const next = [...list.map((x) => byId.get(x.id) ?? x), ...items.filter((i) => !list.some((x) => x.id === i.id))];
         setList(next);
         let ok = true;
-        for (const i of items) ok = (await store.save(userId, i, next)) && ok;
-        setStatus(ok ? 'Saved.' : 'Saved on this device only.');
+        let newer = false;
+        for (const i of items) {
+          const r = await store.save(userId, i, next);
+          if (r === 'newer') newer = true;
+          ok = !!r && ok;
+        }
+        if (!newer) setStatus(ok ? 'Saved.' : 'Saved on this device only.');
       },
       remove: async (id: string) => {
         const next = list.filter((x) => x.id !== id);
