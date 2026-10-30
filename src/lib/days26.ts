@@ -3,10 +3,14 @@
  *
  * Mode comes from the routine picker (HQ, or MWD on Days or Nights). Every MWD Nights time
  * flips 12 hours. "Today" is the routine day: 4 AM to 4 AM, or 4 PM to 4 PM on nights.
- * A day is ON BASELINE at 80% of its Non-Negotiables with the vice load inside the limit.
+ * A day is ON BASELINE at 90% of its Non-Negotiables ticked (Oct 29). Vices are logged honestly
+ * and tracked on their own; a celebration day you still showed up for isn't a wash.
  * The log is the proof: loggable Non-Negotiables tick only from logs.
  */
 import { makeStore } from './store';
+
+/** Share of the Non-Negotiables that makes a day ON BASELINE (V12-041). */
+export const BASELINE = 0.9;
 import { formatMinutes, shiftMinutes, type Routine, type Shift } from './routines';
 
 export type Mode = 'HQ' | 'MWD';
@@ -251,7 +255,7 @@ export function scoreDay(rec: DayRecord, logs: LogEntry[], c: Config): DayResult
     pct,
     vice,
     limit,
-    on: items.length > 0 && pct >= 0.8 && vice <= limit,
+    on: items.length > 0 && pct >= BASELINE,
     blocks: sum(logsOn(logs, rec.day, 'productivity')),
     activity: activityMinutes(logsOn(logs, rec.day, 'activity'))
   };

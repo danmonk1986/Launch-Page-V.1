@@ -38,6 +38,7 @@ import {
   sum,
   takeaway,
   total,
+  BASELINE,
   viceLimit,
   writeShownQuote,
   writeShownRitual,
@@ -575,7 +576,7 @@ function NonNegCard({ items, rec, records, logs, config, today, now, flip, reset
   // Last 7 routine days: on baseline, a dip, or nothing recorded; today is the ring.
   const results = finished(records, logs, config, today, null);
   const run = currentRun(results);
-  const needed = Math.ceil(items.length * 0.8);
+  const needed = Math.ceil(items.length * BASELINE - 1e-9);
   const vice = sum(logsOn(logs, today, 'vices'));
   const limit = viceLimit(config, mode);
   const inDip = results.length > 0 && !run.on;
@@ -1130,7 +1131,7 @@ function SummaryCard({
   const tVice = sum(logsOn(logs, today, 'vices'));
   const tLimit = viceLimit(config, mode);
   const tBlocks = sum(logsOn(logs, today, 'productivity'));
-  const tOn = todayItems.length > 0 && tDone / todayItems.length >= 0.8 && tVice <= tLimit;
+  const tOn = todayItems.length > 0 && tDone / todayItems.length >= BASELINE;
 
   const pct = (x: number | null) => (x === null ? '—' : `${Math.round(x * 100)}%`);
   const one = (x: number | null) => (x === null ? '—' : num(Math.round(x * 10) / 10));
