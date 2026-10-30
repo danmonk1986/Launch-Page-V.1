@@ -15,6 +15,8 @@ export interface Store<T extends { id: string }> {
    * device last saw it. The newer copy wins and is handed here (null = deleted) to show instead.
    */
   onNewer(fn: (id: string, newer: T | null) => void): void;
+  /** V20-011: sends changes still waiting on this device (connection back, app back in view). Returns how many went. */
+  flush(userId: string | null): Promise<number>;
 }
 
 export function makeStore<T extends { id: string }, R extends { id: string }>(opts: {
@@ -211,6 +213,36 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
 
     onNewer(fn) {
       newer = fn;
+    },
+
+    async flush(userId) {
+      if (!supabase || !userId) return 0;
+      const pending = readPending();
+      if (!pending.upserts.length && !pending.deletes.length) return 0;
+      const local = readLocal() ?? [];
+      let sent = 0;
+      for (const id of pending.upserts) {
+        const item = local.find((x) => x.id === id);
+        if (!item) {
+          mark('upserts', id, false);
+          continue;
+        }
+        // Made on this device while offline, on purpose: it goes in over the cloud copy.
+        if (await push(item, { force: true })) {
+          mark('upserts', id, false);
+          sent += 1;
+        }
+      }
+      for (const id of pending.deletes) {
+        const { error } = await supabase.from(opts.table).delete().eq('id', id);
+        if (!error) {
+          mark('deletes', id, false);
+          delete versions[id];
+          sent += 1;
+        }
+      }
+      keepVersions();
+      return sent;
     }
   };
 }

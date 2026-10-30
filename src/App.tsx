@@ -426,6 +426,35 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // V20-011: changes that couldn't reach the cloud (no signal on site) go as soon as the
+  // connection is back, or when the app comes back into view, not only on the next reload.
+  useEffect(() => {
+    if (!userId) return;
+    const stores = [launcherStore, launchStore, eventStore, projectStore, taskStore, nonNegStore, quoteStore, budgetStore, invoiceStore, customerStore, profileStore, meditationStore, hiddenPickStore, expenseStore, dayStore, logStore, journalStore, launchLogStore, configStore] as Store<{ id: string }>[];
+    let busy = false;
+    const flushAll = async () => {
+      if (busy || !navigator.onLine) return;
+      busy = true;
+      try {
+        let sent = 0;
+        for (const st of stores) sent += await st.flush(userId);
+        if (sent) setStatus(`Back online: ${sent} change${sent === 1 ? '' : 's'} saved to the cloud.`);
+      } finally {
+        busy = false;
+      }
+    };
+    const onVisible = () => document.visibilityState === 'visible' && void flushAll();
+    window.addEventListener('online', flushAll);
+    document.addEventListener('visibilitychange', onVisible);
+    const every = window.setInterval(flushAll, 120_000);
+    return () => {
+      window.removeEventListener('online', flushAll);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.clearInterval(every);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   function ops<T extends { id: string }>(store: Store<T>, list: T[], setList: (l: T[]) => void, name: (t: T) => string) {
     return {
       save: async (item: T) => {
