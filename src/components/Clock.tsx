@@ -9,7 +9,7 @@ export function HeaderClock() {
   }, []);
   return (
     <p className="header-clock">
-      <time dateTime={now.toISOString().slice(0, 10)}>
+      <time dateTime={`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`}>
         {now.toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
       </time>
       <span className="header-time">{now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>

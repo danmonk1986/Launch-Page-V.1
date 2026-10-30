@@ -1,3 +1,4 @@
+import { isoDate } from '../lib/launchers';
 import { useMemo, useRef, useState } from 'react';
 import { Sheet } from './Sheet';
 import { Icon, SearchToggle, TaskSheet, ViewToggle } from './Tasks';
@@ -364,7 +365,7 @@ export function BudgetPage(p: Props) {
             aria-label="Export CSV"
             title="Export as CSV (opens in Google Sheets; imports back in here)"
             disabled={!p.lines.length}
-            onClick={() => download(`launchpage-budget-${new Date().toISOString().slice(0, 10)}.csv`, linesToCsv(p.lines), 'text/csv')}
+            onClick={() => download(`launchpage-budget-${isoDate(new Date())}.csv`, linesToCsv(p.lines), 'text/csv')}
           >
             <Icon d={EXPORT} />
           </button>

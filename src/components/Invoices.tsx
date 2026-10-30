@@ -1,3 +1,4 @@
+import { isoDate } from '../lib/launchers';
 import { Fragment, useId, useMemo, useState, type ReactNode } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { AmountInput } from './AmountInput';
@@ -44,7 +45,7 @@ const shortDate = (s: string | null) => (s ? new Date(`${s}T12:00:00`).toLocaleD
 export function InvoicesPage(p: Props) {
   const [editing, setEditing] = useState<Invoice | null>(null);
   const [details, setDetails] = useState(false);
-  const thisFy = fiscalYear(new Date().toISOString().slice(0, 10))!;
+  const thisFy = fiscalYear(isoDate(new Date()))!;
   const fys = useMemo(() => [...new Set([thisFy, ...p.invoices.map((i) => fiscalYear(i.end ?? i.start)).filter((x): x is number => x !== null)])].sort((a, b) => b - a), [p.invoices, thisFy]);
   const [fy, setFy] = useState(thisFy);
   const inYear = p.invoices.filter((i) => fiscalYear(i.end ?? i.start) === fy || (!i.end && !i.start && fy === thisFy)).sort((a, b) => (b.end ?? '9').localeCompare(a.end ?? '9'));

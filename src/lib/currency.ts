@@ -7,7 +7,11 @@
 export const CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP', 'AUD', 'MXN', 'JPY'];
 export const HOME = 'CAD';
 
-const today = () => new Date().toISOString().slice(0, 10);
+/** Today in local time (V20-012: not UTC, which turns over at 6 PM in Edmonton). */
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 const cacheKey = (from: string) => `launchpage.rate.${from}.${HOME}`;
 
 /** How many CAD one unit of `from` buys today. Throws when no rate can be reached. */
