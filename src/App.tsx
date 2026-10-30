@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettings, type BrandSettings } from './lib/settings';
@@ -249,6 +250,20 @@ export default function App() {
   const now = useNow(30_000);
 
   const userId = session?.user.id ?? null;
+
+  // V20-006: this browser's copy belongs to one account. A different account starts clean
+  // (and the page reloads, so nothing of the last account stays in memory). Runs before any load.
+  useLayoutEffect(() => {
+    if (userId && claimDevice(userId) === 'wiped') window.location.reload();
+  }, [userId]);
+  /** Sign out (⚙ menu): clears this browser's copy, after a warning if changes haven't synced. */
+  async function signOutClean() {
+    const n = unsyncedCount();
+    if (n && !window.confirm(`${n} change${n === 1 ? " hasn't" : "s haven't"} reached the cloud yet. Signing out now loses ${n === 1 ? 'it' : 'them'}. Sign out anyway?`)) return;
+    await supabase?.auth.signOut({ scope: 'local' });
+    releaseDevice();
+    window.location.reload();
+  }
 
   useEffect(() => {
     if (!supabase) return;
@@ -1177,7 +1192,7 @@ export default function App() {
                           setTimeout(() => document.querySelector<HTMLInputElement>('.account input[type=password]')?.focus(), 150);
                         }
                       },
-                      { label: 'Sign out', danger: true, onClick: () => void supabase?.auth.signOut({ scope: 'local' }) }
+                      { label: 'Sign out', danger: true, onClick: () => void signOutClean() }
                     ]
                   : [])
               ]}
