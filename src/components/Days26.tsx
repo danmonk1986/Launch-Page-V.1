@@ -19,6 +19,7 @@ import {
   isDone,
   itemTime,
   loggedFor,
+  loggingStreak,
   logsOn,
   modeOf,
   nonNegForRitual,
@@ -130,7 +131,7 @@ type Props = {
 
 const RITUAL_SECTION_KEY = 'launchpage.d26.ritualSection';
 
-/** 26 Days: quote + daily goal, Non-Negotiables, Rituals, Logging, Summary. */
+/** 26 Days: quote + daily goal, Non-Negotiables, Logging, Rituals, Summary (V12-045: logs above rituals). */
 export function Days26Page(p: Props) {
   const { now, routine, shift, nonnegs, records, logs, config } = p;
   const mode = modeOf(routine);
@@ -254,6 +255,16 @@ export function Days26Page(p: Props) {
         onEdit={() => setEditList(true)}
       />
 
+      <LoggingCard
+        logs={logsOn(logs, viewDay)}
+        dayLabel={isPast ? new Date(`${viewDay}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' }) : null}
+        streak={loggingStreak(logs, today)}
+        config={config}
+        mode={mode}
+        onNew={(k) => setLog({ entry: newLog(k, undefined, viewDay), isNew: true })}
+        onOpen={(e) => setLog({ entry: e, isNew: false })}
+      />
+
       <section ref={ritualCard} className="panel d26-rituals" aria-labelledby="h-rituals">
         <div className="panel-head">
           <h2 id="h-rituals" className="panel-title">
@@ -320,13 +331,6 @@ export function Days26Page(p: Props) {
         )}
       </section>
 
-      <LoggingCard
-        logs={logsOn(logs, today)}
-        config={config}
-        mode={mode}
-        onNew={(k) => setLog({ entry: newLog(k), isNew: true })}
-        onOpen={(e) => setLog({ entry: e, isNew: false })}
-      />
 
       <SummaryCard
         displayName={p.displayName}
@@ -886,33 +890,37 @@ function describe(e: LogEntry) {
   }
 }
 
-function LoggingCard({ logs, config, mode, onNew, onOpen }: { logs: LogEntry[]; config: Config; mode: Mode; onNew: (k: LogKind) => void; onOpen: (e: LogEntry) => void }) {
+function LoggingCard({ logs, config, mode, dayLabel, streak, onNew, onOpen }: { logs: LogEntry[]; config: Config; mode: Mode; /** A past day being caught up (V12-044), or null for today. */ dayLabel: string | null; streak: number; onNew: (k: LogKind) => void; onOpen: (e: LogEntry) => void }) {
+  const when = dayLabel ? 'that day' : 'today';
   const big = (k: LogKind, list: LogEntry[]): { value: string; unit: string } => {
     switch (k) {
       case 'productivity':
-        return { value: num(sum(list)), unit: 'blocks today' };
+        return { value: num(sum(list)), unit: `blocks ${when}` };
       case 'activity': {
         const steps = sum(list.filter((e) => e.unit === 'steps'));
-        return { value: String(Math.round(sum(list.filter((e) => e.unit !== 'steps')))), unit: `min today${steps ? ` · ${Math.round(steps).toLocaleString()} steps` : ''}` };
+        return { value: String(Math.round(sum(list.filter((e) => e.unit !== 'steps')))), unit: `min ${when}${steps ? ` · ${Math.round(steps).toLocaleString()} steps` : ''}` };
       }
       case 'rest': {
         const breaks = sum(list.filter((e) => e.unit !== 'h'));
         return { value: num(sum(list.filter((e) => e.unit === 'h'))), unit: `hours sleep${breaks ? ` · ${num(breaks)} min breaks` : ''}` };
       }
       case 'food':
-        return { value: Math.round(sum(list)).toLocaleString(), unit: 'kcal today' };
+        return { value: Math.round(sum(list)).toLocaleString(), unit: `kcal ${when}` };
       case 'h2o':
-        return { value: num(Math.round(sum(list) / 100) / 10), unit: 'L today' };
+        return { value: num(Math.round(sum(list) / 100) / 10), unit: `L ${when}` };
       case 'vices':
-        return { value: num(sum(list)), unit: `load today · limit ${num(viceLimit(config, mode))}` };
+        return { value: num(sum(list)), unit: `load ${when} · limit ${num(viceLimit(config, mode))}` };
     }
   };
   return (
     <section className="panel d26-logging" aria-labelledby="h-logging">
       <div className="panel-head">
         <h2 id="h-logging" className="panel-title">
-          Logging
+          Logging {dayLabel && <span className="d26-count">{dayLabel}</span>}
         </h2>
+        <span className={`d26-log-streak${streak ? ' is-on' : ''}`} title="Days in a row with at least one log: are you showing up?">
+          {streak ? `${streak}-day logging streak` : 'Log something to start a streak'}
+        </span>
       </div>
       <div className="d26-tiles">
         {KINDS.map((k) => {
@@ -945,7 +953,7 @@ function LoggingCard({ logs, config, mode, onNew, onOpen }: { logs: LogEntry[]; 
                   ))}
                 </ul>
               ) : (
-                <p className="d26-tile-empty">Nothing logged yet today</p>
+                <p className="d26-tile-empty">Nothing logged {dayLabel ? 'that day' : 'yet today'}</p>
               )}
             </div>
           );

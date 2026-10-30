@@ -276,6 +276,21 @@ export function finished(records: DayRecord[], logs: LogEntry[], c: Config, toda
     .map((r) => scoreDay(r, logs, c));
 }
 
+/**
+ * V12-045 · logging streak: days in a row with at least one log of any kind (did you show up).
+ * Today counts once it has a log; until then the streak runs to yesterday, so it isn't broken yet.
+ */
+export function loggingStreak(logs: LogEntry[], today: string): number {
+  const days = new Set(logs.map((l) => l.day));
+  let d = days.has(today) ? today : addDays(today, -1);
+  let n = 0;
+  while (days.has(d)) {
+    n += 1;
+    d = addDays(d, -1);
+  }
+  return n;
+}
+
 /** The run you're on: days on baseline in a row, or days in a dip. */
 export function currentRun(results: DayResult[]) {
   if (!results.length) return { on: true, n: 0 };

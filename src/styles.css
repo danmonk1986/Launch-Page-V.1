@@ -2270,3 +2270,6 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .d26-dot-btn.is-picked .d26-dot-day { color: var(--accent-teal); font-weight: 700; }
 .d26-dot { transition: transform 0.12s ease; }
 .d26-back-today { white-space: nowrap; }
+/* V12-045 · logging streak */
+.d26-log-streak { margin-left: auto; font-size: 13px; color: var(--dim); white-space: nowrap; }
+.d26-log-streak.is-on { color: var(--accent-teal); font-weight: 600; }
