@@ -654,6 +654,8 @@ export function BudgetPage(p: Props) {
                   <strong>{incoming.name}</strong> has {incoming.lines.length} lines:{' '}
                   {BUDGET_SECTIONS.map((s) => `${incoming.lines.filter((l) => l.section === s.id).length} ${s.title.toLowerCase()}`).join(', ')}.
                   {p.lines.length > 0 && ` You have ${p.lines.length} lines now.`}
+                  {/* V20-010: say what Replace does to linked tasks before it happens. */}
+                  {p.lines.length > 0 && linkedIds.size > 0 && ` Replace removes your current lines; ${linkedIds.size === 1 ? 'the 1 linked task stays' : `their ${linkedIds.size} linked tasks stay`} in Tasks, unlinked.`}
                 </p>
                 <div className="reminder-actions">
                   <button type="button" className="btn btn-quiet" onClick={() => setIncoming(null)}>

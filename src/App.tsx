@@ -651,10 +651,16 @@ export default function App() {
   async function replaceBudget(next: BudgetLine[]) {
     const old = budget;
     setBudget(next);
-    for (const l of old) if (!next.some((n) => n.id === l.id)) await budgetStore.remove(userId, l.id, next);
+    const gone = old.filter((l) => !next.some((n) => n.id === l.id));
+    for (const l of gone) await budgetStore.remove(userId, l.id, next);
+    // V20-010: tasks linked to a line that's gone are unlinked (as ⋯ Remove does), not left pointing at nothing.
+    const goneIds = new Set(gone.map((l) => l.id));
+    const orphans = tasks.filter((t) => t.budgetLineId && goneIds.has(t.budgetLineId));
+    if (orphans.length) await taskOps.saveMany(orphans.map((t) => ({ ...t, budgetLineId: null })));
     let ok = true;
-    for (const l of next) ok = (await budgetStore.save(userId, l, next)) && ok;
-    setStatus(ok ? `Budget: ${next.length} lines saved.` : `Budget: ${next.length} lines saved on this device only.`);
+    for (const l of next) ok = !!(await budgetStore.save(userId, l, next)) && ok;
+    const unlinked = orphans.length ? ` ${orphans.length} task${orphans.length === 1 ? '' : 's'} unlinked from removed lines.` : '';
+    setStatus((ok ? `Budget: ${next.length} lines saved.` : `Budget: ${next.length} lines saved on this device only.`) + unlinked);
   }
 
   // 26 Days lists that change often (ticks, logs) save quietly from the newest copy.
