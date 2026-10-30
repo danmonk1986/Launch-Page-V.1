@@ -38,7 +38,8 @@ import {
   sum,
   takeaway,
   total,
-  BASELINE,
+  ALLOWED_MISSES,
+  onBaseline,
   viceLimit,
   writeShownQuote,
   writeShownRitual,
@@ -576,7 +577,7 @@ function NonNegCard({ items, rec, records, logs, config, today, now, flip, reset
   // Last 7 routine days: on baseline, a dip, or nothing recorded; today is the ring.
   const results = finished(records, logs, config, today, null);
   const run = currentRun(results);
-  const needed = Math.ceil(items.length * BASELINE - 1e-9);
+  const needed = Math.max(1, items.length - ALLOWED_MISSES);
   const vice = sum(logsOn(logs, today, 'vices'));
   const limit = viceLimit(config, mode);
   const inDip = results.length > 0 && !run.on;
@@ -674,10 +675,11 @@ function NonNegCard({ items, rec, records, logs, config, today, now, flip, reset
           {weekDays.map((d) => {
             const rr = records.find((x) => x.day === d);
             const res = rr && d < today && rr.items.length ? scoreDay(rr, logs, config) : null;
-            const state = d === today ? 'today' : res ? (res.on ? 'on' : 'dip') : 'none';
+            // V12-041: teal = all ticked, beige = one missed (still on baseline), purple = a dip.
+            const state = d === today ? 'today' : res ? (res.full ? 'full' : res.on ? 'on' : 'dip') : 'none';
             const letter = new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { weekday: 'narrow' });
             return (
-              <li key={d} title={`${d}: ${state === 'on' ? 'on baseline' : state === 'dip' ? 'a dip' : state === 'today' ? 'today' : 'no record'}`}>
+              <li key={d} title={`${d}: ${state === 'full' ? 'all ticked' : state === 'on' ? 'on baseline, one missed' : state === 'dip' ? 'a dip' : state === 'today' ? 'today' : 'no record'}`}>
                 <span className={`d26-dot is-${state}`} />
                 <span className="d26-dot-day">{letter}</span>
               </li>
@@ -1131,7 +1133,7 @@ function SummaryCard({
   const tVice = sum(logsOn(logs, today, 'vices'));
   const tLimit = viceLimit(config, mode);
   const tBlocks = sum(logsOn(logs, today, 'productivity'));
-  const tOn = todayItems.length > 0 && tDone / todayItems.length >= BASELINE;
+  const tOn = onBaseline(tDone, todayItems.length);
 
   const pct = (x: number | null) => (x === null ? '—' : `${Math.round(x * 100)}%`);
   const one = (x: number | null) => (x === null ? '—' : num(Math.round(x * 10) / 10));

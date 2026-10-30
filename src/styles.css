@@ -1555,7 +1555,10 @@ html.snap-scroll { scroll-snap-type: y mandatory; scroll-padding-top: calc(var(-
 .d26-dots { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; }
 .d26-dots li { display: grid; justify-items: center; gap: 4px; }
 .d26-dot { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--edge-strong); }
-.d26-dot.is-on { background: var(--accent-teal); border-color: var(--accent-teal); }
+.d26-dot.is-full { background: var(--accent-teal); border-color: var(--accent-teal); }
+/* V12-041: one missed, still on baseline */
+.d26-dot.is-on { background: #f5f5dc; border-color: #f5f5dc; }
+.app[data-tone='light'] .d26-dot.is-on { background: #e9dfbd; border-color: #b9ad86; }
 .d26-dot.is-dip { background: color-mix(in srgb, var(--accent-purple) 70%, transparent); border-color: var(--accent-purple); }
 .d26-dot.is-today { border: 2px solid var(--accent-teal); box-shadow: 0 0 8px color-mix(in srgb, var(--accent-teal) 45%, transparent); }
 .d26-dot-day { font-size: 11px; color: var(--dim); }
