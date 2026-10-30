@@ -984,6 +984,28 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, launches, handled, endAlerted, launchLog, timeUp, reminder, paused, logReady]);
 
+  /**
+   * Oct 29 · Missed tab: settle a past run. Done = checked off without logging time (nothing goes to
+   * 26 Days); cleared = taken out of the counts, kept in the log as 'cleared'.
+   */
+  function settleMissed(l: Launch, day: string, how: 'done' | 'cleared') {
+    const list = logRef.current;
+    const cur = list.find((g) => g.launchId === l.id && g.day === day);
+    const at = new Date(`${day}T${l.atTime || '12:00'}:00`).toISOString();
+    const item: LaunchLog = {
+      ...(cur ?? { id: crypto.randomUUID(), launchId: l.id, day, planned: l.minutes, extra: 0, sort: 0, launchedAt: null }),
+      title: l.title,
+      outcome: how,
+      launchedAt: null,
+      finishedAt: at
+    } as LaunchLog;
+    const next = cur ? list.map((g) => (g.id === item.id ? item : g)) : [...list, item];
+    logRef.current = next;
+    setLaunchLog(next);
+    void launchLogStore.save(userId, item, next);
+    setStatus(how === 'done' ? `${l.title} (${day}): marked done, no time logged.` : `${l.title} (${day}): cleared, it won't count either way.`);
+  }
+
   async function finishLaunch(l: Launch, how: 'done' | 'skipped') {
     setHandled(markHandled(l, new Date(), how));
     logLaunch(l, () => ({ outcome: how, finishedAt: new Date().toISOString() }));
@@ -1202,6 +1224,7 @@ export default function App() {
                   isPaused={isPaused}
                   onPause={togglePause}
                   log={launchLog}
+                  onSettleMissed={settleMissed}
                   preset={timedPreset}
                   onPresetUsed={() => setTimedPreset(null)}
                   editLaunch={editLaunch}

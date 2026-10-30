@@ -646,7 +646,8 @@ export interface LaunchLog {
   title: string;
   planned: number; // minutes allotted
   extra: number; // minutes added with +10
-  outcome: 'launched' | 'done' | 'skipped';
+  /** cleared (Oct 29): a missed run taken out of the counts; kept so the record stays honest. */
+  outcome: 'launched' | 'done' | 'skipped' | 'cleared';
   launchedAt: string | null;
   finishedAt: string | null;
   sort: number;
@@ -692,4 +693,36 @@ export function logFor(list: LaunchLog[], l: Launch, day: Date): LaunchLog {
       sort: 0
     }
   );
+}
+
+/**
+ * Missed runs (Oct 29): past runs never checked off, skipped or cleared. One-time launches count on
+ * any past date; repeating ones over the last `days` days, from their first logged run on (so a
+ * launch you never used doesn't fill the list). Hourly launches are left out. Newest first.
+ */
+export function missedRuns(launches: Launch[], log: LaunchLog[], now: Date, days = 7): { launch: Launch; day: string }[] {
+  const settled = new Set(log.filter((g) => g.outcome !== 'launched' || g.finishedAt).map((g) => `${g.launchId}:${g.day}`));
+  const firstRun = new Map<string, string>();
+  for (const g of log) if (!firstRun.has(g.launchId) || g.day < firstRun.get(g.launchId)!) firstRun.set(g.launchId, g.day);
+  const out: { launch: Launch; day: string }[] = [];
+  for (const l of launches) {
+    if (l.repeat === 'hourly') continue;
+    // Today's run belongs to today (Active and the Missed pop-up), so only days before it.
+    const todayIso = isoDate(launchDate(l, now));
+    const dates = new Set<string>();
+    if (l.repeat === 'once') {
+      for (const d of [l.onDate, ...(l.moreDates ?? [])]) if (d && d < todayIso) dates.add(d);
+    } else {
+      const first = firstRun.get(l.id);
+      if (!first) continue;
+      for (let i = 1; i <= days; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 12);
+        const iso = isoDate(d);
+        if (iso < todayIso && iso >= first && happensOn(l, d)) dates.add(iso);
+      }
+    }
+    if (l.movedTo && l.movedTo < todayIso) dates.add(l.movedTo);
+    for (const day of dates) if (!settled.has(`${l.id}:${day}`)) out.push({ launch: l, day });
+  }
+  return out.sort((a, b) => b.day.localeCompare(a.day) || toMinutes(a.launch.atTime) - toMinutes(b.launch.atTime));
 }

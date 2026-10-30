@@ -29,6 +29,7 @@ import {
   LOG_KINDS,
   type LaunchLogKind,
   dayOrder,
+  missedRuns,
 } from '../lib/launchers';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
@@ -61,6 +62,8 @@ type Props = {
   preset?: TimedPreset | null;
   /** Runs of each launch: today's +10 minutes show on the row. */
   log?: LaunchLog[];
+  /** Oct 29 · Missed tab: done without logging time, or cleared out of the counts. */
+  onSettleMissed?: (l: Launch, day: string, how: 'done' | 'cleared') => void;
   onPresetUsed?: () => void;
   /** Oct 25: opens Edit timed launch on this launch (from the reminder's Edit). */
   editLaunch?: Launch | null;
@@ -77,13 +80,14 @@ const COLORS: TileColor[] = ['teal', 'purple', 'green', 'pink'];
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-type TimedView = 'active' | 'complete' | 'tomorrow' | 'scheduled' | 'all' | 'history';
+type TimedView = 'active' | 'complete' | 'missed' | 'tomorrow' | 'scheduled' | 'all' | 'history';
 
 const CLEARED_KEY = 'launchpage.launches.cleared.v1';
 
 const TIMED_VIEWS: [TimedView, string][] = [
   ['active', 'Active'],
   ['complete', 'Complete'],
+  ['missed', 'Missed'],
   ['tomorrow', 'Tomorrow'],
   ['scheduled', 'Scheduled'],
   ['all', 'All'],
@@ -93,6 +97,7 @@ const TIMED_VIEWS: [TimedView, string][] = [
 const EMPTY: Record<TimedView, string> = {
   active: 'Nothing left to launch today.',
   complete: 'Nothing checked off or skipped yet today.',
+  missed: 'Nothing missed. Every past run is checked off, skipped or cleared.',
   tomorrow: 'Nothing scheduled for tomorrow.',
   scheduled: 'Nothing switched on and ahead.',
   all: 'No timed launches yet.',
@@ -192,13 +197,16 @@ export function LaunchersPanel(p: Props) {
       .filter((l) => l.active && nextOf(l))
       .sort((a, b) => (nextOf(a) ?? '').localeCompare(nextOf(b) ?? '') || dayOrder(a.atTime) - dayOrder(b.atTime)),
     all: [...p.launches].sort((a, b) => dayOrder(a.atTime) - dayOrder(b.atTime)),
+    missed: [],
     history: []
   };
+  // Missed (Oct 29): past runs never settled, one row per run (a launch can miss several days).
+  const missed = missedRuns(p.launches, p.log ?? [], p.today);
   // History (Oct 22): every finished run, newest first.
   const history = (p.log ?? [])
     .filter((g) => g.outcome !== 'launched' || g.finishedAt)
     .sort((a, b) => (b.finishedAt ?? b.launchedAt ?? b.day).localeCompare(a.finishedAt ?? a.launchedAt ?? a.day));
-  const countOf = (id: TimedView) => (id === 'history' ? history.length : views[id].length);
+  const countOf = (id: TimedView) => (id === 'history' ? history.length : id === 'missed' ? missed.length : views[id].length);
   const list = views[view];
   // Active keeps to the next 3 (Show all for the rest); the other tabs show their whole list.
   const capped = view === 'active' && !showAllTimed;
@@ -370,7 +378,49 @@ export function LaunchersPanel(p: Props) {
             <Icon d="M12 5v14M5 12h14" />
           </button>
         </div>
-        {view === 'history' ? (
+        {view === 'missed' ? (
+          missed.length === 0 ? (
+            <p className="panel-empty timed-empty">{EMPTY.missed}</p>
+          ) : (
+            <ul className="timed-list">
+              {missed.map(({ launch: l, day }) => (
+                <li key={`${l.id}:${day}`} className="timed-item is-missed">
+                  <div className="timed-row">
+                    <span className="timed-time">{new Date(`${day}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}</span>
+                    <span className="timed-name">{l.title}</span>
+                    <span className="timed-meta">
+                      {formatMinutes(toMinutes(l.atTime))} · {l.minutes} min · missed
+                    </span>
+                  </div>
+                  <div className="timed-quick">
+                    <button
+                      type="button"
+                      className="quick-btn quick-done"
+                      aria-label={`${l.title}: done, don't log the time`}
+                      title="Done, but don't log the time (nothing goes to 26 Days)"
+                      onClick={() => p.onSettleMissed?.(l, day, 'done')}
+                    >
+                      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12l5 5 9-10" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="quick-btn quick-skip"
+                      aria-label={`Clear ${l.title}`}
+                      title="Clear: take this run out of the counts (it stays in History as cleared)"
+                      onClick={() => p.onSettleMissed?.(l, day, 'cleared')}
+                    >
+                      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                        <path d="M6 6l12 12M18 6L6 18" />
+                      </svg>
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : view === 'history' ? (
           history.length === 0 ? (
             <p className="panel-empty timed-empty">{EMPTY.history}</p>
           ) : (
@@ -378,13 +428,13 @@ export function LaunchersPanel(p: Props) {
               {history.slice(0, showAllTimed ? undefined : 30).map((g) => {
                 const spent = g.launchedAt && g.finishedAt ? Math.round((new Date(g.finishedAt).getTime() - new Date(g.launchedAt).getTime()) / 60_000) : null;
                 return (
-                  <li key={g.id} className={`timed-item is-${g.outcome === 'skipped' ? 'skipped' : 'done'}`}>
+                  <li key={g.id} className={`timed-item is-${g.outcome === 'skipped' ? 'skipped' : g.outcome === 'cleared' ? 'cleared' : 'done'}`}>
                     <div className="timed-row">
                       <span className="timed-time">{new Date(`${g.day}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}</span>
                       <span className="timed-name">{g.title}</span>
                       <span className="timed-meta">
-                        {g.outcome === 'skipped' ? 'Skipped' : 'Done'}
-                        {g.outcome !== 'skipped' && ` · ${spent ?? g.planned + g.extra} min${spent === null ? ' planned' : ''}`}
+                        {g.outcome === 'skipped' ? 'Skipped' : g.outcome === 'cleared' ? 'Cleared · not counted' : 'Done'}
+                        {g.outcome === 'done' && ` · ${spent ?? g.planned + g.extra} min${spent === null ? ' planned' : ''}`}
                         {g.extra > 0 && ` · +${g.extra} added`}
                       </span>
                     </div>

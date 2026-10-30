@@ -2273,3 +2273,7 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 /* V12-045 · logging streak */
 .d26-log-streak { margin-left: auto; font-size: 13px; color: var(--dim); white-space: nowrap; }
 .d26-log-streak.is-on { color: var(--accent-teal); font-weight: 600; }
+/* Oct 29 · Missed tab and cleared runs in History */
+.timed-item.is-missed .timed-time { color: var(--accent-purple); }
+.timed-item.is-cleared { opacity: 0.55; }
+.timed-item.is-cleared .timed-name { color: var(--dim); }
