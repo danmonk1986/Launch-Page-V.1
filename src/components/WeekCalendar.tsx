@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, useId } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { addDays, layoutWeek, weekStart, type CalEvent, type EventColor } from '../lib/events';
 import { isoDate } from '../lib/launchers';
+import { useMobile, useSwipe } from '../lib/useMobile';
 import { colorForCalendar, type Project } from '../lib/projects';
 import {
   connectGoogle,
@@ -52,10 +53,17 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
   const [gError, setGError] = useState<string | null>(null);
 
   const today = isoDate(new Date());
-  const start = addDays(weekStart(new Date()), offset * 7);
-  const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  // Phones (Oct 30): 3 days at a time starting today; swipe left/right moves 3 days.
+  const mobile = useMobile();
+  const span = mobile ? 3 : 7;
+  useEffect(() => setOffset(0), [mobile]);
+  const swipe = useSwipe(() => setOffset((o) => o + 1), () => setOffset((o) => o - 1), mobile);
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const start = mobile ? addDays(todayStart, offset * 3) : addDays(weekStart(new Date()), offset * 7);
+  const days = Array.from({ length: span }, (_, i) => addDays(start, i));
   const from = isoDate(days[0]);
-  const to = isoDate(days[6]);
+  const to = isoDate(days[span - 1]);
 
   useEffect(preloadGoogle, []);
 
@@ -205,7 +213,7 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
   const themes = layoutWeek(perDay(all.filter(isTheme)), start).map((p) => ({ ...p, lane: p.lane + mainLanes, theme: true }));
   const placed = [...main, ...themes];
   const lanes = placed.reduce((m, p) => Math.max(m, p.lane + 1), 0);
-  const end = days[6];
+  const end = days[span - 1];
   const range = `${start.toLocaleDateString('en-CA', { month: 'long', day: 'numeric' })} – ${end.toLocaleDateString('en-CA', {
     month: start.getMonth() === end.getMonth() ? undefined : 'long',
     day: 'numeric'
@@ -216,7 +224,11 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
       <div className="panel-head">
         <h2 id="h-week" className="panel-title" title={range}>
           {offset === 0 ? (
-            'This week'
+            mobile ? 'Next 3 days' : 'This week'
+          ) : mobile ? (
+            <button type="button" className="title-btn" title="Back to today" onClick={() => setOffset(0)}>
+              {range}
+            </button>
           ) : (
             <button type="button" className="title-btn" title="Back to this week" onClick={() => setOffset(0)}>
               {offset === 1
@@ -228,7 +240,7 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
           )}
         </h2>
         <div className="panel-actions week-tools">
-          <button type="button" className="week-arrow" aria-label="Previous week" title="Previous week" onClick={() => setOffset((o) => o - 1)}>
+          <button type="button" className="week-arrow" aria-label={mobile ? 'Previous 3 days' : 'Previous week'} title={mobile ? 'Previous 3 days' : 'Previous week'} onClick={() => setOffset((o) => o - 1)}>
             {"<"}
           </button>
           {googleConfigured() && (
@@ -260,7 +272,7 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
           >
             <Icon d="M12 5v14M5 12h14" />
           </button>
-          <button type="button" className="week-arrow" aria-label="Next week" title="Next week" onClick={() => setOffset((o) => o + 1)}>
+          <button type="button" className="week-arrow" aria-label={mobile ? 'Next 3 days' : 'Next week'} title={mobile ? 'Next 3 days' : 'Next week'} onClick={() => setOffset((o) => o + 1)}>
             {">"}
           </button>
         </div>
@@ -268,8 +280,8 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
 
       {gError && <p className="panel-empty">{gError}</p>}
 
-      <div className="week-scroll">
-        <div className="week-grid" style={{ gridTemplateRows: `auto repeat(${Math.max(lanes, 1)}, 24px)` }}>
+      <div className={`week-scroll${mobile ? ' is-3day' : ''}`} {...swipe}>
+        <div className="week-grid" style={{ gridTemplateColumns: `repeat(${span}, minmax(0, 1fr))`, gridTemplateRows: `auto repeat(${Math.max(lanes, 1)}, 24px)` }}>
           {days.map((d, i) => {
             const iso = isoDate(d);
             return (
@@ -317,7 +329,7 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
             </button>
           ))}
         </div>
-        {placed.length === 0 && <p className="panel-empty week-empty">Nothing this week yet. Tap a day to add an event.</p>}
+        {placed.length === 0 && <p className="panel-empty week-empty">{mobile ? 'Nothing in these 3 days. Tap a day to add an event.' : 'Nothing this week yet. Tap a day to add an event.'}</p>}
       </div>
 
       <Sheet open={open} title={editing ? `Edit ${editing.title}` : 'Add event'} onClose={() => setOpen(false)}>

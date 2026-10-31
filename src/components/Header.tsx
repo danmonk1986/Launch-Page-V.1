@@ -1,5 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { BrandSettings } from '../lib/settings';
+import { useMobile } from '../lib/useMobile';
+import { OneMenu } from './OneMenu';
 
 /** journal is opened from the Journal panel, not the menu. */
 export type PageId = 'launch' | 'tasks' | 'days26' | 'budget' | 'invoices' | 'journal';
@@ -44,6 +46,18 @@ export function Header({ settings, page, onPage, right }: Props) {
  * teal ⌄ menu at the end of the row instead of stacking.
  */
 function TabBar({ page, onPage }: { page: PageId; onPage: (p: PageId) => void }) {
+  // Phones (Oct 30): the menu shows the page you're on with a ∨ to the rest.
+  if (useMobile()) {
+    return (
+      <nav className="tabs tabs-one" aria-label="Pages">
+        <OneMenu label="Page" items={PAGES} value={page} onPick={onPage} className="page-menu" />
+      </nav>
+    );
+  }
+  return <WideTabBar page={page} onPage={onPage} />;
+}
+
+function WideTabBar({ page, onPage }: { page: PageId; onPage: (p: PageId) => void }) {
   const wrap = useRef<HTMLElement>(null);
   const measure = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState(PAGES.length);

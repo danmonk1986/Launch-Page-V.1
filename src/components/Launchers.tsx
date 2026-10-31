@@ -33,6 +33,8 @@ import {
 } from '../lib/launchers';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
+import { useMobile } from '../lib/useMobile';
+import { OneMenu } from './OneMenu';
 
 /** What "+ Timed launch" hands over: the fields to fill in, and who to tell once it's saved. */
 export type TimedPreset = { fill: Partial<Launch>; n: number; onSaved?: (l: Launch) => void };
@@ -154,6 +156,7 @@ export function LaunchersPanel(p: Props) {
     }
   };
   const [showAllTimed, setShowAllTimed] = useState(false);
+  const mobile = useMobile();
   const [view, setView] = useState<TimedView>('active');
   // The X on a row asks first: skip just today, or remove the launch for good.
   const [xAsk, setXAsk] = useState<string | null>(null);
@@ -345,6 +348,18 @@ export function LaunchersPanel(p: Props) {
         <div className="timed-head">
           <div className="timed-title-row">
             <h3 className="timed-title">Timed launches</h3>
+            {mobile ? (
+              <OneMenu
+                label="Timed launches"
+                items={TIMED_VIEWS.map(([id, label]) => ({ id, label, count: countOf(id) }))}
+                value={view}
+                onPick={(id) => {
+                  setView(id);
+                  setShowAllTimed(false);
+                }}
+                className="timed-menu"
+              />
+            ) : (
             <div className="timed-tabs" role="tablist" aria-label="Timed launches">
               {TIMED_VIEWS.map(([id, label]) => (
                 <button
@@ -363,6 +378,7 @@ export function LaunchersPanel(p: Props) {
                 </button>
               ))}
             </div>
+            )}
           </div>
           <button
             type="button"

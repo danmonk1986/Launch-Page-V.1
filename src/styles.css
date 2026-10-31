@@ -2287,3 +2287,32 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
   .task-scroll .task-table thead th.col-actions { z-index: 4; }
   .task-table .task-row:not(.is-step) td.col-desc { max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* ── Mobile layout (Oct 30) ──────────────────────────────────────────────
+   Menus show one item (the one you're on) with a ∨ to the rest.
+   Header: logo · tagline · mantra · date and time · [menu ∨ … ⚙ Routine].
+   Calendar: 3 days starting today, swipe left/right for the next/previous 3. */
+.one-menu-btn {
+  all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 2px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent-teal); border-bottom: 2px solid var(--accent-teal);
+}
+.one-menu-btn:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 3px; border-radius: 4px; }
+.one-menu-btn svg { transition: transform 0.15s ease; }
+.one-menu-btn[aria-expanded='true'] svg { transform: rotate(180deg); }
+.one-menu-count { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--dim); margin-left: 6px; }
+.one-menu-btn .one-menu-count { color: inherit; margin-left: 0; }
+.one-menu-list { left: 0; right: auto; }
+.one-menu-list > button { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+@media (prefers-reduced-motion: reduce) { .one-menu-btn svg { transition: none; } }
+
+@media (max-width: 640px) {
+  .topbar { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "logo logo" "words words" "clock clock" "tabs controls"; align-items: center; }
+  .topbar .topbar-right { display: contents; }
+  .topbar .topbar-right .header-clock { grid-area: clock; justify-content: flex-start; }
+  .topbar .topbar-controls { grid-area: controls; justify-self: end; justify-content: flex-end; }
+  .topbar .tabs-one { grid-area: tabs; margin-left: 0; overflow: visible; }
+  .timed-menu { margin-top: 4px; }
+  .week-scroll.is-3day { overflow-x: visible; touch-action: pan-y; }
+  .week-scroll.is-3day .week-grid { min-width: 0; }
+}

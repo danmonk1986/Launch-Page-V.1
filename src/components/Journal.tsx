@@ -3,6 +3,7 @@ import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
 import { byNewest, checkinsOf, isBlank, MOODS, newEntry, shortDate, streak, withCheckins, type CheckIn, type JournalEntry } from '../lib/journal';
 import { isoDate } from '../lib/launchers';
+import { useMobile } from '../lib/useMobile';
 
 const PLUS = 'M12 5v14M5 12h14';
 const PEN = 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4';
@@ -65,6 +66,9 @@ export function JournalPanel({ entries, today, day, onSave, onDelete, onImport, 
   const [isNew, setIsNew] = useState(false);
   const shown = all || full ? past : past.slice(0, 5);
   const run = streak(entries, todayIso);
+  // Phones (Oct 30): only today shows on the card; the date opens past entries.
+  const mobile = useMobile();
+  const datePast = mobile && !full && onOpen ? onOpen : undefined;
 
   return (
     <section className={`panel panel-journal${full ? ' is-full' : ''}`} aria-labelledby="h-journal">
@@ -122,9 +126,10 @@ export function JournalPanel({ entries, today, day, onSave, onDelete, onImport, 
           setIsNew(false);
           setEditing(e);
         }}
+        onPastDays={datePast}
       />
 
-      {past.length > 0 && (
+      {past.length > 0 && !datePast && (
         <>
           <div className="journal-sub-row">
             <h3 className="journal-sub">Past days</h3>
@@ -262,7 +267,7 @@ function CheckIns({ list, onChange, onBlur, focusLast }: { list: CheckIn[]; onCh
 }
 
 /** Today's entry, typed straight into the panel. Saves itself a moment after you stop typing. */
-function TodayEntry({ date, saved, lastTheme, onSave, onEditDate }: { date: string; saved: JournalEntry | null; lastTheme: string; onSave: (e: JournalEntry) => void; onEditDate: (e: JournalEntry) => void }) {
+function TodayEntry({ date, saved, lastTheme, onSave, onEditDate, onPastDays }: { date: string; saved: JournalEntry | null; lastTheme: string; onSave: (e: JournalEntry) => void; onEditDate: (e: JournalEntry) => void; onPastDays?: () => void }) {
   // The theme carries on from the last entry until you change it.
   const [d, setD] = useState<JournalEntry>(() => saved ?? newEntry(date, lastTheme));
   const [cks, setCks] = useState<CheckIn[]>(() => (saved ? checkinsOf(saved) : []));
@@ -345,10 +350,11 @@ function TodayEntry({ date, saved, lastTheme, onSave, onEditDate }: { date: stri
           <button
             type="button"
             className="journal-date journal-date-btn"
-            title="Change the date (moves this entry to that day)"
+            title={onPastDays ? 'Past entries' : 'Change the date (moves this entry to that day)'}
             onClick={() => {
               flush();
-              onEditDate(latest.current);
+              if (onPastDays) onPastDays();
+              else onEditDate(latest.current);
             }}
           >
             {shortDate(date)}

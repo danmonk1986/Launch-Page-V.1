@@ -222,3 +222,12 @@ Dan's story: Rise to Shine as a timed launch. When busy he pushes it (Snooze / S
 - Oct 18, 6:25 AM · Budget project chips match Tasks: the sheet's project name shows as your Project's chip and colour (DAN MONK → DANMONK26).
 - Oct 18, 6:45 AM · Code cleanup (no visual change; 22 screenshots incl. dialogs + day theme compared before/after): removed unused code (old alert prefs, DateLine, toTomorrow, journalDate, ActiveRoutine); removed 47 CSS rules for classes no longer used; merged 54 selectors that were defined 2–4 times into one rule each (24 left as-is where merging could change the cascade). README + BRIEF brought up to date; 0007 double number documented.
 - Oct 18, 6:55 AM · Budget form's Project list includes all your Projects.
+
+## Mobile layout · Oct 30, 2026 (phones, ≤640px)
+
+Sketched by Dan on paper, decided in chat, then built.
+- **One-item menus:** on phones every menu shows only the item you're on with a ∨ to the rest (`OneMenu`). Header menu → "LAUNCH PAGE ∨"; Timed launches tabs → "ACTIVE 5 ∨" (counts kept).
+- **Header:** logo · tagline · mantra · date and time, then one row: menu ∨ on the left, ⚙ Settings + Routine on the right. Still slims down on scroll.
+- **Journal card:** only today shows; tapping the date opens past entries (the full Journal). The Past days list is hidden on phones.
+- **Calendar:** 3 days at a time starting today ("Next 3 days"); swipe left/right moves 3 days (arrows still work). Swipe (`useSwipe`) is meant to spread to the other cards.
+- **Parked:** Tasks + Budget summaries (cards of three per category, swipe between categories); what swipe does on Timed Launches.
