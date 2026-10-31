@@ -2346,3 +2346,14 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
   .task-row .col-status .status { font-size: 11px; padding-inline: 8px; white-space: nowrap; }
   .task-row td.col-date:not(.col-start) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 }
+
+/* Oct 31: ⚙ moves up beside the logo. The date sat in the left column and widened it,
+   squeezing the routine picker to a sliver, so the date and clock now span the full width. */
+@media (max-width: 640px) {
+  .topbar { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "logo logo" "words words" "clock clock" "tabs routine"; }
+  .topbar .topbar-logo { justify-self: start; max-width: calc(100% - 60px); }
+  .topbar .gear-menu { grid-area: logo; justify-self: end; align-self: center; }
+  .topbar .picker { justify-self: stretch; width: 100%; max-width: none; }
+  .topbar .picker-split { width: 100%; }
+  .topbar .picker-main { flex: 1 1 auto; }
+}
