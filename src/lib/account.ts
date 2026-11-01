@@ -15,6 +15,7 @@ const DEVICE_KEYS = new Set([
   'launchpage.budget.groupBy',
   'launchpage.budget.view',
   'launchpage.records.view',
+  'launchpage.records.tally',
   'launchpage.rockets.open',
   'launchpage.scroll.v1',
   'launchpage.tasks.view'

@@ -11,6 +11,16 @@ import { originalLabel } from '../lib/currency';
 import { projectForDivision, type Project } from '../lib/projects';
 
 const PLUS = 'M12 5v14M5 12h14';
+/** Nov 1: what the totals add up by (the square button cycles; remembered on this device). */
+type Tally = 'pmtCategory' | 'category' | 'method' | 'type' | 'project';
+const TALLY_KEY = 'launchpage.records.tally';
+const TALLIES: { id: Tally; label: string; icon: string }[] = [
+  { id: 'pmtCategory', label: 'Category', icon: 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01' },
+  { id: 'category', label: 'Group', icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
+  { id: 'method', label: 'Method', icon: 'M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zM2 10h20M6 15h4' },
+  { id: 'type', label: 'Type', icon: 'M12 3v18M5 8h14M5 16h14' },
+  { id: 'project', label: 'Division', icon: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' }
+];
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 export const thisMonth = () => iso(new Date()).slice(0, 7);
 export const shiftMonth = (m: string, by: number) => {
@@ -61,7 +71,7 @@ export function ExpensesView(p: Props) {
   const [editing, setEditing] = useState<Expense | null>(null);
   const needle = p.search.trim().toLowerCase();
 
-  const rows = useMemo(
+  const monthRows = useMemo(
     () =>
       p.expenses
         .filter((e) => monthKey(e.date) === month)
@@ -69,14 +79,37 @@ export function ExpensesView(p: Props) {
         .sort((a, b) => a.date.localeCompare(b.date) || a.sort - b.sort),
     [p.expenses, month, needle]
   );
-  const total = rows.reduce((a, e) => a + (e.amount ?? 0), 0);
-  const gst = rows.reduce((a, e) => a + (e.gst ?? 0), 0);
-  // The sheet's per-category columns: TOTAL split by PMT CATEGORY.
-  const byPmt = rows.reduce<Record<string, number>>((m, e) => {
-    const k = e.pmtCategory.trim().toUpperCase() || 'OTHER';
+  const total = monthRows.reduce((a, e) => a + (e.amount ?? 0), 0);
+  const gst = monthRows.reduce((a, e) => a + (e.gst ?? 0), 0);
+  // The sheet's per-category columns: TOTAL split by PMT CATEGORY, or (Nov 1) by group, method,
+  // type or division; the square button switches, a total shows just its lines.
+  const [tally, setTallyState] = useState<Tally>(() => {
+    try {
+      const v = localStorage.getItem(TALLY_KEY) as Tally | null;
+      return v && TALLIES.some((t) => t.id === v) ? v : 'pmtCategory';
+    } catch {
+      return 'pmtCategory';
+    }
+  });
+  const [pick, setPick] = useState<string | null>(null);
+  const setTally = (t: Tally) => {
+    setTallyState(t);
+    setPick(null);
+    try {
+      localStorage.setItem(TALLY_KEY, t);
+    } catch {
+      /* ignore */
+    }
+  };
+  const keyOf = (e: Expense) => e[tally].trim().toUpperCase() || 'OTHER';
+  const byPmt = monthRows.reduce<Record<string, number>>((m, e) => {
+    const k = keyOf(e);
     m[k] = (m[k] ?? 0) + (e.amount ?? 0);
     return m;
   }, {});
+  const ti = TALLIES.findIndex((t) => t.id === tally);
+  const nextTally = TALLIES[(ti + 1) % TALLIES.length];
+  const rows = pick ? monthRows.filter((e) => keyOf(e) === pick) : monthRows;
   const lineName = (id: string | null) => (id ? p.lines.find((l) => l.id === id)?.description : undefined);
   const picks = (f: (x: { project: string; method: string; pmtCategory: string }) => string) =>
     [...new Set([...p.expenses, ...p.lines].map(f).map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -102,10 +135,19 @@ export function ExpensesView(p: Props) {
       )}
 
       <div className="budget-stats" aria-label="This month's expenses">
-        <div className="budget-stat budget-stat-total">
-          <span className="budget-stat-label">Spent · {monthLabel(month)}</span>
+        <button
+          type="button"
+          className="icon-btn tool-btn budget-groupby"
+          aria-label={`Totals by ${TALLIES[ti].label}. Switch to ${nextTally.label}`}
+          title={`By ${TALLIES[ti].label} · tap for ${nextTally.label}`}
+          onClick={() => setTally(nextTally.id)}
+        >
+          <Icon d={TALLIES[ti].icon} size={18} />
+        </button>
+        <button type="button" className="budget-stat budget-stat-total" aria-pressed={pick === null} title="Show everything" onClick={() => setPick(null)}>
+          <span className="budget-stat-label">Spent · {monthLabel(month)} · by {TALLIES[ti].label}</span>
           <span className="budget-stat-value">{money(total)}</span>
-        </div>
+        </button>
         {gst > 0 && (
           <div className="budget-stat">
             <span className="budget-stat-label">GST/HST</span>
@@ -115,10 +157,10 @@ export function ExpensesView(p: Props) {
         {Object.keys(byPmt)
           .sort((a, b) => byPmt[b] - byPmt[a])
           .map((k) => (
-            <div key={k} className="budget-stat">
+            <button key={k} type="button" className="budget-stat" aria-pressed={pick === k} title={pick === k ? 'Show everything' : `Show only ${k}`} onClick={() => setPick(pick === k ? null : k)}>
               <span className="budget-stat-label">{k}</span>
               <span className="budget-stat-value">{money(byPmt[k])}</span>
-            </div>
+            </button>
           ))}
       </div>
 
