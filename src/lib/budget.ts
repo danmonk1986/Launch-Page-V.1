@@ -18,7 +18,7 @@ export const BUDGET_SECTIONS: { id: BudgetSection; title: string; pill: string; 
 /** Budget group (the sheet's BUDGET / EXPENSE CATEGORY), in the sheet's order. */
 export const BUDGET_CATEGORIES = ['LIVING', 'SAVINGS', 'VICES', 'L-I-V-I-N', 'TRAVEL', 'MWD', 'SHOP', 'BANKING', 'STUFF+THINGS', 'OTHER'];
 /** Payment category (the sheet's PMT CATEGORY), in the sheet's order. */
-export const PMT_CATEGORIES = ['RENT', 'MKTG', 'TEL/ SUB', 'REG/ TAXES', 'PROJECT', 'OFFICE S.', 'TOOLS/ EQ.', 'FUEL/ WASH', 'REPAIRS', 'INSURANCE', 'TRAVEL', 'MEALS/ ENT.', 'FEES/ DUES', 'TRAINING', 'FOOD+LIQUOR', 'OTHER'];
+export const PMT_CATEGORIES = ['RENT', 'MKTG', 'TEL/ SUB', 'REG/ TAXES', 'PROJECT', 'OFFICE S.', 'TOOLS/ EQ.', 'FUEL/ WASH', 'REPAIRS', 'INSURANCE', 'TRAVEL', 'MEALS/ ENT.', 'FEES/ DUES', 'TRAINING', 'FOOD+LIQUOR', 'GROCERIES', 'CC PMT', 'OTHER'];
 export const PMT_TYPES = ['FIXED', 'VARIABLE'];
 
 export interface BudgetLine {
