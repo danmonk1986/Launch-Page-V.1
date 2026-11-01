@@ -64,6 +64,81 @@ function guessAccount(number: string, file: string, sort: number): BankAccount {
   return { id: crypto.randomUUID(), number, name, method: KINDS.find((k) => k.id === kind)!.method, kind, sort };
 }
 
+
+/**
+ * A dropdown of every value already in use, plus "New…" to type one that isn't (Nov 1: every
+ * column picks, so nothing has to be typed twice). A value typed new stays a text box until it's done.
+ */
+function Pick(p: { value: string; options: string[]; groups?: { label: string; options: string[] }[]; onChange: (v: string) => void; label: string; disabled?: boolean; wide?: boolean }) {
+  const [typing, setTyping] = useState(false);
+  const all = new Set([...(p.groups ?? []).flatMap((g) => g.options), ...p.options]);
+  if (typing)
+    return (
+      <input
+        autoFocus
+        value={p.value}
+        onChange={(e) => p.onChange(e.target.value)}
+        onBlur={() => setTyping(false)}
+        onKeyDown={(e) => e.key === 'Enter' && setTyping(false)}
+        aria-label={p.label}
+        className={p.wide ? 'bank-desc' : undefined}
+      />
+    );
+  return (
+    <select
+      value={p.value}
+      disabled={p.disabled}
+      onChange={(e) => (e.target.value === NEW ? (setTyping(true), p.onChange(p.value)) : p.onChange(e.target.value))}
+      aria-label={p.label}
+      title={p.value}
+      className={p.wide ? 'bank-desc' : undefined}
+    >
+      <option value="">—</option>
+      {p.value && !all.has(p.value) && <option value={p.value}>{p.value}</option>}
+      {(p.groups ?? [])
+        .filter((g) => g.options.length)
+        .map((g) => (
+          <optgroup key={g.label} label={g.label}>
+            {g.options.map((o) => (
+              <option key={g.label + o} value={o}>
+                {o}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      {p.groups ? (
+        <optgroup label="All">
+          {p.options.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </optgroup>
+      ) : (
+        p.options.map((o) => (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ))
+      )}
+      <option value={NEW}>＋ New…</option>
+    </select>
+  );
+}
+const NEW = '\u0000new';
+
+/** Work in progress (Nov 1): kept on this device until it's saved or cleared, so closing the sheet loses nothing. */
+const DRAFT_KEY = 'launchpage.bank-draft.v1';
+type Saved = { parsed: ParsedLine[]; files: string[]; edits: Record<string, Partial<Draft>>; skip: string[]; accounts: BankAccount[] };
+function loadDraft(): Saved | null {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? 'null') as Saved | null;
+    return d && Array.isArray(d.parsed) ? d : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Import CSV (V20-015): bank statements → Records. Every line is shown before anything is saved,
  * with where it's going (Expense, Draw, Income, Transfer, Personal, Interest) and how it's filled in
@@ -72,10 +147,11 @@ function guessAccount(number: string, file: string, sort: number): BankAccount {
  */
 export function BankImport(p: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
-  const [parsed, setParsed] = useState<ParsedLine[]>([]);
-  const [files, setFiles] = useState<string[]>([]);
+  const saved = useMemo(loadDraft, []);
+  const [parsed, setParsed] = useState<ParsedLine[]>(saved?.parsed ?? []);
+  const [files, setFiles] = useState<string[]>(saved?.files ?? []);
   const [errors, setErrors] = useState<string[]>([]);
-  const [accounts, setAccounts] = useState<BankAccount[]>(p.accounts);
+  const [accounts, setAccounts] = useState<BankAccount[]>(saved?.accounts?.length ? saved.accounts : p.accounts);
   const [fyEnd, setFyEnd] = useState(p.profile?.fyEnd ?? '09-30');
   const [personal, setPersonal] = useState(p.profile?.personalDivision || (p.profile?.person ?? '').toUpperCase().replace(/\s+/g, '') || 'PERSONAL');
   // Opening the sheet starts from what's saved (the profile and accounts load after the page).
@@ -88,8 +164,24 @@ export function BankImport(p: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.open, p.profile?.id, p.profile?.fyEnd, defaultPersonal]);
   /** Edits made in the table, by line (fingerprint), kept when the accounts change. */
-  const [edits, setEdits] = useState<Record<string, Partial<Draft>>>({});
-  const [skip, setSkip] = useState<Set<string>>(new Set());
+  const [edits, setEdits] = useState<Record<string, Partial<Draft>>>(saved?.edits ?? {});
+  const [skip, setSkip] = useState<Set<string>>(new Set(saved?.skip ?? []));
+  useEffect(() => {
+    try {
+      if (parsed.length) localStorage.setItem(DRAFT_KEY, JSON.stringify({ parsed, files, edits, skip: [...skip], accounts } satisfies Saved));
+      else localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* full or blocked: the draft stays in memory */
+    }
+  }, [parsed, files, edits, skip, accounts]);
+  function clearDraft() {
+    setParsed([]);
+    setFiles([]);
+    setEdits({});
+    setSkip(new Set());
+    setErrors([]);
+    setAccounts(p.accounts);
+  }
   const [fRoute, setFRoute] = useState<Route | ''>('');
   const [fStatus, setFStatus] = useState<Status | ''>('');
   const [fAccount, setFAccount] = useState('');
@@ -147,7 +239,7 @@ export function BankImport(p: Props) {
   const fys = [...new Set(live.map((r) => fyOf(r.date, fyEnd)))].sort();
 
   const pick = (f: (c: CommonExpense) => string) => [...new Set([...p.common.map(f), ...p.expenses.map((e) => f(e as unknown as CommonExpense))].map((x) => (x ?? '').trim()).filter(Boolean))].sort();
-  const divisions = pick((c) => c.project);
+  const divisions = [...new Set([...pick((c) => c.project), personal, business].filter(Boolean))].sort();
   const groups = pick((c) => c.category);
   const cats = pick((c) => c.pmtCategory);
   const descriptions = [...new Set(p.common.map((c) => c.description))].sort();
@@ -229,10 +321,7 @@ export function BankImport(p: Props) {
     const changedProfile = profile && (profile.fyEnd !== fyEnd || profile.personalDivision !== personal) ? { ...profile, fyEnd, personalDivision: personal } : null;
     await p.onSave({ accounts, lines, expenses, draws, common: [...touched.values()], invoices, profile: changedProfile });
     setSaving(false);
-    setParsed([]);
-    setFiles([]);
-    setEdits({});
-    setSkip(new Set());
+    clearDraft();
     p.onClose();
   }
 
@@ -246,8 +335,13 @@ export function BankImport(p: Props) {
           <button type="button" className="btn btn-go" onClick={() => fileInput.current?.click()}>
             {parsed.length ? 'Add another statement' : 'Choose statements (CSV)'}
           </button>
+          {parsed.length > 0 && (
+            <button type="button" className="btn btn-quiet" title="Start over: drop these statements and your changes (nothing has been saved)" onClick={clearDraft}>
+              Clear
+            </button>
+          )}
           <span className="bank-note">
-            {files.length ? `${files.length} file${files.length > 1 ? 's' : ''} · ${parsed.length} lines` : 'ATB exports: Personal, Mastercard, Business… pick several at once. Nothing is saved until you press Save.'}
+            {files.length ? `${files.length} file${files.length > 1 ? 's' : ''} · ${parsed.length} lines · your changes are kept until you save or clear` : 'ATB exports: Personal, Mastercard, Business… pick several at once. Nothing goes to Records until you press Save; your work here is kept if you close this.'}
           </span>
           {errors.map((e) => (
             <p key={e} className="bank-error">
@@ -441,33 +535,18 @@ export function BankImport(p: Props) {
                           </select>
                         </td>
                         <td>
-                          <input list="bank-divisions" value={r.project} disabled={off} onChange={(e) => edit(r, { project: e.target.value })} aria-label="Division" size={10} />
+                          <Pick value={r.project} options={divisions} disabled={off} onChange={(v) => edit(r, { project: v })} label="Division" />
                         </td>
                         <td className="col-task">
-                          <div className="bank-desc-wrap">
-                            <input list={`bank-desc-${i}`} value={r.description} disabled={off} onChange={(e) => setDescription(r, e.target.value)} aria-label="Description" className="bank-desc" />
-                            {others.length > 1 && !off && (
-                              <select
-                                className="bank-options"
-                                value=""
-                                onChange={(e) => e.target.value && setDescription(r, e.target.value)}
-                                aria-label={`${others.length} Common Expenses for this merchant`}
-                                title={`${others.length} Common Expenses for this merchant`}
-                              >
-                                <option value="">{others.length} ▾</option>
-                                {others.map((c) => (
-                                  <option key={c.id} value={c.description}>
-                                    {c.description} · {c.project || '—'}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-                          </div>
-                          <datalist id={`bank-desc-${i}`}>
-                            {[...new Set([...others.map((c) => c.description), ...descriptions])].map((d) => (
-                              <option key={d} value={d} />
-                            ))}
-                          </datalist>
+                          <Pick
+                            wide
+                            value={r.description}
+                            groups={[{ label: 'This merchant', options: [...new Set(others.map((c) => c.description))] }]}
+                            options={descriptions}
+                            disabled={off}
+                            onChange={(v) => setDescription(r, v)}
+                            label="Description"
+                          />
                         </td>
                         <td>
                           <select value={r.type} disabled={off} onChange={(e) => edit(r, { type: e.target.value })} aria-label="Type">
@@ -477,10 +556,10 @@ export function BankImport(p: Props) {
                           </select>
                         </td>
                         <td>
-                          <input list="bank-groups" value={r.category} disabled={off} onChange={(e) => edit(r, { category: e.target.value })} aria-label="Group" size={8} />
+                          <Pick value={r.category} options={groups} disabled={off} onChange={(v) => edit(r, { category: v })} label="Group" />
                         </td>
                         <td>
-                          <input list="bank-cats" value={r.pmtCategory} disabled={off} onChange={(e) => edit(r, { pmtCategory: e.target.value })} aria-label="Category" size={10} />
+                          <Pick value={r.pmtCategory} options={cats} disabled={off} onChange={(v) => edit(r, { pmtCategory: v })} label="Category" />
                         </td>
                         <td className="col-amount">{money(r.amount)}</td>
                         <td className="col-amount">
@@ -511,21 +590,6 @@ export function BankImport(p: Props) {
                   })}
                 </tbody>
               </table>
-              <datalist id="bank-divisions">
-                {divisions.map((d) => (
-                  <option key={d} value={d} />
-                ))}
-              </datalist>
-              <datalist id="bank-groups">
-                {groups.map((d) => (
-                  <option key={d} value={d} />
-                ))}
-              </datalist>
-              <datalist id="bank-cats">
-                {cats.map((d) => (
-                  <option key={d} value={d} />
-                ))}
-              </datalist>
             </div>
 
             <div className="bank-foot">
