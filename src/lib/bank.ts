@@ -478,10 +478,10 @@ export function draft(
         set({ route: 'income', status: 'check', why: 'A deposit into the business account: a client payment? It goes to Records → Income; link it to its invoice there if it isn\'t matched here.', description: `Payment - ${tidy(l.key)}`, amount: l.credit ?? 0, gst: gstCollected(l.credit ?? 0), project: ctx.business });
       } else if (/e-Transfer Received/i.test(l.text)) {
         set({ route: 'personal', status: 'check', why: 'E-transfer received: personal unless it’s the other side of a draw.', description: 'E-Transfer Received', amount: l.credit ?? 0 });
-      } else if (kind === 'business' || kind === 'card') {
-        set({ route: 'expense', status: 'check', why: `New merchant on the ${a?.name || 'business'} account: check how it's documented.`, project: kind === 'business' ? ctx.business : '' });
       } else {
-        set({ route: 'personal', status: 'check', why: 'New merchant on a personal account: personal unless you change it.' });
+        // Nov 1: a merchant with no Common Expense starts as personal (the personal division) on any
+        // account, card and business included, until it's documented.
+        set({ route: 'personal', status: 'check', why: `New merchant on the ${a?.name || 'account'}: personal (${ctx.personal}) until you document it.`, project: ctx.personal });
       }
 
       // Every spending line shows its GST (5% of the total) unless its Common Expense says none.

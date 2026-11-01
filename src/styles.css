@@ -2495,3 +2495,6 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .income-table select { font-size: 12px; padding: 3px 28px 3px 6px !important; background-color: transparent; color: inherit; border: 1px solid var(--edge); border-radius: 6px; }
 .income-months .income-total td { font-weight: 700; border-top: 1px solid var(--edge-strong); }
 .panel-records .task-scroll.income-scroll { min-height: 0; max-height: none; }
+/* Nov 1: Saved → a month's lines by account (one statement at a time). */
+.bank-modes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.bank-acct-pills { margin: 0; }

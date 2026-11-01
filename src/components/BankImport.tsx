@@ -488,6 +488,20 @@ export function BankImport(p: Props) {
             </button>
           </div>
           {mode === 'saved' && <MonthNav month={savedMonth} onChange={setSavedMonth} />}
+          {mode === 'saved' && rows.length > 0 && (
+            <div className="area-filter pill-row bank-acct-pills" role="group" aria-label="Account">
+              <button type="button" className="area-pill" aria-pressed={!fAccount} onClick={() => setFAccount('')}>
+                All <span className="pill-count">{rows.length}</span>
+              </button>
+              {accounts
+                .filter((a) => rows.some((r) => r.account === a.number))
+                .map((a) => (
+                  <button key={a.id} type="button" className="area-pill" aria-pressed={fAccount === a.number} title={a.name} onClick={() => setFAccount(fAccount === a.number ? '' : a.number)}>
+                    {a.method || a.name} <span className="pill-count">{rows.filter((r) => r.account === a.number).length}</span>
+                  </button>
+                ))}
+            </div>
+          )}
           {mode === 'saved' && <span className="bank-note">{rows.length} lines saved in this month. Change any of them and save again: their expenses and draws update.</span>}
         </div>
         {mode === 'new' && (
