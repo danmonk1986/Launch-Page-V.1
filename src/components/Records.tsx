@@ -107,6 +107,7 @@ export function RecordsPage(
         common={p.common}
         imported={p.bankLines}
         expenses={p.expenses}
+        draws={p.draws}
         invoices={p.invoices}
         profile={p.profile}
         onSave={p.onImport}

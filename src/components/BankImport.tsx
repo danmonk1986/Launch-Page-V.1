@@ -11,6 +11,7 @@ import {
   hasGst,
   learn,
   parseStatement,
+  tidy,
   type AccountKind,
   type BankAccount,
   type BankLine,
@@ -24,7 +25,7 @@ import {
 } from '../lib/bank';
 import { newExpense, type Expense } from '../lib/expenses';
 import type { Invoice, InvoiceProfile } from '../lib/invoices';
-import { dayLabel } from './Expenses';
+import { MonthNav, dayLabel } from './Expenses';
 import { TitleCombo } from './Launchers';
 
 export interface ImportResult {
@@ -35,6 +36,11 @@ export interface ImportResult {
   common: CommonExpense[];
   invoices: Invoice[];
   profile: InvoiceProfile | null;
+  /** Reopening saved lines: expenses / draws a changed line no longer makes. */
+  removeExpenses?: string[];
+  removeDraws?: string[];
+  /** True when this saves changes to lines imported before. */
+  update?: boolean;
 }
 
 type Props = {
@@ -44,6 +50,7 @@ type Props = {
   common: CommonExpense[];
   imported: BankLine[];
   expenses: Expense[];
+  draws: Draw[];
   invoices: Invoice[];
   profile: InvoiceProfile | null;
   onSave: (r: ImportResult) => Promise<void>;
@@ -132,7 +139,7 @@ export function BankImport(p: Props) {
   const [parts, setParts] = useState<Record<string, Part[]>>(saved?.parts ?? {});
   useEffect(() => {
     try {
-      if (parsed.length) localStorage.setItem(DRAFT_KEY, JSON.stringify({ parsed, files, edits, skip: [...skip], accounts, parts } satisfies Saved));
+      if (parsed.length || Object.keys(edits).length || Object.keys(parts).length) localStorage.setItem(DRAFT_KEY, JSON.stringify({ parsed, files, edits, skip: [...skip], accounts, parts } satisfies Saved));
       else localStorage.removeItem(DRAFT_KEY);
     } catch {
       /* full or blocked: the draft stays in memory */
@@ -180,10 +187,59 @@ export function BankImport(p: Props) {
   const profile = p.profile;
   const owner = profile?.person ?? '';
   const business = (profile?.business ?? '').replace(/\s+(LIMITED|LTD\.?|INC\.?|CORP\.?)$/i, '');
-  const base = useMemo(
+  const fresh = useMemo(
     () => draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business, personal }),
     [parsed, accounts, p.common, p.imported, p.expenses, p.invoices, owner, business, personal]
   );
+
+  /**
+   * Saved (Nov 1): reopen a month of lines already imported, in the same table. Each line comes back
+   * as it was saved (its expense, draw or parts); saving updates them, adds or removes the expense /
+   * draw when where it goes changes, and teaches Common Expenses again.
+   */
+  const [mode, setMode] = useState<'new' | 'saved'>('new');
+  const lastMonth = p.imported.reduce((m, l) => (l.date.slice(0, 7) > m ? l.date.slice(0, 7) : m), '') || new Date().toLocaleDateString('en-CA').slice(0, 7);
+  const [savedMonth, setSavedMonth] = useState(lastMonth);
+  const savedRows = useMemo<Draft[]>(() => {
+    const strip = (notes: string, text: string) => notes.replace(text, '').replace(/\s*\(part of [^)]*\)/, '').replace(/\s*—\s*$/, '').trim();
+    return p.imported
+      .filter((l) => l.date.slice(0, 7) === savedMonth)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.account.localeCompare(b.account) || a.sort - b.sort)
+      .map((l) => {
+        const a = accounts.find((x) => x.number === l.account);
+        const owedAmt = l.debit ?? -(l.credit ?? 0);
+        const e = l.expenseId ? p.expenses.find((x) => x.id === l.expenseId) : undefined;
+        const d = l.drawId ? p.draws.find((x) => x.id === l.drawId) : undefined;
+        const rule = commonFor(p.common, l.key, a?.kind === 'personal')[0];
+        const src = e ?? (l.route === 'personal' ? rule : undefined);
+        const parts: Part[] | undefined = l.parts?.map((x) => {
+          const pe = x.expenseId ? p.expenses.find((y) => y.id === x.expenseId) : undefined;
+          return { id: x.expenseId ?? crypto.randomUUID(), route: x.route === 'expense' ? 'expense' : 'personal', project: pe?.project ?? x.project, description: pe?.description ?? x.description, type: pe?.type ?? '', category: pe?.category ?? '', pmtCategory: pe?.pmtCategory ?? '', amount: x.amount, gst: !!pe?.gst };
+        });
+        return {
+          account: l.account, date: l.date, kind: l.kind, text: l.text, debit: l.debit, credit: l.credit, balance: l.balance, fp: l.fp, key: l.key,
+          id: l.id,
+          route: l.route,
+          status: 'saved',
+          why: `Saved${e ? ` as ${e.description}` : d ? ` as a draw (${d.description})` : ''}. Change anything and save again.`,
+          project: d?.project ?? src?.project ?? (l.route === 'personal' ? personal : ''),
+          description: d?.description ?? src?.description ?? tidy(l.key),
+          method: e?.method ?? a?.method ?? '',
+          type: src?.type ?? '',
+          category: src?.category ?? '',
+          pmtCategory: src?.pmtCategory ?? '',
+          amount: l.route === 'expense' || l.route === 'personal' ? owedAmt : Math.abs(owedAmt),
+          gst: e?.gst ?? 0,
+          expenseId: l.expenseId,
+          invoiceId: l.invoiceId,
+          commonId: rule?.id ?? null,
+          pairOf: null,
+          notes: e ? strip(e.notes, l.text) : d?.notes ?? '',
+          savedParts: parts
+        } satisfies Draft;
+      });
+  }, [p.imported, p.expenses, p.draws, p.common, accounts, savedMonth, personal]);
+  const base = mode === 'saved' ? savedRows : fresh;
   /**
    * Lines with their splits. A line's parts are the ones made here, or (until then) the split its
    * Common Expense remembers, by the same shares. The main line keeps what the parts don't cover;
@@ -194,8 +250,8 @@ export function BankImport(p: Props) {
       base.map((d) => {
         const r = { ...d, ...edits[d.fp] };
         const total = r.amount;
-        let ps: Part[] | undefined = parts[d.fp];
-        if (!ps && r.status !== 'duplicate') {
+        let ps: Part[] | undefined = parts[d.fp] ?? d.savedParts;
+        if (!ps && r.status !== 'duplicate' && r.status !== 'saved') {
           const split = p.common.find((c) => c.id === r.commonId)?.split;
           ps = split?.map((x, k) => ({ id: `${d.fp}#${k}`, route: x.route, project: x.project, description: x.description, type: x.type, category: x.category, pmtCategory: x.pmtCategory, gst: x.gst, amount: Math.round(total * x.share * 100) / 100 }));
         }
@@ -221,6 +277,7 @@ export function BankImport(p: Props) {
   const startedCheck = useMemo(() => new Set(base.filter((d) => d.status === 'check').map((d) => d.fp)), [base]);
   const acct = (n: string) => accounts.find((a) => a.number === n);
   const live = rows.filter((r) => r.status !== 'duplicate' && !skip.has(r.fp));
+  const changed = mode === 'saved' ? rows.filter((r) => edits[r.fp] || parts[r.fp]) : [];
   const dups = rows.filter((r) => r.status === 'duplicate').length;
   const needle = q.trim().toLowerCase();
   const shown = rows.filter(
@@ -341,11 +398,82 @@ export function BankImport(p: Props) {
     p.onClose();
   }
 
+  async function saveSaved() {
+    setSaving(true);
+    const lines: BankLine[] = [];
+    const expenses: Expense[] = [];
+    const draws: Draw[] = [];
+    const removeExpenses: string[] = [];
+    const removeDraws: string[] = [];
+    let common = [...p.common];
+    const touched = new Map<string, CommonExpense>();
+    let sort = p.expenses.reduce((m, e) => Math.max(m, e.sort + 1), 0);
+    for (const r of changed) {
+      const line = p.imported.find((l) => l.fp === r.fp);
+      if (!line) continue;
+      const next: BankLine = { ...line, route: r.route, expenseId: null, drawId: null, parts: undefined };
+      const method = r.method || acct(r.account)?.method || '';
+      const oldE = line.expenseId ? p.expenses.find((e) => e.id === line.expenseId) : undefined;
+      if (r.route === 'expense') {
+        const e: Expense = { ...(oldE ?? newExpense(r.date, sort++)), project: r.project, description: r.description, method, type: r.type, category: r.category, pmtCategory: r.pmtCategory, amount: Math.round(r.amount * 100) / 100, gst: r.gst ? Math.round(r.gst * 100) / 100 : null, notes: [r.notes.trim(), r.text].filter(Boolean).join(' — ') };
+        expenses.push(e);
+        next.expenseId = e.id;
+      } else if (oldE) removeExpenses.push(oldE.id);
+      const oldParts = new Set((line.parts ?? []).map((x) => x.expenseId).filter((x): x is string => !!x));
+      if (r.parts.length) {
+        next.parts = [];
+        for (const x of r.parts) {
+          let expenseId: string | null = null;
+          if (x.route === 'expense') {
+            const old = oldParts.has(x.id) ? p.expenses.find((e) => e.id === x.id) : undefined;
+            const e: Expense = { ...(old ?? newExpense(r.date, sort++)), project: x.project, description: x.description, method, type: x.type, category: x.category, pmtCategory: x.pmtCategory, amount: Math.round(x.amount * 100) / 100, gst: partGst(x) ? Math.round(partGst(x) * 100) / 100 : null, notes: [r.notes.trim(), `${r.text} (part of ${money(r.total)})`].filter(Boolean).join(' — ') };
+            expenses.push(e);
+            expenseId = e.id;
+            oldParts.delete(e.id);
+          }
+          next.parts.push({ route: x.route, amount: x.amount, expenseId, project: x.project, description: x.description });
+        }
+      }
+      removeExpenses.push(...oldParts);
+      const oldD = line.drawId ? p.draws.find((d) => d.id === line.drawId) : undefined;
+      if (r.route === 'draw') {
+        const d: Draw = { ...(oldD ?? { id: crypto.randomUUID(), sort: p.draws.length + draws.length, bankLineId: line.id }), project: r.project, date: r.date, description: r.description, amount: Math.round(r.amount * 100) / 100, notes: r.notes.trim() };
+        draws.push(d);
+        next.drawId = d.id;
+      } else if (oldD) removeDraws.push(oldD.id);
+      const c = learn(r, common, r.parts, r.total);
+      if (c) {
+        common = common.some((x) => x.id === c.id) ? common.map((x) => (x.id === c.id ? c : x)) : [...common, c];
+        touched.set(c.id, c);
+      }
+      lines.push(next);
+    }
+    await p.onSave({ accounts: [], lines, expenses, draws, common: [...touched.values()], invoices: [], profile: null, removeExpenses, removeDraws, update: true });
+    // Only this month's reopened changes are done; a new import in progress stays.
+    const done = new Set(changed.map((r) => r.fp));
+    setEdits((m) => Object.fromEntries(Object.entries(m).filter(([k]) => !done.has(k))));
+    setParts((m) => Object.fromEntries(Object.entries(m).filter(([k]) => !done.has(k))));
+    setSaving(false);
+  }
+
   const statusOf = (r: Draft) => (skip.has(r.fp) ? 'Left out' : STATUS_LABEL[r.status]);
 
   return (
     <Sheet open={p.open} title="Import bank CSV" onClose={p.onClose} wide>
       <div className="bank-import">
+        <div className="bank-modes">
+          <div className="d26-range budget-views" role="group" aria-label="Import or reopen">
+            <button type="button" aria-pressed={mode === 'new'} onClick={() => setMode('new')} title="Bring in new statements">
+              New import
+            </button>
+            <button type="button" aria-pressed={mode === 'saved'} onClick={() => setMode('saved')} disabled={!p.imported.length} title="Reopen lines already saved to Records, a month at a time">
+              Saved · {p.imported.length}
+            </button>
+          </div>
+          {mode === 'saved' && <MonthNav month={savedMonth} onChange={setSavedMonth} />}
+          {mode === 'saved' && <span className="bank-note">{rows.length} lines saved in this month. Change any of them and save again: their expenses and draws update.</span>}
+        </div>
+        {mode === 'new' && (
         <div className="bank-files">
           <input ref={fileInput} type="file" accept=".csv,text/csv" multiple hidden onChange={(e) => (void read(e.target.files), (e.target.value = ''))} />
           <button type="button" className="btn btn-go" onClick={() => fileInput.current?.click()}>
@@ -365,6 +493,7 @@ export function BankImport(p: Props) {
             </p>
           ))}
         </div>
+        )}
 
         <details className="bank-setup" open={accounts.length > p.accounts.length || undefined}>
           <summary>Records setup · fiscal year ends {fyEnd} · personal division {personal} · {accounts.length} account{accounts.length === 1 ? '' : 's'}</summary>
@@ -526,6 +655,7 @@ export function BankImport(p: Props) {
                           <input
                             type="checkbox"
                             checked={!off}
+                            hidden={mode === 'saved'}
                             disabled={r.status === 'duplicate'}
                             aria-label="Include this line"
                             onChange={(e) =>
@@ -682,9 +812,15 @@ export function BankImport(p: Props) {
               )}
               <span className="bank-note">Hover a status to see why a line was routed that way.</span>
               {overSplit.length > 0 && <span className="bank-error bank-inline">{overSplit.length} split{overSplit.length > 1 ? 's add' : ' adds'} up to more than the charge: fix the parts before saving.</span>}
+              {mode === 'saved' ? (
+              <button type="button" className="btn btn-go" disabled={saving || !changed.length || overSplit.length > 0} onClick={() => void saveSaved()}>
+                {saving ? 'Saving…' : changed.length ? `Save ${changed.length} change${changed.length === 1 ? '' : 's'}` : 'No changes yet'}
+              </button>
+              ) : (
               <button type="button" className="btn btn-go" disabled={saving || !live.length || overSplit.length > 0} onClick={() => void save()}>
                 {saving ? 'Saving…' : live.length ? `Save ${live.length} line${live.length === 1 ? '' : 's'} to Records` : 'Nothing new to import'}
               </button>
+              )}
             </div>
           </>
         )}

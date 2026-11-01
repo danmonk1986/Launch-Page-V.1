@@ -582,8 +582,22 @@ export default function App() {
       many(invoiceStore, invoices, setInvoices, r.invoices),
       r.profile ? many(profileStore, invoiceProfile, setInvoiceProfile, [r.profile]) : Promise.resolve(true)
     ]);
+    // Reopened lines that no longer make an expense / draw (Expense → Personal, a part removed).
+    const gone = async <T extends { id: string }>(store: Store<T>, list: T[], set: (l: T[]) => void, ids: string[] = []) => {
+      if (!ids.length) return;
+      const drop = new Set(ids);
+      const next = list.filter((x) => !drop.has(x.id));
+      set(next);
+      for (const id of ids) await store.remove(userId, id, next);
+    };
+    await gone(expenseStore, expenses.filter((e) => !r.expenses.some((x) => x.id === e.id)).concat(r.expenses), setExpenses, r.removeExpenses);
+    await gone(drawStore, draws.filter((d) => !r.draws.some((x) => x.id === d.id)).concat(r.draws), setDraws, r.removeDraws);
     // The import history last, so a line only counts as imported once what it made is saved.
     const linesOk = await many(bankLineStore, bankLines, setBankLines, r.lines);
+    if (r.update) {
+      setStatus(`Updated ${r.lines.length} saved line${r.lines.length === 1 ? '' : 's'}${r.removeExpenses?.length ? `; ${r.removeExpenses.length} expense${r.removeExpenses.length > 1 ? 's' : ''} removed` : ''}.` + (oks.every(Boolean) && linesOk ? '' : ' Some saved on this device only.'));
+      return;
+    }
     const n = (route: string) => r.lines.filter((l) => l.route === route).length;
     setStatus(
       `Imported ${r.lines.length} lines: ${n('expense')} expenses, ${n('draw')} draws, ${n('income')} income${r.invoices.length ? ` (${r.invoices.length} invoice${r.invoices.length > 1 ? 's' : ''} marked paid)` : ''}, ${n('personal')} personal, ${n('transfer') + n('interest')} transfers / interest.` +

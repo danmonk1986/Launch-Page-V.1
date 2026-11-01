@@ -340,14 +340,15 @@ export const hasGst = (c: { gst: boolean | null; pmtCategory: string; route: Rou
 /** GST inside a total that includes it (5%). */
 export const gstIn = (total: number) => Math.round((total * 5) / 105 * 100) / 100;
 
-export type Status = 'duplicate' | 'common' | 'matched' | 'auto' | 'check' | 'edited';
+export type Status = 'duplicate' | 'common' | 'matched' | 'auto' | 'check' | 'edited' | 'saved';
 export const STATUS_LABEL: Record<Status, string> = {
   duplicate: 'Already imported',
   common: 'Common expense',
   matched: 'Matched',
   auto: 'Auto',
   check: 'Check',
-  edited: 'Edited'
+  edited: 'Edited',
+  saved: 'Saved'
 };
 
 export interface Draft extends ParsedLine {
@@ -374,6 +375,8 @@ export interface Draft extends ParsedLine {
   pairOf: string | null;
   /** Your note: goes on the expense / draw. */
   notes: string;
+  /** A saved line reopened (Nov 1): its parts as saved. */
+  savedParts?: Part[];
 }
 
 const owed = (l: ParsedLine) => l.debit ?? -(l.credit ?? 0);
