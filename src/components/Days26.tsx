@@ -20,6 +20,8 @@ import {
   itemTime,
   loggedFor,
   loggingStreak,
+  offAllowance,
+  offDaysIn,
   logsOn,
   modeOf,
   nonNegForRitual,
@@ -124,6 +126,8 @@ type Props = {
   onTick: (key: string, on?: boolean) => void;
   /** V12-044: tick on a past day (from the 7-day strip). */
   onTickDay: (day: string, key: string, on?: boolean) => void;
+  /** V12-043: mark a day (today or a past day in the strip) as an off day. */
+  onSetOff: (day: string, off: boolean) => void;
   /** Today's journal check-ins, for a ritual's check-in step. */
   checkinText: (n: number) => string;
   onCheckin: (n: number, text: string) => void;
@@ -285,12 +289,13 @@ export function Days26Page(p: Props) {
           ritualCard.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }}
         onEdit={() => setEditList(true)}
+        onSetOff={p.onSetOff}
       />
 
       <LoggingCard
         logs={logsOn(logs, viewDay)}
         dayLabel={isPast ? new Date(`${viewDay}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' }) : null}
-        streak={loggingStreak(logs, today)}
+        streak={loggingStreak(logs, today, new Set(records.filter((r) => r.off).map((r) => r.day)))}
         config={config}
         mode={mode}
         onNew={(k) => setLog({ entry: newLog(k, undefined, viewDay), isNew: true })}
@@ -638,10 +643,19 @@ type NonNegCardProps = {
   ritualFor: (label: string) => Routine | null;
   onOpenRitual: (r: Routine) => void;
   onEdit: () => void;
+  /** V12-043: mark the day shown as an off day (or back to a run day). */
+  onSetOff: (day: string, off: boolean) => void;
 };
 
-function NonNegCard({ items, rec, day, onPickDay, records, logs, config, today, now, flip, reset, mode, routine, shift, onToggle, onLog, ritualFor, onOpenRitual, onEdit }: NonNegCardProps) {
+function NonNegCard({ items, rec, day, onPickDay, records, logs, config, today, now, flip, reset, mode, routine, shift, onToggle, onLog, ritualFor, onOpenRitual, onEdit, onSetOff }: NonNegCardProps) {
   const isPast = day !== today;
+  // V12-043 · off days: the month's allowance is its days − 26 (4 or 5); any day can be one.
+  const isOff = !!rec?.off;
+  const month = day.slice(0, 7);
+  const offUsed = offDaysIn(records, month).length;
+  const allowance = offAllowance(month);
+  const monthName = new Date(`${day}T12:00:00`).toLocaleDateString('en-CA', { month: 'long' });
+  const canOff = isOff || offUsed < allowance;
   const done = (n: NonNeg) => isDone({ id: n.id, label: n.label, log: n.log, target: n.target }, rec, logs, day);
   const count = items.filter(done).length;
   const cur = isPast ? null : currentSection(now, reset, flip);
@@ -667,12 +681,37 @@ function NonNegCard({ items, rec, day, onPickDay, records, logs, config, today, 
               ← Today
             </button>
           )}
+          <button
+            type="button"
+            className={`btn btn-quiet d26-off-btn${isOff ? ' is-on' : ''}`}
+            aria-pressed={isOff}
+            disabled={!canOff}
+            title={
+              isOff
+                ? 'Make this a run day again'
+                : canOff
+                  ? `Mark ${isPast ? dayName : 'today'} as an off day: a technology break that counts nowhere (${offUsed} of ${allowance} used in ${monthName})`
+                  : `All ${allowance} off days for ${monthName} are used`
+            }
+            onClick={() => onSetOff(day, !isOff)}
+          >
+            <span className="d26-off-long">{isOff ? 'Off day ✓' : `Off day · ${offUsed}/${allowance}`}</span>
+            <span className="d26-off-short">{isOff ? 'Off ✓' : `Off ${offUsed}/${allowance}`}</span>
+          </button>
           <button type="button" className="icon-btn tool-btn" aria-label="Edit Non-Negotiables" title="Edit Non-Negotiables" onClick={onEdit}>
             <Icon d={PEN} />
           </button>
         </div>
       </div>
 
+      {isOff ? (
+        <div className="d26-offday">
+          <p className="d26-offday-title">Off day · technology break and reset</p>
+          <p className="d26-offday-sub">
+            Nothing to tick, no timed launches, and it counts nowhere: no dip, no streak break. {offUsed} of {allowance} off days used in {monthName}.
+          </p>
+        </div>
+      ) : (
       <div className="d26-sections">
         {SECTIONS.map((s) => {
           const list = items.filter((n) => n.section === s.id);
@@ -747,14 +786,16 @@ function NonNegCard({ items, rec, day, onPickDay, records, logs, config, today, 
           );
         })}
       </div>
+      )}
 
       <div className="d26-bounce">
         <ol className="d26-dots" aria-label="Last 7 days">
           {weekDays.map((d) => {
             const rr = records.find((x) => x.day === d);
-            const res = rr && d < today && rr.items.length ? scoreDay(rr, logs, config) : null;
+            const res = rr && d < today && rr.items.length && !rr.off ? scoreDay(rr, logs, config) : null;
             // V12-041: teal = all ticked, beige = one missed (still on baseline), purple = a dip.
-            const state = d === today ? 'today' : res ? (res.full ? 'full' : res.on ? 'on' : 'dip') : 'none';
+            // V12-043: an off day is a hollow grey ring.
+            const state = rr?.off ? 'off' : d === today ? 'today' : res ? (res.full ? 'full' : res.on ? 'on' : 'dip') : 'none';
             const letter = new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { weekday: 'narrow' });
             return (
               <li key={d}>
@@ -762,11 +803,11 @@ function NonNegCard({ items, rec, day, onPickDay, records, logs, config, today, 
                   type="button"
                   className={`d26-dot-btn${d === day ? ' is-picked' : ''}`}
                   aria-pressed={d === day}
-                  aria-label={`${new Date(`${d}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'long', month: 'short', day: 'numeric' })}: ${state === 'full' ? 'all ticked' : state === 'on' ? 'on baseline, one missed' : state === 'dip' ? 'a dip' : state === 'today' ? 'today' : 'no record'}. Open this day`}
+                  aria-label={`${new Date(`${d}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'long', month: 'short', day: 'numeric' })}: ${state === 'off' ? 'off day' : state === 'full' ? 'all ticked' : state === 'on' ? 'on baseline, one missed' : state === 'dip' ? 'a dip' : state === 'today' ? 'today' : 'no record'}. Open this day`}
                   title={d === today ? 'Today' : 'Open this day to tick or log what you did'}
                   onClick={() => onPickDay(d)}
                 >
-                  <span className={`d26-dot is-${state}`} />
+                  <span className={`d26-dot is-${state}${d === today && state === 'off' ? ' is-today-off' : ''}`} />
                   <span className="d26-dot-day">{letter}</span>
                 </button>
               </li>
@@ -774,9 +815,9 @@ function NonNegCard({ items, rec, day, onPickDay, records, logs, config, today, 
           })}
         </ol>
         <div>
-          <p className="d26-bounce-title">{isPast ? `Catching up ${dayName}` : inDip ? 'Bounce back today' : 'Stay on baseline'}</p>
+          <p className="d26-bounce-title">{isOff ? `Off day${isPast ? ` · ${dayName}` : ''}` : isPast ? `Catching up ${dayName}` : inDip ? 'Bounce back today' : 'Stay on baseline'}</p>
           <p className="d26-bounce-sub">
-            {count}/{needed} needed · vice load {num(vice)}/{num(limit)}
+            {isOff ? 'Counts nowhere' : `${count}/${needed} needed`} · vice load {num(vice)}/{num(limit)}
             {inDip ? ` · dip ${plural(run.n, 'day')}` : run.n ? ` · ${plural(run.n, 'day')} on baseline` : ''}
           </p>
         </div>

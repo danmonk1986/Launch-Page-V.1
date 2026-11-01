@@ -62,6 +62,8 @@ export interface DayRecord {
   ticks: string[];
   items: SnapItem[];
   sort: number;
+  /** V12-043: an off day (technology break and reset): counts nowhere. Column from 0036. */
+  off?: boolean;
 }
 
 export interface LogEntry {
@@ -271,7 +273,8 @@ export function scoreDay(rec: DayRecord, logs: LogEntry[], c: Config): DayResult
 export function finished(records: DayRecord[], logs: LogEntry[], c: Config, today: string, days: number | null) {
   const from = days ? addDays(today, -days) : '';
   return records
-    .filter((r) => r.day < today && r.day >= from && r.items.length)
+    // V12-043: off days count nowhere (no dip, no streak break): they're left out of every result.
+    .filter((r) => r.day < today && r.day >= from && r.items.length && !r.off)
     .sort((a, b) => (a.day < b.day ? 1 : -1))
     .map((r) => scoreDay(r, logs, c));
 }
@@ -280,16 +283,26 @@ export function finished(records: DayRecord[], logs: LogEntry[], c: Config, toda
  * V12-045 · logging streak: days in a row with at least one log of any kind (did you show up).
  * Today counts once it has a log; until then the streak runs to yesterday, so it isn't broken yet.
  */
-export function loggingStreak(logs: LogEntry[], today: string): number {
+export function loggingStreak(logs: LogEntry[], today: string, offDays: Set<string> = new Set()): number {
   const days = new Set(logs.map((l) => l.day));
   let d = days.has(today) ? today : addDays(today, -1);
   let n = 0;
-  while (days.has(d)) {
-    n += 1;
+  // An off day (V12-043) neither adds to the streak nor breaks it.
+  for (let guard = 0; guard < 3660; guard++) {
+    if (days.has(d)) n += 1;
+    else if (!offDays.has(d)) break;
     d = addDays(d, -1);
   }
   return n;
 }
+
+// ---------- Off days (V12-043) ----------
+
+/** Runs follow the calendar month: 26 days on, the rest off (4 in a 30-day month, 5 in a 31-day one). */
+export const RUN_DAYS = 26;
+export const daysInMonth = (month: string) => new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+export const offAllowance = (month: string) => Math.max(0, daysInMonth(month) - RUN_DAYS);
+export const offDaysIn = (records: DayRecord[], month: string) => records.filter((r) => r.off && r.day.startsWith(month)).map((r) => r.day).sort();
 
 /** The run you're on: days on baseline in a row, or days in a dip. */
 export function currentRun(results: DayResult[]) {
@@ -412,7 +425,7 @@ export const nonNegStore = makeStore<NonNeg, NonNegRow>({
   })
 });
 
-type DayRow = { id: string; day: string; mode: Mode; shift: Shift; ticks: string[]; items: SnapItem[]; sort: number };
+type DayRow = { id: string; day: string; mode: Mode; shift: Shift; ticks: string[]; items: SnapItem[]; sort: number; off?: boolean };
 
 export const dayStore = makeStore<DayRecord, DayRow>({
   table: 'd26_days',
@@ -420,7 +433,7 @@ export const dayStore = makeStore<DayRecord, DayRow>({
   orderBy: 'day',
   script: 'supabase/migrations/0018_26_days.sql',
   seed: () => [],
-  toRow: (d) => ({ id: d.id, day: d.day, mode: d.mode, shift: d.shift, ticks: d.ticks, items: d.items, sort: d.sort }),
+  toRow: (d) => ({ id: d.id, day: d.day, mode: d.mode, shift: d.shift, ticks: d.ticks, items: d.items, sort: d.sort, off: !!d.off }),
   fromRow: (r) => ({
     id: r.id,
     day: r.day,
@@ -428,7 +441,8 @@ export const dayStore = makeStore<DayRecord, DayRow>({
     shift: r.shift,
     ticks: Array.isArray(r.ticks) ? r.ticks : [],
     items: Array.isArray(r.items) ? r.items : [],
-    sort: r.sort
+    sort: r.sort,
+    off: !!r.off
   })
 });
 

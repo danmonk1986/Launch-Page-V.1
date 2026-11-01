@@ -872,6 +872,12 @@ export default function App() {
   function tickToday(key: string, on?: boolean) {
     tickDay(d26Today, key, on);
   }
+  /** V12-043: mark a day as an off day (or back to a run day). Its ticks stay, in case it's undone. */
+  function setOffDay(day: string, off: boolean) {
+    const cur = daysRef.current.find((d) => d.day === day) ?? { id: dayId(day), day, mode: d26Mode, shift: d26Shift, ticks: [], items: snapshot(nonnegs), sort: 0 };
+    saveDay({ ...cur, off });
+    setStatus(off ? `${day}: off day. It counts nowhere, and today's timed launches stay quiet.` : `${day}: a run day again.`);
+  }
   /** V12-044: tick on any routine day (a past day opened from the 7-day strip, or today). */
   function tickDay(day: string, key: string, on?: boolean) {
     const cur = daysRef.current.find((d) => d.day === day) ?? { id: dayId(day), day, mode: d26Mode, shift: d26Shift, ticks: [], items: snapshot(nonnegs), sort: 0 };
@@ -1023,7 +1029,9 @@ export default function App() {
     }
   });
   const stillOpen = (l: Launch) => !handled[runKey(l, now)] && !missedClosed[runKey(l, now)];
-  const missedNow = launches.filter((l) => isMissed(l, now) && stillOpen(l));
+  // V12-043: on an off day, timed launches stay quiet (no reminder, no Missed pop-up).
+  const offToday = !!d26Days.find((d) => d.day === d26Today)?.off;
+  const missedNow = offToday ? [] : launches.filter((l) => isMissed(l, now) && stillOpen(l));
   const missedList = missedNow.length
     ? [...missedNow, ...launches.filter((l) => isDue(l, now) && stillOpen(l) && !(snoozed[l.id] && snoozed[l.id] > now.getTime()))].sort((a, b) =>
         timeFor(a, now).localeCompare(timeFor(b, now))
@@ -1042,13 +1050,13 @@ export default function App() {
 
   // Timed launches: pop the reminder when one is due and not handled today.
   useEffect(() => {
-    if (reminder || missedList.length) return;
+    if (reminder || missedList.length || offToday) return;
     const due = launches.find(
       (l) => isDue(l, now) && !handled[runKey(l, now)] && !(snoozed[l.id] && snoozed[l.id] > now.getTime())
     );
     if (due) setReminder(due);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [now, launches, reminder, snoozed, handled, missedList.length]);
+  }, [now, launches, reminder, snoozed, handled, missedList.length, offToday]);
 
   // Start alert: chime + desktop notification when a reminder pops.
   useEffect(() => {
@@ -1316,6 +1324,8 @@ export default function App() {
                   onPause={togglePause}
                   log={launchLog}
                   onSettleMissed={settleMissed}
+                  offDays={d26Days.filter((d) => d.off).map((d) => d.day)}
+                  offToday={offToday}
                   preset={timedPreset}
                   onPresetUsed={() => setTimedPreset(null)}
                   editLaunch={editLaunch}
@@ -1425,6 +1435,7 @@ export default function App() {
               }}
               onTick={tickToday}
               onTickDay={tickDay}
+              onSetOff={setOffDay}
               checkinText={checkinText}
               onCheckin={setCheckin}
             />

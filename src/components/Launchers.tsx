@@ -66,6 +66,9 @@ type Props = {
   log?: LaunchLog[];
   /** Oct 29 · Missed tab: done without logging time, or cleared out of the counts. */
   onSettleMissed?: (l: Launch, day: string, how: 'done' | 'cleared') => void;
+  /** V12-043: off days (a quiet card today; their runs aren't Missed). */
+  offDays?: string[];
+  offToday?: boolean;
   onPresetUsed?: () => void;
   /** Oct 25: opens Edit timed launch on this launch (from the reminder's Edit). */
   editLaunch?: Launch | null;
@@ -204,7 +207,7 @@ export function LaunchersPanel(p: Props) {
     history: []
   };
   // Missed (Oct 29): past runs never settled, one row per run (a launch can miss several days).
-  const missed = missedRuns(p.launches, p.log ?? [], p.today);
+  const missed = missedRuns(p.launches, p.log ?? [], p.today, 7, new Set(p.offDays ?? []));
   // History (Oct 22): every finished run, newest first.
   const history = (p.log ?? [])
     .filter((g) => g.outcome !== 'launched' || g.finishedAt)
@@ -405,6 +408,9 @@ export function LaunchersPanel(p: Props) {
             <Icon d="M12 5v14M5 12h14" />
           </button>
         </div>
+        {p.offToday && view === 'active' && (
+          <p className="d26-offday-note">Off day · technology break. Timed launches stay quiet today: no reminders, nothing counts as missed.</p>
+        )}
         {view === 'missed' ? (
           missed.length === 0 ? (
             <p className="panel-empty timed-empty">{EMPTY.missed}</p>

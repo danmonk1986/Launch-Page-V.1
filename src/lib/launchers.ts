@@ -676,7 +676,7 @@ export function logFor(list: LaunchLog[], l: Launch, day: Date): LaunchLog {
  * any past date; repeating ones over the last `days` days, from their first logged run on (so a
  * launch you never used doesn't fill the list). Hourly launches are left out. Newest first.
  */
-export function missedRuns(launches: Launch[], log: LaunchLog[], now: Date, days = 7): { launch: Launch; day: string }[] {
+export function missedRuns(launches: Launch[], log: LaunchLog[], now: Date, days = 7, offDays: Set<string> = new Set()): { launch: Launch; day: string }[] {
   const settled = new Set(log.filter((g) => g.outcome !== 'launched' || g.finishedAt).map((g) => `${g.launchId}:${g.day}`));
   const firstRun = new Map<string, string>();
   for (const g of log) if (!firstRun.has(g.launchId) || g.day < firstRun.get(g.launchId)!) firstRun.set(g.launchId, g.day);
@@ -698,7 +698,8 @@ export function missedRuns(launches: Launch[], log: LaunchLog[], now: Date, days
       }
     }
     if (l.movedTo && l.movedTo < todayIso) dates.add(l.movedTo);
-    for (const day of dates) if (!settled.has(`${l.id}:${day}`)) out.push({ launch: l, day });
+    // V12-043: runs on an off day were skipped on purpose: not missed.
+    for (const day of dates) if (!settled.has(`${l.id}:${day}`) && !offDays.has(day)) out.push({ launch: l, day });
   }
   return out.sort((a, b) => b.day.localeCompare(a.day) || toMinutes(a.launch.atTime) - toMinutes(b.launch.atTime));
 }
