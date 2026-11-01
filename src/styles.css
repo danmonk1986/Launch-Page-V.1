@@ -2488,3 +2488,10 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 /* Nov 1: budget audit, a bill charged at a new amount offers to update its Budget line. */
 .bank-budget { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; color: var(--accent-purple); white-space: nowrap; cursor: pointer; }
 .bank-stat-budget .budget-stat-value { color: var(--accent-purple); }
+/* Nov 1: Records → Income. */
+.records-sub { margin: 18px 0 8px; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mist); }
+.income-table .income-cell { background: transparent; color: inherit; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; font: inherit; width: 100%; min-width: 90px; }
+.income-table .income-cell:hover, .income-table .income-cell:focus { border-color: var(--edge); }
+.income-table select { font-size: 12px; padding: 3px 28px 3px 6px !important; background-color: transparent; color: inherit; border: 1px solid var(--edge); border-radius: 6px; }
+.income-months .income-total td { font-weight: 700; border-top: 1px solid var(--edge-strong); }
+.panel-records .task-scroll.income-scroll { min-height: 0; max-height: none; }

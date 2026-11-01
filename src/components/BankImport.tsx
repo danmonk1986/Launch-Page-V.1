@@ -227,19 +227,19 @@ export function BankImport(p: Props) {
           route: l.route,
           status: 'saved',
           why: `Saved${e ? ` as ${e.description}` : d ? ` as a draw (${d.description})` : ''}. Change anything and save again.`,
-          project: d?.project ?? src?.project ?? (l.route === 'personal' ? personal : ''),
-          description: d?.description ?? src?.description ?? tidy(l.key),
+          project: l.income?.project ?? d?.project ?? src?.project ?? (l.route === 'personal' ? personal : ''),
+          description: l.income?.description ?? d?.description ?? src?.description ?? tidy(l.key),
           method: e?.method ?? a?.method ?? '',
           type: src?.type ?? '',
           category: src?.category ?? '',
           pmtCategory: src?.pmtCategory ?? '',
           amount: l.route === 'expense' || l.route === 'personal' ? owedAmt : Math.abs(owedAmt),
-          gst: e?.gst ?? 0,
+          gst: l.income?.gst ?? e?.gst ?? 0,
           expenseId: l.expenseId,
           invoiceId: l.invoiceId,
           commonId: rule?.id ?? null,
           pairOf: null,
-          notes: e ? strip(e.notes, l.text) : d?.notes ?? '',
+          notes: l.income?.notes ?? (e ? strip(e.notes, l.text) : d?.notes ?? ''),
           savedParts: parts
         } satisfies Draft;
       });
@@ -333,7 +333,8 @@ export function BankImport(p: Props) {
   /** Typing or picking a description: a Common Expenses entry fills in the rest. */
   function setDescription(r: Draft, description: string) {
     const c = p.common.find((x) => x.description === description);
-    if (!c) return edit(r, { description });
+    // A draw, income, transfer or interest line keeps where it goes: only spending takes a Common Expense's route.
+    if (!c || !spends(r.route)) return edit(r, { description });
     edit(r, {
       description,
       commonId: c.id,
@@ -392,6 +393,7 @@ export function BankImport(p: Props) {
         if (inv && !inv.datePaid) invoices.push({ ...inv, datePaid: r.date });
         line.invoiceId = r.invoiceId;
       }
+      if (r.route === 'income' || r.route === 'interest') line.income = { project: r.project, description: r.description, gst: r.route === 'income' ? Math.round(r.gst * 100) / 100 : 0, notes: r.notes.trim() };
       const c = learn(r, common, r.parts, r.total);
       if (c) {
         common = common.some((x) => x.id === c.id) ? common.map((x) => (x.id === c.id ? c : x)) : [...common, c];
@@ -455,6 +457,7 @@ export function BankImport(p: Props) {
         draws.push(d);
         next.drawId = d.id;
       } else if (oldD) removeDraws.push(oldD.id);
+      next.income = r.route === 'income' || r.route === 'interest' ? { project: r.project, description: r.description, gst: r.route === 'income' ? Math.round(r.gst * 100) / 100 : 0, notes: r.notes.trim() } : undefined;
       const c = learn(r, common, r.parts, r.total);
       if (c) {
         common = common.some((x) => x.id === c.id) ? common.map((x) => (x.id === c.id ? c : x)) : [...common, c];

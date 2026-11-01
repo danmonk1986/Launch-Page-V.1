@@ -562,6 +562,7 @@ export default function App() {
   const customerOps = ops(customerStore, customers, setCustomers, (c) => c.name);
   const profileOps = ops(profileStore, invoiceProfile, setInvoiceProfile, () => 'Your details');
   const drawOps = ops(drawStore, draws, setDraws, (d) => d.description || 'Draw');
+  const bankLineOps = ops(bankLineStore, bankLines, setBankLines, (l) => l.income?.description || 'Deposit');
 
   /** V20-015: a confirmed bank import, saved list by list (each in one go). */
   async function saveImport(r: ImportResult) {
@@ -1526,6 +1527,7 @@ export default function App() {
               onSaveDraw={drawOps.save}
               onDeleteDraw={drawOps.remove}
               onImport={saveImport}
+              onSaveBankLine={bankLineOps.save}
               projects={projects}
               invoices={invoices}
               customers={customers}

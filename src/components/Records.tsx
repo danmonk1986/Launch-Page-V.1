@@ -8,11 +8,12 @@ import type { Project } from '../lib/projects';
 import type { BankAccount, BankLine, CommonExpense, Draw } from '../lib/bank';
 import { BankImport, type ImportResult } from './BankImport';
 import { DrawsView, FyNav, thisFy } from './Draws';
+import { IncomeView } from './Income';
 
 const CLOSE = 'M6 6l12 12M18 6L6 18';
 const IMPORT = 'M12 3v12M7 10l5 5 5-5M5 21h14';
 const PLUS = 'M12 5v14M5 12h14';
-type View = 'expenses' | 'draws' | 'invoices';
+type View = 'expenses' | 'income' | 'draws' | 'invoices';
 const VIEW_KEY = 'launchpage.records.view';
 
 /**
@@ -32,13 +33,14 @@ export function RecordsPage(
     onSaveDraw: (d: Draw) => Promise<void>;
     onDeleteDraw: (id: string) => Promise<void>;
     onImport: (r: ImportResult) => Promise<void>;
+    onSaveBankLine: (l: BankLine) => Promise<void>;
     projects: Project[];
   }
 ) {
   const [view, setViewState] = useState<View>(() => {
     try {
       const v = localStorage.getItem(VIEW_KEY);
-      return v === 'invoices' || v === 'draws' ? v : 'expenses';
+      return v === 'invoices' || v === 'draws' || v === 'income' ? v : 'expenses';
     } catch {
       return 'expenses';
     }
@@ -61,6 +63,7 @@ export function RecordsPage(
   // Nov 1: the views are pills under the header (Income joins them soon), like Tasks' filters.
   const VIEWS: { id: View; label: string; hint: string }[] = [
     { id: 'expenses', label: 'Expenses', hint: 'What was actually paid' },
+    { id: 'income', label: 'Income', hint: 'Money in: client payments and interest, and the year by month' },
     { id: 'draws', label: 'Draws', hint: 'Business withdrawals and e-transfers to you' },
     { id: 'invoices', label: 'Invoices', hint: 'STARDVST invoices' }
   ];
@@ -82,7 +85,7 @@ export function RecordsPage(
         <h2 id="h-records" className="panel-title">
           Records
         </h2>
-        {view === 'draws' ? <FyNav fy={fy} fyEnd={fyEnd} onChange={setFy} /> : <MonthNav month={month} onChange={setMonth} />}
+        {view === 'draws' || view === 'income' ? <FyNav fy={fy} fyEnd={fyEnd} onChange={setFy} /> : <MonthNav month={month} onChange={setMonth} />}
         <div className="panel-actions">
           <button type="button" className="icon-btn tool-btn" aria-label="Import CSV" title="Import bank statements (CSV) into Expenses and Draws" onClick={() => setImporting(true)}>
             <Icon d={IMPORT} />
@@ -92,14 +95,29 @@ export function RecordsPage(
               <Icon d={PLUS} />
             </button>
           )}
-          <SearchToggle value={q} onChange={setQ} placeholder={view === 'draws' ? 'Search draws' : 'Search expenses'} />
+          <SearchToggle value={q} onChange={setQ} placeholder={view === 'draws' ? 'Search draws' : view === 'income' ? 'Search income' : 'Search expenses'} />
           <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
             <Icon d={CLOSE} />
           </button>
         </div>
       </div>
       {views}
-      {view === 'draws' ? (
+      {view === 'income' ? (
+        <IncomeView
+          lines={p.bankLines}
+          accounts={p.bankAccounts}
+          invoices={p.invoices}
+          customers={p.customers}
+          expenses={p.expenses}
+          draws={p.draws}
+          fy={fy}
+          fyEnd={fyEnd}
+          personal={p.profile?.personalDivision || (p.profile?.person ?? '').toUpperCase().replace(/\s+/g, '') || 'PERSONAL'}
+          search={q}
+          onSaveLine={p.onSaveBankLine}
+          onSaveInvoice={p.onSave}
+        />
+      ) : view === 'draws' ? (
         <DrawsView draws={p.draws} fy={fy} fyEnd={fyEnd} search={q} onSave={p.onSaveDraw} onDelete={p.onDeleteDraw} />
       ) : (
         <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} addTick={addTick} projects={p.projects} />

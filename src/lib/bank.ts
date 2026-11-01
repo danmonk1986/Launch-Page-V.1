@@ -64,6 +64,8 @@ export interface BankLine {
   invoiceId: string | null;
   /** A split charge: the parts beyond the main line (each its own expense, or personal). */
   parts?: { route: Route; amount: number; expenseId: string | null; project: string; description: string }[];
+  /** Money in (Nov 1, Records → Income): how a deposit or interest is documented; GST is what it collected. */
+  income?: { project: string; description: string; gst: number; notes: string };
   sort: number;
 }
 
@@ -147,7 +149,8 @@ export const bankLineStore = jsonStore<BankLine>('bank_lines', 'launchpage.bank-
   expenseId: s(d.expenseId) || null,
   drawId: s(d.drawId) || null,
   invoiceId: s(d.invoiceId) || null,
-  parts: Array.isArray(d.parts) ? (d.parts as BankLine['parts']) : undefined
+  parts: Array.isArray(d.parts) ? (d.parts as BankLine['parts']) : undefined,
+  income: d.income && typeof d.income === 'object' ? (d.income as BankLine['income']) : undefined
 }));
 
 export const commonStore = jsonStore<CommonExpense>('expense_rules', 'launchpage.expense-rules.v1', (d) => ({
@@ -347,6 +350,9 @@ export const hasGst = (c: { gst: boolean | null; pmtCategory: string; route: Rou
 
 // ---------- Where each line goes ----------
 
+/** GST collected inside a deposit (an invoice is billed + 5% GST, so the GST is deposit × 5/105). */
+export const gstCollected = (deposit: number) => Math.round(((deposit * 5) / 105) * 100) / 100;
+
 /** GST: 5% of the total, as the Launch Sheet works it out (Nov 1, Dan: $96.59 → $4.83). */
 export const GST_RATE = 0.05;
 export const gstIn = (total: number) => Math.round(total * GST_RATE * 100) / 100;
@@ -469,7 +475,7 @@ export function draft(
           gst: hasGst(rule) ? gstIn(Math.abs(amt)) * Math.sign(amt) : 0
         });
       } else if (/Direct Deposit/i.test(l.text) && (l.credit ?? 0) > 0 && kind === 'business') {
-        set({ route: 'income', status: 'check', why: 'A deposit into the business account: a client payment?', description: `Payment - ${tidy(l.key)}`, amount: l.credit ?? 0 });
+        set({ route: 'income', status: 'check', why: 'A deposit into the business account: a client payment? It goes to Records → Income; link it to its invoice there if it isn\'t matched here.', description: `Payment - ${tidy(l.key)}`, amount: l.credit ?? 0, gst: gstCollected(l.credit ?? 0), project: ctx.business });
       } else if (/e-Transfer Received/i.test(l.text)) {
         set({ route: 'personal', status: 'check', why: 'E-transfer received: personal unless it’s the other side of a draw.', description: 'E-Transfer Received', amount: l.credit ?? 0 });
       } else if (kind === 'business' || kind === 'card') {
@@ -519,7 +525,7 @@ export function draft(
       }
       if (base.route === 'income') {
         const inv = ctx.invoices.find((i) => !i.datePaid && Math.abs(invoiceTotals(i).subTotal - base.amount) < 0.01);
-        if (inv) set({ invoiceId: inv.id, status: 'matched', why: `Pays invoice ${inv.number}: it's marked paid on ${l.date}.` });
+        if (inv) set({ invoiceId: inv.id, status: 'matched', why: `Pays invoice ${inv.number}: it's marked paid on ${l.date}.`, gst: invoiceTotals(inv).gst });
       }
       return base;
     });
