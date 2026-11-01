@@ -2450,8 +2450,9 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .panel-records .expenses-table input.bank-desc { background: transparent; color: inherit; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; font: inherit; width: 100%; }
 .panel-records .expenses-table input.bank-desc:hover, .panel-records .expenses-table input.bank-desc:focus { border-color: var(--edge); }
 /* Nov 1: rows that need work are orange (Check); a merchant with several Common Expenses gets a dropdown. */
-.bank-row.st-check td { background: rgb(255 153 51 / 0.1); }
-.bank-row.st-check td:first-child { box-shadow: inset 3px 0 0 #ff9933; }
+/* Nov 1: orange = needs work (Check, or not filled in all the way across); beats the row striping. */
+.bank-table tr.bank-row.needs-work td, .app .bank-table tr.bank-row.needs-work.is-alt td { background: rgb(255 153 51 / 0.12); }
+.bank-table tr.bank-row.needs-work td:first-child { box-shadow: inset 3px 0 0 #ff9933; }
 .bank-status.st-check { border-color: #ff9933; color: #ff9933; }
 .bank-desc-wrap { display: flex; gap: 6px; align-items: center; }
 .bank-desc-wrap .bank-desc { flex: 1; }

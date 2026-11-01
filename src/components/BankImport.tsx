@@ -285,12 +285,18 @@ export function BankImport(p: Props) {
   const changed = mode === 'saved' ? rows.filter((r) => edits[r.fp] || parts[r.fp]) : [];
   const dups = rows.filter((r) => r.status === 'duplicate').length;
   const needle = q.trim().toLowerCase();
+  /**
+   * Orange (Nov 1): a line that still needs work: marked Check, or spending not filled in all the way
+   * across (division, description, type, group and category), or a split part that isn't.
+   */
+  const blank = (x: { project: string; description: string; type: string; category: string; pmtCategory: string }) => [x.project, x.description, x.type, x.category, x.pmtCategory].some((v) => !(v ?? '').trim());
+  const needsWork = (r: (typeof rows)[number]) => r.status !== 'duplicate' && !skip.has(r.fp) && (r.status === 'check' || (spends(r.route) && blank(r)) || r.parts.some((x) => blank(x)));
   const shown = rows.filter(
     (r) =>
       (showDup || r.status !== 'duplicate') &&
       (!fRoute || r.route === fRoute) &&
       // A line being worked on stays in the Check filter until the filter changes.
-      (!fStatus || r.status === fStatus || (fStatus === 'check' && startedCheck.has(r.fp))) &&
+      (!fStatus || r.status === fStatus || (fStatus === 'check' && (startedCheck.has(r.fp) || needsWork(r)))) &&
       (!fAccount || r.account === fAccount) &&
       (!needle || [r.text, r.description, r.project, r.category, r.pmtCategory].some((v) => v.toLowerCase().includes(needle)))
   );
@@ -610,7 +616,7 @@ export function BankImport(p: Props) {
               )}
               <div className="budget-stat">
                 <span className="budget-stat-label">To check</span>
-                <span className="budget-stat-value">{live.filter((r) => r.status === 'check').length}</span>
+                <span className="budget-stat-value">{live.filter(needsWork).length}</span>
               </div>
               {fys.length > 0 && (
                 <div className="budget-stat">
@@ -689,7 +695,7 @@ export function BankImport(p: Props) {
                     const others = commonFor(p.common, r.key, acct(r.account)?.kind === 'personal', r.total).slice(0, 8);
                     return (
                       <Fragment key={r.fp}>
-                      <tr className={`task-row bank-row is-${r.route} st-${r.status}${off ? ' is-off' : ''}${quiet ? ' is-quiet' : ''}${i % 2 ? ' is-alt' : ''}`}>
+                      <tr className={`task-row bank-row is-${r.route} st-${r.status}${needsWork(r) ? ' needs-work' : ''}${off ? ' is-off' : ''}${quiet ? ' is-quiet' : ''}${i % 2 ? ' is-alt' : ''}`}>
                         <td className="col-center">
                           <input
                             type="checkbox"
@@ -789,7 +795,7 @@ export function BankImport(p: Props) {
                       </tr>
                       {!off &&
                         r.parts.map((x) => (
-                          <tr key={x.id} className={`task-row bank-row bank-part is-${x.route}${x.route === 'personal' ? ' is-quiet' : ''}${i % 2 ? ' is-alt' : ''}`}>
+                          <tr key={x.id} className={`task-row bank-row bank-part is-${x.route}${blank(x) ? ' needs-work' : ''}${x.route === 'personal' ? ' is-quiet' : ''}${i % 2 ? ' is-alt' : ''}`}>
                             <td className="col-center">
                               <button type="button" className="icon-btn bank-part-x" aria-label="Remove this part" title="Remove this part (its amount goes back to the line)" onClick={() => setPartsOf(r, r.parts.filter((y) => y.id !== x.id))}>
                                 ×
