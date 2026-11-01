@@ -2385,3 +2385,14 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
   .task-table.task-page tbody { margin-bottom: 0; }
   .task-pager .timed-more { margin-top: 4px; }
 }
+
+/* Nov 1 (fix): task cards ran wider than their swipe page, so Due Today slid sideways and cards got
+   cut off on the right. Lock every card list to one full-width column; long titles wrap instead. */
+@media (max-width: 640px) {
+  .task-table tbody { grid-template-columns: minmax(0, 1fr); }
+  .task-table, .task-table tbody, .task-row, .swipe-page, .timed-pages { box-sizing: border-box; max-width: 100%; }
+  .task-row { width: 100%; min-width: 0; }
+  .task-row .task-name { white-space: normal; }
+  .timed-pages.is-paged > .swipe-page { padding: 1px; }
+  .task-table tr.task-pager > td { width: 100%; max-width: 100%; overflow: hidden; }
+}

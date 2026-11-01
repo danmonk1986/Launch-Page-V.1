@@ -370,11 +370,11 @@ function TaskTable({
                       <span className="section-caret" aria-hidden="true">
                         {shut ? '›' : '⌄'}
                       </span>
-                      {s.title} <span className="section-count">{rows.length}</span>
+                      {s.title} {id !== 'key' && <span className="section-count">{rows.length}</span>}
                     </button>
                   ) : (
                     <>
-                      {s.title} <span className="section-count">{rows.length}</span>
+                      {s.title} {id !== 'key' && <span className="section-count">{rows.length}</span>}
                     </>
                   )}
                 </th>
