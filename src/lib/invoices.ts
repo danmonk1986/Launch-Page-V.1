@@ -14,6 +14,8 @@ export interface InvoiceProfile {
   email: string;
   web: string;
   gstNumber: string;
+  /** Records setup (V20-015): the fiscal year's last day, 'MM-DD' (STARDVST: '09-30'). */
+  fyEnd: string;
   sort: number;
 }
 
@@ -137,7 +139,7 @@ export const longDate = (s: string) => at(s).toLocaleDateString('en-US', { month
 // ---------- Storage: each row keeps its fields in `data` (0029) ----------
 
 type Row = { id: string; data: Record<string, unknown>; sort: number };
-function jsonStore<T extends { id: string; sort: number }>(table: string, localKey: string, fill: (d: Record<string, unknown>) => Omit<T, 'id' | 'sort'>) {
+export function jsonStore<T extends { id: string; sort: number }>(table: string, localKey: string, fill: (d: Record<string, unknown>) => Omit<T, 'id' | 'sort'>) {
   return makeStore<T, Row>({
     table,
     localKey,
@@ -189,7 +191,8 @@ export const profileStore = jsonStore<InvoiceProfile>('invoice_profile', 'launch
   phone: s(d.phone),
   email: s(d.email),
   web: s(d.web),
-  gstNumber: s(d.gstNumber)
+  gstNumber: s(d.gstNumber),
+  fyEnd: /^\d\d-\d\d$/.test(s(d.fyEnd)) ? s(d.fyEnd) : '09-30'
 }));
 
-export const emptyProfile = (): InvoiceProfile => ({ id: crypto.randomUUID(), business: '', person: '', phone: '', email: '', web: '', gstNumber: '', sort: 0 });
+export const emptyProfile = (): InvoiceProfile => ({ id: crypto.randomUUID(), business: '', person: '', phone: '', email: '', web: '', gstNumber: '', fyEnd: '09-30', sort: 0 });

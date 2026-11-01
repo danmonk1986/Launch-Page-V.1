@@ -19,6 +19,8 @@ import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
 import { syncNonNegs } from './lib/nnsync';
 import { meditationStore, MeditationsContext, type Meditation } from './lib/meditations';
 import { hiddenPickStore, HiddenPicksContext, pickKey as hiddenKey, type HiddenPick } from './lib/hiddenPicks';
+import { bankAccountStore, bankLineStore, commonStore, drawStore, type BankAccount, type BankLine, type CommonExpense, type Draw } from './lib/bank';
+import type { ImportResult } from './components/BankImport';
 import { customerStore, invoiceStore, profileStore, type Customer, type Invoice, type InvoiceProfile } from './lib/invoices';
 import { RecordsPage } from './components/Records';
 import { nextRepeat, readRepeat, writeRepeat } from './lib/repeat';
@@ -154,6 +156,11 @@ export default function App() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [invoiceProfile, setInvoiceProfile] = useState<InvoiceProfile[]>([]);
+  // V20-015 bookkeeping: bank accounts, imported statement lines, Common Expenses, draws.
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [bankLines, setBankLines] = useState<BankLine[]>([]);
+  const [common, setCommon] = useState<CommonExpense[]>([]);
+  const [draws, setDraws] = useState<Draw[]>([]);
   const [medReady, setMedReady] = useState(false);
   const tasksRef = useRef<Task[]>([]);
   const [gcalOff, setGcalOff] = useState(0);
@@ -361,6 +368,12 @@ export default function App() {
       setInvoices(iv.items);
       setCustomers(cu.items);
       setInvoiceProfile(pf.items);
+      const [ba, bl, ce, dr] = await Promise.all([bankAccountStore.load(userId), bankLineStore.load(userId), commonStore.load(userId), drawStore.load(userId)]);
+      if (!live) return;
+      setBankAccounts(ba.items);
+      setBankLines(bl.items);
+      setCommon(ce.items);
+      setDraws(dr.items);
       setMedReady(true);
       setStoreProblem(l1.problem ?? l2.problem ?? l3.problem ?? p1.problem ?? t1.problem ?? j1.problem ?? n1.problem ?? dd.problem ?? lg.problem);
     })();
@@ -416,6 +429,10 @@ export default function App() {
     invoiceStore.onNewer(swap(setInvoices));
     customerStore.onNewer(swap(setCustomers));
     profileStore.onNewer(swap(setInvoiceProfile));
+    bankAccountStore.onNewer(swap(setBankAccounts));
+    bankLineStore.onNewer(swap(setBankLines));
+    commonStore.onNewer(swap(setCommon));
+    drawStore.onNewer(swap(setDraws));
     meditationStore.onNewer(swap(setMeditations, medsRef));
     hiddenPickStore.onNewer(swap(setHiddenPicks, hiddenRef));
     expenseStore.onNewer(swap(setExpenses, expRef));
@@ -431,7 +448,7 @@ export default function App() {
   // connection is back, or when the app comes back into view, not only on the next reload.
   useEffect(() => {
     if (!userId) return;
-    const stores = [launcherStore, launchStore, eventStore, projectStore, taskStore, nonNegStore, quoteStore, budgetStore, invoiceStore, customerStore, profileStore, meditationStore, hiddenPickStore, expenseStore, dayStore, logStore, journalStore, launchLogStore, configStore] as Store<{ id: string }>[];
+    const stores = [launcherStore, launchStore, eventStore, projectStore, taskStore, nonNegStore, quoteStore, budgetStore, invoiceStore, customerStore, profileStore, bankAccountStore, bankLineStore, commonStore, drawStore, meditationStore, hiddenPickStore, expenseStore, dayStore, logStore, journalStore, launchLogStore, configStore] as Store<{ id: string }>[];
     let busy = false;
     const flushAll = async () => {
       if (busy || !navigator.onLine) return;
@@ -544,6 +561,35 @@ export default function App() {
   const invoiceOps = ops(invoiceStore, invoices, setInvoices, (i) => i.number || 'Invoice');
   const customerOps = ops(customerStore, customers, setCustomers, (c) => c.name);
   const profileOps = ops(profileStore, invoiceProfile, setInvoiceProfile, () => 'Your details');
+  const drawOps = ops(drawStore, draws, setDraws, (d) => d.description || 'Draw');
+
+  /** V20-015: a confirmed bank import, saved list by list (each in one go). */
+  async function saveImport(r: ImportResult) {
+    const many = async <T extends { id: string }>(store: Store<T>, list: T[], set: (l: T[]) => void, items: T[]) => {
+      if (!items.length) return true;
+      const byId = new Map(items.map((i) => [i.id, i]));
+      const next = [...list.map((x) => byId.get(x.id) ?? x), ...items.filter((i) => !list.some((x) => x.id === i.id))];
+      set(next);
+      let ok = true;
+      for (const i of items) ok = !!(await store.save(userId, i, next)) && ok;
+      return ok;
+    };
+    const oks = await Promise.all([
+      many(bankAccountStore, bankAccounts, setBankAccounts, r.accounts),
+      many(expenseStore, expenses, setExpenses, r.expenses),
+      many(drawStore, draws, setDraws, r.draws),
+      many(commonStore, common, setCommon, r.common),
+      many(invoiceStore, invoices, setInvoices, r.invoices),
+      r.profile ? many(profileStore, invoiceProfile, setInvoiceProfile, [r.profile]) : Promise.resolve(true)
+    ]);
+    // The import history last, so a line only counts as imported once what it made is saved.
+    const linesOk = await many(bankLineStore, bankLines, setBankLines, r.lines);
+    const n = (route: string) => r.lines.filter((l) => l.route === route).length;
+    setStatus(
+      `Imported ${r.lines.length} lines: ${n('expense')} expenses, ${n('draw')} draws, ${n('income')} income${r.invoices.length ? ` (${r.invoices.length} invoice${r.invoices.length > 1 ? 's' : ''} marked paid)` : ''}, ${n('personal')} personal, ${n('transfer') + n('interest')} transfers / interest.` +
+        (oks.every(Boolean) && linesOk ? '' : ' Some saved on this device only; they go to the cloud when the connection is back.')
+    );
+  }
   // Expenses (LP-030) save from the newest copy: a tick and an edit can land together.
   const expRef = useRef(expenses);
   expRef.current = expenses;
@@ -1457,6 +1503,13 @@ export default function App() {
               lines={budget}
               onSaveExpense={editExpense}
               onDeleteExpense={removeExpense}
+              draws={draws}
+              bankAccounts={bankAccounts}
+              bankLines={bankLines}
+              common={common}
+              onSaveDraw={drawOps.save}
+              onDeleteDraw={drawOps.remove}
+              onImport={saveImport}
               invoices={invoices}
               customers={customers}
               profile={invoiceProfile[0] ?? null}
