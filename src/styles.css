@@ -2435,7 +2435,6 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .bank-table thead tr.bank-filters th { top: 30px; padding-top: 2px; padding-bottom: 6px; }
 .bank-table .bank-text { max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dim); font-family: var(--font-mono); font-size: 11px; }
 .bank-table .bank-desc { width: 100%; min-width: 260px; }
-.bank-table .bank-gst { width: 72px; text-align: right; }
 .bank-row.is-quiet td { color: var(--dim); }
 .bank-row.is-quiet input, .bank-row.is-quiet select { opacity: 0.75; }
 .bank-row.is-off td { opacity: 0.45; }
@@ -2462,3 +2461,7 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .panel-records .panel-head > .month-nav { margin-left: 10px; margin-right: auto; }
 .bank-import select:not([multiple]) { padding-right: 22px !important; background-position: right 4px center !important; background-size: 13px !important; }
 .bank-import select.bank-options:not([multiple]) { background-image: none !important; padding: 3px 4px !important; width: 46px; text-align: center; text-align-last: center; }
+/* Nov 1: GST is worked out, not typed: tap to remove or add it back. */
+.bank-table .bank-gst { font: inherit; font-family: var(--font-mono); font-size: 12px; min-width: 72px; text-align: right; background: transparent; color: var(--accent-teal); border: 1px solid var(--edge); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+.bank-table .bank-gst:hover:not(:disabled) { border-color: var(--accent-teal); }
+.bank-table .bank-gst.is-none { color: var(--dim); border-style: dashed; }

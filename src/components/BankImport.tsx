@@ -565,18 +565,17 @@ export function BankImport(p: Props) {
                         <td className="col-amount">{money(r.amount)}</td>
                         <td className="col-amount">
                           {r.route === 'expense' ? (
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={r.gst ? String(Math.round(r.gst * 100) / 100) : ''}
+                            <button
+                              type="button"
+                              className={`bank-gst${r.gst ? '' : ' is-none'}`}
                               disabled={off}
-                              placeholder="0"
-                              onChange={(e) => edit(r, { gst: Number(e.target.value) || 0 })}
-                              onDoubleClick={() => edit(r, { gst: r.gst ? 0 : gstIn(Math.abs(r.amount)) * Math.sign(r.amount) })}
-                              title="GST inside the total (total × 5/105). Double-click to add or clear it."
-                              aria-label="GST"
-                              className="bank-gst"
-                            />
+                              aria-pressed={!!r.gst}
+                              aria-label={r.gst ? `GST ${money(r.gst)}: tap to remove` : 'No GST: tap to add it'}
+                              title={r.gst ? 'GST in the total, worked out automatically (total × 5/105). Tap to remove it (e.g. a bill your GST number exempts); it’s remembered for this expense.' : 'No GST. Tap to add it back.'}
+                              onClick={() => edit(r, { gst: r.gst ? 0 : gstIn(Math.abs(r.amount)) * Math.sign(r.amount) })}
+                            >
+                              {r.gst ? money(r.gst) : 'No GST'}
+                            </button>
                           ) : (
                             ''
                           )}
