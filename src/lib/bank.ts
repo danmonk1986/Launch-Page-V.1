@@ -82,7 +82,7 @@ export interface CommonExpense {
   category: string;
   pmtCategory: string;
   route: Route;
-  /** Total includes GST (GST = total × 5/105). null: by payment category (insurance, fees and dues aren't taxed). */
+  /** GST on this spend (5% of the total). null: by payment category (insurance, fees and dues aren't taxed). */
   gst: boolean | null;
   frequency: string;
   /** Bank merchants confirmed for this entry (merchantKey). */
@@ -331,14 +331,16 @@ export function commonFor(list: CommonExpense[], key: string, personalAccount: b
   return [...known, ...named];
 }
 
-/** GST is in the total unless the entry says otherwise; insurance, fees and dues, and other aren't taxed. */
+/** Spending carries GST unless the entry says otherwise; insurance, fees and dues, and other aren't taxed. */
+export const spends = (route: Route) => route === 'expense' || route === 'personal';
 export const hasGst = (c: { gst: boolean | null; pmtCategory: string; route: Route }) =>
-  c.route === 'expense' && (c.gst ?? !/INSURANCE|FEES|DUES|OTHER|TAX/i.test(c.pmtCategory));
+  spends(c.route) && (c.gst ?? !/INSURANCE|FEES|DUES|OTHER|TAX/i.test(c.pmtCategory));
 
 // ---------- Where each line goes ----------
 
-/** GST inside a total that includes it (5%). */
-export const gstIn = (total: number) => Math.round((total * 5) / 105 * 100) / 100;
+/** GST: 5% of the total, as the Launch Sheet works it out (Nov 1, Dan: $96.59 → $4.83). */
+export const GST_RATE = 0.05;
+export const gstIn = (total: number) => Math.round(total * GST_RATE * 100) / 100;
 
 export type Status = 'duplicate' | 'common' | 'matched' | 'auto' | 'check' | 'edited' | 'saved';
 export const STATUS_LABEL: Record<Status, string> = {
@@ -465,6 +467,10 @@ export function draft(
         set({ route: 'personal', status: 'check', why: 'New merchant on a personal account: personal unless you change it.' });
       }
 
+      // Every spending line shows its GST (5% of the total) unless its Common Expense says none.
+      // Not on money moving between people, cash, bank fees or money received (other than a refund).
+      const noGst = /e-Transfer|ABM|Cash|Interest/i.test(l.text) || /^Fee$/i.test(l.kind) || ((l.credit ?? 0) > 0 && !/Return|Refund|Credit/i.test(`${l.text} ${l.kind}`));
+      if (spends(base.route) && !rule && base.status !== 'duplicate' && !noGst) base.gst = gstIn(Math.abs(amt)) * Math.sign(amt);
       // A Budget bill already paid (ticked in Tasks) is this line: link it instead of adding it twice.
       if (base.route === 'expense' && amt > 0) {
         const hit = ctx.expenses.find((e) => !usedExpense.has(e.id) && e.amount !== null && Math.abs(e.amount - amt) < 0.005 && daysApart(e.date, l.date) <= 4);
@@ -509,7 +515,7 @@ export function learn(d: Draft, list: CommonExpense[], parts: Part[] = [], total
     category: d.category,
     pmtCategory: d.pmtCategory,
     route: d.route,
-    gst: d.route === 'expense' ? Math.abs(d.gst) > 0 : null,
+    gst: spends(d.route) ? Math.abs(d.gst) > 0 : null,
     frequency: same?.frequency ?? '',
     keys,
     lastDate: same && same.lastDate > d.date ? same.lastDate : d.date,

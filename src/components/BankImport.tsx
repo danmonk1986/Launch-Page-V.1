@@ -9,6 +9,7 @@ import {
   fyOf,
   gstIn,
   hasGst,
+  spends,
   learn,
   parseStatement,
   tidy,
@@ -273,7 +274,7 @@ export function BankImport(p: Props) {
     const c = p.common.find((e) => e.description === description);
     setPart(r, x.id, c ? { description, route: c.route === 'personal' ? 'personal' : 'expense', project: c.project, type: c.type, category: c.category, pmtCategory: c.pmtCategory, gst: hasGst(c) } : { description });
   }
-  const partGst = (x: Part) => (x.route === 'expense' && x.gst ? gstIn(Math.abs(x.amount)) * Math.sign(x.amount) : 0);
+  const partGst = (x: Part) => (spends(x.route) && x.gst ? gstIn(Math.abs(x.amount)) * Math.sign(x.amount) : 0);
   const startedCheck = useMemo(() => new Set(base.filter((d) => d.status === 'check').map((d) => d.fp)), [base]);
   const acct = (n: string) => accounts.find((a) => a.number === n);
   const live = rows.filter((r) => r.status !== 'duplicate' && !skip.has(r.fp));
@@ -339,7 +340,7 @@ export function BankImport(p: Props) {
     });
   }
   function setRoute(r: Draft, route: Route) {
-    edit(r, { route, gst: route === 'expense' ? r.gst : 0, ...(route === 'personal' ? { project: personal } : route === 'draw' && (!r.project || r.project === personal) ? { project: business } : {}) });
+    edit(r, { route, gst: !spends(route) ? 0 : spends(r.route) ? r.gst : gstIn(Math.abs(r.amount)) * Math.sign(r.amount), ...(route === 'personal' ? { project: personal } : route === 'draw' && (!r.project || r.project === personal) ? { project: business } : {}) });
   }
 
   async function save() {
@@ -554,7 +555,7 @@ export function BankImport(p: Props) {
                 <span className="budget-stat-value">{money(sum('expense'))}</span>
               </div>
               <div className="budget-stat">
-                <span className="budget-stat-label">GST in them</span>
+                <span className="budget-stat-label">GST · expenses</span>
                 <span className="budget-stat-value">{money(expenseGst)}</span>
               </div>
               <div className="budget-stat">
@@ -717,14 +718,14 @@ export function BankImport(p: Props) {
                           {r.parts.length > 0 && <span className="money-orig">of {money(r.total)}</span>}
                         </td>
                         <td className="col-amount">
-                          {r.route === 'expense' ? (
+                          {spends(r.route) ? (
                             <button
                               type="button"
                               className={`bank-gst${r.gst ? '' : ' is-none'}`}
                               disabled={off}
                               aria-pressed={!!r.gst}
                               aria-label={r.gst ? `GST ${money(r.gst)}: tap to remove` : 'No GST: tap to add it'}
-                              title={r.gst ? 'GST in the total, worked out automatically (total × 5/105). Tap to remove it (e.g. a bill your GST number exempts); it’s remembered for this expense.' : 'No GST. Tap to add it back.'}
+                              title={r.gst ? 'GST: 5% of the total, worked out automatically. Tap to remove it (e.g. a bill your GST number exempts); it’s remembered for this expense.' : 'No GST. Tap to add it back.'}
                               onClick={() => edit(r, { gst: r.gst ? 0 : gstIn(Math.abs(r.amount)) * Math.sign(r.amount) })}
                             >
                               {r.gst ? money(r.gst) : 'No GST'}
@@ -787,7 +788,7 @@ export function BankImport(p: Props) {
                               />
                             </td>
                             <td className="col-amount">
-                              {x.route === 'expense' && (
+                              {spends(x.route) && (
                                 <button type="button" className={`bank-gst${x.gst ? '' : ' is-none'}`} aria-pressed={x.gst} onClick={() => setPart(r, x.id, { gst: !x.gst })} title={x.gst ? 'GST in this part. Tap to remove it.' : 'No GST. Tap to add it back.'}>
                                   {x.gst ? money(partGst(x)) : 'No GST'}
                                 </button>
