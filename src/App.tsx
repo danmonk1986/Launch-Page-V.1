@@ -1263,7 +1263,7 @@ export default function App() {
                     const googleEvents = await loadCached(userId).catch(() => [] as CalEvent[]);
                     const counts = downloadLaunchSheet({
                       settings, routines, meditations, launchers, launches, launchLog, events, googleEvents, tasks, projects, journal,
-                      days: d26Days, nonnegs, logs: d26Logs, quotes, config: d26Config, budget, expenses, invoices, customers
+                      days: d26Days, nonnegs, logs: d26Logs, quotes, config: d26Config, budget
                     });
                     setStatus(`Launch Sheet exported: ${counts.length + 1} tabs, ${counts.reduce((a, c) => a + c.rows, 0)} rows.`);
                   }

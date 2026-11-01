@@ -1,5 +1,6 @@
 /**
- * ⚙ Export my data → the LAUNCH SHEET (V12-042, Nov 1): every card's data in one workbook, one tab
+ * ⚙ Export my data → the LAUNCH SHEET (V12-042, Nov 1): L4UNCH P4GE V.1 data (Records, i.e. expenses and
+ * invoices, get their own bookkeeping export later): every card's data in one workbook, one tab
  * per card, each topped with the brand (logo text, headline, mantra) so a user's own branding
  * replaces L4UNCH!P4GE. Opens in Google Sheets with every tab. A user's data is theirs: nothing is
  * trimmed or retired until it can be exported.
@@ -15,8 +16,6 @@ import type { Project } from './projects';
 import { checkinsOf, type JournalEntry } from './journal';
 import { isDone, scoreDay, type Config, type DayRecord, type LogEntry, type NonNeg, type Quote } from './days26';
 import type { BudgetLine } from './budget';
-import type { Expense } from './expenses';
-import { invoiceTotals, type Customer, type Invoice } from './invoices';
 import { describeRepeat, readRepeat } from './repeat';
 
 export interface ExportData {
@@ -37,9 +36,6 @@ export interface ExportData {
   quotes: Quote[];
   config: Config;
   budget: BudgetLine[];
-  expenses: Expense[];
-  invoices: Invoice[];
-  customers: Customer[];
 }
 
 const yes = (b: unknown) => (b ? 'Yes' : '');
@@ -224,25 +220,6 @@ export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: 
         l.notes,
         yes(d.tasks.some((t) => t.budgetLineId === l.id && !t.deletedAt))
       ])
-  );
-
-  add(
-    'EXPENSES',
-    ['Date', 'Division', 'Description', 'Method', 'Pmt type', 'Budget group', 'Payment category', 'Total (CAD)', 'Original price', 'GST', 'Notes', 'From budget'],
-    [...d.expenses]
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .map((e) => [e.date, e.project, e.description, e.method, e.type, e.category, e.pmtCategory, e.amount, e.currency && e.foreign != null ? `${e.foreign} ${e.currency}` : '', e.gst, e.notes, yes(e.budgetLineId)])
-  );
-
-  add(
-    'INVOICES',
-    ['Number', 'Customer', 'Start', 'End', 'Job ID', 'Operator', 'Well', 'Description', 'Day rate', 'Subtotal', 'GST', 'Total', 'Paid', 'Notes'],
-    [...d.invoices]
-      .sort((a, b) => (a.start ?? '').localeCompare(b.start ?? ''))
-      .map((i) => {
-        const t = invoiceTotals(i);
-        return [i.number, d.customers.find((c) => c.id === i.customerId)?.name ?? '', i.start ?? '', i.end ?? '', i.jobId, i.operator, i.well, i.description, i.dayRate, t.total, t.gst, t.subTotal, i.datePaid ?? '', i.notes];
-      })
   );
 
   // The cover first: what's in the sheet.
