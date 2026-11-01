@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { useOpensUp } from './Launchers';
+import { chunk, SwipePages } from './SwipePages';
+import { useMobile } from '../lib/useMobile';
 import { TasksMonth } from './TasksMonth';
 import { MonthNav, thisMonth } from './Expenses';
 import type { Expense } from '../lib/expenses';
@@ -325,6 +327,9 @@ function TaskTable({
   collapsible?: boolean;
 }) {
   const [closed, setClosed] = useState<Record<string, boolean>>({ done: true, monthly: true, annual: true, deleted: true });
+  // Nov 1: on a phone each group shows 3 tasks; swipe left for the next 3, or Show all to stack them.
+  const mobile = useMobile();
+  const [showAll, setShowAll] = useState<Record<string, boolean>>({});
   // Open the group holding a task you jumped to.
   useEffect(() => {
     if (!focusId) return;
@@ -381,7 +386,37 @@ function TaskTable({
                   </td>
                 </tr>
               )}
-              {!shut &&
+              {!shut && mobile && rows.length > 3 ? (
+                <tr className="task-pager">
+                  <td colSpan={10}>
+                    <SwipePages
+                      total={rows.length}
+                      resetKey={showAll[id]}
+                      pages={(showAll[id] ? [rows] : chunk(rows)).map((pg, pi) => (
+                        <table className="task-table task-page" key={pi}>
+                          <tbody>
+                            {pg.map((t, i) => (
+                              <Fragment key={t.id}>
+                                <TaskRow t={t} alt={i % 2 === 1} projects={projects} today={today} act={act} />
+                                {(steps.get(t.id) ?? []).map((st) => (
+                                  <TaskRow key={st.id} t={st} step alt={i % 2 === 1} projects={projects} today={today} act={act} />
+                                ))}
+                              </Fragment>
+                            ))}
+                          </tbody>
+                        </table>
+                      ))}
+                    />
+                    <button type="button" className="timed-more" aria-expanded={!!showAll[id]} onClick={() => setShowAll((a) => ({ ...a, [id]: !a[id] }))}>
+                      {showAll[id] ? 'Show 3' : `Show all ${rows.length}`}
+                      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className={showAll[id] ? 'is-open' : ''}>
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              ) : (
+                !shut &&
                 rows.map((t, i) => (
                   <Fragment key={t.id}>
                     <TaskRow t={t} alt={i % 2 === 1} projects={projects} today={today} act={act} />
@@ -389,7 +424,8 @@ function TaskTable({
                       <TaskRow key={st.id} t={st} step alt={i % 2 === 1} projects={projects} today={today} act={act} />
                     ))}
                   </Fragment>
-                ))}
+                ))
+              )}
             </tbody>
           );
         })}

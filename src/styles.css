@@ -2375,3 +2375,13 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
   .timed-dots-label { margin-left: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
 }
 @media (prefers-reduced-motion: reduce) { .timed-dots > span { transition: none; } }
+
+/* Nov 1: Task groups use the same 3-and-swipe pager (components/SwipePages.tsx). */
+.swipe-page { min-width: 0; }
+@media (max-width: 640px) {
+  .timed-pages.is-paged > .swipe-page { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+  .task-table tr.task-pager, .task-table tr.task-pager > td { display: block; padding: 0; border: 0; background: none; }
+  .task-table.task-page { margin: 0; }
+  .task-table.task-page tbody { margin-bottom: 0; }
+  .task-pager .timed-more { margin-top: 4px; }
+}
