@@ -93,3 +93,15 @@ export function matchCalendar(projects: Project[], calendarName: string): Projec
 export function colorForCalendar(projects: Project[], calendarId: string) {
   return projects.find((p) => p.calendarId === calendarId)?.color ?? null;
 }
+
+/**
+ * The project a division name means (Records, Nov 1): the same name, or the name without the
+ * "STARDVST " prefix (MWD → STARDVST MWD, APP SHOP → STARDVST APP SHOP), so its pill takes the
+ * project's colour.
+ */
+export function projectForDivision(projects: Project[], division: string): Project | null {
+  const d = division.trim().toUpperCase();
+  if (!d) return null;
+  const bare = (n: string) => n.trim().toUpperCase().replace(/^STARDVST\s+/, '');
+  return projects.find((x) => x.name.trim().toUpperCase() === d) ?? projects.find((x) => bare(x.name) === bare(d)) ?? null;
+}

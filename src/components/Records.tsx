@@ -4,6 +4,7 @@ import { ExpensesView, MonthNav, thisMonth } from './Expenses';
 import { InvoicesPage } from './Invoices';
 import type { BudgetLine } from '../lib/budget';
 import type { Expense } from '../lib/expenses';
+import type { Project } from '../lib/projects';
 import type { BankAccount, BankLine, CommonExpense, Draw } from '../lib/bank';
 import { BankImport, type ImportResult } from './BankImport';
 import { DrawsView, FyNav, thisFy } from './Draws';
@@ -31,6 +32,7 @@ export function RecordsPage(
     onSaveDraw: (d: Draw) => Promise<void>;
     onDeleteDraw: (id: string) => Promise<void>;
     onImport: (r: ImportResult) => Promise<void>;
+    projects: Project[];
   }
 ) {
   const [view, setViewState] = useState<View>(() => {
@@ -56,21 +58,23 @@ export function RecordsPage(
   const [fy, setFy] = useState(() => thisFy(fyEnd));
   const [addTick, setAddTick] = useState(0);
 
+  // Nov 1: the views are pills under the header (Income joins them soon), like Tasks' filters.
+  const VIEWS: { id: View; label: string; hint: string }[] = [
+    { id: 'expenses', label: 'Expenses', hint: 'What was actually paid' },
+    { id: 'draws', label: 'Draws', hint: 'Business withdrawals and e-transfers to you' },
+    { id: 'invoices', label: 'Invoices', hint: 'STARDVST invoices' }
+  ];
   const views = (
-    <div className="d26-range budget-views" role="group" aria-label="View">
-      <button type="button" aria-pressed={view === 'expenses'} title="What was actually paid" onClick={() => setView('expenses')}>
-        Expenses
-      </button>
-      <button type="button" aria-pressed={view === 'draws'} title="Business withdrawals and e-transfers to you" onClick={() => setView('draws')}>
-        Draws
-      </button>
-      <button type="button" aria-pressed={view === 'invoices'} title="STARDVST invoices" onClick={() => setView('invoices')}>
-        Invoices
-      </button>
+    <div className="area-filter pill-row records-views" role="group" aria-label="Records">
+      {VIEWS.map((v) => (
+        <button key={v.id} type="button" className="area-pill" aria-pressed={view === v.id} title={v.hint} onClick={() => setView(v.id)}>
+          {v.label}
+        </button>
+      ))}
     </div>
   );
 
-  if (view === 'invoices') return <InvoicesPage {...p} title="Records" views={views} />;
+  if (view === 'invoices') return <InvoicesPage {...p} title="Records" below={views} />;
 
   return (
     <section className="panel panel-budget panel-records" aria-labelledby="h-records">
@@ -78,7 +82,6 @@ export function RecordsPage(
         <h2 id="h-records" className="panel-title">
           Records
         </h2>
-        {views}
         {view === 'draws' ? <FyNav fy={fy} fyEnd={fyEnd} onChange={setFy} /> : <MonthNav month={month} onChange={setMonth} />}
         <div className="panel-actions">
           <button type="button" className="icon-btn tool-btn" aria-label="Import CSV" title="Import bank statements (CSV) into Expenses and Draws" onClick={() => setImporting(true)}>
@@ -95,10 +98,11 @@ export function RecordsPage(
           </button>
         </div>
       </div>
+      {views}
       {view === 'draws' ? (
         <DrawsView draws={p.draws} fy={fy} fyEnd={fyEnd} search={q} onSave={p.onSaveDraw} onDelete={p.onDeleteDraw} />
       ) : (
-        <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} addTick={addTick} />
+        <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} addTick={addTick} projects={p.projects} />
       )}
       <BankImport
         open={importing}

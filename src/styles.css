@@ -2482,3 +2482,6 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .bank-cell-off { display: inline-block; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); font-size: 12px; padding: 3px 6px; }
 .bank-cell-off.is-wide { max-width: 280px; }
 .bank-table .bank-notes { width: 140px; }
+/* Nov 1: Records views as pills under the header (room for Income, more later). */
+.panel-records .records-views { margin: 2px 0 12px; }
+.panel-records .panel-head > .month-nav { margin-left: 14px; }

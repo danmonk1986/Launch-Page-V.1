@@ -1524,6 +1524,7 @@ export default function App() {
               onSaveDraw={drawOps.save}
               onDeleteDraw={drawOps.remove}
               onImport={saveImport}
+              projects={projects}
               invoices={invoices}
               customers={customers}
               profile={invoiceProfile[0] ?? null}

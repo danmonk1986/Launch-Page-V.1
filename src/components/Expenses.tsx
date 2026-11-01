@@ -8,6 +8,7 @@ import { monthKey, newExpense, type Expense } from '../lib/expenses';
 import { MoneyField, settleMoney } from './MoneyField';
 import { AmountInput } from './AmountInput';
 import { originalLabel } from '../lib/currency';
+import { projectForDivision, type Project } from '../lib/projects';
 
 const PLUS = 'M12 5v14M5 12h14';
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -47,6 +48,8 @@ type Props = {
   onDelete: (id: string) => Promise<void>;
   /** Records (Nov 1): the month selector and + live in the Records header; each tap of + bumps this. */
   addTick?: number;
+  /** Division pills in their project's colour. */
+  projects?: Project[];
 };
 
 /**
@@ -143,7 +146,7 @@ export function ExpensesView(p: Props) {
             <tbody>
               {rows.map((e, i) => (
                 <tr key={e.id} className={`task-row${i % 2 ? ' is-alt' : ''}`}>
-                  <td className="col-project">{e.project ? <span className="chip">{e.project}</span> : <span className="chip chip-empty">—</span>}</td>
+                  <td className="col-project">{e.project ? <span className="chip" style={{ ['--chip' as string]: projectForDivision(p.projects ?? [], e.project)?.color }}>{e.project}</span> : <span className="chip chip-empty">—</span>}</td>
                   <td className="col-date">{dayLabel(e.date)}</td>
                   <td className="col-task">
                     <button type="button" className="task-name" onClick={() => setEditing(e)} title={lineName(e.budgetLineId) ? `Paid from the budget line ${lineName(e.budgetLineId)}` : undefined}>

@@ -36,7 +36,8 @@ type Props = {
   onClose: () => void;
   /** Records (Oct 26): the page title and the Expenses | Invoices switch. */
   title?: string;
-  views?: ReactNode;
+  /** Records (Nov 1): the view pills, under the header. */
+  below?: ReactNode;
 };
 
 const shortDate = (s: string | null) => (s ? new Date(`${s}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '');
@@ -70,7 +71,6 @@ export function InvoicesPage(p: Props) {
         <h2 id="h-invoices" className="panel-title">
           {p.title ?? 'Invoices'}
         </h2>
-        {p.views}
         <div className="panel-actions">
           <button type="button" className="icon-btn tool-btn" aria-label="New invoice" title="New invoice" onClick={() => setEditing(newInvoice(p.invoices.length))}>
             <Icon d={PLUS} />
@@ -83,6 +83,7 @@ export function InvoicesPage(p: Props) {
           </button>
         </div>
       </div>
+      {p.below}
 
       <div className="budget-stats" aria-label="Fiscal year totals">
         <label className="budget-stat">
