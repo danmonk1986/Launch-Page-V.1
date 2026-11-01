@@ -2465,3 +2465,10 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .bank-table .bank-gst { font: inherit; font-family: var(--font-mono); font-size: 12px; min-width: 72px; text-align: right; background: transparent; color: var(--accent-teal); border: 1px solid var(--edge); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
 .bank-table .bank-gst:hover:not(:disabled) { border-color: var(--accent-teal); }
 .bank-table .bank-gst.is-none { color: var(--dim); border-style: dashed; }
+/* Nov 1: split a charge into parts (↳), like steps under a task. */
+.bank-table .bank-split { width: 26px; height: 26px; flex: none; font-size: 14px; color: var(--accent-teal); }
+.bank-part td { border-top: 0; }
+.bank-part .bank-part-label { color: var(--dim); font-size: 11px; padding-left: 24px; white-space: nowrap; }
+.bank-part .bank-part-x { width: 24px; height: 24px; font-size: 14px; color: var(--dim); }
+.bank-table .bank-part-amount { width: 84px; text-align: right; font-family: var(--font-mono); }
+.bank-inline { width: auto; }

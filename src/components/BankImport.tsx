@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from './Sheet';
 import { BUDGET_CATEGORIES, PMT_CATEGORIES, money } from '../lib/budget';
 import {
@@ -18,6 +18,7 @@ import {
   type Draft,
   type Draw,
   type ParsedLine,
+  type Part,
   type Route,
   type Status
 } from '../lib/bank';
@@ -76,6 +77,7 @@ function Pick(p: { value: string; options: string[]; groups?: { label: string; o
     return (
       <input
         autoFocus
+        onFocus={(e) => e.target.select()}
         value={p.value}
         onChange={(e) => p.onChange(e.target.value)}
         onBlur={() => setTyping(false)}
@@ -129,7 +131,7 @@ const NEW = '\u0000new';
 
 /** Work in progress (Nov 1): kept on this device until it's saved or cleared, so closing the sheet loses nothing. */
 const DRAFT_KEY = 'launchpage.bank-draft.v1';
-type Saved = { parsed: ParsedLine[]; files: string[]; edits: Record<string, Partial<Draft>>; skip: string[]; accounts: BankAccount[] };
+type Saved = { parsed: ParsedLine[]; files: string[]; edits: Record<string, Partial<Draft>>; skip: string[]; accounts: BankAccount[]; parts?: Record<string, Part[]> };
 function loadDraft(): Saved | null {
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? 'null') as Saved | null;
@@ -166,19 +168,24 @@ export function BankImport(p: Props) {
   /** Edits made in the table, by line (fingerprint), kept when the accounts change. */
   const [edits, setEdits] = useState<Record<string, Partial<Draft>>>(saved?.edits ?? {});
   const [skip, setSkip] = useState<Set<string>>(new Set(saved?.skip ?? []));
+  /** Lines filled in by following another line of the same new merchant (they keep following until edited). */
+  const followers = useRef(new Set<string>());
+  /** Split charges (Nov 1): the parts under a line, by line. */
+  const [parts, setParts] = useState<Record<string, Part[]>>(saved?.parts ?? {});
   useEffect(() => {
     try {
-      if (parsed.length) localStorage.setItem(DRAFT_KEY, JSON.stringify({ parsed, files, edits, skip: [...skip], accounts } satisfies Saved));
+      if (parsed.length) localStorage.setItem(DRAFT_KEY, JSON.stringify({ parsed, files, edits, skip: [...skip], accounts, parts } satisfies Saved));
       else localStorage.removeItem(DRAFT_KEY);
     } catch {
       /* full or blocked: the draft stays in memory */
     }
-  }, [parsed, files, edits, skip, accounts]);
+  }, [parsed, files, edits, skip, accounts, parts]);
   function clearDraft() {
     setParsed([]);
     setFiles([]);
     setEdits({});
     setSkip(new Set());
+    setParts({});
     setErrors([]);
     setAccounts(p.accounts);
   }
@@ -219,7 +226,40 @@ export function BankImport(p: Props) {
     () => draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business, personal }),
     [parsed, accounts, p.common, p.imported, p.expenses, p.invoices, owner, business, personal]
   );
-  const rows = useMemo(() => base.map((d) => ({ ...d, ...edits[d.fp] })), [base, edits]);
+  /**
+   * Lines with their splits. A line's parts are the ones made here, or (until then) the split its
+   * Common Expense remembers, by the same shares. The main line keeps what the parts don't cover;
+   * its GST follows its own share.
+   */
+  const rows = useMemo(
+    () =>
+      base.map((d) => {
+        const r = { ...d, ...edits[d.fp] };
+        const total = r.amount;
+        let ps: Part[] | undefined = parts[d.fp];
+        if (!ps && r.status !== 'duplicate') {
+          const split = p.common.find((c) => c.id === r.commonId)?.split;
+          ps = split?.map((x, k) => ({ id: `${d.fp}#${k}`, route: x.route, project: x.project, description: x.description, type: x.type, category: x.category, pmtCategory: x.pmtCategory, gst: x.gst, amount: Math.round(total * x.share * 100) / 100 }));
+        }
+        ps = ps ?? [];
+        if (!ps.length) return { ...r, total, parts: ps };
+        const rest = Math.round((total - ps.reduce((a, x) => a + x.amount, 0)) * 100) / 100;
+        return { ...r, total, parts: ps, amount: rest, gst: r.gst ? gstIn(Math.abs(rest)) * Math.sign(rest) : 0 };
+      }),
+    [base, edits, parts, p.common]
+  );
+  type Row = (typeof rows)[number];
+  const setPartsOf = (r: Row, next: Part[]) => setParts((m) => ({ ...m, [r.fp]: next }));
+  /** ↳ Split: a new part under the line, like a step under a task. It starts as a copy with no amount. */
+  const addPart = (r: Row) =>
+    setPartsOf(r, [...r.parts, { id: crypto.randomUUID(), route: r.route === 'personal' ? 'expense' : 'personal', project: r.route === 'personal' ? business : personal, description: r.description, type: r.type, category: r.category, pmtCategory: r.pmtCategory, amount: 0, gst: r.route === 'personal' }]);
+  const setPart = (r: Row, id: string, patch: Partial<Part>) => setPartsOf(r, r.parts.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  /** A Common Expenses pick on a part fills it like a line. */
+  function setPartDescription(r: Row, x: Part, description: string) {
+    const c = p.common.find((e) => e.description === description);
+    setPart(r, x.id, c ? { description, route: c.route === 'personal' ? 'personal' : 'expense', project: c.project, type: c.type, category: c.category, pmtCategory: c.pmtCategory, gst: hasGst(c) } : { description });
+  }
+  const partGst = (x: Part) => (x.route === 'expense' && x.gst ? gstIn(Math.abs(x.amount)) * Math.sign(x.amount) : 0);
   const startedCheck = useMemo(() => new Set(base.filter((d) => d.status === 'check').map((d) => d.fp)), [base]);
   const acct = (n: string) => accounts.find((a) => a.number === n);
   const live = rows.filter((r) => r.status !== 'duplicate' && !skip.has(r.fp));
@@ -234,8 +274,9 @@ export function BankImport(p: Props) {
       (!fAccount || r.account === fAccount) &&
       (!needle || [r.text, r.description, r.project, r.category, r.pmtCategory].some((v) => v.toLowerCase().includes(needle)))
   );
-  const sum = (route: Route) => live.filter((r) => r.route === route).reduce((a, r) => a + r.amount, 0);
-  const expenseGst = live.filter((r) => r.route === 'expense').reduce((a, r) => a + r.gst, 0);
+  const sum = (route: Route) => live.reduce((a, r) => a + (r.route === route ? r.amount : 0) + r.parts.filter((x) => x.route === route).reduce((b, x) => b + x.amount, 0), 0);
+  const expenseGst = live.reduce((a, r) => a + (r.route === 'expense' ? r.gst : 0) + r.parts.reduce((b, x) => b + partGst(x), 0), 0);
+  const overSplit = live.filter((r) => r.parts.length && (r.total >= 0 ? r.amount < -0.004 : r.amount > 0.004));
   const fys = [...new Set(live.map((r) => fyOf(r.date, fyEnd)))].sort();
 
   const pick = (f: (c: CommonExpense) => string) => [...new Set([...p.common.map(f), ...p.expenses.map((e) => f(e as unknown as CommonExpense))].map((x) => (x ?? '').trim()).filter(Boolean))].sort();
@@ -255,11 +296,14 @@ export function BankImport(p: Props) {
       // Touched: no longer orange ("Edited"), unless a Common Expenses pick already set its status.
       const mark = r.status === 'check' && !patch.status ? { status: 'edited' as Status } : {};
       const next = { ...m, [r.fp]: { ...m[r.fp], ...patch, ...mark } };
+      // Editing a line yourself makes it your own; it stops following the others.
+      followers.current.delete(r.fp);
       if (base.find((b) => b.fp === r.fp)?.status !== 'check') return next;
       for (const o of base) {
-        if (o.fp === r.fp || o.key !== r.key || o.status !== 'check' || m[o.fp]) continue;
+        if (o.fp === r.fp || o.key !== r.key || o.status !== 'check' || (m[o.fp] && !followers.current.has(o.fp))) continue;
+        followers.current.add(o.fp);
         const { gst, ...rest } = patch;
-        next[o.fp] = { ...rest, ...mark, ...(gst === undefined ? {} : { gst: gst ? gstIn(Math.abs(o.amount)) * Math.sign(o.amount) : 0 }) };
+        next[o.fp] = { ...m[o.fp], ...rest, ...mark, ...(gst === undefined ? {} : { gst: gst ? gstIn(Math.abs(o.amount)) * Math.sign(o.amount) : 0 }) };
       }
       return next;
     });
@@ -303,7 +347,20 @@ export function BankImport(p: Props) {
           : { ...newExpense(r.date, sort++), project: r.project, description: r.description, method: r.method || a(r.account)?.method || '', type: r.type, category: r.category, pmtCategory: r.pmtCategory, amount: Math.round(r.amount * 100) / 100, gst: r.gst ? Math.round(r.gst * 100) / 100 : null, notes: r.text };
         expenses.push(e);
         line.expenseId = e.id;
-      } else if (r.route === 'draw') {
+      }
+      if (r.parts.length) {
+        line.parts = [];
+        for (const x of r.parts) {
+          let expenseId: string | null = null;
+          if (x.route === 'expense') {
+            const e: Expense = { ...newExpense(r.date, sort++), project: x.project, description: x.description, method: r.method || a(r.account)?.method || '', type: x.type, category: x.category, pmtCategory: x.pmtCategory, amount: Math.round(x.amount * 100) / 100, gst: partGst(x) ? Math.round(partGst(x) * 100) / 100 : null, notes: `${r.text} (part of ${money(r.total)})` };
+            expenses.push(e);
+            expenseId = e.id;
+          }
+          line.parts.push({ route: x.route, amount: x.amount, expenseId, project: x.project, description: x.description });
+        }
+      }
+      if (r.route === 'draw') {
         const d: Draw = { id: crypto.randomUUID(), project: r.project, date: r.date, description: r.description, amount: Math.round(r.amount * 100) / 100, notes: '', bankLineId: line.id, sort: draws.length };
         draws.push(d);
         line.drawId = d.id;
@@ -312,7 +369,7 @@ export function BankImport(p: Props) {
         if (inv && !inv.datePaid) invoices.push({ ...inv, datePaid: r.date });
         line.invoiceId = r.invoiceId;
       }
-      const c = learn(r, common);
+      const c = learn(r, common, r.parts, r.total);
       if (c) {
         common = common.some((x) => x.id === c.id) ? common.map((x) => (x.id === c.id ? c : x)) : [...common, c];
         touched.set(c.id, c);
@@ -406,7 +463,7 @@ export function BankImport(p: Props) {
           <>
             <div className="budget-stats bank-stats" aria-label="What this import adds">
               <div className="budget-stat budget-stat-total">
-                <span className="budget-stat-label">Expenses · {live.filter((r) => r.route === 'expense').length}</span>
+                <span className="budget-stat-label">Expenses · {live.filter((r) => r.route === 'expense').length + live.reduce((a, r) => a + r.parts.filter((x) => x.route === 'expense').length, 0)}</span>
                 <span className="budget-stat-value">{money(sum('expense'))}</span>
               </div>
               <div className="budget-stat">
@@ -504,7 +561,8 @@ export function BankImport(p: Props) {
                     const quiet = r.route === 'transfer' || r.route === 'interest' || r.route === 'personal';
                     const others = commonFor(p.common, r.key, acct(r.account)?.kind === 'personal').slice(0, 8);
                     return (
-                      <tr key={r.fp} className={`task-row bank-row is-${r.route} st-${r.status}${off ? ' is-off' : ''}${quiet ? ' is-quiet' : ''}${i % 2 ? ' is-alt' : ''}`}>
+                      <Fragment key={r.fp}>
+                      <tr className={`task-row bank-row is-${r.route} st-${r.status}${off ? ' is-off' : ''}${quiet ? ' is-quiet' : ''}${i % 2 ? ' is-alt' : ''}`}>
                         <td className="col-center">
                           <input
                             type="checkbox"
@@ -539,6 +597,12 @@ export function BankImport(p: Props) {
                           <Pick value={r.project} options={divisions} disabled={off} onChange={(v) => edit(r, { project: v })} label="Division" />
                         </td>
                         <td className="col-task">
+                          <div className="bank-desc-wrap">
+                          {!off && (r.route === 'expense' || r.route === 'personal') && (
+                            <button type="button" className="icon-btn bank-split" aria-label="Split this charge" title="Split this charge: add a part under it (another division, or a personal share). The line keeps what's left." onClick={() => addPart(r)}>
+                              ↳
+                            </button>
+                          )}
                           <Pick
                             wide
                             value={r.description}
@@ -548,6 +612,7 @@ export function BankImport(p: Props) {
                             onChange={(v) => setDescription(r, v)}
                             label="Description"
                           />
+                          </div>
                         </td>
                         <td>
                           <select value={r.type} disabled={off} onChange={(e) => edit(r, { type: e.target.value })} aria-label="Type">
@@ -562,7 +627,10 @@ export function BankImport(p: Props) {
                         <td>
                           <Pick value={r.pmtCategory} options={cats} disabled={off} onChange={(v) => edit(r, { pmtCategory: v })} label="Category" />
                         </td>
-                        <td className="col-amount">{money(r.amount)}</td>
+                        <td className="col-amount" title={r.parts.length ? `What's left of ${money(r.total)} after the parts` : undefined}>
+                          {money(r.amount)}
+                          {r.parts.length > 0 && <span className="money-orig">of {money(r.total)}</span>}
+                        </td>
                         <td className="col-amount">
                           {r.route === 'expense' ? (
                             <button
@@ -586,6 +654,65 @@ export function BankImport(p: Props) {
                           </span>
                         </td>
                       </tr>
+                      {!off &&
+                        r.parts.map((x) => (
+                          <tr key={x.id} className={`task-row bank-row bank-part is-${x.route}${x.route === 'personal' ? ' is-quiet' : ''}${i % 2 ? ' is-alt' : ''}`}>
+                            <td className="col-center">
+                              <button type="button" className="icon-btn bank-part-x" aria-label="Remove this part" title="Remove this part (its amount goes back to the line)" onClick={() => setPartsOf(r, r.parts.filter((y) => y.id !== x.id))}>
+                                ×
+                              </button>
+                            </td>
+                            <td colSpan={3} className="bank-part-label">
+                              ↳ part of {money(r.total)}
+                            </td>
+                            <td>
+                              <select value={x.route} onChange={(e) => setPart(r, x.id, { route: e.target.value as Part['route'], ...(e.target.value === 'personal' ? { project: personal } : {}) })} aria-label="Part goes to">
+                                <option value="expense">Expense</option>
+                                <option value="personal">Personal</option>
+                              </select>
+                            </td>
+                            <td>
+                              <Pick value={x.project} options={divisions} onChange={(v) => setPart(r, x.id, { project: v })} label="Part division" />
+                            </td>
+                            <td className="col-task">
+                              <Pick wide value={x.description} groups={[{ label: 'This merchant', options: [...new Set(others.map((c) => c.description))] }]} options={descriptions} onChange={(v) => setPartDescription(r, x, v)} label="Part description" />
+                            </td>
+                            <td>
+                              <select value={x.type} onChange={(e) => setPart(r, x.id, { type: e.target.value })} aria-label="Part type">
+                                <option value="" />
+                                <option value="FIXED">FIXED</option>
+                                <option value="VARIABLE">VARIABLE</option>
+                              </select>
+                            </td>
+                            <td>
+                              <Pick value={x.category} options={groups} onChange={(v) => setPart(r, x.id, { category: v })} label="Part group" />
+                            </td>
+                            <td>
+                              <Pick value={x.pmtCategory} options={cats} onChange={(v) => setPart(r, x.id, { pmtCategory: v })} label="Part category" />
+                            </td>
+                            <td className="col-amount">
+                              <input
+                                type="number"
+                                step="0.01"
+                                inputMode="decimal"
+                                className="bank-part-amount"
+                                value={x.amount || ''}
+                                placeholder="0.00"
+                                onChange={(e) => setPart(r, x.id, { amount: Math.round((Number(e.target.value) || 0) * 100) / 100 })}
+                                aria-label="Part amount"
+                              />
+                            </td>
+                            <td className="col-amount">
+                              {x.route === 'expense' && (
+                                <button type="button" className={`bank-gst${x.gst ? '' : ' is-none'}`} aria-pressed={x.gst} onClick={() => setPart(r, x.id, { gst: !x.gst })} title={x.gst ? 'GST in this part. Tap to remove it.' : 'No GST. Tap to add it back.'}>
+                                  {x.gst ? money(partGst(x)) : 'No GST'}
+                                </button>
+                              )}
+                            </td>
+                            <td />
+                          </tr>
+                        ))}
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -599,7 +726,8 @@ export function BankImport(p: Props) {
                 </label>
               )}
               <span className="bank-note">Hover a status to see why a line was routed that way.</span>
-              <button type="button" className="btn btn-go" disabled={saving || !live.length} onClick={() => void save()}>
+              {overSplit.length > 0 && <span className="bank-error bank-inline">{overSplit.length} split{overSplit.length > 1 ? 's add' : ' adds'} up to more than the charge: fix the parts before saving.</span>}
+              <button type="button" className="btn btn-go" disabled={saving || !live.length || overSplit.length > 0} onClick={() => void save()}>
                 {saving ? 'Saving…' : live.length ? `Save ${live.length} line${live.length === 1 ? '' : 's'} to Records` : 'Nothing new to import'}
               </button>
             </div>

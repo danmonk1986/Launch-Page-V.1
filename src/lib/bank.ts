@@ -61,6 +61,8 @@ export interface BankLine {
   expenseId: string | null;
   drawId: string | null;
   invoiceId: string | null;
+  /** A split charge: the parts beyond the main line (each its own expense, or personal). */
+  parts?: { route: Route; amount: number; expenseId: string | null; project: string; description: string }[];
   sort: number;
 }
 
@@ -86,8 +88,25 @@ export interface CommonExpense {
   /** Bank merchants confirmed for this entry (merchantKey). */
   keys: string[];
   lastDate: string;
+  /** Nov 1: a charge split across divisions (vehicle insurance: SHOP / MWD / personal), remembered as shares of the total. */
+  split?: SplitShare[];
   sort: number;
 }
+
+/** One part of a split charge. The main line keeps whatever the parts don't cover. */
+export interface Part {
+  id: string;
+  route: 'expense' | 'personal';
+  project: string;
+  description: string;
+  type: string;
+  category: string;
+  pmtCategory: string;
+  amount: number;
+  /** GST in this part (worked out from its amount), or none. */
+  gst: boolean;
+}
+export type SplitShare = Omit<Part, 'id' | 'amount'> & { share: number };
 
 export interface Draw {
   id: string;
@@ -124,7 +143,8 @@ export const bankLineStore = jsonStore<BankLine>('bank_lines', 'launchpage.bank-
   route: route(d.route),
   expenseId: s(d.expenseId) || null,
   drawId: s(d.drawId) || null,
-  invoiceId: s(d.invoiceId) || null
+  invoiceId: s(d.invoiceId) || null,
+  parts: Array.isArray(d.parts) ? (d.parts as BankLine['parts']) : undefined
 }));
 
 export const commonStore = jsonStore<CommonExpense>('expense_rules', 'launchpage.expense-rules.v1', (d) => ({
@@ -137,7 +157,8 @@ export const commonStore = jsonStore<CommonExpense>('expense_rules', 'launchpage
   gst: typeof d.gst === 'boolean' ? d.gst : null,
   frequency: s(d.frequency),
   keys: Array.isArray(d.keys) ? (d.keys as unknown[]).filter((k): k is string => typeof k === 'string') : [],
-  lastDate: s(d.lastDate)
+  lastDate: s(d.lastDate),
+  split: Array.isArray(d.split) ? (d.split as SplitShare[]).filter((x) => x && typeof x.share === 'number') : undefined
 }));
 
 export const drawStore = jsonStore<Draw>('draws', 'launchpage.draws.v1', (d) => ({
@@ -470,7 +491,7 @@ export function draft(
  * Common Expenses after a line is confirmed: its entry (picked, or typed new) saved as the latest
  * version and taught this bank merchant. Transfers, interest and draws aren't documented here.
  */
-export function learn(d: Draft, list: CommonExpense[]): CommonExpense | null {
+export function learn(d: Draft, list: CommonExpense[], parts: Part[] = [], total = d.amount): CommonExpense | null {
   if (d.route !== 'expense' && d.route !== 'personal') return null;
   const same = list.find((c) => c.id === d.commonId && c.description === d.description) ?? list.find((c) => c.description.trim().toLowerCase() === d.description.trim().toLowerCase());
   const keys = same ? [...new Set([...same.keys.filter((k) => k !== d.key), d.key])] : [d.key];
@@ -486,6 +507,9 @@ export function learn(d: Draft, list: CommonExpense[]): CommonExpense | null {
     frequency: same?.frequency ?? '',
     keys,
     lastDate: same && same.lastDate > d.date ? same.lastDate : d.date,
+    // A split is remembered for a FIXED bill (vehicle insurance every month), as shares of the
+    // total; a one-off split (part of a Marks run was personal) isn't. No parts this time clears it.
+    split: parts.length && total && d.type === 'FIXED' ? parts.map(({ id: _id, amount, ...rest }) => ({ ...rest, share: amount / total })) : undefined,
     sort: same?.sort ?? list.length
   };
 }
