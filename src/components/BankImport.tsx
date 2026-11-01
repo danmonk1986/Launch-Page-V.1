@@ -300,11 +300,14 @@ export function BankImport(p: Props) {
   const fys = [...new Set(live.map((r) => fyOf(r.date, fyEnd)))].sort();
 
   const pick = (f: (c: CommonExpense) => string) => [...new Set([...p.common.map(f), ...p.expenses.map((e) => f(e as unknown as CommonExpense))].map((x) => (x ?? '').trim()).filter(Boolean))].sort();
-  const divisions = [...new Set([...pick((c) => c.project), personal, business].filter(Boolean))].sort();
+  // Values typed in this import join the lists straight away (CC PMT typed once is offered on the next line).
+  const typed = (f: (x: { project: string; category: string; pmtCategory: string; description: string }) => string) =>
+    rows.flatMap((r) => [f(r), ...r.parts.map(f)]).map((x) => (x ?? '').trim()).filter(Boolean);
+  const divisions = [...new Set([...pick((c) => c.project), ...typed((x) => x.project), personal, business].filter(Boolean))].sort();
   // The sheet's full lists, in its order, then anything else already in use.
-  const groups = [...new Set([...BUDGET_CATEGORIES, ...pick((c) => c.category)])];
-  const cats = [...new Set([...PMT_CATEGORIES, ...pick((c) => c.pmtCategory)])];
-  const descriptions = [...new Set(p.common.map((c) => c.description))].sort();
+  const groups = [...new Set([...BUDGET_CATEGORIES, ...pick((c) => c.category), ...typed((x) => x.category)])];
+  const cats = [...new Set([...PMT_CATEGORIES, ...pick((c) => c.pmtCategory), ...typed((x) => x.pmtCategory)])];
+  const descriptions = [...new Set([...p.common.map((c) => c.description), ...typed((x) => x.description)])].sort();
 
   /**
    * An edit to a line. A new merchant (Check) is documented once: its other lines in this import
