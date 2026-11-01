@@ -2434,7 +2434,7 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .bank-table { min-width: 1400px; font-size: 12px; }
 .bank-table thead tr.bank-filters th { top: 30px; padding-top: 2px; padding-bottom: 6px; }
 .bank-table .bank-text { max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dim); font-family: var(--font-mono); font-size: 11px; }
-.bank-table .bank-desc { width: 100%; min-width: 220px; }
+.bank-table .bank-desc { width: 100%; min-width: 260px; }
 .bank-table .bank-gst { width: 72px; text-align: right; }
 .bank-row.is-quiet td { color: var(--dim); }
 .bank-row.is-quiet input, .bank-row.is-quiet select { opacity: 0.75; }
@@ -2443,7 +2443,6 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .bank-row.is-draw td:first-child { box-shadow: inset 3px 0 0 var(--accent-purple); }
 .bank-row.is-income td:first-child { box-shadow: inset 3px 0 0 var(--accent-green); }
 .bank-status { display: inline-block; white-space: nowrap; font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--edge); cursor: help; }
-.bank-status.st-check { border-color: var(--accent-pink); color: var(--accent-pink); }
 .bank-status.st-common { border-color: var(--accent-teal); color: var(--accent-teal); }
 .bank-status.st-matched { border-color: var(--accent-green); color: var(--accent-green); }
 .bank-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: flex-end; }
@@ -2451,3 +2450,15 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .bank-stats { margin: 0; }
 .panel-records .expenses-table input.bank-desc { background: transparent; color: inherit; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; font: inherit; width: 100%; }
 .panel-records .expenses-table input.bank-desc:hover, .panel-records .expenses-table input.bank-desc:focus { border-color: var(--edge); }
+/* Nov 1: rows that need work are orange (Check); a merchant with several Common Expenses gets a dropdown. */
+.bank-row.st-check td { background: rgb(255 153 51 / 0.1); }
+.bank-row.st-check td:first-child { box-shadow: inset 3px 0 0 #ff9933; }
+.bank-status.st-check { border-color: #ff9933; color: #ff9933; }
+.bank-desc-wrap { display: flex; gap: 6px; align-items: center; }
+.bank-desc-wrap .bank-desc { flex: 1; }
+.bank-import select.bank-options { width: 52px; appearance: none; -webkit-appearance: none; text-align: center; background-image: none; flex: none; color: var(--accent-teal); border-color: var(--accent-teal); }
+/* Nov 1: Records header like Budget: title, views, then the month / fiscal-year selector beside them. */
+.panel-records .panel-head .budget-views { margin-right: 0; }
+.panel-records .panel-head > .month-nav { margin-left: 10px; margin-right: auto; }
+.bank-import select:not([multiple]) { padding-right: 22px !important; background-position: right 4px center !important; background-size: 13px !important; }
+.bank-import select.bank-options:not([multiple]) { background-image: none !important; padding: 3px 4px !important; width: 46px; text-align: center; text-align-last: center; }

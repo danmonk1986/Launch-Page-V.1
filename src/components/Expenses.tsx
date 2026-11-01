@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
 import { TitleCombo } from './Launchers';
@@ -45,6 +45,8 @@ type Props = {
   search: string;
   onSave: (e: Expense) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  /** Records (Nov 1): the month selector and + live in the Records header; each tap of + bumps this. */
+  addTick?: number;
 };
 
 /**
@@ -76,21 +78,25 @@ export function ExpensesView(p: Props) {
   const picks = (f: (x: { project: string; method: string; pmtCategory: string }) => string) =>
     [...new Set([...p.expenses, ...p.lines].map(f).map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
+  const addNew = () => {
+    const today = iso(new Date());
+    setEditing(newExpense(monthKey(today) === month ? today : `${month}-01`, p.expenses.reduce((m, e) => Math.max(m, e.sort + 1), 0)));
+  };
+  useEffect(() => {
+    if (p.addTick) addNew();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.addTick]);
+
   return (
     <div className="expenses">
-      <div className="expenses-bar">
-        <MonthNav month={month} onChange={setMonth} />
-        <button
-          type="button"
-          className="btn btn-quiet expenses-add"
-          onClick={() => {
-            const today = iso(new Date());
-            setEditing(newExpense(monthKey(today) === month ? today : `${month}-01`, p.expenses.reduce((m, e) => Math.max(m, e.sort + 1), 0)));
-          }}
-        >
-          <Icon d={PLUS} size={16} /> Add expense
-        </button>
-      </div>
+      {p.addTick === undefined && (
+        <div className="expenses-bar">
+          <MonthNav month={month} onChange={setMonth} />
+          <button type="button" className="btn btn-quiet expenses-add" onClick={addNew}>
+            <Icon d={PLUS} size={16} /> Add expense
+          </button>
+        </div>
+      )}
 
       <div className="budget-stats" aria-label="This month's expenses">
         <div className="budget-stat budget-stat-total">
@@ -116,7 +122,7 @@ export function ExpensesView(p: Props) {
       {rows.length === 0 ? (
         <p className="panel-empty">
           {needle ? 'No expenses match in ' : 'No expenses yet in '}
-          {monthLabel(month)}. Ticking a task linked to a budget line adds one here, or use Add expense.
+          {monthLabel(month)}. Ticking a task linked to a budget line adds one here, or import a bank statement (CSV) or tap +.
         </p>
       ) : (
         <div className="task-scroll">

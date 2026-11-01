@@ -72,7 +72,7 @@ export interface BankLine {
  */
 export interface CommonExpense {
   id: string;
-  /** DIVISION: a business area (MWD, APP SHOP…) or the owner's name for personal. */
+  /** DIVISION: a business area (MWD, APP SHOP…) or the owner's personal division (Records setup) for personal. */
   project: string;
   /** "Merchant - purpose" */
   description: string;
@@ -319,13 +319,14 @@ export const hasGst = (c: { gst: boolean | null; pmtCategory: string; route: Rou
 /** GST inside a total that includes it (5%). */
 export const gstIn = (total: number) => Math.round((total * 5) / 105 * 100) / 100;
 
-export type Status = 'duplicate' | 'common' | 'matched' | 'auto' | 'check';
+export type Status = 'duplicate' | 'common' | 'matched' | 'auto' | 'check' | 'edited';
 export const STATUS_LABEL: Record<Status, string> = {
   duplicate: 'Already imported',
   common: 'Common expense',
   matched: 'Matched',
   auto: 'Auto',
-  check: 'Check'
+  check: 'Check',
+  edited: 'Edited'
 };
 
 export interface Draft extends ParsedLine {
@@ -363,7 +364,7 @@ const CARD_PAYMENT = /Bill Payment ATB Mastercard|PAYMENT - THANK YOU|PAYMENT RE
  */
 export function draft(
   parsed: ParsedLine[],
-  ctx: { accounts: BankAccount[]; common: CommonExpense[]; imported: BankLine[]; expenses: Expense[]; invoices: Invoice[]; owner: string; business: string }
+  ctx: { accounts: BankAccount[]; common: CommonExpense[]; imported: BankLine[]; expenses: Expense[]; invoices: Invoice[]; owner: string; business: string; personal: string }
 ): Draft[] {
   const done = new Set(ctx.imported.map((l) => l.fp));
   const acct = (num: string) => ctx.accounts.find((a) => a.number === num);
@@ -460,6 +461,8 @@ export function draft(
       d.why += ' Its other side is on your personal account.';
     }
   }
+  // No division yet: the owner's personal division (DANMONK26) until it's given one.
+  for (const d of out) if (!d.project.trim()) d.project = ctx.personal;
   return out;
 }
 

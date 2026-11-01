@@ -1,15 +1,16 @@
 import { useState, type ComponentProps } from 'react';
 import { Icon, SearchToggle } from './Tasks';
-import { ExpensesView, thisMonth } from './Expenses';
+import { ExpensesView, MonthNav, thisMonth } from './Expenses';
 import { InvoicesPage } from './Invoices';
 import type { BudgetLine } from '../lib/budget';
 import type { Expense } from '../lib/expenses';
 import type { BankAccount, BankLine, CommonExpense, Draw } from '../lib/bank';
 import { BankImport, type ImportResult } from './BankImport';
-import { DrawsView } from './Draws';
+import { DrawsView, FyNav, thisFy } from './Draws';
 
 const CLOSE = 'M6 6l12 12M18 6L6 18';
-const UPLOAD = 'M12 16V4M7 9l5-5 5 5M4 20h16';
+const IMPORT = 'M12 3v12M7 10l5 5 5-5M5 21h14';
+const PLUS = 'M12 5v14M5 12h14';
 type View = 'expenses' | 'draws' | 'invoices';
 const VIEW_KEY = 'launchpage.records.view';
 
@@ -51,6 +52,9 @@ export function RecordsPage(
   const [month, setMonth] = useState(thisMonth);
   const [q, setQ] = useState('');
   const [importing, setImporting] = useState(false);
+  const fyEnd = p.profile?.fyEnd ?? '09-30';
+  const [fy, setFy] = useState(() => thisFy(fyEnd));
+  const [addTick, setAddTick] = useState(0);
 
   const views = (
     <div className="d26-range budget-views" role="group" aria-label="View">
@@ -75,10 +79,16 @@ export function RecordsPage(
           Records
         </h2>
         {views}
+        {view === 'draws' ? <FyNav fy={fy} fyEnd={fyEnd} onChange={setFy} /> : <MonthNav month={month} onChange={setMonth} />}
         <div className="panel-actions">
-          <button type="button" className="btn btn-quiet" title="Import bank statements (CSV) into Expenses and Draws" onClick={() => setImporting(true)}>
-            <Icon d={UPLOAD} size={16} /> Import CSV
+          <button type="button" className="icon-btn tool-btn" aria-label="Import CSV" title="Import bank statements (CSV) into Expenses and Draws" onClick={() => setImporting(true)}>
+            <Icon d={IMPORT} />
           </button>
+          {view === 'expenses' && (
+            <button type="button" className="icon-btn tool-btn" aria-label="Add expense" title="Add an expense" onClick={() => setAddTick((n) => n + 1)}>
+              <Icon d={PLUS} />
+            </button>
+          )}
           <SearchToggle value={q} onChange={setQ} placeholder={view === 'draws' ? 'Search draws' : 'Search expenses'} />
           <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
             <Icon d={CLOSE} />
@@ -86,9 +96,9 @@ export function RecordsPage(
         </div>
       </div>
       {view === 'draws' ? (
-        <DrawsView draws={p.draws} fyEnd={p.profile?.fyEnd ?? '09-30'} search={q} onSave={p.onSaveDraw} onDelete={p.onDeleteDraw} />
+        <DrawsView draws={p.draws} fy={fy} fyEnd={fyEnd} search={q} onSave={p.onSaveDraw} onDelete={p.onDeleteDraw} />
       ) : (
-        <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} />
+        <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} addTick={addTick} />
       )}
       <BankImport
         open={importing}

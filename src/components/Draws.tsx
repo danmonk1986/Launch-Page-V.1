@@ -8,8 +8,28 @@ const TRASH = 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3';
 const today = () => new Date().toLocaleDateString('en-CA');
 
 /** Records → Draws (V20-015): business withdrawals and e-transfers to the owner, a fiscal year at a time. */
-export function DrawsView(p: { draws: Draw[]; fyEnd: string; search: string; onSave: (d: Draw) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
-  const [fy, setFy] = useState(() => fyOf(today(), p.fyEnd));
+export const thisFy = (fyEnd: string) => fyOf(today(), fyEnd);
+
+/** ‹ FY2027 › — tap the year to come back to this one. */
+export function FyNav({ fy, fyEnd, onChange }: { fy: number; fyEnd: string; onChange: (fy: number) => void }) {
+  const range = fyRange(fy, fyEnd);
+  return (
+    <div className="d26-range month-nav" role="group" aria-label="Fiscal year">
+      <button type="button" aria-label="Previous fiscal year" onClick={() => onChange(fy - 1)}>
+        ‹
+      </button>
+      <button type="button" aria-pressed="true" title={`${range.from} – ${range.to}. Tap for this year.`} onClick={() => onChange(thisFy(fyEnd))}>
+        FY{fy}
+      </button>
+      <button type="button" aria-label="Next fiscal year" onClick={() => onChange(fy + 1)}>
+        ›
+      </button>
+    </div>
+  );
+}
+
+export function DrawsView(p: { draws: Draw[]; fy: number; fyEnd: string; search: string; onSave: (d: Draw) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
+  const { fy } = p;
   const range = fyRange(fy, p.fyEnd);
   const needle = p.search.trim().toLowerCase();
   const rows = useMemo(
@@ -38,19 +58,6 @@ export function DrawsView(p: { draws: Draw[]; fyEnd: string; search: string; onS
 
   return (
     <div className="expenses">
-      <div className="expenses-bar">
-        <div className="d26-range month-nav" role="group" aria-label="Fiscal year">
-          <button type="button" aria-label="Previous fiscal year" onClick={() => setFy(fy - 1)}>
-            ‹
-          </button>
-          <button type="button" aria-pressed="true" title={`${range.from} – ${range.to}. Tap for this year.`} onClick={() => setFy(fyOf(today(), p.fyEnd))}>
-            FY{fy}
-          </button>
-          <button type="button" aria-label="Next fiscal year" onClick={() => setFy(fy + 1)}>
-            ›
-          </button>
-        </div>
-      </div>
       <div className="budget-stats" aria-label="Draws this fiscal year">
         <div className="budget-stat budget-stat-total">
           <span className="budget-stat-label">Draws · FY{fy}</span>

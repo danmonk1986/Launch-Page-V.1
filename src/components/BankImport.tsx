@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from './Sheet';
 import { money } from '../lib/budget';
 import {
@@ -77,6 +77,16 @@ export function BankImport(p: Props) {
   const [errors, setErrors] = useState<string[]>([]);
   const [accounts, setAccounts] = useState<BankAccount[]>(p.accounts);
   const [fyEnd, setFyEnd] = useState(p.profile?.fyEnd ?? '09-30');
+  const [personal, setPersonal] = useState(p.profile?.personalDivision || (p.profile?.person ?? '').toUpperCase().replace(/\s+/g, '') || 'PERSONAL');
+  // Opening the sheet starts from what's saved (the profile and accounts load after the page).
+  const defaultPersonal = p.profile?.personalDivision || (p.profile?.person ?? '').toUpperCase().replace(/\s+/g, '') || 'PERSONAL';
+  useEffect(() => {
+    if (!p.open) return;
+    setFyEnd(p.profile?.fyEnd ?? '09-30');
+    setPersonal(defaultPersonal);
+    if (!parsed.length) setAccounts(p.accounts);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.open, p.profile?.id, p.profile?.fyEnd, defaultPersonal]);
   /** Edits made in the table, by line (fingerprint), kept when the accounts change. */
   const [edits, setEdits] = useState<Record<string, Partial<Draft>>>({});
   const [skip, setSkip] = useState<Set<string>>(new Set());
@@ -114,10 +124,11 @@ export function BankImport(p: Props) {
   const owner = profile?.person ?? '';
   const business = (profile?.business ?? '').replace(/\s+(LIMITED|LTD\.?|INC\.?|CORP\.?)$/i, '');
   const base = useMemo(
-    () => draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business }),
-    [parsed, accounts, p.common, p.imported, p.expenses, p.invoices, owner, business]
+    () => draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business, personal }),
+    [parsed, accounts, p.common, p.imported, p.expenses, p.invoices, owner, business, personal]
   );
   const rows = useMemo(() => base.map((d) => ({ ...d, ...edits[d.fp] })), [base, edits]);
+  const startedCheck = useMemo(() => new Set(base.filter((d) => d.status === 'check').map((d) => d.fp)), [base]);
   const acct = (n: string) => accounts.find((a) => a.number === n);
   const live = rows.filter((r) => r.status !== 'duplicate' && !skip.has(r.fp));
   const dups = rows.filter((r) => r.status === 'duplicate').length;
@@ -126,7 +137,8 @@ export function BankImport(p: Props) {
     (r) =>
       (showDup || r.status !== 'duplicate') &&
       (!fRoute || r.route === fRoute) &&
-      (!fStatus || r.status === fStatus) &&
+      // A line being worked on stays in the Check filter until the filter changes.
+      (!fStatus || r.status === fStatus || (fStatus === 'check' && startedCheck.has(r.fp))) &&
       (!fAccount || r.account === fAccount) &&
       (!needle || [r.text, r.description, r.project, r.category, r.pmtCategory].some((v) => v.toLowerCase().includes(needle)))
   );
@@ -147,12 +159,14 @@ export function BankImport(p: Props) {
    */
   const edit = (r: Draft, patch: Partial<Draft>) =>
     setEdits((m) => {
-      const next = { ...m, [r.fp]: { ...m[r.fp], ...patch } };
-      if (r.status !== 'check') return next;
+      // Touched: no longer orange ("Edited"), unless a Common Expenses pick already set its status.
+      const mark = r.status === 'check' && !patch.status ? { status: 'edited' as Status } : {};
+      const next = { ...m, [r.fp]: { ...m[r.fp], ...patch, ...mark } };
+      if (base.find((b) => b.fp === r.fp)?.status !== 'check') return next;
       for (const o of base) {
         if (o.fp === r.fp || o.key !== r.key || o.status !== 'check' || m[o.fp]) continue;
         const { gst, ...rest } = patch;
-        next[o.fp] = { ...rest, ...(gst === undefined ? {} : { gst: gst ? gstIn(Math.abs(o.amount)) * Math.sign(o.amount) : 0 }) };
+        next[o.fp] = { ...rest, ...mark, ...(gst === undefined ? {} : { gst: gst ? gstIn(Math.abs(o.amount)) * Math.sign(o.amount) : 0 }) };
       }
       return next;
     });
@@ -169,11 +183,11 @@ export function BankImport(p: Props) {
       category: c.category,
       pmtCategory: c.pmtCategory,
       gst: hasGst(c) ? gstIn(Math.abs(r.amount)) * Math.sign(r.amount) : 0,
-      status: r.status === 'check' ? 'common' : r.status
+      status: r.status === 'check' || r.status === 'edited' ? 'common' : r.status
     });
   }
   function setRoute(r: Draft, route: Route) {
-    edit(r, { route, gst: route === 'expense' ? r.gst : 0, ...(route === 'draw' && !r.project ? { project: business } : {}) });
+    edit(r, { route, gst: route === 'expense' ? r.gst : 0, ...(route === 'personal' ? { project: personal } : route === 'draw' && (!r.project || r.project === personal) ? { project: business } : {}) });
   }
 
   async function save() {
@@ -212,7 +226,7 @@ export function BankImport(p: Props) {
       }
       lines.push(line);
     }
-    const changedProfile = profile && profile.fyEnd !== fyEnd ? { ...profile, fyEnd } : null;
+    const changedProfile = profile && (profile.fyEnd !== fyEnd || profile.personalDivision !== personal) ? { ...profile, fyEnd, personalDivision: personal } : null;
     await p.onSave({ accounts, lines, expenses, draws, common: [...touched.values()], invoices, profile: changedProfile });
     setSaving(false);
     setParsed([]);
@@ -243,11 +257,16 @@ export function BankImport(p: Props) {
         </div>
 
         <details className="bank-setup" open={accounts.length > p.accounts.length || undefined}>
-          <summary>Records setup · fiscal year ends {fyEnd} · {accounts.length} account{accounts.length === 1 ? '' : 's'}</summary>
+          <summary>Records setup · fiscal year ends {fyEnd} · personal division {personal} · {accounts.length} account{accounts.length === 1 ? '' : 's'}</summary>
           <label className="bank-fy">
             Fiscal year ends (MM-DD)
             <input value={fyEnd} onChange={(e) => setFyEnd(e.target.value)} pattern="\d\d-\d\d" maxLength={5} size={6} aria-label="Fiscal year ends" />
             <span className="bank-note">FY{fyOf(new Date().toISOString().slice(0, 10), fyEnd)} is this year (named by the year it ends).</span>
+          </label>
+          <label className="bank-fy">
+            Personal division
+            <input value={personal} onChange={(e) => setPersonal(e.target.value.toUpperCase())} size={12} aria-label="Personal division" />
+            <span className="bank-note">Personal lines, and any line without a division, go under this.</span>
           </label>
           {accounts.length > 0 && (
             <table className="bank-accounts">
@@ -425,7 +444,25 @@ export function BankImport(p: Props) {
                           <input list="bank-divisions" value={r.project} disabled={off} onChange={(e) => edit(r, { project: e.target.value })} aria-label="Division" size={10} />
                         </td>
                         <td className="col-task">
-                          <input list={`bank-desc-${i}`} value={r.description} disabled={off} onChange={(e) => setDescription(r, e.target.value)} aria-label="Description" className="bank-desc" />
+                          <div className="bank-desc-wrap">
+                            <input list={`bank-desc-${i}`} value={r.description} disabled={off} onChange={(e) => setDescription(r, e.target.value)} aria-label="Description" className="bank-desc" />
+                            {others.length > 1 && !off && (
+                              <select
+                                className="bank-options"
+                                value=""
+                                onChange={(e) => e.target.value && setDescription(r, e.target.value)}
+                                aria-label={`${others.length} Common Expenses for this merchant`}
+                                title={`${others.length} Common Expenses for this merchant`}
+                              >
+                                <option value="">{others.length} ▾</option>
+                                {others.map((c) => (
+                                  <option key={c.id} value={c.description}>
+                                    {c.description} · {c.project || '—'}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
                           <datalist id={`bank-desc-${i}`}>
                             {[...new Set([...others.map((c) => c.description), ...descriptions])].map((d) => (
                               <option key={d} value={d} />

@@ -16,6 +16,8 @@ export interface InvoiceProfile {
   gstNumber: string;
   /** Records setup (V20-015): the fiscal year's last day, 'MM-DD' (STARDVST: '09-30'). */
   fyEnd: string;
+  /** Records setup (Nov 1): the DIVISION personal lines go under (DANMONK26). Empty: the person's name. */
+  personalDivision: string;
   sort: number;
 }
 
@@ -192,7 +194,8 @@ export const profileStore = jsonStore<InvoiceProfile>('invoice_profile', 'launch
   email: s(d.email),
   web: s(d.web),
   gstNumber: s(d.gstNumber),
-  fyEnd: /^\d\d-\d\d$/.test(s(d.fyEnd)) ? s(d.fyEnd) : '09-30'
+  fyEnd: /^\d\d-\d\d$/.test(s(d.fyEnd)) ? s(d.fyEnd) : '09-30',
+  personalDivision: s(d.personalDivision)
 }));
 
-export const emptyProfile = (): InvoiceProfile => ({ id: crypto.randomUUID(), business: '', person: '', phone: '', email: '', web: '', gstNumber: '', fyEnd: '09-30', sort: 0 });
+export const emptyProfile = (): InvoiceProfile => ({ id: crypto.randomUUID(), business: '', person: '', phone: '', email: '', web: '', gstNumber: '', fyEnd: '09-30', personalDivision: '', sort: 0 });
