@@ -213,7 +213,18 @@ export function LaunchersPanel(p: Props) {
   const list = views[view];
   // Active keeps to the next 3 (Show all for the rest); the other tabs show their whole list.
   const capped = view === 'active' && !showAllTimed;
-  const visible = capped ? list.slice(0, 3) : list;
+  // Nov 1: lists come in pages of 3. On a phone you swipe left for the next 3 (every tab but History);
+  // on a laptop Active still shows the first 3 only, and Show all stacks the whole list.
+  const pages: (typeof list)[] = [];
+  if (showAllTimed || (!mobile && !capped)) pages.push(list);
+  else if (!mobile) pages.push(list.slice(0, 3));
+  else for (let i = 0; i < list.length; i += 3) pages.push(list.slice(i, i + 3));
+  const [page, setPage] = useState(0);
+  const pagesRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    setPage(0);
+    pagesRef.current?.scrollTo({ left: 0 });
+  }, [view, showAllTimed]);
 
   function launchAll() {
     const urls = p.launchers.filter((l) => !l.hidden).map((l) => l.url).filter(Boolean);
@@ -462,8 +473,18 @@ export function LaunchersPanel(p: Props) {
         ) : list.length === 0 ? (
           <p className="panel-empty timed-empty">{p.launches.length === 0 ? 'At a set time, a reminder pops up and one tap opens every tab you need.' : EMPTY[view]}</p>
         ) : (
-          <ul className="timed-list">
-            {visible.map((l) => {
+          <>
+          <div
+            ref={pagesRef}
+            className={`timed-pages${pages.length > 1 ? ' is-paged' : ''}`}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              if (el.clientWidth) setPage(Math.round(el.scrollLeft / el.clientWidth));
+            }}
+          >
+          {pages.map((items, pi) => (
+          <ul className="timed-list" key={pi} aria-label={pages.length > 1 ? `Page ${pi + 1} of ${pages.length}` : undefined}>
+            {items.map((l) => {
               // Tomorrow shows plain rows: today's check-offs belong to today.
               const ahead = view === 'tomorrow' || view === 'scheduled';
               const todays = !ahead && l.active && happensToday(l, p.today);
@@ -591,6 +612,19 @@ export function LaunchersPanel(p: Props) {
               );
             })}
           </ul>
+          ))}
+          </div>
+          {pages.length > 1 && (
+            <div className="timed-dots" aria-hidden="true">
+              {pages.map((_, i) => (
+                <span key={i} className={i === page ? 'is-on' : ''} />
+              ))}
+              <span className="timed-dots-label">
+                {page * 3 + 1}–{Math.min(page * 3 + 3, list.length)} of {list.length}
+              </span>
+            </div>
+          )}
+          </>
         )}
         {((view === 'active' && list.length > 3) || (view === 'history' && history.length > 30)) && (
           <button
