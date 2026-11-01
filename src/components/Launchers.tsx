@@ -1219,7 +1219,7 @@ export function useOpensUp(wrap: { current: HTMLElement | null }, open: boolean)
 }
 
 /** "What": type a new name, or open the list with ⌄ (or by typing) and pick one you've used before. */
-export function TitleCombo({ value, titles: allTitles, onChange, placeholder = 'Work Block #1 - Launch Page Construction', required = true, autoFocus, list }: { value: string; titles: string[]; onChange: (v: string) => void; placeholder?: string; required?: boolean; autoFocus?: boolean; /** Oct 24: names the list so its items get an ✕ that hides them (lib/hiddenPicks.ts). */ list?: string }) {
+export function TitleCombo({ value, titles: allTitles, onChange, placeholder = 'Work Block #1 - Launch Page Construction', required = true, autoFocus, list, label }: { value: string; titles: string[]; onChange: (v: string) => void; placeholder?: string; required?: boolean; autoFocus?: boolean; /** Oct 24: names the list so its items get an ✕ that hides them (lib/hiddenPicks.ts). */ list?: string; /** Nov 1: the input's accessible name (bank import cells). */ label?: string }) {
   const picks = useContext(HiddenPicksContext);
   const gone = new Set(list ? picks.hidden.filter((h) => h.list === list).map((h) => h.value) : []);
   const titles = gone.size ? allTitles.filter((t) => !gone.has(hiddenKey(t))) : allTitles;
@@ -1243,6 +1243,8 @@ export function TitleCombo({ value, titles: allTitles, onChange, placeholder = '
         autoFocus={autoFocus}
         autoComplete="off"
         role="combobox"
+        aria-label={label}
+        title={label ? value : undefined}
         aria-expanded={open && shown.length > 0}
         aria-controls={listId}
         value={value}

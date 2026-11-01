@@ -25,6 +25,7 @@ import {
 import { newExpense, type Expense } from '../lib/expenses';
 import type { Invoice, InvoiceProfile } from '../lib/invoices';
 import { dayLabel } from './Expenses';
+import { TitleCombo } from './Launchers';
 
 export interface ImportResult {
   accounts: BankAccount[];
@@ -54,6 +55,7 @@ const KINDS: { id: AccountKind; label: string; method: string }[] = [
   { id: 'card', label: 'Credit card', method: 'ATB MC' },
   { id: 'savings', label: 'Savings', method: 'ATB S.' }
 ];
+const TYPES = ['FIXED', 'VARIABLE'];
 const last4 = (n: string) => `••${n.replace(/\D/g, '').slice(-4)}`;
 
 /** A new account from a statement: its kind and name guessed from the file name and number. */
@@ -67,67 +69,23 @@ function guessAccount(number: string, file: string, sort: number): BankAccount {
 
 
 /**
- * A dropdown of every value already in use, plus "New…" to type one that isn't (Nov 1: every
- * column picks, so nothing has to be typed twice). A value typed new stays a text box until it's done.
+ * Type or pick (Nov 1): type anything, or ▾ for every value already in use (the merchant's own
+ * Common Expenses first for Description); typing filters the list.
  */
 function Pick(p: { value: string; options: string[]; groups?: { label: string; options: string[] }[]; onChange: (v: string) => void; label: string; disabled?: boolean; wide?: boolean }) {
-  const [typing, setTyping] = useState(false);
-  const all = new Set([...(p.groups ?? []).flatMap((g) => g.options), ...p.options]);
-  if (typing)
+  const titles = [...new Set([...(p.groups ?? []).flatMap((g) => g.options), ...p.options])];
+  if (p.disabled)
     return (
-      <input
-        autoFocus
-        onFocus={(e) => e.target.select()}
-        value={p.value}
-        onChange={(e) => p.onChange(e.target.value)}
-        onBlur={() => setTyping(false)}
-        onKeyDown={(e) => e.key === 'Enter' && setTyping(false)}
-        aria-label={p.label}
-        className={p.wide ? 'bank-desc' : undefined}
-      />
+      <span className={`bank-cell-off${p.wide ? ' is-wide' : ''}`} title={p.value}>
+        {p.value || '—'}
+      </span>
     );
   return (
-    <select
-      value={p.value}
-      disabled={p.disabled}
-      onChange={(e) => (e.target.value === NEW ? (setTyping(true), p.onChange(p.value)) : p.onChange(e.target.value))}
-      aria-label={p.label}
-      title={p.value}
-      className={p.wide ? 'bank-desc' : undefined}
-    >
-      <option value="">—</option>
-      {p.value && !all.has(p.value) && <option value={p.value}>{p.value}</option>}
-      {(p.groups ?? [])
-        .filter((g) => g.options.length)
-        .map((g) => (
-          <optgroup key={g.label} label={g.label}>
-            {g.options.map((o) => (
-              <option key={g.label + o} value={o}>
-                {o}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      {p.groups ? (
-        <optgroup label="All">
-          {p.options.map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </optgroup>
-      ) : (
-        p.options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))
-      )}
-      <option value={NEW}>＋ New…</option>
-    </select>
+    <div className={`bank-combo${p.wide ? ' is-wide' : ''}`}>
+      <TitleCombo value={p.value} titles={titles} onChange={p.onChange} placeholder="—" required={false} label={p.label} />
+    </div>
   );
 }
-const NEW = '\u0000new';
 
 /** Work in progress (Nov 1): kept on this device until it's saved or cleared, so closing the sheet loses nothing. */
 const DRAFT_KEY = 'launchpage.bank-draft.v1';
@@ -344,7 +302,7 @@ export function BankImport(p: Props) {
         const old = r.expenseId ? p.expenses.find((e) => e.id === r.expenseId) : null;
         const e: Expense = old
           ? { ...old, method: old.method || r.method, gst: old.gst ?? (r.gst || null) }
-          : { ...newExpense(r.date, sort++), project: r.project, description: r.description, method: r.method || a(r.account)?.method || '', type: r.type, category: r.category, pmtCategory: r.pmtCategory, amount: Math.round(r.amount * 100) / 100, gst: r.gst ? Math.round(r.gst * 100) / 100 : null, notes: r.text };
+          : { ...newExpense(r.date, sort++), project: r.project, description: r.description, method: r.method || a(r.account)?.method || '', type: r.type, category: r.category, pmtCategory: r.pmtCategory, amount: Math.round(r.amount * 100) / 100, gst: r.gst ? Math.round(r.gst * 100) / 100 : null, notes: [r.notes.trim(), r.text].filter(Boolean).join(' — ') };
         expenses.push(e);
         line.expenseId = e.id;
       }
@@ -353,7 +311,7 @@ export function BankImport(p: Props) {
         for (const x of r.parts) {
           let expenseId: string | null = null;
           if (x.route === 'expense') {
-            const e: Expense = { ...newExpense(r.date, sort++), project: x.project, description: x.description, method: r.method || a(r.account)?.method || '', type: x.type, category: x.category, pmtCategory: x.pmtCategory, amount: Math.round(x.amount * 100) / 100, gst: partGst(x) ? Math.round(partGst(x) * 100) / 100 : null, notes: `${r.text} (part of ${money(r.total)})` };
+            const e: Expense = { ...newExpense(r.date, sort++), project: x.project, description: x.description, method: r.method || a(r.account)?.method || '', type: x.type, category: x.category, pmtCategory: x.pmtCategory, amount: Math.round(x.amount * 100) / 100, gst: partGst(x) ? Math.round(partGst(x) * 100) / 100 : null, notes: [r.notes.trim(), `${r.text} (part of ${money(r.total)})`].filter(Boolean).join(' — ') };
             expenses.push(e);
             expenseId = e.id;
           }
@@ -361,7 +319,7 @@ export function BankImport(p: Props) {
         }
       }
       if (r.route === 'draw') {
-        const d: Draw = { id: crypto.randomUUID(), project: r.project, date: r.date, description: r.description, amount: Math.round(r.amount * 100) / 100, notes: '', bankLineId: line.id, sort: draws.length };
+        const d: Draw = { id: crypto.randomUUID(), project: r.project, date: r.date, description: r.description, amount: Math.round(r.amount * 100) / 100, notes: r.notes.trim(), bankLineId: line.id, sort: draws.length };
         draws.push(d);
         line.drawId = d.id;
       } else if (r.route === 'income' && r.invoiceId) {
@@ -510,6 +468,7 @@ export function BankImport(p: Props) {
                     <th>Category</th>
                     <th className="col-amount">Amount</th>
                     <th className="col-amount">GST</th>
+                    <th>Notes</th>
                     <th>Status</th>
                   </tr>
                   <tr className="bank-filters">
@@ -540,7 +499,7 @@ export function BankImport(p: Props) {
                         ))}
                       </select>
                     </th>
-                    <th colSpan={7} />
+                    <th colSpan={8} />
                     <th>
                       <select value={fStatus} onChange={(e) => setFStatus(e.target.value as Status | '')} aria-label="Filter by status">
                         <option value="">All</option>
@@ -615,11 +574,7 @@ export function BankImport(p: Props) {
                           </div>
                         </td>
                         <td>
-                          <select value={r.type} disabled={off} onChange={(e) => edit(r, { type: e.target.value })} aria-label="Type">
-                            <option value="" />
-                            <option value="FIXED">FIXED</option>
-                            <option value="VARIABLE">VARIABLE</option>
-                          </select>
+                          <Pick value={r.type} options={TYPES} disabled={off} onChange={(v) => edit(r, { type: v.toUpperCase() })} label="Type" />
                         </td>
                         <td>
                           <Pick value={r.category} options={groups} disabled={off} onChange={(v) => edit(r, { category: v })} label="Group" />
@@ -647,6 +602,9 @@ export function BankImport(p: Props) {
                           ) : (
                             ''
                           )}
+                        </td>
+                        <td>
+                          <input className="bank-notes" value={r.notes} disabled={off} onChange={(e) => edit(r, { notes: e.target.value })} aria-label="Notes" placeholder="Notes" />
                         </td>
                         <td>
                           <span className={`bank-status st-${r.status}`} title={r.why}>
@@ -678,11 +636,7 @@ export function BankImport(p: Props) {
                               <Pick wide value={x.description} groups={[{ label: 'This merchant', options: [...new Set(others.map((c) => c.description))] }]} options={descriptions} onChange={(v) => setPartDescription(r, x, v)} label="Part description" />
                             </td>
                             <td>
-                              <select value={x.type} onChange={(e) => setPart(r, x.id, { type: e.target.value })} aria-label="Part type">
-                                <option value="" />
-                                <option value="FIXED">FIXED</option>
-                                <option value="VARIABLE">VARIABLE</option>
-                              </select>
+                              <Pick value={x.type} options={TYPES} onChange={(v) => setPart(r, x.id, { type: v.toUpperCase() })} label="Part type" />
                             </td>
                             <td>
                               <Pick value={x.category} options={groups} onChange={(v) => setPart(r, x.id, { category: v })} label="Part group" />
@@ -709,6 +663,7 @@ export function BankImport(p: Props) {
                                 </button>
                               )}
                             </td>
+                            <td />
                             <td />
                           </tr>
                         ))}

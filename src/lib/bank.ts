@@ -372,6 +372,8 @@ export interface Draft extends ParsedLine {
   commonId: string | null;
   /** The other side of a draw (the personal account's e-transfer received). */
   pairOf: string | null;
+  /** Your note: goes on the expense / draw. */
+  notes: string;
 }
 
 const owed = (l: ParsedLine) => l.debit ?? -(l.credit ?? 0);
@@ -415,7 +417,8 @@ export function draft(
         expenseId: null,
         invoiceId: null,
         commonId: null,
-        pairOf: null
+        pairOf: null,
+        notes: ''
       };
       const set = (p: Partial<Draft>) => Object.assign(base, p);
       if (done.has(l.fp)) return set({ status: 'duplicate', why: 'Imported before: skipped.', route: ctx.imported.find((x) => x.fp === l.fp)?.route ?? 'personal' });

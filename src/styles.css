@@ -2472,3 +2472,13 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .bank-part .bank-part-x { width: 24px; height: 24px; font-size: 14px; color: var(--dim); }
 .bank-table .bank-part-amount { width: 84px; text-align: right; font-family: var(--font-mono); }
 .bank-inline { width: auto; }
+/* Nov 1: type-or-pick cells in the import table (the Add rocket combo, made compact). */
+.bank-combo { min-width: 110px; }
+.bank-combo.is-wide { min-width: 280px; }
+.bank-combo .combo input { padding: 3px 26px 3px 6px !important; font-size: 12px; }
+.bank-combo .combo-caret { width: 22px; height: 22px; right: 2px; }
+.bank-combo .combo-list { min-width: 260px; max-height: 240px; z-index: 40; font-size: 13px; }
+.bank-combo .combo-opt { padding: 6px 8px; }
+.bank-cell-off { display: inline-block; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); font-size: 12px; padding: 3px 6px; }
+.bank-cell-off.is-wide { max-width: 280px; }
+.bank-table .bank-notes { width: 140px; }
