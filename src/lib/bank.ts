@@ -88,6 +88,8 @@ export interface CommonExpense {
   /** Bank merchants confirmed for this entry (merchantKey). */
   keys: string[];
   lastDate: string;
+  /** The amount it was last confirmed at: a FIXED bill is told apart from others at the same merchant by it (PayPal → Adobe $96.59, Soundcloud $12.99). */
+  amount: number | null;
   /** Nov 1: a charge split across divisions (vehicle insurance: SHOP / MWD / personal), remembered as shares of the total. */
   split?: SplitShare[];
   sort: number;
@@ -158,6 +160,7 @@ export const commonStore = jsonStore<CommonExpense>('expense_rules', 'launchpage
   frequency: s(d.frequency),
   keys: Array.isArray(d.keys) ? (d.keys as unknown[]).filter((k): k is string => typeof k === 'string') : [],
   lastDate: s(d.lastDate),
+  amount: n(d.amount),
   split: Array.isArray(d.split) ? (d.split as SplitShare[]).filter((x) => x && typeof x.share === 'number') : undefined
 }));
 
@@ -322,13 +325,18 @@ function merchantWords(description: string): string[] {
  * nothing's been confirmed yet, the account decides: a personal account prefers the owner's
  * (personal) entries, a business account or card the business ones.
  */
-export function commonFor(list: CommonExpense[], key: string, personalAccount: boolean): CommonExpense[] {
+export function commonFor(list: CommonExpense[], key: string, personalAccount: boolean, amount?: number): CommonExpense[] {
   if (!key) return [];
   const bank = squash(key);
   const known = list.filter((c) => c.keys.includes(key)).sort((a, b) => b.lastDate.localeCompare(a.lastDate));
   const named = list.filter((c) => !c.keys.includes(key) && ((ws) => ws.length > 0 && ws.every((w) => bank.includes(w)))(merchantWords(c.description)));
   named.sort((a, b) => Number(personalAccount ? b.route === 'personal' : b.route !== 'personal') - Number(personalAccount ? a.route === 'personal' : a.route !== 'personal') || b.lastDate.localeCompare(a.lastDate) || a.sort - b.sort);
-  return [...known, ...named];
+  const all = [...known, ...named];
+  // A FIXED bill at the same amount (within $0.50 or 3%, for exchange rates) is the one: PayPal $12.99 → Soundcloud.
+  if (amount === undefined) return all;
+  const same = all.filter((c) => c.type === 'FIXED' && c.amount !== null && Math.abs(Math.abs(amount) - c.amount) <= Math.max(0.5, c.amount * 0.03));
+  same.sort((a, b) => Math.abs(Math.abs(amount) - (a.amount ?? 0)) - Math.abs(Math.abs(amount) - (b.amount ?? 0)));
+  return [...same, ...all.filter((c) => !same.includes(c))];
 }
 
 /** Spending carries GST unless the entry says otherwise; insurance, fees and dues, and other aren't taxed. */
@@ -443,7 +451,7 @@ export function draft(
         });
       }
 
-      const rule = commonFor(ctx.common, l.key, kind === 'personal')[0];
+      const rule = commonFor(ctx.common, l.key, kind === 'personal', amt)[0];
       if (rule) {
         set({
           route: rule.route,
@@ -519,6 +527,7 @@ export function learn(d: Draft, list: CommonExpense[], parts: Part[] = [], total
     frequency: same?.frequency ?? '',
     keys,
     lastDate: same && same.lastDate > d.date ? same.lastDate : d.date,
+    amount: same && same.lastDate > d.date ? same.amount : Math.round(Math.abs(total) * 100) / 100,
     // A split is remembered for a FIXED bill (vehicle insurance every month), as shares of the
     // total; a one-off split (part of a Marks run was personal) isn't. No parts this time clears it.
     split: parts.length && total && d.type === 'FIXED' ? parts.map(({ id: _id, amount, ...rest }) => ({ ...rest, share: amount / total })) : undefined,

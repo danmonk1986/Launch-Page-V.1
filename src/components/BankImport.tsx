@@ -211,7 +211,7 @@ export function BankImport(p: Props) {
         const owedAmt = l.debit ?? -(l.credit ?? 0);
         const e = l.expenseId ? p.expenses.find((x) => x.id === l.expenseId) : undefined;
         const d = l.drawId ? p.draws.find((x) => x.id === l.drawId) : undefined;
-        const rule = commonFor(p.common, l.key, a?.kind === 'personal')[0];
+        const rule = commonFor(p.common, l.key, a?.kind === 'personal', l.debit ?? -(l.credit ?? 0))[0];
         const src = e ?? (l.route === 'personal' ? rule : undefined);
         const parts: Part[] | undefined = l.parts?.map((x) => {
           const pe = x.expenseId ? p.expenses.find((y) => y.id === x.expenseId) : undefined;
@@ -648,7 +648,7 @@ export function BankImport(p: Props) {
                   {shown.map((r, i) => {
                     const off = r.status === 'duplicate' || skip.has(r.fp);
                     const quiet = r.route === 'transfer' || r.route === 'interest' || r.route === 'personal';
-                    const others = commonFor(p.common, r.key, acct(r.account)?.kind === 'personal').slice(0, 8);
+                    const others = commonFor(p.common, r.key, acct(r.account)?.kind === 'personal', r.total).slice(0, 8);
                     return (
                       <Fragment key={r.fp}>
                       <tr className={`task-row bank-row is-${r.route} st-${r.status}${off ? ' is-off' : ''}${quiet ? ' is-quiet' : ''}${i % 2 ? ' is-alt' : ''}`}>
