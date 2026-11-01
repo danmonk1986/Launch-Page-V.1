@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from './Sheet';
-import { money } from '../lib/budget';
+import { BUDGET_CATEGORIES, PMT_CATEGORIES, money } from '../lib/budget';
 import {
   ROUTES,
   STATUS_LABEL,
@@ -240,8 +240,9 @@ export function BankImport(p: Props) {
 
   const pick = (f: (c: CommonExpense) => string) => [...new Set([...p.common.map(f), ...p.expenses.map((e) => f(e as unknown as CommonExpense))].map((x) => (x ?? '').trim()).filter(Boolean))].sort();
   const divisions = [...new Set([...pick((c) => c.project), personal, business].filter(Boolean))].sort();
-  const groups = pick((c) => c.category);
-  const cats = pick((c) => c.pmtCategory);
+  // The sheet's full lists, in its order, then anything else already in use.
+  const groups = [...new Set([...BUDGET_CATEGORIES, ...pick((c) => c.category)])];
+  const cats = [...new Set([...PMT_CATEGORIES, ...pick((c) => c.pmtCategory)])];
   const descriptions = [...new Set(p.common.map((c) => c.description))].sort();
 
   /**
