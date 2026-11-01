@@ -3,7 +3,8 @@ import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettings, type BrandSettings } from './lib/settings';
-import { downloadExport } from './lib/exportData';
+import { downloadLaunchSheet } from './lib/launchSheet';
+import { loadCached } from './lib/gcalCache';
 import { Header, type PageId } from './components/Header';
 import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
@@ -1255,7 +1256,18 @@ export default function App() {
                 { label: 'Brand settings', onClick: () => setSettingsOpen('brand') },
                 { label: 'Colour settings', onClick: () => setSettingsOpen('colours') },
                 { label: 'Import tasks', onClick: () => importInput.current?.click() },
-                { label: 'Export my data', onClick: () => downloadExport(settings) },
+                {
+                  label: 'Export my data',
+                  onClick: async () => {
+                    // V12-042: the Launch Sheet, one tab per card (Google events from this device's cache).
+                    const googleEvents = await loadCached(userId).catch(() => [] as CalEvent[]);
+                    const counts = downloadLaunchSheet({
+                      settings, routines, launchers, launches, launchLog, events, googleEvents, tasks, projects, journal,
+                      days: d26Days, nonnegs, logs: d26Logs, quotes, config: d26Config, budget, expenses, invoices, customers
+                    });
+                    setStatus(`Launch Sheet exported: ${counts.length + 1} tabs, ${counts.reduce((a, c) => a + c.rows, 0)} rows.`);
+                  }
+                },
                 ...(googleConfigured() && wasConnected()
                   ? [
                       {
