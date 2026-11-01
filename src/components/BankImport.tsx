@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from './Sheet';
-import { BUDGET_CATEGORIES, PMT_CATEGORIES, money } from '../lib/budget';
+import { BUDGET_CATEGORIES, PMT_CATEGORIES, money, type BudgetLine } from '../lib/budget';
 import {
   ROUTES,
   STATUS_LABEL,
@@ -42,6 +42,8 @@ export interface ImportResult {
   removeDraws?: string[];
   /** True when this saves changes to lines imported before. */
   update?: boolean;
+  /** Budget audit: Budget lines updated to what the bank charged. */
+  budgetLines?: BudgetLine[];
 }
 
 type Props = {
@@ -54,6 +56,8 @@ type Props = {
   draws: Draw[];
   invoices: Invoice[];
   profile: InvoiceProfile | null;
+  /** Budget lines, for the budget audit. */
+  budget: BudgetLine[];
   onSave: (r: ImportResult) => Promise<void>;
 };
 
@@ -189,8 +193,8 @@ export function BankImport(p: Props) {
   const owner = profile?.person ?? '';
   const business = (profile?.business ?? '').replace(/\s+(LIMITED|LTD\.?|INC\.?|CORP\.?)$/i, '');
   const fresh = useMemo(
-    () => draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business, personal }),
-    [parsed, accounts, p.common, p.imported, p.expenses, p.invoices, owner, business, personal]
+    () => draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business, personal, budget: p.budget }),
+    [parsed, accounts, p.common, p.imported, p.expenses, p.invoices, owner, business, personal, p.budget]
   );
 
   /**
@@ -359,7 +363,7 @@ export function BankImport(p: Props) {
       if (r.route === 'expense') {
         const old = r.expenseId ? p.expenses.find((e) => e.id === r.expenseId) : null;
         const e: Expense = old
-          ? { ...old, method: old.method || r.method, gst: old.gst ?? (r.gst || null) }
+          ? { ...old, method: old.method || r.method, amount: Math.round(r.amount * 100) / 100, gst: r.gst ? Math.round(r.gst * 100) / 100 : old.gst }
           : { ...newExpense(r.date, sort++), project: r.project, description: r.description, method: r.method || a(r.account)?.method || '', type: r.type, category: r.category, pmtCategory: r.pmtCategory, amount: Math.round(r.amount * 100) / 100, gst: r.gst ? Math.round(r.gst * 100) / 100 : null, notes: [r.notes.trim(), r.text].filter(Boolean).join(' — ') };
         expenses.push(e);
         line.expenseId = e.id;
@@ -393,7 +397,13 @@ export function BankImport(p: Props) {
       lines.push(line);
     }
     const changedProfile = profile && (profile.fyEnd !== fyEnd || profile.personalDivision !== personal) ? { ...profile, fyEnd, personalDivision: personal } : null;
-    await p.onSave({ accounts, lines, expenses, draws, common: [...touched.values()], invoices, profile: changedProfile });
+    // Budget audit: each Budget line takes the latest amount the bank charged for it.
+    const budgetLines = new Map<string, BudgetLine>();
+    for (const r of [...live].sort((a, b) => a.date.localeCompare(b.date))) {
+      const b = r.budget?.apply ? p.budget.find((x) => x.id === r.budget!.lineId) : undefined;
+      if (b) budgetLines.set(b.id, { ...b, amount: Math.round(Math.abs(r.total) * 100) / 100 });
+    }
+    await p.onSave({ accounts, lines, expenses, draws, common: [...touched.values()], invoices, profile: changedProfile, budgetLines: [...budgetLines.values()] });
     setSaving(false);
     clearDraft();
     p.onClose();
@@ -570,6 +580,14 @@ export function BankImport(p: Props) {
                 <span className="budget-stat-label">Personal · {live.filter((r) => r.route === 'personal').length}</span>
                 <span className="budget-stat-value">{money(sum('personal'))}</span>
               </div>
+              {live.some((r) => r.budget) && (
+                <div className="budget-stat bank-stat-budget" title="Bills the bank charged at a different amount than Budget plans: ticked ones update Budget when you save">
+                  <span className="budget-stat-label">Budget changes</span>
+                  <span className="budget-stat-value">
+                    {live.filter((r) => r.budget?.apply).length} / {live.filter((r) => r.budget).length}
+                  </span>
+                </div>
+              )}
               <div className="budget-stat">
                 <span className="budget-stat-label">To check</span>
                 <span className="budget-stat-value">{live.filter((r) => r.status === 'check').length}</span>
@@ -741,6 +759,12 @@ export function BankImport(p: Props) {
                           <span className={`bank-status st-${r.status}`} title={r.why}>
                             {statusOf(r)}
                           </span>
+                          {r.budget && !off && (
+                            <label className="bank-budget" title={`Budget plans ${money(r.budget.planned)} for ${r.budget.description}; the bank charged ${money(Math.abs(r.total))}. Ticked: Budget takes the new amount when you save.`}>
+                              <input type="checkbox" checked={r.budget.apply} onChange={() => edit(r, { budget: { ...r.budget!, apply: !r.budget!.apply } })} />
+                              Budget {money(r.budget.planned)} → {money(Math.abs(r.total))}
+                            </label>
+                          )}
                         </td>
                       </tr>
                       {!off &&

@@ -2485,3 +2485,6 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 /* Nov 1: Records views as pills under the header (room for Income, more later). */
 .panel-records .records-views { margin: 2px 0 12px; }
 .panel-records .panel-head > .month-nav { margin-left: 14px; }
+/* Nov 1: budget audit, a bill charged at a new amount offers to update its Budget line. */
+.bank-budget { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; color: var(--accent-purple); white-space: nowrap; cursor: pointer; }
+.bank-stat-budget .budget-stat-value { color: var(--accent-purple); }

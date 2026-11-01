@@ -16,9 +16,10 @@
  *
  * Statements are the user's data: they live in their database, never in this code or the repo.
  */
-import { jsonStore, type Invoice } from './invoices';
+import { jsonStore, money as cad, type Invoice } from './invoices';
 import { invoiceTotals } from './invoices';
 import type { Expense } from './expenses';
+import type { BudgetLine } from './budget';
 
 export type Route = 'expense' | 'draw' | 'income' | 'transfer' | 'personal' | 'interest';
 export const ROUTES: { id: Route; label: string; hint: string }[] = [
@@ -387,6 +388,8 @@ export interface Draft extends ParsedLine {
   notes: string;
   /** A saved line reopened (Nov 1): its parts as saved. */
   savedParts?: Part[];
+  /** Budget audit (Nov 1): the Budget line this bill is, when the bank charged a different amount; apply updates it. */
+  budget?: { lineId: string; planned: number; description: string; apply: boolean };
 }
 
 const owed = (l: ParsedLine) => l.debit ?? -(l.credit ?? 0);
@@ -400,7 +403,7 @@ const CARD_PAYMENT = /Bill Payment ATB Mastercard|PAYMENT - THANK YOU|PAYMENT RE
  */
 export function draft(
   parsed: ParsedLine[],
-  ctx: { accounts: BankAccount[]; common: CommonExpense[]; imported: BankLine[]; expenses: Expense[]; invoices: Invoice[]; owner: string; business: string; personal: string }
+  ctx: { accounts: BankAccount[]; common: CommonExpense[]; imported: BankLine[]; expenses: Expense[]; invoices: Invoice[]; owner: string; business: string; personal: string; budget?: BudgetLine[] }
 ): Draft[] {
   const done = new Set(ctx.imported.map((l) => l.fp));
   const acct = (num: string) => ctx.accounts.find((a) => a.number === num);
@@ -480,12 +483,39 @@ export function draft(
       const noGst = /e-Transfer|ABM|Cash|Interest/i.test(l.text) || /^Fee$/i.test(l.kind) || ((l.credit ?? 0) > 0 && !/Return|Refund|Credit/i.test(`${l.text} ${l.kind}`));
       if (spends(base.route) && !rule && base.status !== 'duplicate' && !noGst) base.gst = gstIn(Math.abs(amt)) * Math.sign(amt);
       // A Budget bill already paid (ticked in Tasks) is this line: link it instead of adding it twice.
-      if (base.route === 'expense' && amt > 0) {
-        const hit = ctx.expenses.find((e) => !usedExpense.has(e.id) && e.amount !== null && Math.abs(e.amount - amt) < 0.005 && daysApart(e.date, l.date) <= 4);
+      // Same amount within 4 days, or (Nov 1) a bill from Budget by the same name within 6 days at a
+      // new amount: the expense takes what the bank charged.
+      const bankName = squash(l.key);
+      const named = (desc: string) => ((ws) => ws.length > 0 && ws.every((w) => bankName.includes(w)))(merchantWords(desc));
+      if (spends(base.route) && amt > 0) {
+        const free = ctx.expenses.filter((e) => !usedExpense.has(e.id) && e.amount !== null);
+        const hit =
+          free.find((e) => Math.abs((e.amount ?? 0) - amt) < 0.005 && daysApart(e.date, l.date) <= 4) ??
+          free.find((e) => e.budgetLineId && daysApart(e.date, l.date) <= 6 && (named(e.description) || (!!rule && e.description.trim().toLowerCase() === rule.description.trim().toLowerCase())));
         if (hit) {
           usedExpense.add(hit.id);
-          set({ expenseId: hit.id, status: 'matched', why: `Already in Expenses: ${hit.description} (${hit.date}). Linked, not added again.`, project: hit.project || base.project, description: hit.description || base.description, type: hit.type || base.type, category: hit.category || base.category, pmtCategory: hit.pmtCategory || base.pmtCategory, gst: hit.gst ?? base.gst });
+          const moved = Math.abs((hit.amount ?? 0) - amt) >= 0.005;
+          set({
+            route: 'expense',
+            expenseId: hit.id,
+            status: 'matched',
+            why: `Already in Expenses (paid from ${hit.budgetLineId ? 'Budget / Tasks' : 'Records'}): ${hit.description} (${hit.date}). Linked, not added again.${moved ? ` Expenses had ${cad(hit.amount ?? 0)}; it takes the bank's ${cad(amt)}.` : ''}`,
+            project: hit.project || base.project,
+            description: hit.description || base.description,
+            type: hit.type || base.type,
+            category: hit.category || base.category,
+            pmtCategory: hit.pmtCategory || base.pmtCategory,
+            gst: moved ? (hit.gst ? gstIn(amt) : base.gst) : hit.gst ?? base.gst
+          });
         }
+        // Budget audit: the Budget bill this is (by the expense that paid it, or by name), when the bank
+        // charged something else. Fixed and annual bills only (an allotment like groceries isn't one
+        // charge); lines priced in another currency are left to Recalc.
+        const lineId = hit?.budgetLineId ?? null;
+        const bill = (b: BudgetLine) => b.type.toUpperCase() === 'FIXED' || b.section === 'fixed' || b.section === 'annual';
+        const candidates = (ctx.budget ?? []).filter((b) => b.amount !== null && !b.currency && bill(b) && (b.id === lineId || (!lineId && (named(b.description) || (!!rule && b.description.trim().toLowerCase() === rule.description.trim().toLowerCase())))));
+        const line = candidates.sort((a, b) => Math.abs((a.amount ?? 0) - amt) - Math.abs((b.amount ?? 0) - amt))[0];
+        if (line && Math.abs((line.amount ?? 0) - amt) >= 0.005) base.budget = { lineId: line.id, planned: line.amount ?? 0, description: line.description, apply: true };
       }
       if (base.route === 'income') {
         const inv = ctx.invoices.find((i) => !i.datePaid && Math.abs(invoiceTotals(i).subTotal - base.amount) < 0.01);

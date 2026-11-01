@@ -580,6 +580,7 @@ export default function App() {
       many(drawStore, draws, setDraws, r.draws),
       many(commonStore, common, setCommon, r.common),
       many(invoiceStore, invoices, setInvoices, r.invoices),
+      many(budgetStore, budget, setBudget, r.budgetLines ?? []),
       r.profile ? many(profileStore, invoiceProfile, setInvoiceProfile, [r.profile]) : Promise.resolve(true)
     ]);
     // Reopened lines that no longer make an expense / draw (Expense → Personal, a part removed).
@@ -601,6 +602,7 @@ export default function App() {
     const n = (route: string) => r.lines.filter((l) => l.route === route).length;
     setStatus(
       `Imported ${r.lines.length} lines: ${n('expense')} expenses, ${n('draw')} draws, ${n('income')} income${r.invoices.length ? ` (${r.invoices.length} invoice${r.invoices.length > 1 ? 's' : ''} marked paid)` : ''}, ${n('personal')} personal, ${n('transfer') + n('interest')} transfers / interest.` +
+        (r.budgetLines?.length ? ` Budget updated: ${r.budgetLines.map((b) => b.description).join(', ')}.` : '') +
         (oks.every(Boolean) && linesOk ? '' : ' Some saved on this device only; they go to the cloud when the connection is back.')
     );
   }

@@ -112,6 +112,7 @@ export function RecordsPage(
         imported={p.bankLines}
         expenses={p.expenses}
         draws={p.draws}
+        budget={p.lines}
         invoices={p.invoices}
         profile={p.profile}
         onSave={p.onImport}
