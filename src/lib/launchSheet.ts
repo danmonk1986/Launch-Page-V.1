@@ -7,6 +7,7 @@
 import { buildXlsx, type Cell, type SheetSpec } from './xlsx';
 import type { BrandSettings } from './settings';
 import type { Routine } from './routines';
+import type { Meditation } from './meditations';
 import { describeLog, describeOpens, type Launch, type LaunchLog, type Launcher } from './launchers';
 import type { CalEvent } from './events';
 import type { Task } from './tasks';
@@ -21,6 +22,7 @@ import { describeRepeat, readRepeat } from './repeat';
 export interface ExportData {
   settings: BrandSettings;
   routines: Routine[];
+  meditations: Meditation[];
   launchers: Launcher[];
   launches: Launch[];
   launchLog: LaunchLog[];
@@ -195,6 +197,8 @@ export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: 
   );
 
   add('RITUALS', ['Ritual', 'Starts', '', '', 'Step #', 'Time', 'Step', 'Type', 'Details'], steps('ritual'));
+
+  add('MEDITATIONS', ['Title', 'Script'], [...d.meditations].sort((a, b) => a.sort - b.sort).map((m) => [m.title, m.script]), [28, 100]);
 
   add('QUOTES', ['Quote', 'Author'], [...d.quotes].sort((a, b) => a.sort - b.sort).map((q) => [q.text, q.author]));
 
