@@ -156,6 +156,51 @@ export function nextNumber(list: Invoice[], code: string, year: number) {
   return `${prefix}${(seq.length ? Math.max(...seq) : 0) + 1}`;
 }
 
+/**
+ * A new invoice (Nov 2), filled in from the last one: same customer, the next number, dates from
+ * the day after it ended (so the year and month are already right; end = start until changed),
+ * the same operator, description, rates and travel km. Job ID and well are left for the new job.
+ */
+export function startInvoice(list: Invoice[], customers: Customer[], today: string): Invoice {
+  const inv = newInvoice(list.length);
+  const prev = [...list].filter((i) => i.end).sort((a, b) => (b.end ?? '').localeCompare(a.end ?? ''))[0] ?? null;
+  const cust = customers.find((c) => c.id === prev?.customerId) ?? (customers.length === 1 ? customers[0] : null);
+  let start = today;
+  if (prev?.end) {
+    const d = at(prev.end);
+    d.setDate(d.getDate() + 1);
+    start = iso(d);
+  }
+  const km = prev?.trips.find((t) => t.km)?.km ?? null;
+  return {
+    ...inv,
+    customerId: cust?.id ?? null,
+    number: cust?.code ? nextNumber(list, cust.code, Number(start.slice(0, 4))) : '',
+    start,
+    end: start,
+    operator: prev?.customerId === cust?.id ? prev?.operator ?? '' : '',
+    description: prev?.description || inv.description,
+    dayRate: prev?.dayRate ?? null,
+    travelRate: prev?.travelRate ?? null,
+    trips: [{ date: start, km }]
+  };
+}
+
+/** Past values of a field for a customer, newest first (Operator / Well / Job ID drop-downs). */
+export function pastValues(list: Invoice[], customerId: string | null, key: 'operator' | 'well' | 'jobId') {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const i of [...list].sort((a, b) => (b.end ?? '').localeCompare(a.end ?? ''))) {
+    if (customerId && i.customerId !== customerId) continue;
+    const v = i[key].trim();
+    if (v && !seen.has(v.toLowerCase())) {
+      seen.add(v.toLowerCase());
+      out.push(v);
+    }
+  }
+  return out;
+}
+
 /** The last invoice for a customer: its rates are suggested on the next one. */
 export const lastFor = (list: Invoice[], customerId: string | null) =>
   customerId ? [...list].filter((i) => i.customerId === customerId).sort((a, b) => (b.end ?? '').localeCompare(a.end ?? ''))[0] ?? null : null;

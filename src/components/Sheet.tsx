@@ -85,17 +85,21 @@ export function FormActions({
   saveDisabled,
   hideSave,
   onDelete,
-  deleteLabel
+  deleteLabel,
+  extra
 }: {
   formId: string;
   saveDisabled?: boolean;
   hideSave?: boolean;
   onDelete?: () => void;
   deleteLabel?: string;
+  /** Nov 2: more header icons, left of Save (e.g. the invoice's Print / Save PDF). */
+  extra?: ReactNode;
 }) {
   const slot = useContext(ToolSlot);
   const icons = (
     <>
+      {extra}
       {!hideSave && (
         <button type="submit" form={formId} className="icon-btn tool-btn tool-btn-go" disabled={saveDisabled} aria-label="Save" title="Save">
           <HeadIcon d={SAVE_ICON} />

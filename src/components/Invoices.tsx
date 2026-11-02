@@ -1,6 +1,7 @@
 import { isoDate } from '../lib/launchers';
 import { Fragment, useId, useMemo, useState, type ReactNode } from 'react';
-import { FormActions, Sheet } from './Sheet';
+import { FormActions, HeadIcon, Sheet } from './Sheet';
+import { TitleCombo } from './Launchers';
 import { AmountInput } from './AmountInput';
 import { Icon } from './Tasks';
 import {
@@ -12,8 +13,9 @@ import {
   invoiceTotals,
   lastFor,
   money,
-  newInvoice,
   nextNumber,
+  pastValues,
+  startInvoice,
   type Customer,
   type Invoice,
   type InvoiceProfile
@@ -21,6 +23,7 @@ import {
 import { printInvoice } from '../lib/invoicePrint';
 
 const PLUS = 'M12 5v14M5 12h14';
+const PRINT = 'M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z';
 const CLOSE = 'M6 6l12 12M18 6L6 18';
 const ID_CARD = 'M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM8 10h.01M12 9h5M12 13h5M7 15h3';
 
@@ -72,7 +75,7 @@ export function InvoicesPage(p: Props) {
           {p.title ?? 'Invoices'}
         </h2>
         <div className="panel-actions">
-          <button type="button" className="icon-btn tool-btn" aria-label="New invoice" title="New invoice" onClick={() => setEditing(newInvoice(p.invoices.length))}>
+          <button type="button" className="icon-btn tool-btn" aria-label="New invoice" title="New invoice" onClick={() => setEditing(startInvoice(p.invoices, p.customers, isoDate(new Date())))}>
             <Icon d={PLUS} />
           </button>
           <button type="button" className="icon-btn tool-btn" aria-label="Business details and customers" title="Your details and customers" onClick={() => setDetails(true)}>
@@ -249,7 +252,16 @@ function InvoiceForm({
       <div className="budget-grid">
         <label className="field">
           <span>Customer</span>
-          <select value={d.customerId ?? ''} onChange={(e) => set({ customerId: e.target.value || null })}>
+          <select
+            value={d.customerId ?? ''}
+            onChange={(e) => {
+              const id = e.target.value || null;
+              const c = customers.find((x) => x.id === id);
+              // The number follows the customer while it's still the suggested one.
+              const auto = !d.number.trim() || d.number.trim() === suggested;
+              set({ customerId: id, ...(auto ? { number: c?.code ? nextNumber(others, c.code, year) : '' } : {}) });
+            }}
+          >
             <option value="">{customers.length ? 'Pick a customer' : 'Add one under your details first'}</option>
             {customers.map((c) => (
               <option key={c.id} value={c.id}>
@@ -265,28 +277,36 @@ function InvoiceForm({
         </label>
         <label className="field">
           <span>Start (first day)</span>
-          <input type="date" value={d.start ?? ''} onChange={(e) => set({ start: e.target.value || null })} />
+          <input
+            type="date"
+            value={d.start ?? ''}
+            onChange={(e) => {
+              const start = e.target.value || null;
+              // End moves with the start while it's before it (a new invoice starts with end = start).
+              set({ start, ...(start && (!d.end || d.end < start) ? { end: start } : {}), trips: d.trips.map((x, i) => (i === 0 && x.date === d.start ? { ...x, date: start } : x)) });
+            }}
+          />
         </label>
         <label className="field">
           <span>End (last day) · {days} day{days === 1 ? '' : 's'}</span>
           <input type="date" min={d.start ?? undefined} value={d.end ?? ''} onChange={(e) => set({ end: e.target.value || null })} />
         </label>
-        <label className="field">
+        <div className="field">
           <span>Job ID</span>
-          <input value={d.jobId} placeholder={last?.jobId || '26-0052'} onChange={(e) => set({ jobId: e.target.value })} />
-        </label>
+          <TitleCombo value={d.jobId} titles={pastValues(others, d.customerId, 'jobId')} onChange={(v) => set({ jobId: v })} placeholder={last?.jobId || '26-0052'} required={false} label="Job ID" />
+        </div>
         <label className="field">
           <span>Description</span>
           <input value={d.description} placeholder="MWD Operations" onChange={(e) => set({ description: e.target.value })} />
         </label>
-        <label className="field">
+        <div className="field">
           <span>Operator</span>
-          <input value={d.operator} placeholder={last?.operator || 'LINEUP Resources Corp'} onChange={(e) => set({ operator: e.target.value })} />
-        </label>
-        <label className="field">
+          <TitleCombo value={d.operator} titles={pastValues(others, d.customerId, 'operator')} onChange={(v) => set({ operator: v })} placeholder={last?.operator || 'LINEUP Resources Corp'} required={false} label="Operator" />
+        </div>
+        <div className="field">
           <span>Well</span>
-          <input value={d.well} placeholder={last?.well || 'LINEUP 100 HZ CHARL LK 11-20-60-4'} onChange={(e) => set({ well: e.target.value })} />
-        </label>
+          <TitleCombo value={d.well} titles={pastValues(others, d.customerId, 'well')} onChange={(v) => set({ well: v })} placeholder={last?.well || 'LINEUP 100 HZ CHARL LK 11-20-60-4'} required={false} label="Well" />
+        </div>
         <label className="field">
           <span>Day rate ($)</span>
           <NumInput value={d.dayRate} placeholder={last?.dayRate ? `Last: ${last.dayRate}` : '700'} onChange={(v) => set({ dayRate: v })} />
@@ -377,17 +397,30 @@ function InvoiceForm({
         <strong>Sub total {money(t.subTotal)}</strong>
         <span>{daysByMonth(d).map((m) => `${m.month.split(' ')[0]} ${m.days}`).join(' · ')}</span>
       </div>
-      <div className="reminder-actions">
-        {!profile?.business && (
+      {!profile?.business && (
+        <div className="reminder-actions">
           <button type="button" className="btn btn-quiet" onClick={onDetails}>
             Add your business details
           </button>
-        )}
-        <button type="button" className="btn" disabled={!days} title="Opens the invoice in a new tab to print or save as PDF" onClick={() => printInvoice({ ...d, number: d.number.trim() || suggested }, cust, profile)}>
-          Print / Save PDF
-        </button>
-      </div>
-      <FormActions formId={formId} onDelete={!isNew ? () => void onDelete() : undefined} deleteLabel={d.number} />
+        </div>
+      )}
+      <FormActions
+        formId={formId}
+        onDelete={!isNew ? () => void onDelete() : undefined}
+        deleteLabel={d.number}
+        extra={
+          <button
+            type="button"
+            className="icon-btn tool-btn"
+            disabled={!days}
+            aria-label="Print / Save PDF"
+            title="Print / Save PDF"
+            onClick={() => printInvoice({ ...d, number: d.number.trim() || suggested, trips: d.trips.filter((x) => x.km) }, cust, profile)}
+          >
+            <HeadIcon d={PRINT} />
+          </button>
+        }
+      />
     </form>
   );
 }
