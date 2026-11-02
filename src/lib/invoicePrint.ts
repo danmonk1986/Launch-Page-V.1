@@ -9,6 +9,25 @@ const shortNum = (s: string | null) => {
   return `${m}/${d}/${y}`;
 };
 
+/** Company-type words dropped from the customer for the file name ("Mostar Directional Technologies Inc." → MOSTAR DIRECTIONAL). */
+const SUFFIX = /^(technologies|technology|inc|incorporated|ltd|limited|corp|corporation|co|company|llc|lp)\.?$/i;
+
+/**
+ * The PDF's file name (Nov 2): "<BRAND> <SERVICE> - <number> (<CUSTOMER>)", e.g.
+ * STARDVST MWD - MS 2026-9 (MOSTAR DIRECTIONAL). Brand = first word of the business, service =
+ * first word of the description. The browser's Save as PDF uses the page title as the name.
+ */
+export function invoiceFileName(inv: Invoice, c: Customer | null, pr: InvoiceProfile | null) {
+  const brand = (pr?.business ?? '').trim().split(/\s+/)[0] ?? '';
+  const service = (inv.description ?? '').trim().split(/\s+/)[0] ?? '';
+  const words = (c?.name ?? '').trim().split(/\s+/).filter(Boolean);
+  while (words.length > 1 && SUFFIX.test(words[words.length - 1])) words.pop();
+  const who = words.join(' ').toUpperCase();
+  const left = [brand.toUpperCase(), service.toUpperCase()].filter(Boolean).join(' ');
+  const name = [left, inv.number.trim() || 'Invoice'].filter(Boolean).join(' - ') + (who ? ` (${who})` : '');
+  return name.replace(/[\\/:*?"<>|]/g, '-');
+}
+
 /**
  * Opens the invoice in a new tab, laid out like the Launch Sheet's invoice tab (Oct 22): one
  * four-column grid with grey header bands, the business name large on the left, Invoice # /
@@ -19,7 +38,7 @@ export function invoiceHtml(inv: Invoice, c: Customer | null, pr: InvoiceProfile
   const lines = invoiceLines(inv);
   const e = (v: string | null | undefined) => esc(v ?? '');
   const head = (v: string) => `<td class="band">${v}</td>`;
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${e(inv.number || 'Invoice')}</title>
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${e(invoiceFileName(inv, c, pr))}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
 @page{size:letter;margin:0}
