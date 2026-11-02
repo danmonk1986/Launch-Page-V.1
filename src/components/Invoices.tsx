@@ -413,9 +413,14 @@ function InvoiceForm({
             type="button"
             className="icon-btn tool-btn"
             disabled={!days}
-            aria-label="Print / Save PDF"
-            title="Print / Save PDF"
-            onClick={() => printInvoice({ ...d, number: d.number.trim() || suggested, trips: d.trips.filter((x) => x.km) }, cust, profile)}
+            aria-label="Print / Save PDF and save the invoice"
+            title="Print / Save PDF (also saves)"
+            onClick={() => {
+              // Nov 2: Print also saves, like the Save icon: the invoice opens to print (first, so
+              // the browser doesn't block the new tab) and the form saves and closes.
+              printInvoice({ ...d, number: d.number.trim() || suggested, trips: d.trips.filter((x) => x.km) }, cust, profile);
+              (document.getElementById(formId) as HTMLFormElement | null)?.requestSubmit();
+            }}
           >
             <HeadIcon d={PRINT} />
           </button>
