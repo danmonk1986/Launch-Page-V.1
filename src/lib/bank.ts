@@ -256,6 +256,8 @@ export function parseStatement(text: string): { lines: ParsedLine[]; error?: str
     const account = (r[col[2]] ?? '').trim();
     const debit = money(r[col[5]]);
     const credit = money(r[col[6]]);
+    // A card's notice lines come as $0.00 charges ("AN OVERLIMIT FEE WAS ASSESSED…"): not transactions.
+    if (!debit && !credit) continue;
     const balance = money(r[col[7]]);
     const t = (r[col[8]] ?? '').replace(/\s+$/, '');
     const base = [account, date, debit ?? '', credit ?? '', balance ?? '', t.replace(/\s+/g, ' ')].join('|');
@@ -446,6 +448,20 @@ export function draft(
       if (done.has(l.fp)) return set({ status: 'duplicate', why: 'Imported before: skipped.', route: ctx.imported.find((x) => x.fp === l.fp)?.route ?? 'personal' });
 
       if (CARD_PAYMENT.test(l.text)) return set({ route: 'transfer', status: 'auto', why: 'Card payment between your own accounts.', description: 'ATB Mastercard payment', amount: Math.abs(amt) });
+      // Nov 1 (FY2026 back books): moves between your own accounts; a transfer from the business to
+      // the owner's chequing is a draw.
+      if (/^Transfer (to|from) /i.test(l.text)) {
+        const toOwner = kind === 'business' && !!ownerRe?.test(l.text) && (l.debit ?? 0) > 0;
+        return toOwner
+          ? set({ route: 'draw', status: 'auto', why: 'A transfer from the business to your chequing: a draw.', description: `Transfer - ${ctx.owner}`, project: ctx.business, amount: Math.abs(amt) })
+          : set({ route: 'transfer', status: 'auto', why: 'A transfer between your own accounts.', description: l.text.replace(/\s+/g, ' ').trim(), amount: Math.abs(amt) });
+      }
+      if (kind === 'business' && (l.debit ?? 0) > 0 && /Withdrawal (Interac )?ABM|Withdrawal Intl ABM|VISA Withdrawal/i.test(l.text))
+        return set({ route: 'draw', status: 'check', why: 'Cash taken out of the business account: a draw? Change it if it paid a business cost.', description: 'Cash withdrawal', project: ctx.business, amount: Math.abs(amt) });
+      if (/PAD CCRA|CANADA REVENUE|CRA\b/i.test(l.text))
+        return set({ route: 'expense', status: 'check', why: 'A payment to the CRA (corporate tax, GST or payroll remittance): check which, it may not be an expense.', description: 'CRA - Tax payment', project: ctx.business, type: 'VARIABLE', category: 'MWD', pmtCategory: 'REG/ TAXES', amount: Math.abs(amt), gst: 0 });
+      if (kind === 'business' && (l.credit ?? 0) > 0 && /e-Transfer (Received|Auto-claimed)/i.test(l.text))
+        return set({ route: 'income', status: 'check', why: 'Money received into the business account: a client payment, a refund or a loan back?', description: `Payment - ${l.text.replace(/^.*e-Transfer (Received|Auto-claimed)-?\s*/i, '').trim() || 'e-transfer'}`, project: ctx.business, amount: l.credit ?? 0, gst: 0 });
       if (/^Interest/i.test(l.kind) || /^Interest Payment/i.test(l.text)) return set({ route: 'interest', status: 'auto', why: 'Interest paid on the account.', description: 'Interest', amount: Math.abs(amt) });
       if (/e-Transfer Sent/i.test(l.text) && kind === 'business') {
         const to = l.text.replace(/^.*e-Transfer Sent(-Autodep)?\s*-\s*/i, '').trim();
@@ -474,6 +490,10 @@ export function draft(
           pmtCategory: rule.pmtCategory,
           gst: hasGst(rule) ? gstIn(Math.abs(amt)) * Math.sign(amt) : 0
         });
+        // A FIXED bill at a different amount than usual (PayPal $1,453 isn't the $12.99 subscription;
+        // last year's insurance was a different charge): filled in, but to check.
+        if (rule.type === 'FIXED' && rule.amount !== null && Math.abs(Math.abs(amt) - rule.amount) > Math.max(0.5, rule.amount * 0.03))
+          set({ status: 'check', why: `${rule.description} is usually ${cad(rule.amount)}; this is ${cad(Math.abs(amt))}. Check it's the same thing.` });
       } else if (/Direct Deposit/i.test(l.text) && (l.credit ?? 0) > 0 && kind === 'business') {
         set({ route: 'income', status: 'check', why: 'A deposit into the business account: a client payment? It goes to Records → Income; link it to its invoice there if it isn\'t matched here.', description: `Payment - ${tidy(l.key)}`, amount: l.credit ?? 0, gst: gstCollected(l.credit ?? 0), project: ctx.business });
       } else if (/e-Transfer Received/i.test(l.text)) {
