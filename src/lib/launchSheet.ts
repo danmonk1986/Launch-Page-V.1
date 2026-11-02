@@ -9,7 +9,7 @@ import { buildXlsx, type Cell, type SheetSpec } from './xlsx';
 import type { BrandSettings } from './settings';
 import type { Routine } from './routines';
 import type { Meditation } from './meditations';
-import { describeLog, describeOpens, type Launch, type LaunchLog, type Launcher } from './launchers';
+import { describeLog, describeOpens, describeSchedule, type Launch, type LaunchLog, type Launcher } from './launchers';
 import type { CalEvent } from './events';
 import type { Task } from './tasks';
 import type { Project } from './projects';
@@ -102,7 +102,7 @@ export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: 
         l.atTime,
         l.repeat,
         l.repeat === 'weekly' ? l.weekdays.map((w) => 'SMTWTFS'[w]).join(' ') : '',
-        l.monthDay ?? '',
+        l.monthWeek ? describeSchedule(l) : l.monthDay ?? '',
         l.onDate ?? '',
         (l.moreDates ?? []).join(', '),
         l.minutes,

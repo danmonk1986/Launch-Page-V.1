@@ -30,6 +30,8 @@ export interface Launch {
   repeat: Repeat;
   weekdays: number[]; // 0 = Sunday
   monthDay: number | null;
+  /** Nov 2: monthly by weekday instead: 1–4 = first…fourth, 5 = last, with the day in weekdays[0] (first Tuesday). Column from 0038. */
+  monthWeek?: number | null;
   onDate: string | null; // "YYYY-MM-DD"
   /** Once: more picked dates, not a pattern (Oct 21 / Oct 22 / Oct 23). Column from 0024. */
   moreDates?: string[];
@@ -273,6 +275,7 @@ type LaunchRow = {
   repeat: Repeat;
   weekdays: number[];
   month_day: number | null;
+  month_week?: number | null;
   on_date: string | null;
   minutes: number;
   urls: string[];
@@ -313,6 +316,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     repeat: l.repeat,
     weekdays: l.weekdays,
     month_day: l.monthDay,
+    month_week: l.monthWeek ?? null,
     on_date: l.onDate,
     minutes: l.minutes,
     urls: l.urls,
@@ -337,6 +341,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     repeat: r.repeat,
     weekdays: r.weekdays ?? [],
     monthDay: r.month_day,
+    monthWeek: r.month_week ?? null,
     onDate: r.on_date,
     minutes: r.minutes,
     urls: r.urls ?? [],
@@ -391,7 +396,16 @@ export function happensOn(l: Launch, day: Date) {
   if (l.repeat === 'hourly') return true;
   if (l.movedTo && l.movedTo === isoDate(day)) return true;
   if (l.repeat === 'weekly') return l.weekdays.includes(day.getDay());
-  if (l.repeat === 'monthly') return l.monthDay === day.getDate();
+  if (l.repeat === 'monthly') {
+    if (l.monthWeek) {
+      // The nth (or last) given weekday of the month: first Tuesday = a Tuesday on the 1st–7th.
+      if (day.getDay() !== (l.weekdays[0] ?? -1)) return false;
+      const n = Math.ceil(day.getDate() / 7);
+      if (l.monthWeek === 5) return day.getDate() + 7 > new Date(day.getFullYear(), day.getMonth() + 1, 0).getDate();
+      return n === l.monthWeek;
+    }
+    return l.monthDay === day.getDate();
+  }
   const iso = isoDate(day);
   return l.onDate === iso || !!l.moreDates?.includes(iso);
 }
@@ -425,6 +439,8 @@ export function isDue(l: Launch, now: Date) {
 }
 
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+export const MONTH_WEEK = ['first', 'second', 'third', 'fourth', 'last'];
 
 export function describeSchedule(l: Launch) {
   if (l.repeat === 'hourly') return `Every hour, ${clock12(l.atTime)}–${clock12(l.untilTime || l.atTime)}`;
@@ -432,7 +448,10 @@ export function describeSchedule(l: Launch) {
     if (l.weekdays.length === 7) return 'Every day';
     return l.weekdays.length ? l.weekdays.map((d) => WEEKDAY[d]).join(', ') : 'No days picked';
   }
-  if (l.repeat === 'monthly') return l.monthDay ? `Monthly on the ${ordinal(l.monthDay)}` : 'Monthly';
+  if (l.repeat === 'monthly') {
+    if (l.monthWeek && l.weekdays.length) return `Monthly on the ${MONTH_WEEK[l.monthWeek - 1]} ${DAY_LONG[l.weekdays[0]]}`;
+    return l.monthDay ? `Monthly on the ${ordinal(l.monthDay)}` : 'Monthly';
+  }
   const dates = [l.onDate, ...(l.moreDates ?? [])].filter((x): x is string => !!x).sort();
   return dates.length ? dates.map((x) => new Date(`${x}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })).join(' / ') : 'One date';
 }

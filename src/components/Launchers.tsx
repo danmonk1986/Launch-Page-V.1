@@ -30,6 +30,7 @@ import {
   type LaunchLogKind,
   dayOrder,
   missedRuns,
+  MONTH_WEEK,
 } from '../lib/launchers';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
@@ -844,9 +845,10 @@ function TileForm({
 
 /** The starting list for a timed launch's What; anything typed there joins it once saved. */
 const WHAT_CATEGORIES = ['Work Block #1', 'Work Block #2', 'Work Block #3', 'Expansion Work', 'Leisure Work'];
+/** "Category - Description" (Nov 2: also " · " and " – ", as some older launches were saved). */
 export function splitTitle(t: string) {
-  const i = t.indexOf(' - ');
-  return i < 0 ? { cat: t.trim(), desc: '' } : { cat: t.slice(0, i).trim(), desc: t.slice(i + 3).trim() };
+  const m = / (-|·|–|—) /.exec(t);
+  return !m ? { cat: t.trim(), desc: '' } : { cat: t.slice(0, m.index).trim(), desc: t.slice(m.index + m[0].length).trim() };
 }
 export const joinTitle = (c: string, x: string) => (x.trim() ? `${c.trim()} - ${x.trim()}` : c.trim());
 /** The day after the latest date already picked, for + Add another date. */
@@ -916,6 +918,8 @@ function TimedForm({
   const [cat, setCat] = useState(() => splitTitle(d.title).cat);
   const [desc, setDesc] = useState(() => splitTitle(d.title).desc);
   const setWhat = (c: string, x: string) => {
+    // Nov 2: a full "What - Description" picked or pasted into What fills both boxes.
+    if (!x && / (-|·|–|—) /.test(c)) ({ cat: c, desc: x } = splitTitle(c));
     setCat(c);
     setDesc(x);
     set('title', joinTitle(c, x));
@@ -1140,16 +1144,46 @@ function TimedForm({
         </fieldset>
       )}
       {d.repeat === 'monthly' && (
-        <label className="field">
-          <span>Day of the month</span>
-          <input
-            type="number"
-            min={1}
-            max={31}
-            value={d.monthDay ?? 1}
-            onChange={(e) => set('monthDay', Math.min(31, Math.max(1, Number(e.target.value) || 1)))}
-          />
-        </label>
+        <fieldset className="field">
+          <legend>On</legend>
+          {/* Nov 2: a date (the 1st) or a weekday (the first Tuesday). */}
+          <div className="time-grid">
+            <select
+              aria-label="Which day of the month"
+              value={d.monthWeek ? String(d.monthWeek) : 'date'}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'date') setD((x) => ({ ...x, monthWeek: null, monthDay: x.monthDay ?? 1 }));
+                else setD((x) => ({ ...x, monthWeek: Number(v), monthDay: null, weekdays: x.weekdays.length ? [x.weekdays[0]] : [2] }));
+              }}
+            >
+              <option value="date">Day of the month</option>
+              {MONTH_WEEK.map((w, i) => (
+                <option key={w} value={String(i + 1)}>
+                  The {w}…
+                </option>
+              ))}
+            </select>
+            {d.monthWeek ? (
+              <select aria-label="Weekday" value={String(d.weekdays[0] ?? 2)} onChange={(e) => set('weekdays', [Number(e.target.value)])}>
+                {DAY_NAMES.map((n, i) => (
+                  <option key={n} value={String(i)}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="number"
+                min={1}
+                max={31}
+                aria-label="Day of the month"
+                value={d.monthDay ?? 1}
+                onChange={(e) => set('monthDay', Math.min(31, Math.max(1, Number(e.target.value) || 1)))}
+              />
+            )}
+          </div>
+        </fieldset>
       )}
       {d.repeat === 'once' && (
         <fieldset className="field">
