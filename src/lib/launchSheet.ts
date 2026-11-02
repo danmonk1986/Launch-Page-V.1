@@ -62,7 +62,9 @@ export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: 
   const routineName = (id: string | null | undefined) => d.routines.find((r) => r.id === id)?.name ?? '';
 
   const tabs: SheetSpec[] = [];
-  const add = (name: string, headers: string[], rows: Cell[][], widths?: number[]) => tabs.push({ name, top: top(name), headers, rows, widths });
+  const add = (name: string, headers: string[], rows: Cell[][], widths?: number[], group?: SheetSpec['group']) => tabs.push({ name, top: top(name), headers, rows, widths, group });
+  // Nov 2: date tabs get a month separator + collapsible group per month (and a Month column to filter).
+  const byMonth: SheetSpec['group'] = { col: 0, kind: 'month' };
 
   // ROUTINES and RITUALS: one row per step.
   const steps = (kind: 'routine' | 'ritual') =>
@@ -120,7 +122,9 @@ export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: 
       .map((g) => {
         const spent = g.launchedAt && g.finishedAt ? Math.round((new Date(g.finishedAt).getTime() - new Date(g.launchedAt).getTime()) / 60_000) : '';
         return [g.day, g.title, g.outcome, g.planned, g.extra, when(g.launchedAt), when(g.finishedAt), spent];
-      })
+      }),
+    undefined,
+    byMonth
   );
 
   add(
@@ -128,7 +132,9 @@ export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: 
     ['Start', 'End', 'Event', 'Calendar', 'From'],
     [...d.events.map((e) => ({ e, from: 'LaunchPage' })), ...d.googleEvents.map((e) => ({ e, from: 'Google' }))]
       .sort((a, b) => a.e.startDate.localeCompare(b.e.startDate))
-      .map(({ e, from }) => [e.startDate, e.endDate, e.title, e.google?.calendar ?? '', from])
+      .map(({ e, from }) => [e.startDate, e.endDate, e.title, e.google?.calendar ?? '', from]),
+    undefined,
+    byMonth
   );
 
   // TASKS: steps under their task.
@@ -165,7 +171,9 @@ export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: 
       .flatMap((j) => {
         const cs = checkinsOf(j);
         return cs.length ? cs.map((c, i) => [j.date, i === 0 ? j.headline : '', i === 0 ? j.theme : '', i === 0 ? j.mood ?? '' : '', i + 1, when(c.at), c.text]) : [[j.date, j.headline, j.theme, j.mood ?? '', '', '', '']];
-      })
+      }),
+    undefined,
+    byMonth
   );
 
   add(
@@ -177,7 +185,9 @@ export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: 
         const s = scoreDay(r, d.logs, d.config);
         const missed = r.off ? '' : r.items.filter((it) => !isDone(it, r, d.logs, r.day)).map((it) => it.label).join(', ');
         return [r.day, r.mode, r.shift, yes(r.off), r.off ? '' : s.done, r.off ? '' : s.total, r.off ? '' : yes(s.on), r.off ? '' : yes(s.full), s.blocks, s.activity, s.vice, missed];
-      })
+      }),
+    undefined,
+    byMonth
   );
 
   add(
@@ -189,7 +199,9 @@ export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: 
   add(
     'LOGS',
     ['Day', 'At', 'Kind', 'Amount', 'Unit', 'Qty', 'Note', 'Mode'],
-    [...d.logs].sort((a, b) => a.at.localeCompare(b.at)).map((l) => [l.day, when(l.at), l.kind, l.amount, l.unit, l.qty, l.note, l.mode])
+    [...d.logs].sort((a, b) => a.at.localeCompare(b.at)).map((l) => [l.day, when(l.at), l.kind, l.amount, l.unit, l.qty, l.note, l.mode]),
+    undefined,
+    byMonth
   );
 
   add('RITUALS', ['Ritual', 'Starts', '', '', 'Step #', 'Time', 'Step', 'Type', 'Details'], steps('ritual'));
@@ -219,7 +231,9 @@ export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: 
         l.link ?? '',
         l.notes,
         yes(d.tasks.some((t) => t.budgetLineId === l.id && !t.deletedAt))
-      ])
+      ]),
+    undefined,
+    { col: 0, kind: 'value' }
   );
 
   // The cover first: what's in the sheet.
