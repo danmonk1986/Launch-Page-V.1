@@ -2066,6 +2066,7 @@ select:not([multiple]) {
 /* Invoices page (Oct 22) */
 .invoice-fy { font: inherit; font-family: var(--font-mono); font-weight: 700; background: transparent; color: var(--beige); border: 0; padding: 0; }
 .invoice-extra { display: grid; grid-template-columns: minmax(0, 2fr) 80px 110px auto; gap: 8px; align-items: center; margin-bottom: 6px; }
+.invoice-trip { grid-template-columns: minmax(0, 1fr) 110px auto; }
 .invoice-totals { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; margin: 16px 0 10px; font-family: var(--font-mono); color: var(--mist); }
 .invoice-totals strong { color: var(--accent-teal); }
 .invoice-sub { margin: 20px 0 8px; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--beige); }

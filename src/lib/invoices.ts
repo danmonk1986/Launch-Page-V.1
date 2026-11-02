@@ -33,6 +33,12 @@ export interface Customer {
   sort: number;
 }
 
+export interface Trip {
+  /** The day travelled; its line prints right under that day. Empty = under the first day. */
+  date: string | null;
+  km: number | null;
+}
+
 export interface Extra {
   desc: string;
   qty: number;
@@ -50,7 +56,8 @@ export interface Invoice {
   well: string; // LINEUP 100 HZ CHARL LK 11-20-60-4
   description: string; // MWD Operations
   dayRate: number | null;
-  travelKm: number | null;
+  /** Travel (Nov 2): one entry per trip, each on its own day (out and back are two), at travelRate $/km. */
+  trips: Trip[];
   travelRate: number | null;
   extras: Extra[];
   gstRate: number; // 0.05
@@ -63,7 +70,7 @@ export interface Invoice {
 export const GST = 0.05;
 
 export function newInvoice(sort: number): Invoice {
-  return { id: crypto.randomUUID(), number: '', customerId: null, start: null, end: null, jobId: '', operator: '', well: '', description: 'MWD Operations', dayRate: null, travelKm: null, travelRate: null, extras: [], gstRate: GST, datePaid: null, deposit: null, notes: '', sort };
+  return { id: crypto.randomUUID(), number: '', customerId: null, start: null, end: null, jobId: '', operator: '', well: '', description: 'MWD Operations', dayRate: null, trips: [{ date: null, km: null }], travelRate: null, extras: [], gstRate: GST, datePaid: null, deposit: null, notes: '', sort };
 }
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -86,16 +93,34 @@ export interface Line {
 
 const r2 = (x: number) => Math.round(x * 100) / 100;
 
-/** The invoice's lines, as the sheet lays them out: day 1, travel, then each day, then extras. */
+/**
+ * The invoice's lines, as the sheet lays them out: each day, a travel line right under the day it
+ * was travelled (Nov 2: several trips, e.g. out on day 1 and back on the last day), then extras.
+ * Travel lines keep an empty date cell on the printout, like the sheet.
+ */
 export function invoiceLines(inv: Invoice): Line[] {
   const days = daysWorked(inv);
   const label = `${inv.description || 'MWD Operations'}${inv.jobId ? ` (${inv.jobId})` : ''}`;
   const rate = inv.dayRate ?? 0;
-  const lines: Line[] = days.map((d) => ({ date: d, desc: label, rate, total: rate }));
-  if (inv.travelKm && inv.travelRate) {
-    const travel: Line = { date: null, desc: `Travel (${inv.travelKm}KMs)`, rate: inv.travelRate, total: r2(inv.travelKm * inv.travelRate) };
-    lines.splice(Math.min(1, lines.length), 0, travel);
-  }
+  const lines: Line[] = [];
+  const trips = inv.travelRate ? inv.trips.filter((t) => t.km) : [];
+  // Where each trip goes: after the last day on or before its date (no date: after day 1).
+  const slot = (t: Trip) => {
+    if (!days.length) return -1;
+    if (!t.date) return 0;
+    let at = -1;
+    days.forEach((d, i) => {
+      if (d <= t.date!) at = i;
+    });
+    return at;
+  };
+  const travel = (t: Trip): Line => ({ date: null, desc: `Travel (${t.km}KMs)`, rate: inv.travelRate!, total: r2(t.km! * inv.travelRate!) });
+  const placed = trips.map((t) => ({ t, at: slot(t) })).sort((a, b) => a.at - b.at || (a.t.date ?? '').localeCompare(b.t.date ?? ''));
+  for (const p of placed) if (p.at === -1) lines.push(travel(p.t));
+  days.forEach((d, i) => {
+    lines.push({ date: d, desc: label, rate, total: rate });
+    for (const p of placed) if (p.at === i) lines.push(travel(p.t));
+  });
   for (const x of inv.extras) if (x.desc.trim()) lines.push({ date: null, desc: x.desc.trim(), rate: x.rate, total: r2((x.qty || 1) * x.rate) });
   return lines;
 }
@@ -169,7 +194,12 @@ export const invoiceStore = jsonStore<Invoice>('invoices', 'launchpage.invoices.
   well: s(d.well),
   description: s(d.description) || 'MWD Operations',
   dayRate: n(d.dayRate),
-  travelKm: n(d.travelKm),
+  // Before Nov 2 an invoice had one travel line (travelKm, under the first day).
+  trips: Array.isArray(d.trips)
+    ? (d.trips as Trip[]).map((t) => ({ date: s(t?.date) || null, km: n(t?.km) }))
+    : n(d.travelKm)
+      ? [{ date: s(d.start) || null, km: n(d.travelKm) }]
+      : [],
   travelRate: n(d.travelRate),
   extras: Array.isArray(d.extras) ? (d.extras as Extra[]) : [],
   gstRate: n(d.gstRate) ?? GST,

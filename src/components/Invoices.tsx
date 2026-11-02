@@ -232,6 +232,7 @@ function InvoiceForm({
   const cust = customers.find((c) => c.id === d.customerId) ?? null;
   const others = all.filter((x) => x.id !== d.id);
   const last = lastFor(others, d.customerId);
+  const lastKm = last?.trips.find((x) => x.km)?.km ?? null;
   const year = d.start ? Number(d.start.slice(0, 4)) : new Date().getFullYear();
   const suggested = cust?.code ? nextNumber(others, cust.code, year) : '';
   const t = invoiceTotals(d);
@@ -242,7 +243,7 @@ function InvoiceForm({
       className="task-form budget-form"
       onSubmit={(e) => {
         e.preventDefault();
-        void onSave({ ...d, number: d.number.trim() || suggested, extras: d.extras.filter((x) => x.desc.trim()) });
+        void onSave({ ...d, number: d.number.trim() || suggested, extras: d.extras.filter((x) => x.desc.trim()), trips: d.trips.filter((x) => x.km) });
       }}
     >
       <div className="budget-grid">
@@ -290,21 +291,53 @@ function InvoiceForm({
           <span>Day rate ($)</span>
           <NumInput value={d.dayRate} placeholder={last?.dayRate ? `Last: ${last.dayRate}` : '700'} onChange={(v) => set({ dayRate: v })} />
         </label>
-        <div className="field">
-          <span>Travel (km × $/km)</span>
-          <div className="time-grid">
-            <NumInput label="Travel km" value={d.travelKm} placeholder={last?.travelKm ? `Last: ${last.travelKm}` : '600'} onChange={(v) => set({ travelKm: v })} />
-            <NumInput label="Travel rate per km" value={d.travelRate} placeholder={last?.travelRate ? `Last: ${last.travelRate}` : '1.20'} onChange={(v) => set({ travelRate: v })} />
-          </div>
+        <label className="field">
+          <span>Travel rate ($/km)</span>
+          <NumInput label="Travel rate per km" value={d.travelRate} placeholder={last?.travelRate ? `Last: ${last.travelRate}` : '1.20'} onChange={(v) => set({ travelRate: v })} />
+        </label>
+        <div className="field budget-wide">
+          <span>Travel (date · km): each prints under its day</span>
+          {d.trips.map((x, i) => (
+            <div key={i} className="invoice-extra invoice-trip">
+              <input
+                type="date"
+                aria-label="Day travelled"
+                min={d.start ?? undefined}
+                max={d.end ?? undefined}
+                value={x.date ?? ''}
+                onChange={(e) => set({ trips: d.trips.map((y, j) => (j === i ? { ...y, date: e.target.value || null } : y)) })}
+              />
+              <NumInput label="Travel km" value={x.km} placeholder={lastKm ? `Last: ${lastKm}` : '600'} onChange={(v) => set({ trips: d.trips.map((y, j) => (j === i ? { ...y, km: v } : y)) })} />
+              <button type="button" className="icon-btn tool-btn" aria-label="Remove this travel" title="Remove" onClick={() => set({ trips: d.trips.filter((_, j) => j !== i) })}>
+                <Icon d={CLOSE} />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="btn btn-quiet"
+            onClick={() => set({ trips: [...d.trips, { date: d.trips.length ? d.end : d.start, km: d.trips[d.trips.length - 1]?.km ?? lastKm }] })}
+          >
+            + Add travel
+          </button>
         </div>
-        {last && (last.dayRate || last.travelKm) && (d.dayRate === null || d.travelKm === null) ? (
+        {last && (last.dayRate || lastKm) && (d.dayRate === null || !d.trips.some((x) => x.km)) ? (
           <div className="field budget-wide">
             <button
               type="button"
               className="btn btn-quiet"
-              onClick={() => set({ dayRate: d.dayRate ?? last.dayRate, travelKm: d.travelKm ?? last.travelKm, travelRate: d.travelRate ?? last.travelRate, jobId: d.jobId || last.jobId, operator: d.operator || last.operator, well: d.well || last.well })}
+              onClick={() =>
+                set({
+                  dayRate: d.dayRate ?? last.dayRate,
+                  trips: d.trips.some((x) => x.km) ? d.trips : [{ date: d.trips[0]?.date ?? d.start, km: lastKm }],
+                  travelRate: d.travelRate ?? last.travelRate,
+                  jobId: d.jobId || last.jobId,
+                  operator: d.operator || last.operator,
+                  well: d.well || last.well
+                })
+              }
             >
-              Use last ({[last.dayRate ? `${money(last.dayRate)}/day` : '', last.travelKm ? `${last.travelKm} km × ${money(last.travelRate ?? 0)}` : ''].filter(Boolean).join(', ')}, same job)
+              Use last ({[last.dayRate ? `${money(last.dayRate)}/day` : '', lastKm ? `${lastKm} km × ${money(last.travelRate ?? 0)}` : ''].filter(Boolean).join(', ')}, same job)
             </button>
           </div>
         ) : null}
