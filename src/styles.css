@@ -2500,3 +2500,23 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 /* Nov 1: Saved → a month's lines by account (one statement at a time). */
 .bank-modes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .bank-acct-pills { margin: 0; }
+
+/* ---------- Journal entry sheet (Nov 3): wide, and laid out like today's card instead of a form ---------- */
+.sheet:has(.journal-sheet) { width: min(900px, calc(100vw - 32px)); }
+.journal-sheet { padding: 20px 24px 14px; gap: 6px; }
+.journal-sheet .journal-headline { font-size: 24px; }
+.journal-sheet > .journal-theme { width: 100%; text-align: right; font-size: 14px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-teal); }
+.journal-sheet > .journal-theme::placeholder { text-align: right; }
+.journal-sheet .checkin { margin-top: 12px; }
+.journal-sheet .checkin .journal-body { font-size: 15px; line-height: 1.7; min-height: 96px; }
+.journal-date-input { background: transparent; border: 0; padding: 2px 0; color: var(--beige); font-family: var(--font-mono, ui-monospace, monospace); font-size: 13px; cursor: pointer; outline: none; border-bottom: 1px dotted color-mix(in srgb, var(--accent-teal) 60%, transparent); }
+.journal-date-input:focus { border-bottom-color: var(--accent-teal); }
+.journal-clash { margin: 4px 0 0; text-align: right; }
+@media (max-width: 640px) {
+  .sheet:has(.journal-sheet) { width: calc(100vw - 16px); padding: 16px; }
+  .journal-sheet { padding: 14px 14px 10px; }
+  .journal-sheet .journal-headline { font-size: 20px; }
+  .journal-sheet .journal-top-row { flex-wrap: wrap; }
+  .journal-sheet .journal-top-row .journal-headline { flex-basis: 100%; }
+  .journal-sheet .journal-when { margin-left: auto; }
+}

@@ -403,40 +403,43 @@ function EntryForm({ entry, isNew, taken, onSave, onDelete }: { entry: JournalEn
         onSave(withCheckins({ ...d, headline: d.headline.trim(), theme: d.theme.trim() }, cks));
       }}
     >
-      <label className="field">
-        <span>Date</span>
-        <input type="date" value={d.date} onChange={(e) => setD({ ...d, date: e.target.value })} required />
-      </label>
-      {clash && <p className="field-note">There's already an entry for that day. Open it from the list instead.</p>}
-      <label className="field">
-        <span>Headline</span>
-        <input value={d.headline} onChange={(e) => setD({ ...d, headline: e.target.value })} placeholder="One headline for the day" />
-      </label>
-      <label className="field">
-        <span>Theme</span>
-        <input value={d.theme} onChange={(e) => setD({ ...d, theme: e.target.value })} placeholder="Theme for the day" />
-      </label>
-      <div className="field">
-        <span>Mood</span>
-        <div className="mood-row">
-          {MOODS.map((m) => (
-            <button key={m} type="button" className="mood-opt" aria-pressed={d.mood === m} onClick={() => setD({ ...d, mood: d.mood === m ? '' : m })}>
-              {m}
-            </button>
-          ))}
+      {/* Nov 3: the entry opens as a wide page laid out like today's card (headline · mood · date, theme, check-ins), not a form. */}
+      <div className="journal-today journal-sheet">
+        <div className="journal-top-row">
+          <input
+            className="journal-headline"
+            value={d.headline}
+            onChange={(e) => setD({ ...d, headline: e.target.value })}
+            placeholder="One headline for the day"
+            aria-label="Headline"
+          />
+          <span className="journal-when">
+            <MoodPicker value={d.mood ?? ''} onChange={(m) => setD({ ...d, mood: m })} />
+            <input
+              type="date"
+              className="journal-date journal-date-input"
+              value={d.date}
+              onChange={(e) => setD({ ...d, date: e.target.value })}
+              required
+              aria-label="Date (moves this entry to that day)"
+              title="Change the date (moves this entry to that day)"
+            />
+          </span>
         </div>
-      </div>
-      <div className="field">
+        <input className="journal-theme" value={d.theme} onChange={(e) => setD({ ...d, theme: e.target.value })} placeholder="Theme" aria-label="Theme" />
+        {clash && <p className="field-note journal-clash">There's already an entry for that day. Open it from the list instead.</p>}
         <CheckIns list={cks} onChange={setCks} focusLast />
-        <button
-          type="button"
-          className="journal-toggle"
-          disabled={cks.some((c) => !c.text.trim())}
-          onClick={() => setCks((l) => [...l, { at: null, text: '' }])}
-        >
-          <Icon d={PEN} size={14} />
-          Add check in
-        </button>
+        <div className="journal-foot">
+          <button
+            type="button"
+            className="journal-toggle"
+            disabled={cks.some((c) => !c.text.trim())}
+            onClick={() => setCks((l) => [...l, { at: null, text: '' }])}
+          >
+            <Icon d={PEN} size={14} />
+            Add check in
+          </button>
+        </div>
       </div>
       <FormActions formId={formId} saveDisabled={clash || !d.date || !hasText} onDelete={isNew ? undefined : onDelete} deleteLabel="this entry" />
     </form>
