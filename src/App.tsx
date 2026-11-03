@@ -58,7 +58,7 @@ import { WeekCalendar } from './components/WeekCalendar';
 import { TasksPage, TasksPanel } from './components/Tasks';
 import { ProjectsSheet } from './components/Projects';
 import { matchCalendar, projectStore, type Project } from './lib/projects';
-import { buildJournalImport, byNewest, checkinsOf, journalStore, newEntry, withCheckins, type JournalEntry } from './lib/journal';
+import { buildJournalImport, byNewest, checkinsOf, journalStore, mergeJournal, newEntry, withCheckins, type JournalEntry } from './lib/journal';
 import { JournalPanel } from './components/Journal';
 import { Sheet } from './components/Sheet';
 import { RitualRunner } from './components/Rituals';
@@ -438,7 +438,7 @@ export default function App() {
     expenseStore.onNewer(swap(setExpenses, expRef));
     dayStore.onNewer(swap(setD26Days, daysRef));
     logStore.onNewer(swap(setD26Logs, logsRef));
-    journalStore.onNewer(swap(setJournal, journalRef));
+    journalStore.onNewer((id, item) => journalTheirs.current.set(id, item));
     launchLogStore.onNewer(swap(setLaunchLog, logRef));
     configStore.onNewer((_id, c) => c && setD26Config(c));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -855,12 +855,27 @@ export default function App() {
   // The Journal saves itself while you type, so it saves quietly and from the newest list.
   const journalRef = useRef(journal);
   journalRef.current = journal;
+  // V20-026: the newer copy a clashing journal save ran into (merged with ours, never swapped in blind).
+  const journalTheirs = useRef(new Map<string, JournalEntry | null>());
   function saveJournal(e: JournalEntry) {
     const list = journalRef.current;
     const next = list.some((x) => x.id === e.id) ? list.map((x) => (x.id === e.id ? e : x)) : [...list, e];
     journalRef.current = next;
     setJournal(next);
-    void journalStore.save(userId, e, next);
+    void journalStore.save(userId, e, next).then((how) => {
+      // V20-026: a newer copy won (another device or tab). Its copy is on screen now; put our
+      // writing back into it instead of dropping it, then save the merge.
+      if (how !== 'newer') return;
+      const cur = journalRef.current;
+      const theirs = journalTheirs.current.get(e.id) ?? null;
+      journalTheirs.current.delete(e.id);
+      const merged = theirs ? mergeJournal(theirs, e) : e;
+      const again = theirs ? cur.map((x) => (x.id === e.id ? merged : x)) : [...cur, e];
+      journalRef.current = again;
+      setJournal(again);
+      void journalStore.save(userId, merged, again);
+      setStatus('This entry was also changed on another device or tab. Both versions were kept in it.');
+    });
   }
   /** Journal import (a LaunchPage journal file): days already written are skipped. */
   async function importJournal(f: File) {

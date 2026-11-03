@@ -91,3 +91,30 @@ export function buildJournalImport(json: unknown, existing: JournalEntry[]): Jou
 }
 
 export const isBlank = (j: JournalEntry) => !j.headline.trim() && !j.body.trim() && !j.mood && !checkinsOf(j).some((c) => c.text.trim());
+
+/**
+ * Nov 3 (V20-026): a journal save that clashed with a newer copy from another device or tab.
+ * Writing is never thrown away: the newer copy is kept, and any check-in of ours that it doesn't
+ * already hold is added after its own. Blank fields take ours.
+ */
+export function mergeJournal(theirs: JournalEntry, ours: JournalEntry): JournalEntry {
+  const list = [...checkinsOf(theirs)];
+  for (const c of checkinsOf(ours)) {
+    const text = c.text.trim();
+    if (!text) continue;
+    // Already there (same words, or theirs holds ours as a start it carried on from).
+    if (list.some((t) => t.text.trim() === text || t.text.trim().startsWith(text))) continue;
+    const i = list.findIndex((t) => text.startsWith(t.text.trim()) && t.at === c.at);
+    if (i >= 0) list[i] = c; // ours carried on from theirs: ours is the longer copy
+    else list.push(c);
+  }
+  return withCheckins(
+    {
+      ...theirs,
+      headline: theirs.headline.trim() ? theirs.headline : ours.headline,
+      theme: theirs.theme.trim() ? theirs.theme : ours.theme,
+      mood: theirs.mood || ours.mood
+    },
+    list
+  );
+}

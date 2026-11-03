@@ -190,6 +190,7 @@ export function JournalPanel({ entries, today, day, onSave, onDelete, onImport, 
               if (editing.date === todayIso && e.date !== todayIso) setMoved((n) => n + 1);
               setEditing(null);
             }}
+            onAutoSave={onSave}
             onDelete={() => {
               onDelete(editing.id);
               setEditing(null);
@@ -293,7 +294,19 @@ function TodayEntry({ date, saved, lastTheme, onSave, onEditDate, onPastDays }: 
   };
   // Today's entry arrived after the panel opened (loaded from the cloud, or saved on another device).
   useEffect(() => {
-    if (!saved || saved.id === latest.current.id) return;
+    if (!saved) return;
+    if (saved.id === latest.current.id) {
+      // Nov 3: the same entry changed elsewhere (the edit sheet's autosave, or a merge after a clash).
+      // Show it, unless you're mid-sentence here (then yours goes in on the next save).
+      const mine = latest.current;
+      if (timer.current !== undefined || saved === mine) return;
+      const same = (a: JournalEntry, b: JournalEntry) => a.headline === b.headline && a.theme === b.theme && (a.mood ?? '') === (b.mood ?? '') && a.body === b.body;
+      if (same(saved, mine)) return;
+      latest.current = saved;
+      setD(saved);
+      setCks(checkinsOf(saved));
+      return;
+    }
     const mine = latest.current;
     const next = isBlank(mine) ? saved : { ...mine, id: saved.id };
     const list = isBlank(mine) ? checkinsOf(saved) : cks;
@@ -388,18 +401,66 @@ function TodayEntry({ date, saved, lastTheme, onSave, onEditDate, onPastDays }: 
   );
 }
 
-function EntryForm({ entry, isNew, taken, onSave, onDelete }: { entry: JournalEntry; isNew: boolean; taken: (date: string) => boolean; onSave: (e: JournalEntry) => void; onDelete: () => void }) {
+function EntryForm({ entry, isNew, taken, onSave, onAutoSave, onDelete }: { entry: JournalEntry; isNew: boolean; taken: (date: string) => boolean; onSave: (e: JournalEntry) => void; onAutoSave: (e: JournalEntry) => void; onDelete: () => void }) {
   const [d, setD] = useState(entry);
   const [cks, setCks] = useState<CheckIn[]>(() => checkinsOf(entry));
+  const [state, setState] = useState<'idle' | 'typing' | 'saved'>('idle');
   const formId = useId();
   const clash = taken(d.date);
   const hasText = !!d.headline.trim() || cks.some((c) => c.text.trim());
+
+  // Nov 3 (V20-026): the sheet saves itself a moment after you stop typing, and again when it
+  // closes any way (×, Escape, clicking off), so writing is never lost. The date only moves when
+  // Save is pressed; until then autosave keeps the entry on the day it was opened on (for a new
+  // entry, the first free day it was saved on).
+  const home = useRef<string | null>(isNew ? null : entry.date);
+  const latest = useRef({ d, cks });
+  latest.current = { d, cks };
+  const timer = useRef<number | undefined>(undefined);
+  const dead = useRef(false);
+  const auto = useRef(onAutoSave);
+  auto.current = onAutoSave;
+  const free = useRef(taken);
+  free.current = taken;
+  const flush = () => {
+    window.clearTimeout(timer.current);
+    timer.current = undefined;
+    if (dead.current) return;
+    const { d: x, cks: list } = latest.current;
+    const e = withCheckins(x, list);
+    if (isBlank(e)) return;
+    if (home.current === null) {
+      if (!x.date || free.current(x.date)) return; // a new entry waits for a free day
+      home.current = x.date;
+    }
+    auto.current({ ...e, date: home.current });
+    setState('saved');
+  };
+  const dirty = useRef(false);
+  useEffect(() => {
+    if (!dirty.current) {
+      dirty.current = true;
+      return;
+    }
+    setState('typing');
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(flush, 900);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d, cks]);
+  // Closing the sheet mid-sentence still saves what's written.
+  useEffect(() => () => {
+    if (timer.current !== undefined) flush();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <form
       id={formId}
       onSubmit={(e) => {
         e.preventDefault();
         if (clash || !d.date) return;
+        window.clearTimeout(timer.current);
+        timer.current = undefined;
+        dead.current = true;
         onSave(withCheckins({ ...d, headline: d.headline.trim(), theme: d.theme.trim() }, cks));
       }}
     >
@@ -439,9 +500,26 @@ function EntryForm({ entry, isNew, taken, onSave, onDelete }: { entry: JournalEn
             <Icon d={PEN} size={14} />
             Add check in
           </button>
+          <span className="journal-state" aria-live="polite">
+            {state === 'typing' ? 'Saving…' : state === 'saved' ? 'Saved' : ''}
+          </span>
         </div>
       </div>
-      <FormActions formId={formId} saveDisabled={clash || !d.date || !hasText} onDelete={isNew ? undefined : onDelete} deleteLabel="this entry" />
+      <FormActions
+        formId={formId}
+        saveDisabled={clash || !d.date || !hasText}
+        onDelete={
+          isNew && home.current === null
+            ? undefined
+            : () => {
+                window.clearTimeout(timer.current);
+                timer.current = undefined;
+                dead.current = true;
+                onDelete();
+              }
+        }
+        deleteLabel="this entry"
+      />
     </form>
   );
 }
