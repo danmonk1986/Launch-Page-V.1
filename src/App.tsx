@@ -62,7 +62,7 @@ import { buildJournalImport, byNewest, checkinsOf, journalStore, mergeJournal, n
 import { JournalPanel } from './components/Journal';
 import { Sheet } from './components/Sheet';
 import { RitualRunner } from './components/Rituals';
-import { buildImport, repeatOf, taskName, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
+import { buildImport, doneToday, isRecurring, repeatOf, taskName, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
 import { addTaskToGoogle, googleConfigured, knownCalendars, wasConnected } from './lib/google';
 import {
   isDue,
@@ -1181,7 +1181,28 @@ export default function App() {
     logRef.current = next;
     setLaunchLog(next);
     void launchLogStore.save(userId, item, next);
+    if (how === 'done' && day === isoDate(new Date())) void completeTasksFor(l);
     setStatus(how === 'done' ? `${l.title} (${day}): marked done, no time logged.` : `${l.title} (${day}): cleared, it won't count either way.`);
+  }
+
+  /**
+   * Nov 4 (V20-027): a launch checked off Done completes its task: the one it was created from
+   * (task.launchId), or a task with exactly the same name. Repeating tasks are done for this time
+   * and come back on their next date; one-off tasks are done for good. Returns the names ticked.
+   */
+  async function completeTasksFor(l: Launch, when = new Date()): Promise<string[]> {
+    const norm = (x: string) => x.toLowerCase().replace(/\s*[-·–—]\s*/g, ' ').replace(/\s+/g, ' ').trim();
+    const list = tasksRef.current;
+    const todo = list.filter(
+      (t) =>
+        !t.deletedAt &&
+        (t.launchId === l.id || (!t.launchId && norm(taskName(t)) === norm(l.title))) &&
+        (isRecurring(t) ? !doneToday(t, when) : !t.done)
+    );
+    if (!todo.length) return [];
+    const at = when.toISOString();
+    await saveTasks(todo.map((t) => (isRecurring(t) ? { ...t, doneAt: at } : { ...t, done: true, doneAt: at })));
+    return todo.map(taskName);
   }
 
   async function finishLaunch(l: Launch, how: 'done' | 'skipped') {
@@ -1196,8 +1217,10 @@ export default function App() {
     } else {
       const ticked = tickNonNegsFor(l.title);
       const logged = await logFromLaunch(l);
-      if (ticked.length && !logged) return setStatus(`${l.title} checked off: ${ticked.join(', ')} ticked.`);
-      setStatus(logged ? `${l.title} checked off: ${logged} logged.` : `${l.title} checked off.`);
+      const tasksDone = await completeTasksFor(l);
+      const task = tasksDone.length ? ` Task done.` : '';
+      if (ticked.length && !logged) return setStatus(`${l.title} checked off: ${ticked.join(', ')} ticked.${task}`);
+      setStatus(logged ? `${l.title} checked off: ${logged} logged.${task}` : `${l.title} checked off.${task}`);
     }
   }
 
