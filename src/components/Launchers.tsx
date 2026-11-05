@@ -143,6 +143,76 @@ export function LaunchersPanel(p: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.editLaunch]);
   const [launched, setLaunched] = useState<{ count: number; blocked: number } | null>(null);
+  // Nov 5 (V20-028): edit mode drags rockets into a new order (⠿ grip; mouse and touch) and × hides one.
+  const visible = p.launchers.filter((l) => !l.hidden).slice().sort((a, b) => a.sort - b.sort);
+  const [drag, setDrag] = useState<{ id: string; order: string[] } | null>(null);
+  const byId = new Map(p.launchers.map((l) => [l.id, l] as const));
+  const shownTiles = drag ? drag.order.map((id) => byId.get(id)).filter((l): l is Launcher => !!l) : visible;
+  const moveTo = (order: string[], id: string, overId: string) => {
+    if (id === overId) return order;
+    const next = order.filter((x) => x !== id);
+    const at = next.indexOf(overId);
+    const from = order.indexOf(id);
+    const to = order.indexOf(overId);
+    next.splice(from < to ? at + 1 : at, 0, id);
+    return next;
+  };
+  const saveOrder = (order: string[]) => {
+    // Reuse the slots these rockets already hold, so rockets on other routines keep their places.
+    const slots = visible.map((l) => l.sort).sort((a, b) => a - b);
+    const ok = new Set(slots).size === slots.length;
+    const changed = order
+      .map((id, i) => {
+        const l = byId.get(id)!;
+        const sort = ok ? slots[i] : i;
+        return l.sort === sort ? null : { ...l, sort };
+      })
+      .filter((l): l is Launcher => !!l);
+    if (changed.length) void p.onSaveLaunchers(changed);
+  };
+  // Follow the pointer on the whole page while dragging: moving a tile in the list drops a pointer
+  // capture on it, so the tile itself can't be relied on to hear the move and the drop.
+  const dragRef = useRef(drag);
+  dragRef.current = drag;
+  const saveRef = useRef(saveOrder);
+  saveRef.current = saveOrder;
+  const dragging = !!drag;
+  useEffect(() => {
+    if (!dragging) return;
+    const move = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-rocket]')?.getAttribute('data-rocket');
+      if (over && over !== d.id) {
+        const next = { ...d, order: moveTo(d.order, d.id, over) };
+        dragRef.current = next;
+        setDrag(next);
+      }
+    };
+    const up = () => {
+      const d = dragRef.current;
+      if (d) saveRef.current(d.order);
+      dragRef.current = null;
+      setDrag(null);
+    };
+    const cancel = () => {
+      dragRef.current = null;
+      setDrag(null);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', cancel);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', cancel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragging]);
+  const hideRocket = (l: Launcher) => {
+    void p.onSaveLauncher({ ...l, hidden: true });
+    p.onStatus(`${l.name} hidden. Bring it back from + Add rocket.`);
+  };
   // The rocket tiles start hidden; ⌄ beside the title shows them (remembered on this device).
   const [showTiles, setShowTiles] = useState(() => {
     try {
@@ -316,8 +386,42 @@ export function LaunchersPanel(p: Props) {
 
       <ul className="tiles" id="rocket-tiles" hidden={!showTiles}>
         {/* Hidden rockets stay off the Launch Page; in edit mode they show dimmed so you can bring them back. */}
-        {p.launchers.filter((l) => !l.hidden).map((l) => (
-          <li key={l.id}>
+        {shownTiles.map((l) => (
+          <li key={l.id} data-rocket={l.id} className={`${editing ? 'tile-slot' : ''}${drag?.id === l.id ? ' is-dragging' : ''}`}>
+            {editing && (
+              <>
+                <button type="button" className="tile-x" aria-label={`Hide ${l.name}`} title="Hide from the Launch Page" onClick={() => hideRocket(l)}>
+                  <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+                <span
+                  className="tile-grip"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Move ${l.name} (drag, or use the arrow keys)`}
+                  title="Drag to move"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    const d = { id: l.id, order: visible.map((x) => x.id) };
+                    dragRef.current = d;
+                    setDrag(d);
+                  }}
+                  onKeyDown={(e) => {
+                    const order = visible.map((x) => x.id);
+                    const i = order.indexOf(l.id);
+                    const j = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? i - 1 : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? i + 1 : -2;
+                    if (j < 0 || j >= order.length) return;
+                    e.preventDefault();
+                    saveOrder(moveTo(order, l.id, order[j]));
+                  }}
+                >
+                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" /><circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" /><circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
+                  </svg>
+                </span>
+              </>
+            )}
             {editing || !l.url ? (
               <button
                 type="button"

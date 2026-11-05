@@ -2520,3 +2520,26 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
   .journal-sheet .journal-top-row .journal-headline { flex-basis: 100%; }
   .journal-sheet .journal-when { margin-left: auto; }
 }
+
+/* ---------- Rockets edit mode (Nov 5): ⠿ drag to reorder, × to hide ---------- */
+.tile-slot { position: relative; }
+.tile-slot .tile { padding-right: 40px; }
+.tile-grip {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 2;
+  width: 26px; height: 34px; display: grid; place-items: center; border-radius: 8px;
+  color: var(--dim); cursor: grab; touch-action: none; user-select: none;
+}
+.tile-grip:hover, .tile-grip:focus-visible { color: var(--accent-teal); background: rgb(136 105 203 / 0.22); outline: none; }
+.is-dragging .tile-grip { cursor: grabbing; }
+.tile-x {
+  position: absolute; top: -7px; right: -7px; z-index: 3;
+  width: 22px; height: 22px; padding: 0; display: grid; place-items: center; border-radius: 50%;
+  border: 1px solid var(--accent-pink, #e07a9a); background: var(--surface-solid); color: var(--accent-pink, #e07a9a); cursor: pointer;
+}
+.tile-x:hover { background: var(--accent-pink, #e07a9a); color: var(--surface-solid); }
+.is-dragging .tile { border-color: var(--accent-teal); border-style: solid; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-teal) 40%, transparent); opacity: 0.85; }
+.tiles:has(.is-dragging) { cursor: grabbing; }
+@media (max-width: 520px) {
+  .tile-slot .tile { padding-right: 46px; }
+  .tile-grip { width: 38px; height: 44px; right: 4px; }
+}
