@@ -2700,6 +2700,10 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-tag:hover { background: #d9cdee; }
 
 /* 5 · Browse */
+.kb-browse-pills { padding: 8px 24px 0; }
+.kb-group-title { display: grid; gap: 0; }
+.kb-group-title .kb-dim { font-size: 13px; }
+.kb-browse-empty { margin: 24px auto; }
 .kb-browse { max-width: 1040px; margin: 0 auto; padding: 28px 24px 40px; display: flex; flex-direction: column; gap: 14px; }
 .kb-domain { display: flex; flex-direction: column; gap: 14px; }
 .kb-course { border: 1px solid var(--kb-line); border-radius: 16px; overflow: hidden; }

@@ -26,7 +26,7 @@ import {
  * a white page of its own. Home (search) → Results (with a preview) → Dig deeper (topic page),
  * and Browse as the way in when you don't know what to search for. Open at slide opens the deck.
  */
-type Screen = { kind: 'home' } | { kind: 'results' } | { kind: 'topic'; slideId: string; back: 'results' | 'browse' | 'home' } | { kind: 'browse'; courseId: string | null };
+type Screen = { kind: 'home' } | { kind: 'results' } | { kind: 'topic'; slideId: string; back: 'results' | 'browse' | 'home' } | { kind: 'browse'; courseId: string | null; domain?: string };
 type Props = { userId: string | null; onStatus: (msg: string) => void };
 
 export function KnowledgeBasePage({ userId, onStatus }: Props) {
@@ -154,8 +154,20 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
   } else if (screen.kind === 'browse') {
     body = (
       <Browse
+        key={`${screen.domain ?? ''}|${screen.courseId ?? ''}`}
         outline={outline}
         openCourse={screen.courseId}
+        domain={screen.domain ?? ''}
+        onDomain={(d) => {
+          setDomain(d);
+          go({ kind: 'browse', courseId: null, domain: d });
+        }}
+        q={q}
+        setQ={setQ}
+        onSearch={() => {
+          setDomain(screen.domain ?? '');
+          go({ kind: 'results' });
+        }}
         onHome={() => go({ kind: 'home' })}
         onTopic={(id) => go({ kind: 'topic', slideId: id, back: 'browse' })}
       />
@@ -170,6 +182,10 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
         outline={outline}
         onSearch={() => go({ kind: 'results' })}
         onBrowse={(id) => go({ kind: 'browse', courseId: id })}
+        onDomain={(d) => {
+          setDomain(d);
+          go({ kind: 'browse', courseId: null, domain: d });
+        }}
         importer={importer}
         recent={recentList()}
         onRecent={(id) => {
@@ -264,6 +280,7 @@ function Home(p: {
   outline: KbOutline;
   onSearch: () => void;
   onBrowse: (courseId: string | null) => void;
+  onDomain?: (domain: string) => void;
   importer: ReactNode;
   recent?: { id: string; title: string; where: string; link: string }[];
   onRecent?: (id: string) => void;
@@ -279,7 +296,7 @@ function Home(p: {
       </div>
       <div className="kb-pills kb-domains" role="group" aria-label="Search">
         {['', ...DOMAINS].map((d) => (
-          <button key={d || 'all'} type="button" className="kb-pill" aria-pressed={p.domain === d} onClick={() => p.setDomain(d)}>
+          <button key={d || 'all'} type="button" className="kb-pill" aria-pressed={p.domain === d} onClick={() => (p.onDomain ? p.onDomain(d) : p.setDomain(d))}>
             {d || 'All'}
           </button>
         ))}
@@ -683,9 +700,37 @@ function Topic(p: {
 
 // ---------- 5 · Browse ----------
 
-function Browse({ outline, openCourse, onHome, onTopic }: { outline: KbOutline; openCourse: string | null; onHome: () => void; onTopic: (id: string) => void }) {
-  const domains = tree(outline);
+function Browse({
+  outline,
+  openCourse,
+  domain,
+  onDomain,
+  q,
+  setQ,
+  onSearch,
+  onHome,
+  onTopic
+}: {
+  outline: KbOutline;
+  openCourse: string | null;
+  domain: string;
+  onDomain: (d: string) => void;
+  q: string;
+  setQ: (v: string) => void;
+  onSearch: () => void;
+  onHome: () => void;
+  onTopic: (id: string) => void;
+}) {
+  // A group pill (Dan, Nov 6) opens just that group's courses; ALL shows everything.
+  const domains = tree(outline).filter((d) => !domain || d.domain.toLowerCase() === domain.toLowerCase());
   const first = openCourse ?? domains[0]?.courses[0]?.course.id ?? null;
+  const groupCourses = domains.flatMap((d) => d.courses);
+  const groupDecks = groupCourses.flatMap((c) => c.decks);
+  const nDecks = groupDecks.filter((d) => d.kind === 'deck').length;
+  const nSlides = groupDecks.reduce((n, d) => n + d.slideCount, 0);
+  const counts = groupCourses.length
+    ? `${groupCourses.length} ${groupCourses.length === 1 ? 'course' : 'courses'} · ${nDecks} ${nDecks === 1 ? 'deck' : 'decks'} · ${nSlides} slides`
+    : 'Nothing imported yet';
   const [open, setOpen] = useState<Set<string>>(() => new Set(first ? [first] : []));
   const [deckOpen, setDeckOpen] = useState<string | null>(null);
   const toggle = (id: string) =>
@@ -699,15 +744,25 @@ function Browse({ outline, openCourse, onHome, onTopic }: { outline: KbOutline; 
     <div className="kb-page">
       <div className="kb-bar">
         <Wordmark small onHome={onHome} />
-        <h1 className="kb-bar-title">Browse</h1>
-        <button type="button" className="kb-link kb-bar-end" onClick={onHome}>
-          Search instead
-        </button>
+        <div className="kb-group-title">
+          <h1 className="kb-bar-title">{domain || 'Browse'}</h1>
+          <p className="kb-dim">{counts}</p>
+        </div>
+        {/* Searching from a group page searches just that group. */}
+        <SearchBox q={q} setQ={setQ} onSubmit={() => q.trim() && onSearch()} />
+      </div>
+      <div className="kb-pills kb-domains kb-browse-pills" role="group" aria-label="Group">
+        {['', ...DOMAINS].map((d) => (
+          <button key={d || 'all'} type="button" className="kb-pill" aria-pressed={domain === d} onClick={() => onDomain(d)}>
+            {d || 'All'}
+          </button>
+        ))}
       </div>
       <div className="kb-browse">
+        {domains.length === 0 && <p className="kb-empty kb-browse-empty">Nothing in {domain} yet. Its courses show up here once they’re imported.</p>}
         {domains.map((dom) => (
           <div key={dom.domain} className="kb-domain">
-            {domains.length > 1 && <h2 className="kb-eyebrow">{dom.domain}</h2>}
+            {!domain && <h2 className="kb-eyebrow">{dom.domain}</h2>}
             {dom.courses.map(({ course: c, decks }) => {
               const isOpen = open.has(c.id);
               return (

@@ -265,3 +265,4 @@ Dan didn't love the first layout: rebuilt from the "Knowledge Base Wireframe" ca
 - Home vertically centred. No 💡. Search bar squarer (12px), "Search." placeholder, no focus ring, LaunchPage icon button (night square, purple edge, beige icon); offset right of the wordmark like Dan's original wireframe.
 - Stats line removed; Import moved to ⚙ → Import knowledge base (the empty page still shows an import link).
 - Round 3 (V20-033): ⚙ on its own in the very top-left corner of this page; search back to a rounded pill with a round dark-blue button (lavender edge, beige icon); wordmark + search centred in the space, pills and cards pushed to the bottom.
+- V20-034: group pills open that group's curriculum (Browse filtered to the group, pills to switch, "Nothing in MWD yet" until imported). Group page has its own search (searches just that group) and a count line (courses · decks · slides).
