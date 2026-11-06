@@ -266,3 +266,4 @@ Dan didn't love the first layout: rebuilt from the "Knowledge Base Wireframe" ca
 - Stats line removed; Import moved to ⚙ → Import knowledge base (the empty page still shows an import link).
 - Round 3 (V20-033): ⚙ on its own in the very top-right corner of this page; search back to a rounded pill with a round dark-blue button (lavender edge, beige icon); wordmark + search centred in the space, pills and cards pushed to the bottom.
 - V20-034: group pills open that group's curriculum (Browse filtered to the group, pills to switch, "Nothing in MWD yet" until imported). Group page has its own search (searches just that group) and a count line (courses · decks · slides).
+- V20-035: home search matches Dan's drawing exactly (bar as wide as the wordmark, starts ⅓ in, overhangs ⅓; no offset under 900px). Search button = the Tasks 🔍 tool button (same icon and weight, lavender edge, beige icon, teal hover) on dark blue, round. ⚙ moved to the top-right corner.

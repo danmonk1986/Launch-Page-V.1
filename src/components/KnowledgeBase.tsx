@@ -222,14 +222,13 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
 
 type Ctx = { deckById: Map<string, KbDeck>; courseById: Map<string, KbCourse>; slideById: Map<string, KbSlide> };
 
+/** The Tasks page 🔍 (same path, size and line weight). */
 const SearchIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
-    <circle cx="11" cy="11" r="7" />
-    <path d="M20 20l-4-4" />
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4.3-4.3" />
   </svg>
 );
 
-/** Dan's original wireframe: a slim beige "Search." bar; the button is a LaunchPage icon button. */
 function SearchBox({ q, setQ, onSubmit, big, autoFocus }: { q: string; setQ: (v: string) => void; onSubmit: () => void; big?: boolean; autoFocus?: boolean }) {
   return (
     <div className={`kb-searchrow${big ? ' is-big' : ''}`}>
@@ -291,8 +290,11 @@ function Home(p: {
   return (
     <div className="kb-home">
       <div className="kb-hero">
-        <Wordmark />
-        <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => p.q.trim() && p.onSearch()} big autoFocus />
+        {/* Dan's original wireframe: the bar is as wide as the wordmark, starts a third of the way in and overhangs a third. */}
+        <div className="kb-lockup">
+          <Wordmark />
+          <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => p.q.trim() && p.onSearch()} big autoFocus />
+        </div>
       </div>
       <div className="kb-pills kb-domains" role="group" aria-label="Search">
         {['', ...DOMAINS].map((d) => (

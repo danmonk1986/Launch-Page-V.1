@@ -2588,15 +2588,17 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 /* Search bar: Dan's original wireframe (slim beige "Search." bar, round teal icons with the purple outline) */
 .kb-searchrow { display: flex; align-items: center; gap: 10px; flex: 1 1 360px; max-width: 560px; min-width: 0; }
 /* Home: the bar sits offset to the right of the wordmark, as in Dan's original wireframe. */
-.kb-searchrow.is-big { width: 100%; max-width: 540px; flex: none; transform: translateX(min(96px, 8vw)); }
+.kb-lockup { width: min(520px, 100%); display: flex; flex-direction: column; gap: 28px; }
+.kb-lockup .kb-mark { width: 100%; }
+.kb-searchrow.is-big { width: 100%; max-width: none; flex: none; transform: translateX(33.333%); }
 .kb-search { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; background: var(--kb-beige); border-radius: 999px; padding: 0 4px 0 20px; min-height: 48px; }
 .kb-search:focus-within { box-shadow: none; }
 .kb-search input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 16px; font-weight: 600; color: var(--kb-ink); padding: 10px 0; outline: none; -webkit-text-fill-color: var(--kb-ink); }
 .kb-search input::placeholder { color: var(--kb-ink); -webkit-text-fill-color: var(--kb-ink); font-weight: 700; opacity: 1; }
 .kb-search input::-webkit-search-cancel-button { filter: grayscale(1); }
-/* Round button: dark blue, lavender edge, beige icon. */
-.kb-go { width: 40px; height: 40px; flex: none; border-radius: 999px; border: 2px solid #8869cb; background: #1a1338; color: #f5f5dc; display: grid; place-items: center; cursor: pointer; padding: 0; }
-.kb-go:hover { border-color: var(--kb-neon); color: var(--kb-neon); }
+/* The Tasks 🔍 button (LaunchPage tool button: lavender edge, beige icon, teal on hover) on dark blue, made round. */
+.kb-go { width: 40px; height: 40px; flex: none; border-radius: 999px; border: 1px solid rgb(136 105 203 / 0.6); background: #1a1338; color: #f5f5dc; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.kb-go:hover { border-color: #06f9c2; color: #06f9c2; }
 .kb-go:focus-visible { outline: 2px solid var(--kb-neon); outline-offset: 2px; }
 
 /* Pills */
@@ -2699,6 +2701,7 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-tag:hover { background: #d9cdee; }
 
 /* 5 · Browse */
+@media (max-width: 900px) { .kb-searchrow.is-big { transform: none; } }
 .kb-browse-pills { padding: 8px 24px 0; }
 .kb-group-title { display: grid; gap: 0; }
 .kb-group-title .kb-dim { font-size: 13px; }
