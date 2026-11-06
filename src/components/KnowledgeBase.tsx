@@ -39,6 +39,13 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
   const [domain, setDomain] = useState('');
   const [importing, setImporting] = useState('');
   const top = useRef<HTMLDivElement>(null);
+  const pick = useRef<HTMLInputElement>(null);
+  // ⚙ → Import knowledge base opens the file picker.
+  useEffect(() => {
+    const open = () => pick.current?.click();
+    window.addEventListener('kb:import', open);
+    return () => window.removeEventListener('kb:import', open);
+  }, []);
 
   async function refresh() {
     const r = await loadOutline();
@@ -105,7 +112,9 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
   if (!loading && !outline.slides.length) {
     body = (
       <Home q={q} setQ={setQ} domain={domain} setDomain={setDomain} outline={outline} onSearch={() => go({ kind: 'results' })} onBrowse={(id) => go({ kind: 'browse', courseId: id })} importer={importer}>
-        <p className="kb-empty">Your course decks show up here once they’re imported. Pick the kb-index.json file from your KNOWLEDGE!B4SE chat; importing again later updates what changed.</p>
+        <p className="kb-empty">
+          Your course decks show up here once they’re imported. {importer} (also in ⚙). Importing again later updates what changed.
+        </p>
       </Home>
     );
   } else if (screen.kind === 'results') {
@@ -173,6 +182,18 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
 
   return (
     <div className="kb" ref={top}>
+      <input
+        ref={pick}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        aria-label="Import a knowledge base index"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void onImport(f);
+          e.target.value = '';
+        }}
+      />
       {(importing || problem || (offline && outline.slides.length > 0)) && (
         <p className={`kb-note${problem ? ' kb-problem' : ''}`} role="status">
           {importing || problem || 'Offline: searching titles and tags from this device’s copy.'}
@@ -192,17 +213,10 @@ const SearchIcon = () => (
   </svg>
 );
 
-/** Dan's original wireframe: a slim beige "Search." bar, round teal icons with the LaunchPage purple outline. */
-function SearchBox({ q, setQ, onSubmit, big, autoFocus, onBulb }: { q: string; setQ: (v: string) => void; onSubmit: () => void; big?: boolean; autoFocus?: boolean; onBulb?: () => void }) {
+/** Dan's original wireframe: a slim beige "Search." bar; the button is a LaunchPage icon button. */
+function SearchBox({ q, setQ, onSubmit, big, autoFocus }: { q: string; setQ: (v: string) => void; onSubmit: () => void; big?: boolean; autoFocus?: boolean }) {
   return (
     <div className={`kb-searchrow${big ? ' is-big' : ''}`}>
-      {onBulb && (
-        <button type="button" className="kb-orb kb-bulb" onClick={onBulb} aria-label="Browse everything" title="Browse everything">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" />
-          </svg>
-        </button>
-      )}
       <form
         role="search"
         className="kb-search"
@@ -215,7 +229,7 @@ function SearchBox({ q, setQ, onSubmit, big, autoFocus, onBulb }: { q: string; s
           Search the knowledge base
         </label>
         <input id={big ? 'kb-q' : 'kb-q2'} type="search" value={q} autoFocus={autoFocus} autoComplete="off" spellCheck={false} placeholder="Search." onChange={(e) => setQ(e.target.value)} />
-        <button type="submit" className="kb-orb kb-go" aria-label="Search">
+        <button type="submit" className="kb-go" aria-label="Search">
           <SearchIcon />
         </button>
       </form>
@@ -260,7 +274,7 @@ function Home(p: {
   return (
     <div className="kb-home">
       <Wordmark />
-      <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => p.q.trim() && p.onSearch()} big autoFocus onBulb={() => p.onBrowse(null)} />
+      <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => p.q.trim() && p.onSearch()} big autoFocus />
       <div className="kb-pills kb-domains" role="group" aria-label="Search">
         {['', ...DOMAINS].map((d) => (
           <button key={d || 'all'} type="button" className="kb-pill" aria-pressed={p.domain === d} onClick={() => p.setDomain(d)}>
@@ -310,14 +324,6 @@ function Home(p: {
           )}
         </section>
       </div>
-      <p className="kb-foot">
-        {p.outline.slides.length > 0 && (
-          <span className="kb-dim">
-            {p.outline.slides.length} slides · {p.outline.decks.filter((d) => d.kind === 'deck').length} decks · {p.outline.courses.length} courses ·{' '}
-          </span>
-        )}
-        {p.importer}
-      </p>
     </div>
   );
 }

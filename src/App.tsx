@@ -1340,6 +1340,8 @@ export default function App() {
             { label: 'Brand settings', onClick: () => setSettingsOpen('brand') },
             { label: 'Colour settings', onClick: () => setSettingsOpen('colours') },
             { label: 'Import tasks', onClick: () => importInput.current?.click() },
+            // KNOWLEDGE!B4SE: its import lives here so the page itself stays clean.
+            ...(page === 'kb' ? [{ label: 'Import knowledge base', onClick: () => window.dispatchEvent(new Event('kb:import')) }] : []),
             {
               label: 'Export my data',
               onClick: async () => {
