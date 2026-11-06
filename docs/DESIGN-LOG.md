@@ -264,4 +264,4 @@ Dan didn't love the first layout: rebuilt from the "Knowledge Base Wireframe" ca
 - Page menu sits exactly where it does on the Launch Page (left, bottom of the same 190px header height, LP tab style); ⚙ on the right in the LP spot. No header, no lines, no footer line or logo.
 - Home vertically centred. No 💡. Search bar squarer (12px), "Search." placeholder, no focus ring, LaunchPage icon button (night square, purple edge, beige icon); offset right of the wordmark like Dan's original wireframe.
 - Stats line removed; Import moved to ⚙ → Import knowledge base (the empty page still shows an import link).
-- Round 3 (V20-033): ⚙ back in the same spot as every other page (above the date row); search back to a rounded pill with a round dark-blue button (lavender edge, beige icon); wordmark + search centred in the space, pills and cards pushed to the bottom.
+- Round 3 (V20-033): ⚙ on its own in the very top-left corner of this page; search back to a rounded pill with a round dark-blue button (lavender edge, beige icon); wordmark + search centred in the space, pills and cards pushed to the bottom.
