@@ -2557,9 +2557,8 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .app.is-kb .topbar-slim > * { grid-area: auto; }
 .app.is-kb .topbar-slim .tabs { justify-content: flex-start; margin-left: -10px; flex-wrap: nowrap; min-width: 0; }
 .app.is-kb .topbar-slim .tab { min-height: 40px; }
-/* ⚙ on its own in the very top-left corner of this page (Dan, Nov 6). */
-.app.is-kb .topbar-slim-right { position: absolute; top: 16px; left: 32px; padding: 0; }
-.app.is-kb .topbar-slim-right .gear-menu-list { left: 0; right: auto; }
+/* ⚙ on its own in the very top-right corner of this page (Dan, Nov 6). */
+.app.is-kb .topbar-slim-right { position: absolute; top: 16px; right: 32px; left: auto; padding: 0; }
 .app.is-kb .topbar-slim .tab { color: #5d5b5b; }
 .app.is-kb .topbar-slim .tab[aria-current='page'] { color: #1a1338; border-bottom: 2px solid #06f9c2; }
 .app.is-kb .topbar-slim .tab:hover { color: #1a1338; }
@@ -2736,7 +2735,7 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
   .app.is-kb .topbar.topbar-slim { min-height: 0; padding: 8px 16px 0; column-gap: 10px; }
   .kb-searchrow.is-big { transform: none; }
   .kb-home { min-height: calc(100dvh - 120px); }
-  .app.is-kb .topbar-slim-right { top: 8px; left: 16px; }
+  .app.is-kb .topbar-slim-right { top: 8px; right: 16px; }
   .app.is-kb .topbar.topbar-slim { padding-top: 56px; }
   .kb-home { padding-top: 36px; gap: 22px; }
   .kb-bar, .kb-split, .kb-filters { padding-left: 16px; padding-right: 16px; }
