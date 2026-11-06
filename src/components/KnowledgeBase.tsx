@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
+  DOMAINS,
   SECTION_ORDER,
   cachedOutline,
   importIndex,
@@ -35,7 +36,7 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
   const [offline, setOffline] = useState(false);
   const [screen, setScreen] = useState<Screen>({ kind: 'home' });
   const [q, setQ] = useState('');
-  const [course, setCourse] = useState('');
+  const [domain, setDomain] = useState('');
   const [importing, setImporting] = useState('');
   const top = useRef<HTMLDivElement>(null);
 
@@ -103,7 +104,7 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
   let body: ReactNode;
   if (!loading && !outline.slides.length) {
     body = (
-      <Home q={q} setQ={setQ} course={course} setCourse={setCourse} outline={outline} onSearch={() => go({ kind: 'results' })} onBrowse={(id) => go({ kind: 'browse', courseId: id })} importer={importer}>
+      <Home q={q} setQ={setQ} domain={domain} setDomain={setDomain} outline={outline} onSearch={() => go({ kind: 'results' })} onBrowse={(id) => go({ kind: 'browse', courseId: id })} importer={importer}>
         <p className="kb-empty">Your course decks show up here once they’re imported. Pick the kb-index.json file from your KNOWLEDGE!B4SE chat; importing again later updates what changed.</p>
       </Home>
     );
@@ -112,8 +113,8 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
       <Results
         q={q}
         setQ={setQ}
-        course={course}
-        setCourse={setCourse}
+        domain={domain}
+        setDomain={setDomain}
         outline={outline}
         ctx={ctx}
         onHome={() => go({ kind: 'home' })}
@@ -155,8 +156,8 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
       <Home
         q={q}
         setQ={setQ}
-        course={course}
-        setCourse={setCourse}
+        domain={domain}
+        setDomain={setDomain}
         outline={outline}
         onSearch={() => go({ kind: 'results' })}
         onBrowse={(id) => go({ kind: 'browse', courseId: id })}
@@ -185,39 +186,40 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
 type Ctx = { deckById: Map<string, KbDeck>; courseById: Map<string, KbCourse>; slideById: Map<string, KbSlide> };
 
 const SearchIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
     <circle cx="11" cy="11" r="7" />
     <path d="M20 20l-4-4" />
   </svg>
 );
 
-function SearchBox({ q, setQ, onSubmit, big, autoFocus }: { q: string; setQ: (v: string) => void; onSubmit: () => void; big?: boolean; autoFocus?: boolean }) {
+/** Dan's original wireframe: a slim beige "Search." bar, round teal icons with the LaunchPage purple outline. */
+function SearchBox({ q, setQ, onSubmit, big, autoFocus, onBulb }: { q: string; setQ: (v: string) => void; onSubmit: () => void; big?: boolean; autoFocus?: boolean; onBulb?: () => void }) {
   return (
-    <form
-      role="search"
-      className={`kb-search${big ? ' is-big' : ''}`}
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit();
-      }}
-    >
-      <label className="sr-only" htmlFor={big ? 'kb-q' : 'kb-q2'}>
-        Search the knowledge base
-      </label>
-      <input
-        id={big ? 'kb-q' : 'kb-q2'}
-        type="search"
-        value={q}
-        autoFocus={autoFocus}
-        autoComplete="off"
-        spellCheck={false}
-        placeholder={big ? 'Search topics, frameworks or slides… try “RICE”' : 'Search'}
-        onChange={(e) => setQ(e.target.value)}
-      />
-      <button type="submit" className="kb-go" aria-label="Search">
-        <SearchIcon />
-      </button>
-    </form>
+    <div className={`kb-searchrow${big ? ' is-big' : ''}`}>
+      {onBulb && (
+        <button type="button" className="kb-orb kb-bulb" onClick={onBulb} aria-label="Browse everything" title="Browse everything">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" />
+          </svg>
+        </button>
+      )}
+      <form
+        role="search"
+        className="kb-search"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
+      >
+        <label className="sr-only" htmlFor={big ? 'kb-q' : 'kb-q2'}>
+          Search the knowledge base
+        </label>
+        <input id={big ? 'kb-q' : 'kb-q2'} type="search" value={q} autoFocus={autoFocus} autoComplete="off" spellCheck={false} placeholder="Search." onChange={(e) => setQ(e.target.value)} />
+        <button type="submit" className="kb-orb kb-go" aria-label="Search">
+          <SearchIcon />
+        </button>
+      </form>
+    </div>
   );
 }
 
@@ -243,8 +245,8 @@ function deckCountLabel(decks: KbDeck[]) {
 function Home(p: {
   q: string;
   setQ: (v: string) => void;
-  course: string;
-  setCourse: (v: string) => void;
+  domain: string;
+  setDomain: (v: string) => void;
   outline: KbOutline;
   onSearch: () => void;
   onBrowse: (courseId: string | null) => void;
@@ -258,20 +260,24 @@ function Home(p: {
   return (
     <div className="kb-home">
       <Wordmark />
-      <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => p.q.trim() && p.onSearch()} big autoFocus />
-      {courses.length > 0 && (
-        <div className="kb-pills" role="group" aria-label="Search in">
-          <span className="kb-pills-label">Search in:</span>
-          <button type="button" className="kb-pill" aria-pressed={!p.course} onClick={() => p.setCourse('')}>
-            All courses
-          </button>
-          {courses.map(({ course: c }) => (
-            <button key={c.id} type="button" className="kb-pill" aria-pressed={p.course === c.id} onClick={() => p.setCourse(p.course === c.id ? '' : c.id)}>
-              {c.course}
+      <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => p.q.trim() && p.onSearch()} big autoFocus onBulb={() => p.onBrowse(null)} />
+      <div className="kb-pills kb-domains" role="group" aria-label="Search">
+        {['', ...DOMAINS].map((d) => {
+          const n = d ? p.outline.courses.filter((c) => c.domain.toLowerCase() === d.toLowerCase()).length : p.outline.courses.length;
+          return (
+            <button
+              key={d || 'all'}
+              type="button"
+              className={`kb-pill${n ? '' : ' is-empty'}`}
+              aria-pressed={p.domain === d}
+              title={n ? undefined : 'Nothing here yet'}
+              onClick={() => p.setDomain(d)}
+            >
+              {d || 'All'}
             </button>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
       {p.children}
       <div className="kb-home-cards">
         <section className="kb-card">
@@ -279,16 +285,15 @@ function Home(p: {
             <h2>Courses</h2>
             {courses.length > 0 && (
               <button type="button" className="kb-link" onClick={() => p.onBrowse(null)}>
-                Browse all
+                {courses.length > 3 ? `Browse all ${courses.length}` : 'Browse all'}
               </button>
             )}
           </div>
           {courses.length ? (
-            courses.map(({ course: c, decks }) => (
+            courses.slice(0, 3).map(({ course: c, decks }) => (
               <button key={c.id} type="button" className="kb-row" onClick={() => p.onBrowse(c.id)}>
-                <span>
+                <span className="kb-row-left">
                   <b>{c.course}</b>
-                  {c.source ? <span className="kb-dim"> · {c.source}</span> : null}
                 </span>
                 <span className="kb-row-right">{deckCountLabel(decks)}</span>
               </button>
@@ -302,9 +307,9 @@ function Home(p: {
             <h2>Recently opened</h2>
           </div>
           {p.recent && p.recent.length ? (
-            p.recent.map((r) => (
+            p.recent.slice(0, 3).map((r) => (
               <button key={r.id} type="button" className="kb-row" onClick={() => p.onRecent?.(r.id)}>
-                <span>
+                <span className="kb-row-left">
                   <b>{r.title}</b>
                 </span>
                 <span className="kb-mono">{r.where}</span>
@@ -339,8 +344,8 @@ const FILTERS: { id: string; label: string; test: (h: KbHit, deck?: KbDeck) => b
 function Results(p: {
   q: string;
   setQ: (v: string) => void;
-  course: string;
-  setCourse: (v: string) => void;
+  domain: string;
+  setDomain: (v: string) => void;
   outline: KbOutline;
   ctx: Ctx;
   onHome: () => void;
@@ -377,13 +382,12 @@ function Results(p: {
 
   const inCourse = hits.filter((h) => {
     const d = p.ctx.deckById.get(h.deckId);
-    return !!d && (!p.course || d.courseId === p.course);
+    return !!d && (!p.domain || p.ctx.courseById.get(d.courseId)?.domain.toLowerCase() === p.domain.toLowerCase());
   });
   const counts = FILTERS.map((f) => ({ ...f, n: inCourse.filter((h) => f.test(h, p.ctx.deckById.get(h.deckId))).length }));
   const active = FILTERS.find((f) => f.id === filter) ?? FILTERS[0];
   const list = inCourse.filter((h) => active.test(h, p.ctx.deckById.get(h.deckId)));
   const current = list.find((h) => h.id === preview) ?? list[0];
-  const courses = p.outline.courses;
 
   return (
     <div className="kb-page">
@@ -403,12 +407,12 @@ function Results(p: {
             </button>
           ))}
         <label className="kb-course-pick">
-          <span className="sr-only">Course</span>
-          <select value={p.course} onChange={(e) => p.setCourse(e.target.value)}>
-            <option value="">All courses</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.course}
+          <span className="sr-only">Search in</span>
+          <select value={p.domain} onChange={(e) => p.setDomain(e.target.value)}>
+            <option value="">All</option>
+            {DOMAINS.map((d) => (
+              <option key={d} value={d}>
+                {d}
               </option>
             ))}
           </select>
@@ -425,7 +429,9 @@ function Results(p: {
                   ? `${list.length} ${list.length === 1 ? 'result' : 'results'} for “${p.q.trim()}”`
                   : inCourse.length
                     ? 'Nothing with this filter. Pick All to see the rest.'
-                    : 'No slides match. Try fewer or shorter words.'}
+                    : hits.length && p.domain
+                      ? `Nothing in ${p.domain} matches. Pick All to search everything.`
+                      : 'No slides match. Try fewer or shorter words.'}
           </p>
           {list.slice(0, shown).map((h, i) => {
             const d = p.ctx.deckById.get(h.deckId)!;

@@ -252,3 +252,9 @@ Dan didn't love the first layout: rebuilt from the "Knowledge Base Wireframe" ca
 - **3 Dig deeper:** breadcrumb, eyebrow, title, the slide's text, Open deck at slide N / Open full deck, up to 6 slides of the same section as thumbnails, Notes; side: the whole deck by section (this slide highlighted), Also appears in (shared tags in other decks), Tags (tap to search).
 - **5 Browse:** one course open at a time like the wireframe (teal outline), table Deck · Slides · Dan's work · Open; tap a deck to list its slides, tap a slide for its Dig deeper page.
 - 4 (viewer) stays as opening the artifact at the slide.
+
+### KNOWLEDGE!B4SE · Dan's tweaks · Nov 6 (V20-031)
+- No header on this page: no LaunchPage logo, no bar, no lines. Just the page menu + ⚙ top right (tab underline 2px neon teal like the LaunchPage tabs, uppercase).
+- Home: KNOWLEDGE!B4SE centred. "Search in" course pills replaced by parent groups: ALL / SOFTWARE DEVELOPMENT / MARKETING / FINANCE / CFA / MWD (empty ones dashed until something's imported there). Results' scope dropdown uses the same groups.
+- Search bar from Dan's original wireframe: slim beige bar, "Search." placeholder, round neon-teal icons with the LaunchPage purple outline (💡 left opens Browse, 🔍 right searches).
+- Courses and Recently opened show 3 rows each ("Browse all 5").

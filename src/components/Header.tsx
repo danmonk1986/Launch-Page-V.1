@@ -19,7 +19,7 @@ const PAGES: { id: PageId; label: string }[] = [
 
 type Props = {
   settings: BrandSettings;
-  /** KNOWLEDGE!B4SE: just the logo, the page menu and ⚙ (no headline, mantra, clock or routine). */
+  /** KNOWLEDGE!B4SE: just the page menu and ⚙, top right, no header bar (Dan, Nov 6). */
   slim?: boolean;
   page: PageId;
   onPage: (p: PageId) => void;
@@ -31,7 +31,6 @@ export function Header({ settings, slim, page, onPage, right }: Props) {
   if (slim) {
     return (
       <header className="topbar topbar-slim">
-        <img className="topbar-logo" src={settings.logoUrl || '/launchpage-logo.png'} alt={settings.logoUrl ? settings.logoText || 'Logo' : 'LaunchPage'} />
         <TabBar page={page} onPage={onPage} />
         {right && <div className="topbar-slim-right">{right}</div>}
       </header>

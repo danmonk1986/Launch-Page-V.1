@@ -276,3 +276,6 @@ export function remember(r: Omit<KbRecent, 'at'>) {
     /* blocked storage: nothing to remember */
   }
 }
+
+/** Parent groups (Dan, Nov 6): the Home pills and the search scope. New courses join one by its domain. */
+export const DOMAINS = ['Software Development', 'Marketing', 'Finance', 'CFA', 'MWD'];
