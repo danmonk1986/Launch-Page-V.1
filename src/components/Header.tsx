@@ -4,7 +4,7 @@ import { useMobile } from '../lib/useMobile';
 import { OneMenu } from './OneMenu';
 
 /** journal is opened from the Journal panel, not the menu. */
-export type PageId = 'launch' | 'tasks' | 'days26' | 'budget' | 'invoices' | 'journal';
+export type PageId = 'launch' | 'tasks' | 'days26' | 'budget' | 'invoices' | 'journal' | 'kb';
 
 const PAGES: { id: PageId; label: string }[] = [
   { id: 'launch', label: 'Launch Page' },
@@ -12,7 +12,9 @@ const PAGES: { id: PageId; label: string }[] = [
   { id: 'tasks', label: 'Tasks' },
   { id: 'budget', label: 'Budget' },
   // Records (Oct 26): Expenses + Invoices; the id stays 'invoices' so saved card rockets keep working.
-  { id: 'invoices', label: 'Records' }
+  { id: 'invoices', label: 'Records' },
+  // KNOWLEDGE!B4SE (Nov 6): course decks and cheat sheets, searchable.
+  { id: 'kb', label: 'KNOWLEDGE!B4SE' }
 ];
 
 type Props = {

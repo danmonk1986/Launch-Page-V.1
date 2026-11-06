@@ -231,3 +231,15 @@ Sketched by Dan on paper, decided in chat, then built.
 - **Journal card:** only today shows; tapping the date opens past entries (the full Journal). The Past days list is hidden on phones.
 - **Calendar:** 3 days at a time starting today ("Next 3 days"); swipe left/right moves 3 days (arrows still work). Swipe (`useSwipe`) is meant to spread to the other cards.
 - **Parked:** Tasks + Budget summaries (cards of three per category, swipe between categories); what swipe does on Timed Launches.
+
+## KNOWLEDGE!B4SE · Nov 6, 2026 (KB-023 to KB-028)
+
+The Knowledge Base tab: search, browse and open any lesson, slide or cheat sheet. Page `#kb`, tab after Records.
+
+- **KB-023 Tables** (migration 0039): kb_courses → kb_decks (kind deck | sheet) → kb_slides, row-level security like every other table. `kb_slides.fts` weights title + tags highest, then eyebrow, slide text, notes. `kb_search(q)` matches every word, the last one as a prefix ("pund" finds Pundit), and runs as the caller.
+- **KB-024 Extractor** (`scripts/kb-extract.mjs`, tests in `scripts/kb-extract.test.mjs` on made-up decks): reads saved deck files (deck.json + slides) and design canvases (canvas.json + boards), works out section, eyebrow, title, slide text, notes, tags and Dan's work, and writes `kb-index.json` (or SQL). Keys, tokens and credential-looking strings are scrubbed. Run from a Claude chat; the manifest and the index file never go in the repo.
+- **KB-025 Search:** one box, results grouped by course and deck, with the slide's eyebrow, a snippet with the match marked, tags and **Open at slide** (deck URL + `#slide-N`, new tab). Filters: domain (when there's more than one), course, section, Dan's work. Offline it searches titles and tags from the copy kept on the device.
+- **KB-026 Browse:** domain → course → deck → sections → slides. A course card on the Search page opens that course here.
+- **KB-027 Cheat sheets:** each canvas with its pages; links out to the canvas.
+- **KB-028 Import** (↓ in the page header): picks a kb-index.json, checks every link points to a claude.ai artifact, then upserts courses and decks and replaces each deck's slides. Re-importing is safe; decks not in the file are left alone.
+- v1 opens the artifact; rendering slides inside the app is a later option.

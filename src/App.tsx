@@ -106,6 +106,7 @@ import {
 import { SettingsPanel } from './components/SettingsPanel';
 import { GearMenu } from './components/GearMenu';
 import { SignIn } from './components/SignIn';
+import { KnowledgeBasePage } from './components/KnowledgeBase';
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -117,7 +118,7 @@ export default function App() {
   const [page, setPage] = useState<PageId>(() => {
     const h = window.location.hash.replace('#', '');
     if (h === 'records') return 'invoices';
-    return (['launch', 'tasks', 'days26', 'budget', 'invoices', 'journal'] as PageId[]).includes(h as PageId) ? (h as PageId) : 'launch';
+    return (['launch', 'tasks', 'days26', 'budget', 'invoices', 'journal', 'kb'] as PageId[]).includes(h as PageId) ? (h as PageId) : 'launch';
   });
   useEffect(() => {
     // Keep the address on the page you're on, so a refresh stays there.
@@ -1577,6 +1578,8 @@ export default function App() {
               onSaveProfile={profileOps.save}
               onClose={() => setPage('launch')}
             />
+          ) : page === 'kb' ? (
+            <KnowledgeBasePage userId={userId} onStatus={setStatus} onClose={() => setPage('launch')} />
           ) : page === 'budget' ? (
             <BudgetPage
               lines={budget}
