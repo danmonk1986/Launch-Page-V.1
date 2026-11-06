@@ -2596,8 +2596,8 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-search input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 16px; font-weight: 600; color: var(--kb-ink); padding: 10px 0; outline: none; -webkit-text-fill-color: var(--kb-ink); }
 .kb-search input::placeholder { color: var(--kb-ink); -webkit-text-fill-color: var(--kb-ink); font-weight: 700; opacity: 1; }
 .kb-search input::-webkit-search-cancel-button { filter: grayscale(1); }
-/* The Tasks 🔍 button (LaunchPage tool button: lavender edge, beige icon, teal on hover) on dark blue, made round. */
-.kb-go { width: 40px; height: 40px; flex: none; border-radius: 999px; border: 1px solid rgb(136 105 203 / 0.6); background: #1a1338; color: #f5f5dc; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+/* Round button: dark blue, 2px lavender ring, bold beige icon (the version Dan liked; the thin Tasks edge read as black on white). */
+.kb-go { width: 40px; height: 40px; flex: none; border-radius: 999px; border: 2px solid #8869cb; background: #1a1338; color: #f5f5dc; display: grid; place-items: center; cursor: pointer; padding: 0; }
 .kb-go:hover { border-color: #06f9c2; color: #06f9c2; }
 .kb-go:focus-visible { outline: 2px solid var(--kb-neon); outline-offset: 2px; }
 
