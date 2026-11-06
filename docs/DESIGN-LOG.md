@@ -243,3 +243,12 @@ The Knowledge Base tab: search, browse and open any lesson, slide or cheat sheet
 - **KB-027 Cheat sheets:** each canvas with its pages; links out to the canvas.
 - **KB-028 Import** (↓ in the page header): picks a kb-index.json, checks every link points to a claude.ai artifact, then upserts courses and decks and replaces each deck's slides. Re-importing is safe; decks not in the file are left alone.
 - v1 opens the artifact; rendering slides inside the app is a later option.
+
+### KNOWLEDGE!B4SE redo · Nov 6, later (V20-030)
+Dan didn't love the first layout: rebuilt from the "Knowledge Base Wireframe" canvas.
+- **Own white page** whatever the theme. The big header (headline, mantra, clock, routine picker) is dropped here; a slim white bar keeps the logo, the page menu on the right and ⚙.
+- **1 Home:** Dan's KNOWLEDGE!B4SE drawing (public/knowledge-b4se.png), round beige search with the neon button, "Search in" course pills, Courses (→ Browse) and Recently opened (this device).
+- **2 Results:** wordmark + search bar + Browse; pills with counts (All, sections, Cheat sheets, Dan's work) + course pick; ranked cards with a mono breadcrumb, the top one outlined teal; Open at slide / Open deck / Dig deeper →; a beige Preview that follows the card you hover.
+- **3 Dig deeper:** breadcrumb, eyebrow, title, the slide's text, Open deck at slide N / Open full deck, up to 6 slides of the same section as thumbnails, Notes; side: the whole deck by section (this slide highlighted), Also appears in (shared tags in other decks), Tags (tap to search).
+- **5 Browse:** one course open at a time like the wireframe (teal outline), table Deck · Slides · Dan's work · Open; tap a deck to list its slides, tap a slide for its Dig deeper page.
+- 4 (viewer) stays as opening the artifact at the slide.

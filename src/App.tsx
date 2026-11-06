@@ -1319,10 +1319,82 @@ export default function App() {
     );
   }
 
+  // ⚙ menu (and the hidden Import tasks picker): in the full header, and alone in KNOWLEDGE!B4SE's slim bar.
+  const gear = (
+    <>
+        <input
+          ref={importInput}
+          type="file"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) {
+              setPage('tasks');
+              importTasks(f);
+            }
+            e.target.value = '';
+          }}
+        />
+        <GearMenu
+          items={[
+            { label: 'Brand settings', onClick: () => setSettingsOpen('brand') },
+            { label: 'Colour settings', onClick: () => setSettingsOpen('colours') },
+            { label: 'Import tasks', onClick: () => importInput.current?.click() },
+            {
+              label: 'Export my data',
+              onClick: async () => {
+                // V12-042: the Launch Sheet, one tab per card (Google events from this device's cache).
+                const googleEvents = await loadCached(userId).catch(() => [] as CalEvent[]);
+                const counts = downloadLaunchSheet({
+                  settings, routines, meditations, launchers, launches, launchLog, events, googleEvents, tasks, projects, journal,
+                  days: d26Days, nonnegs, logs: d26Logs, quotes, config: d26Config, budget
+                });
+                setStatus(`Launch Sheet exported: ${counts.length + 1} tabs, ${counts.reduce((a, c) => a + c.rows, 0)} rows.`);
+              }
+            },
+            ...(googleConfigured() && wasConnected()
+              ? [
+                  {
+                    label: 'Disconnect Google Calendar',
+                    onClick: () => {
+                      setPage('launch');
+                      setGcalOff((n) => n + 1);
+                    }
+                  }
+                ]
+              : []),
+            ...(supabase && session
+              ? [
+                  {
+                    label: 'Change password',
+                    onClick: () => {
+                      setSettingsOpen('brand');
+                      setTimeout(() => document.querySelector<HTMLInputElement>('.account input[type=password]')?.focus(), 150);
+                    }
+                  },
+                  { label: 'Sign out', danger: true, onClick: () => void signOutClean() }
+                ]
+              : [])
+          ]}
+        />
+    </>
+  );
+  // KNOWLEDGE!B4SE (Nov 6, Dan): a white page of its own, whatever the theme, with a slim header.
+  const kb = page === 'kb';
+  const shellStyle = kb
+    ? ({ ...theme, '--accent-teal': '#2F7A6D', '--accent-purple': '#6A4FA3', '--accent-pink': '#C2338F' } as CSSProperties)
+    : theme;
+
   return (
     <MeditationsContext.Provider value={{ list: meditations, save: saveMeditation, remove: removeMeditation }}>
     <HiddenPicksContext.Provider value={{ hidden: hiddenPicks, hide: hidePick }}>
-    <div className={`${scrolled ? 'app is-scrolled' : 'app'}${bgImage ? ' has-bg-image' : ''}`} style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'} data-scroll={scrollMode}>
+    <div
+      className={`${scrolled ? 'app is-scrolled' : 'app'}${bgImage && !kb ? ' has-bg-image' : ''}${kb ? ' is-kb' : ''}`}
+      style={shellStyle}
+      data-bg={settings.background}
+      data-tone={light || kb ? 'light' : 'dark'}
+      data-scroll={scrollMode}
+    >
       <div className="sky" aria-hidden="true">
         <div className="sky-lines" />
         <div className="sky-horizon" />
@@ -1332,69 +1404,19 @@ export default function App() {
       </div>
       <Header
         settings={settings}
+        slim={kb}
         page={page}
         onPage={(pg) => {
           setFocusTask(null);
           setPage(pg);
         }}
         right={
+          kb ? (
+            gear
+          ) : (
           <>
             <div className="topbar-controls">
-            <input
-              ref={importInput}
-              type="file"
-              hidden
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) {
-                  setPage('tasks');
-                  importTasks(f);
-                }
-                e.target.value = '';
-              }}
-            />
-            <GearMenu
-              items={[
-                { label: 'Brand settings', onClick: () => setSettingsOpen('brand') },
-                { label: 'Colour settings', onClick: () => setSettingsOpen('colours') },
-                { label: 'Import tasks', onClick: () => importInput.current?.click() },
-                {
-                  label: 'Export my data',
-                  onClick: async () => {
-                    // V12-042: the Launch Sheet, one tab per card (Google events from this device's cache).
-                    const googleEvents = await loadCached(userId).catch(() => [] as CalEvent[]);
-                    const counts = downloadLaunchSheet({
-                      settings, routines, meditations, launchers, launches, launchLog, events, googleEvents, tasks, projects, journal,
-                      days: d26Days, nonnegs, logs: d26Logs, quotes, config: d26Config, budget
-                    });
-                    setStatus(`Launch Sheet exported: ${counts.length + 1} tabs, ${counts.reduce((a, c) => a + c.rows, 0)} rows.`);
-                  }
-                },
-                ...(googleConfigured() && wasConnected()
-                  ? [
-                      {
-                        label: 'Disconnect Google Calendar',
-                        onClick: () => {
-                          setPage('launch');
-                          setGcalOff((n) => n + 1);
-                        }
-                      }
-                    ]
-                  : []),
-                ...(supabase && session
-                  ? [
-                      {
-                        label: 'Change password',
-                        onClick: () => {
-                          setSettingsOpen('brand');
-                          setTimeout(() => document.querySelector<HTMLInputElement>('.account input[type=password]')?.focus(), 150);
-                        }
-                      },
-                      { label: 'Sign out', danger: true, onClick: () => void signOutClean() }
-                    ]
-                  : [])
-              ]}
-            />
+            {gear}
             <RoutinePicker
               routines={shownRoutines}
               activeId={activeRoutine?.id ?? null}
@@ -1406,6 +1428,7 @@ export default function App() {
             </div>
             <HeaderClock />
           </>
+          )
         }
       />
       <div className="frame">
@@ -1579,7 +1602,7 @@ export default function App() {
               onClose={() => setPage('launch')}
             />
           ) : page === 'kb' ? (
-            <KnowledgeBasePage userId={userId} onStatus={setStatus} onClose={() => setPage('launch')} />
+            <KnowledgeBasePage userId={userId} onStatus={setStatus} />
           ) : page === 'budget' ? (
             <BudgetPage
               lines={budget}

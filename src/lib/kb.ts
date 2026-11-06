@@ -233,3 +233,46 @@ export function slidesOf(o: KbOutline, deckId: string) {
 
 /** The order search filters offer sections in. */
 export const SECTION_ORDER = ['Overview', 'Key topics', 'Practice', 'Resources', 'AI Expansion', 'Cheat sheet'];
+
+// ---------- Topic page + Recently opened (wireframe rebuild, Nov 6) ----------
+
+/** The slide's own text and notes, for the Dig deeper page. */
+export async function slideDetail(id: string): Promise<{ body: string; notes: string } | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from('kb_slides').select('body, notes').eq('id', id).single();
+  if (error || !data) return null;
+  return { body: (data as { body: string }).body ?? '', notes: (data as { notes: string }).notes ?? '' };
+}
+
+/** Slides in other decks that share the most tags with this one ("Also appears in"). */
+export function related(o: KbOutline, slide: KbSlide, max = 5): KbSlide[] {
+  const generic = /^(overview|cover|key topics|divider|resources|ai|ai expansion|wrap|case study|learning outcomes|dan['’]s work|cheat sheet|full stack|ux|product management)$/i;
+  const mine = new Set(slide.tags.filter((t) => !generic.test(t)).map((t) => t.toLowerCase()));
+  if (!mine.size) return [];
+  return o.slides
+    .filter((s) => s.deckId !== slide.deckId)
+    .map((s) => ({ s, n: s.tags.filter((t) => mine.has(t.toLowerCase())).length }))
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.n - a.n || a.s.num - b.s.num)
+    .slice(0, max)
+    .map((x) => x.s);
+}
+
+export type KbRecent = { id: string; title: string; where: string; link: string; at: string };
+const RECENT = 'launchpage.kb.recent.v1';
+export function recentList(): KbRecent[] {
+  try {
+    const r = JSON.parse(localStorage.getItem(RECENT) ?? '[]');
+    return Array.isArray(r) ? r : [];
+  } catch {
+    return [];
+  }
+}
+export function remember(r: Omit<KbRecent, 'at'>) {
+  try {
+    const next = [{ ...r, at: new Date().toISOString() }, ...recentList().filter((x) => x.id !== r.id)].slice(0, 6);
+    localStorage.setItem(RECENT, JSON.stringify(next));
+  } catch {
+    /* blocked storage: nothing to remember */
+  }
+}

@@ -1,40 +1,43 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Icon } from './Tasks';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   SECTION_ORDER,
   cachedOutline,
   importIndex,
   loadOutline,
   readIndex,
+  recentList,
+  related,
+  remember,
   searchKb,
+  slideDetail,
   slidesOf,
   snippetParts,
   tree,
+  type KbCourse,
   type KbDeck,
   type KbHit,
-  type KbOutline
+  type KbOutline,
+  type KbSlide
 } from '../lib/kb';
 
 /**
- * KNOWLEDGE!B4SE (KB-025…028, Nov 6): search, browse and open any lesson, slide or cheat sheet.
- * v1 opens the deck itself at the slide (the artifact is always the current version).
+ * KNOWLEDGE!B4SE (Nov 6, rebuilt from the "Knowledge Base Wireframe" canvas at Dan's ask):
+ * a white page of its own. Home (search) → Results (with a preview) → Dig deeper (topic page),
+ * and Browse as the way in when you don't know what to search for. Open at slide opens the deck.
  */
-type View = 'search' | 'browse' | 'sheets';
-type Props = { userId: string | null; onClose: () => void; onStatus: (msg: string) => void };
+type Screen = { kind: 'home' } | { kind: 'results' } | { kind: 'topic'; slideId: string; back: 'results' | 'browse' | 'home' } | { kind: 'browse'; courseId: string | null };
+type Props = { userId: string | null; onStatus: (msg: string) => void };
 
-const CLOSE = 'M6 6l12 12M18 6L6 18';
-const UPLOAD = 'M12 3v12M7 10l5 5 5-5M5 21h14';
-const OPEN = 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5';
-const SUGGEST = ['MVC', 'usability testing', 'RICE', 'SQL injection', 'Lean Canvas', 'go-to-market'];
-
-export function KnowledgeBasePage({ userId, onClose, onStatus }: Props) {
+export function KnowledgeBasePage({ userId, onStatus }: Props) {
   const [outline, setOutline] = useState<KbOutline>(cachedOutline);
-  const [offline, setOffline] = useState(false);
-  const [problem, setProblem] = useState('');
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<View>('search');
-  const [openCourse, setOpenCourse] = useState<string | null>(null);
+  const [problem, setProblem] = useState('');
+  const [offline, setOffline] = useState(false);
+  const [screen, setScreen] = useState<Screen>({ kind: 'home' });
+  const [q, setQ] = useState('');
+  const [course, setCourse] = useState('');
   const [importing, setImporting] = useState('');
+  const top = useRef<HTMLDivElement>(null);
 
   async function refresh() {
     const r = await loadOutline();
@@ -46,6 +49,12 @@ export function KnowledgeBasePage({ userId, onClose, onStatus }: Props) {
   useEffect(() => {
     void refresh();
   }, []);
+
+  function go(s: Screen) {
+    setScreen(s);
+    top.current?.scrollIntoView({ block: 'start' });
+    window.scrollTo({ top: 0 });
+  }
 
   async function onImport(f: File) {
     if (!userId) return onStatus('Sign in to import: the knowledge base is saved to your account.');
@@ -61,114 +70,293 @@ export function KnowledgeBasePage({ userId, onClose, onStatus }: Props) {
     }
   }
 
-  const decks = outline.decks.filter((d) => d.kind === 'deck');
-  const sheets = outline.decks.filter((d) => d.kind === 'sheet');
-  const VIEWS: { id: View; label: string; hint: string }[] = [
-    { id: 'search', label: 'Search', hint: 'Search every slide, note and tag' },
-    { id: 'browse', label: 'Browse', hint: 'Domain → course → deck → slides' },
-    { id: 'sheets', label: 'Cheat sheets', hint: 'One-page cheat sheets' }
-  ];
+  const ctx = useMemo(() => {
+    const deckById = new Map(outline.decks.map((d) => [d.id, d]));
+    const courseById = new Map(outline.courses.map((c) => [c.id, c]));
+    const slideById = new Map(outline.slides.map((s) => [s.id, s]));
+    return { deckById, courseById, slideById };
+  }, [outline]);
+
+  /** Opening a slide: remembered for Recently opened. */
+  function opened(s: KbSlide) {
+    const d = ctx.deckById.get(s.deckId);
+    const c = d && ctx.courseById.get(d.courseId);
+    remember({ id: s.id, title: s.title, where: `${c?.course ?? ''} · ${d?.title ?? ''} · ${d?.kind === 'sheet' ? 'page' : 'slide'} ${s.num}`, link: s.link });
+  }
+
+  const importer = (
+    <label className="kb-link kb-import" title="Import a knowledge base index (kb-index.json)">
+      ↓ Import kb-index.json
+      <input
+        type="file"
+        accept=".json,application/json"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void onImport(f);
+          e.target.value = '';
+        }}
+      />
+    </label>
+  );
+
+  let body: ReactNode;
+  if (!loading && !outline.slides.length) {
+    body = (
+      <Home q={q} setQ={setQ} course={course} setCourse={setCourse} outline={outline} onSearch={() => go({ kind: 'results' })} onBrowse={(id) => go({ kind: 'browse', courseId: id })} importer={importer}>
+        <p className="kb-empty">Your course decks show up here once they’re imported. Pick the kb-index.json file from your KNOWLEDGE!B4SE chat; importing again later updates what changed.</p>
+      </Home>
+    );
+  } else if (screen.kind === 'results') {
+    body = (
+      <Results
+        q={q}
+        setQ={setQ}
+        course={course}
+        setCourse={setCourse}
+        outline={outline}
+        ctx={ctx}
+        onHome={() => go({ kind: 'home' })}
+        onBrowse={() => go({ kind: 'browse', courseId: null })}
+        onTopic={(id) => go({ kind: 'topic', slideId: id, back: 'results' })}
+        onOpen={opened}
+      />
+    );
+  } else if (screen.kind === 'topic') {
+    const s = ctx.slideById.get(screen.slideId);
+    body = s ? (
+      <Topic
+        slide={s}
+        outline={outline}
+        ctx={ctx}
+        back={screen.back}
+        onBack={() => go(screen.back === 'results' ? { kind: 'results' } : screen.back === 'browse' ? { kind: 'browse', courseId: ctx.deckById.get(s.deckId)?.courseId ?? null } : { kind: 'home' })}
+        onHome={() => go({ kind: 'home' })}
+        onTopic={(id) => go({ kind: 'topic', slideId: id, back: screen.back })}
+        onBrowse={(courseId) => go({ kind: 'browse', courseId })}
+        onTag={(t) => {
+          setQ(t);
+          go({ kind: 'results' });
+        }}
+        onOpen={opened}
+      />
+    ) : null;
+  } else if (screen.kind === 'browse') {
+    body = (
+      <Browse
+        outline={outline}
+        openCourse={screen.courseId}
+        onHome={() => go({ kind: 'home' })}
+        onTopic={(id) => go({ kind: 'topic', slideId: id, back: 'browse' })}
+      />
+    );
+  } else {
+    body = (
+      <Home
+        q={q}
+        setQ={setQ}
+        course={course}
+        setCourse={setCourse}
+        outline={outline}
+        onSearch={() => go({ kind: 'results' })}
+        onBrowse={(id) => go({ kind: 'browse', courseId: id })}
+        importer={importer}
+        recent={recentList()}
+        onRecent={(id) => {
+          const s = ctx.slideById.get(id);
+          if (s) go({ kind: 'topic', slideId: id, back: 'home' });
+        }}
+      />
+    );
+  }
 
   return (
-    <section className="panel panel-kb" aria-labelledby="h-kb">
-      <div className="panel-head">
-        <div>
-          <h2 id="h-kb" className="panel-title kb-title">
-            KNOWLEDGE!B4SE
-          </h2>
-          <p className="panel-sub">
-            {outline.slides.length
-              ? `${outline.slides.length} slides · ${decks.length} decks · ${sheets.length} cheat sheet ${sheets.length === 1 ? 'set' : 'sets'} · ${outline.courses.length} courses`
-              : loading
-                ? 'Loading…'
-                : 'Nothing imported yet'}
-            {offline && outline.slides.length > 0 ? ' · saved copy (titles and tags only)' : ''}
-          </p>
-        </div>
-        <div className="panel-actions">
-          <label className="icon-btn tool-btn import-btn" title="Import a knowledge base index (kb-index.json)">
-            <Icon d={UPLOAD} />
-            <span className="sr-only">Import a knowledge base index</span>
-            <input
-              type="file"
-              accept=".json,application/json"
-              hidden
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void onImport(f);
-                e.target.value = '';
-              }}
-            />
-          </label>
-          <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={onClose}>
-            <Icon d={CLOSE} />
-          </button>
-        </div>
-      </div>
-
-      <div className="area-filter kb-views" role="group" aria-label="KNOWLEDGE!B4SE">
-        {VIEWS.map((v) => (
-          <button key={v.id} type="button" className="area-pill" aria-pressed={view === v.id} title={v.hint} onClick={() => setView(v.id)}>
-            {v.label}
-          </button>
-        ))}
-      </div>
-
-      {importing && (
-        <p className="kb-note" role="status">
-          {importing}
+    <div className="kb" ref={top}>
+      {(importing || problem || (offline && outline.slides.length > 0)) && (
+        <p className={`kb-note${problem ? ' kb-problem' : ''}`} role="status">
+          {importing || problem || 'Offline: searching titles and tags from this device’s copy.'}
         </p>
       )}
-      {problem && <p className="kb-note kb-problem">{problem}</p>}
-
-      {!loading && !outline.slides.length ? (
-        <div className="panel-empty kb-empty">
-          <p>Your course decks show up here once they’re imported.</p>
-          <p>
-            Tap <b>Import</b> (↓ above) and pick the <b>kb-index.json</b> file from your KNOWLEDGE!B4SE chat. Importing again later updates what changed.
-          </p>
-        </div>
-      ) : view === 'search' ? (
-        <SearchView
-          outline={outline}
-          onBrowse={(courseId) => {
-            setOpenCourse(courseId);
-            setView('browse');
-          }}
-        />
-      ) : view === 'browse' ? (
-        <BrowseView outline={outline} openCourse={openCourse} />
-      ) : (
-        <SheetsView outline={outline} sheets={sheets} />
-      )}
-    </section>
+      {body}
+    </div>
   );
 }
 
-// ---------- Search ----------
+type Ctx = { deckById: Map<string, KbDeck>; courseById: Map<string, KbCourse>; slideById: Map<string, KbSlide> };
 
-function SearchView({ outline, onBrowse }: { outline: KbOutline; onBrowse: (courseId: string) => void }) {
-  const [q, setQ] = useState('');
+const SearchIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+    <circle cx="11" cy="11" r="7" />
+    <path d="M20 20l-4-4" />
+  </svg>
+);
+
+function SearchBox({ q, setQ, onSubmit, big, autoFocus }: { q: string; setQ: (v: string) => void; onSubmit: () => void; big?: boolean; autoFocus?: boolean }) {
+  return (
+    <form
+      role="search"
+      className={`kb-search${big ? ' is-big' : ''}`}
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit();
+      }}
+    >
+      <label className="sr-only" htmlFor={big ? 'kb-q' : 'kb-q2'}>
+        Search the knowledge base
+      </label>
+      <input
+        id={big ? 'kb-q' : 'kb-q2'}
+        type="search"
+        value={q}
+        autoFocus={autoFocus}
+        autoComplete="off"
+        spellCheck={false}
+        placeholder={big ? 'Search topics, frameworks or slides… try “RICE”' : 'Search'}
+        onChange={(e) => setQ(e.target.value)}
+      />
+      <button type="submit" className="kb-go" aria-label="Search">
+        <SearchIcon />
+      </button>
+    </form>
+  );
+}
+
+function Wordmark({ onHome, small }: { onHome?: () => void; small?: boolean }) {
+  const img = <img src="/knowledge-b4se.png" alt="KNOWLEDGE!B4SE" className={small ? 'kb-mark-sm' : 'kb-mark'} />;
+  return onHome ? (
+    <button type="button" className="kb-mark-btn" onClick={onHome} title="KNOWLEDGE!B4SE home">
+      {img}
+    </button>
+  ) : (
+    img
+  );
+}
+
+function deckCountLabel(decks: KbDeck[]) {
+  const n = decks.filter((d) => d.kind === 'deck').length;
+  const sheets = decks.some((d) => d.kind === 'sheet');
+  return [n ? `${n} ${n === 1 ? 'deck' : 'decks'}` : '', sheets ? 'cheat sheets' : ''].filter(Boolean).join(' + ');
+}
+
+// ---------- 1 · Home ----------
+
+function Home(p: {
+  q: string;
+  setQ: (v: string) => void;
+  course: string;
+  setCourse: (v: string) => void;
+  outline: KbOutline;
+  onSearch: () => void;
+  onBrowse: (courseId: string | null) => void;
+  importer: ReactNode;
+  recent?: { id: string; title: string; where: string; link: string }[];
+  onRecent?: (id: string) => void;
+  children?: ReactNode;
+}) {
+  const domains = tree(p.outline);
+  const courses = domains.flatMap((d) => d.courses);
+  return (
+    <div className="kb-home">
+      <Wordmark />
+      <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => p.q.trim() && p.onSearch()} big autoFocus />
+      {courses.length > 0 && (
+        <div className="kb-pills" role="group" aria-label="Search in">
+          <span className="kb-pills-label">Search in:</span>
+          <button type="button" className="kb-pill" aria-pressed={!p.course} onClick={() => p.setCourse('')}>
+            All courses
+          </button>
+          {courses.map(({ course: c }) => (
+            <button key={c.id} type="button" className="kb-pill" aria-pressed={p.course === c.id} onClick={() => p.setCourse(p.course === c.id ? '' : c.id)}>
+              {c.course}
+            </button>
+          ))}
+        </div>
+      )}
+      {p.children}
+      <div className="kb-home-cards">
+        <section className="kb-card">
+          <div className="kb-card-head">
+            <h2>Courses</h2>
+            {courses.length > 0 && (
+              <button type="button" className="kb-link" onClick={() => p.onBrowse(null)}>
+                Browse all
+              </button>
+            )}
+          </div>
+          {courses.length ? (
+            courses.map(({ course: c, decks }) => (
+              <button key={c.id} type="button" className="kb-row" onClick={() => p.onBrowse(c.id)}>
+                <span>
+                  <b>{c.course}</b>
+                  {c.source ? <span className="kb-dim"> · {c.source}</span> : null}
+                </span>
+                <span className="kb-row-right">{deckCountLabel(decks)}</span>
+              </button>
+            ))
+          ) : (
+            <p className="kb-dim">No courses yet.</p>
+          )}
+        </section>
+        <section className="kb-card">
+          <div className="kb-card-head">
+            <h2>Recently opened</h2>
+          </div>
+          {p.recent && p.recent.length ? (
+            p.recent.map((r) => (
+              <button key={r.id} type="button" className="kb-row" onClick={() => p.onRecent?.(r.id)}>
+                <span>
+                  <b>{r.title}</b>
+                </span>
+                <span className="kb-mono">{r.where}</span>
+              </button>
+            ))
+          ) : (
+            <p className="kb-dim">Slides you open show up here.</p>
+          )}
+        </section>
+      </div>
+      <p className="kb-foot">
+        {p.outline.slides.length > 0 && (
+          <span className="kb-dim">
+            {p.outline.slides.length} slides · {p.outline.decks.filter((d) => d.kind === 'deck').length} decks · {p.outline.courses.length} courses ·{' '}
+          </span>
+        )}
+        {p.importer}
+      </p>
+    </div>
+  );
+}
+
+// ---------- 2 · Results ----------
+
+const FILTERS: { id: string; label: string; test: (h: KbHit, deck?: KbDeck) => boolean }[] = [
+  { id: '', label: 'All', test: () => true },
+  ...SECTION_ORDER.filter((s) => s !== 'Cheat sheet').map((s) => ({ id: s, label: s, test: (h: KbHit) => h.section === s })),
+  { id: 'sheets', label: 'Cheat sheets', test: (_h: KbHit, d?: KbDeck) => d?.kind === 'sheet' },
+  { id: 'dan', label: 'Dan’s work', test: (h: KbHit) => h.isDansWork }
+];
+
+function Results(p: {
+  q: string;
+  setQ: (v: string) => void;
+  course: string;
+  setCourse: (v: string) => void;
+  outline: KbOutline;
+  ctx: Ctx;
+  onHome: () => void;
+  onBrowse: () => void;
+  onTopic: (id: string) => void;
+  onOpen: (s: KbSlide) => void;
+}) {
   const [hits, setHits] = useState<KbHit[]>([]);
   const [searching, setSearching] = useState(false);
-  const [offline, setOffline] = useState(false);
-  const [domain, setDomain] = useState('');
-  const [course, setCourse] = useState('');
-  const [section, setSection] = useState('');
-  const [dans, setDans] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
+  const [filter, setFilter] = useState('');
+  const [shown, setShown] = useState(30);
+  const [preview, setPreview] = useState<string | null>(null);
   const seq = useRef(0);
 
-  const deckById = useMemo(() => new Map(outline.decks.map((d) => [d.id, d])), [outline]);
-  const courseById = useMemo(() => new Map(outline.courses.map((c) => [c.id, c])), [outline]);
-  const domains = useMemo(() => [...new Set(outline.courses.map((c) => c.domain))], [outline]);
-  const courses = outline.courses.filter((c) => !domain || c.domain === domain);
-
   useEffect(() => {
-    input.current?.focus();
-  }, []);
-  useEffect(() => {
-    const term = q.trim();
+    const term = p.q.trim();
     const n = ++seq.current;
     if (!term) {
       setHits([]);
@@ -177,78 +365,46 @@ function SearchView({ outline, onBrowse }: { outline: KbOutline; onBrowse: (cour
     }
     setSearching(true);
     const t = setTimeout(async () => {
-      const r = await searchKb(term, outline);
+      const r = await searchKb(term, p.outline);
       if (n !== seq.current) return; // a newer search is on its way
       setHits(r.hits);
-      setOffline(r.offline);
       setSearching(false);
+      setShown(30);
+      setPreview(null);
     }, 180);
     return () => clearTimeout(t);
-  }, [q, outline]);
+  }, [p.q, p.outline]);
 
-  const shown = hits.filter((h) => {
-    const d = deckById.get(h.deckId);
-    const c = d && courseById.get(d.courseId);
-    if (!d || !c) return false;
-    if (domain && c.domain !== domain) return false;
-    if (course && c.id !== course) return false;
-    if (section && h.section !== section) return false;
-    if (dans && !h.isDansWork) return false;
-    return true;
+  const inCourse = hits.filter((h) => {
+    const d = p.ctx.deckById.get(h.deckId);
+    return !!d && (!p.course || d.courseId === p.course);
   });
-  const sectionsFound = SECTION_ORDER.filter((s) => hits.some((h) => h.section === s));
-
-  // Course → deck → hits, courses in library order, decks by their best hit.
-  const groups = useMemo(() => {
-    const byDeck = new Map<string, KbHit[]>();
-    for (const h of shown) byDeck.set(h.deckId, [...(byDeck.get(h.deckId) ?? []), h]);
-    const byCourse = new Map<string, { deck: KbDeck; hits: KbHit[] }[]>();
-    for (const [deckId, list] of byDeck) {
-      const deck = deckById.get(deckId)!;
-      byCourse.set(deck.courseId, [...(byCourse.get(deck.courseId) ?? []), { deck, hits: list }]);
-    }
-    return [...byCourse.entries()]
-      .map(([courseId, ds]) => ({ course: courseById.get(courseId)!, decks: ds.sort((a, b) => b.hits[0].rank - a.hits[0].rank || a.deck.sort - b.deck.sort) }))
-      .sort((a, b) => a.course.domainSort - b.course.domainSort || a.course.courseSort - b.course.courseSort);
-  }, [shown, deckById, courseById]);
+  const counts = FILTERS.map((f) => ({ ...f, n: inCourse.filter((h) => f.test(h, p.ctx.deckById.get(h.deckId))).length }));
+  const active = FILTERS.find((f) => f.id === filter) ?? FILTERS[0];
+  const list = inCourse.filter((h) => active.test(h, p.ctx.deckById.get(h.deckId)));
+  const current = list.find((h) => h.id === preview) ?? list[0];
+  const courses = p.outline.courses;
 
   return (
-    <div className="kb-search">
-      <label className="kb-box">
-        <span className="sr-only">Search the knowledge base</span>
-        <Icon d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4" />
-        <input
-          ref={input}
-          type="search"
-          value={q}
-          placeholder="Search every lesson, slide and cheat sheet"
-          autoComplete="off"
-          spellCheck={false}
-          onChange={(e) => setQ(e.target.value)}
-        />
-      </label>
-
-      <div className="kb-filters">
-        {domains.length > 1 && (
-          <label className="kb-select">
-            <span className="sr-only">Domain</span>
-            <select
-              value={domain}
-              onChange={(e) => {
-                setDomain(e.target.value);
-                setCourse('');
-              }}
-            >
-              <option value="">All domains</option>
-              {domains.map((d) => (
-                <option key={d}>{d}</option>
-              ))}
-            </select>
-          </label>
-        )}
-        <label className="kb-select">
+    <div className="kb-page">
+      <div className="kb-bar">
+        <Wordmark small onHome={p.onHome} />
+        <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => undefined} autoFocus />
+        <button type="button" className="kb-link kb-bar-end" onClick={p.onBrowse}>
+          Browse
+        </button>
+      </div>
+      <div className="kb-pills kb-filters">
+        {counts
+          .filter((f) => f.id === '' || f.n > 0 || f.id === filter)
+          .map((f) => (
+            <button key={f.id || 'all'} type="button" className="kb-pill" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>
+              {f.label} · {f.n}
+            </button>
+          ))}
+        <label className="kb-course-pick">
           <span className="sr-only">Course</span>
-          <select value={course} onChange={(e) => setCourse(e.target.value)}>
+          <select value={p.course} onChange={(e) => p.setCourse(e.target.value)}>
             <option value="">All courses</option>
             {courses.map((c) => (
               <option key={c.id} value={c.id}>
@@ -257,69 +413,69 @@ function SearchView({ outline, onBrowse }: { outline: KbOutline; onBrowse: (cour
             ))}
           </select>
         </label>
-        <div className="area-filter" role="group" aria-label="Section">
-          <button type="button" className="area-pill" aria-pressed={!section} onClick={() => setSection('')}>
-            All
-          </button>
-          {(sectionsFound.length ? sectionsFound : ['Key topics', 'Practice', 'AI Expansion']).map((s) => (
-            <button key={s} type="button" className="area-pill" aria-pressed={section === s} onClick={() => setSection(section === s ? '' : s)}>
-              {s}
-            </button>
-          ))}
-          <button type="button" className="area-pill kb-dans" aria-pressed={dans} title="Only Dan’s own work: My work slides, reflections, his code" onClick={() => setDans((d) => !d)}>
-            Dan’s work
-          </button>
-        </div>
       </div>
-
-      {!q.trim() ? (
-        <div className="kb-start">
-          <p className="kb-hint">Try:</p>
-          <div className="area-filter">
-            {SUGGEST.map((s) => (
-              <button key={s} type="button" className="area-pill" onClick={() => setQ(s)}>
-                {s}
-              </button>
-            ))}
-          </div>
-          <CourseCards outline={outline} onBrowse={onBrowse} />
-        </div>
-      ) : (
-        <>
+      <div className="kb-split">
+        <section className="kb-results" aria-label="Results">
           <p className="kb-count" role="status">
-            {searching
-              ? 'Searching…'
-              : shown.length
-                ? `${shown.length} ${shown.length === 1 ? 'slide' : 'slides'}${shown.length < hits.length ? ` (of ${hits.length})` : ''}${offline ? ' · titles and tags only while offline' : ''}`
-                : hits.length
-                  ? 'Nothing with these filters. Clear a filter to see the rest.'
-                  : 'No slides match. Try fewer or shorter words.'}
+            {!p.q.trim()
+              ? 'Type to search every lesson, slide and cheat sheet.'
+              : searching
+                ? 'Searching…'
+                : list.length
+                  ? `${list.length} ${list.length === 1 ? 'result' : 'results'} for “${p.q.trim()}”`
+                  : inCourse.length
+                    ? 'Nothing with this filter. Pick All to see the rest.'
+                    : 'No slides match. Try fewer or shorter words.'}
           </p>
-          {groups.map(({ course: c, decks }) => (
-            <div key={c.id} className="kb-group">
-              <h3 className="kb-course">
-                {c.course}
-                <span className="kb-domain">{c.domain}</span>
-              </h3>
-              {decks.map(({ deck, hits: list }) => (
-                <div key={deck.id} className="kb-deck">
-                  <div className="kb-deck-head">
-                    <p className="kb-deck-title">{deck.title}</p>
-                    <a className="kb-open-deck" href={deck.url} target="_blank" rel="noopener noreferrer">
-                      Open {deck.kind === 'sheet' ? 'sheets' : 'deck'}
+          {list.slice(0, shown).map((h, i) => {
+            const d = p.ctx.deckById.get(h.deckId)!;
+            const c = p.ctx.courseById.get(d.courseId);
+            const parts = snippetParts(h.snippet);
+            const sheet = d.kind === 'sheet';
+            return (
+              <article
+                key={h.id}
+                className={`kb-result${i === 0 ? ' is-top' : ''}${current?.id === h.id ? ' is-previewed' : ''}`}
+                onMouseEnter={() => setPreview(h.id)}
+                onFocus={() => setPreview(h.id)}
+              >
+                <p className="kb-crumb">
+                  {c?.course} › {d.title} › {sheet ? 'Page' : 'Slide'} {h.num}
+                </p>
+                <h2>
+                  <button type="button" className="kb-title-btn" onClick={() => p.onTopic(h.id)}>
+                    {h.title}
+                  </button>
+                  {h.isDansWork && <span className="kb-badge">Dan’s work</span>}
+                </h2>
+                <p className="kb-meta">{metaOf(h)}</p>
+                {parts.length > 0 && (
+                  <p className="kb-snip">{parts.map((x, j) => (x.mark ? <mark key={j}>{x.text}</mark> : <span key={j}>{x.text}</span>))}</p>
+                )}
+                <div className="kb-actions">
+                  <a className="kb-btn kb-btn-dark" href={h.link} target="_blank" rel="noopener noreferrer" onClick={() => p.onOpen(h)}>
+                    {sheet ? 'Open cheat sheets' : `Open at slide ${h.num}`}
+                  </a>
+                  {!sheet && (
+                    <a className="kb-btn" href={d.url} target="_blank" rel="noopener noreferrer">
+                      Open deck
                     </a>
-                  </div>
-                  <ul className="kb-hits">
-                    {list.map((h) => (
-                      <HitRow key={h.id} hit={h} sheet={deck.kind === 'sheet'} />
-                    ))}
-                  </ul>
+                  )}
+                  <button type="button" className="kb-btn" onClick={() => p.onTopic(h.id)}>
+                    Dig deeper →
+                  </button>
                 </div>
-              ))}
-            </div>
-          ))}
-        </>
-      )}
+              </article>
+            );
+          })}
+          {list.length > shown && (
+            <button type="button" className="kb-btn kb-more" onClick={() => setShown((n) => n + 30)}>
+              Show more ({list.length - shown})
+            </button>
+          )}
+        </section>
+        {current && <Preview hit={current} ctx={p.ctx} onOpen={p.onOpen} />}
+      </div>
     </div>
   );
 }
@@ -331,184 +487,303 @@ function metaOf(s: { slideId: string; section: string; eyebrow: string }) {
   return s.eyebrow;
 }
 
-function HitRow({ hit, sheet }: { hit: KbHit; sheet: boolean }) {
-  const parts = snippetParts(hit.snippet);
+function Preview({ hit, ctx, onOpen }: { hit: KbHit; ctx: Ctx; onOpen: (s: KbSlide) => void }) {
+  const d = ctx.deckById.get(hit.deckId);
+  const tags = hit.tags.filter((t) => !/dan['’]s work|cheat sheet/i.test(t)).slice(0, 4);
   return (
-    <li className="kb-hit">
-      <span className="kb-num" aria-hidden="true">
-        {sheet ? 'p' : ''}
-        {hit.num}
-      </span>
-      <div className="kb-hit-main">
-        <p className="kb-hit-title">{hit.title}</p>
-        <p className="kb-hit-meta">
-          {metaOf(hit)}
-          {hit.isDansWork && <span className="chip kb-chip-dan">Dan’s work</span>}
-        </p>
-        {parts.length > 0 && (
-          <p className="kb-snippet">
-            {parts.map((p, i) => (p.mark ? <mark key={i}>{p.text}</mark> : <span key={i}>{p.text}</span>))}
-          </p>
-        )}
-        {hit.tags.length > 0 && (
-          <p className="kb-tags">
-            {hit.tags
-              .filter((t) => !/dan['’]s work/i.test(t))
-              .slice(0, 6)
-              .map((t) => (
-                <span key={t} className="kb-tag">
-                  {t}
-                </span>
-              ))}
-          </p>
+    <aside className="kb-preview" aria-label="Preview">
+      <p className="kb-eyebrow">Preview</p>
+      <div className="kb-slide">
+        <p className="kb-slide-eyebrow">{metaOf(hit)}</p>
+        <p className="kb-slide-title">{hit.title}</p>
+        {tags.length > 0 && (
+          <div className="kb-slide-tags">
+            {tags.map((t, i) => (
+              <span key={t} className={i === tags.length - 1 && tags.length > 1 ? 'is-last' : ''}>
+                {t}
+              </span>
+            ))}
+          </div>
         )}
       </div>
-      <a className="btn btn-quiet kb-open" href={hit.link} target="_blank" rel="noopener noreferrer" title={sheet ? 'Open the cheat sheets' : `Open the deck at slide ${hit.num}`}>
-        <Icon d={OPEN} />
-        <span>{sheet ? 'Open' : 'Open at slide'}</span>
+      <p className="kb-dim">
+        {d?.title} · {d?.kind === 'sheet' ? 'page' : 'slide'} {hit.num}
+        {d && d.kind === 'deck' ? ` of ${d.slideCount}` : ''}
+      </p>
+      <a className="kb-btn kb-btn-dark kb-btn-block" href={hit.link} target="_blank" rel="noopener noreferrer" onClick={() => onOpen(hit)}>
+        Open this slide
       </a>
-    </li>
+    </aside>
   );
 }
 
-function CourseCards({ outline, onBrowse }: { outline: KbOutline; onBrowse: (courseId: string) => void }) {
-  const domains = tree(outline);
-  return (
-    <div className="kb-cards">
-      {domains.map((dom) =>
-        dom.courses.map(({ course: c, decks }) => (
-          <button key={c.id} type="button" className="kb-card" onClick={() => onBrowse(c.id)} title={`Browse ${c.course}`}>
-            <span className="kb-card-domain">{dom.domain}</span>
-            <span className="kb-card-title">{c.course}</span>
-            <span className="kb-card-sub">
-              {[
-                (n => (n ? `${n} ${n === 1 ? 'deck' : 'decks'}` : ''))(decks.filter((d) => d.kind === 'deck').length),
-                decks.some((d) => d.kind === 'sheet') ? 'cheat sheets' : ''
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-              {c.source ? ` · ${c.source}` : ''}
-            </span>
-          </button>
-        ))
-      )}
-    </div>
-  );
-}
+// ---------- 3 · Dig deeper (topic page) ----------
 
-// ---------- Browse ----------
+function Topic(p: {
+  slide: KbSlide;
+  outline: KbOutline;
+  ctx: Ctx;
+  back: 'results' | 'browse' | 'home';
+  onBack: () => void;
+  onHome: () => void;
+  onTopic: (id: string) => void;
+  onBrowse: (courseId: string) => void;
+  onTag: (t: string) => void;
+  onOpen: (s: KbSlide) => void;
+}) {
+  const s = p.slide;
+  const d = p.ctx.deckById.get(s.deckId)!;
+  const c = p.ctx.courseById.get(d.courseId);
+  const [detail, setDetail] = useState<{ body: string; notes: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    setDetail(null);
+    void slideDetail(s.id).then((r) => live && setDetail(r));
+    return () => {
+      live = false;
+    };
+  }, [s.id]);
+  useEffect(() => p.onOpen(s), [s.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-function BrowseView({ outline, openCourse }: { outline: KbOutline; openCourse: string | null }) {
-  const domains = tree(outline);
-  return (
-    <div className="kb-browse">
-      {domains.map((dom) => (
-        <div key={dom.domain} className="kb-domain-block">
-          <h3 className="kb-domain-title">{dom.domain}</h3>
-          {dom.courses.map(({ course: c, decks }) => (
-            <details key={c.id} className="kb-tree-course" open={c.id === openCourse || undefined}>
-              <summary>
-                <span>{c.course}</span>
-                <span className="kb-tree-count">
-                  {decks.length} {decks.length === 1 ? 'item' : 'items'}
-                  {c.source ? ` · ${c.source}` : ''}
-                </span>
-              </summary>
-              <ol className="kb-tree-decks">
-                {decks.map((d, i) => (
-                  <li key={d.id}>
-                    <details className="kb-tree-deck">
-                      <summary>
-                        <span className="kb-tree-n">{d.kind === 'sheet' ? '▤' : i + 1}</span>
-                        <span>{d.title}</span>
-                        <span className="kb-tree-count">
-                          {d.slideCount} {d.kind === 'sheet' ? 'pages' : 'slides'}
-                        </span>
-                      </summary>
-                      <DeckOutline outline={outline} deck={d} />
-                    </details>
-                  </li>
-                ))}
-              </ol>
-            </details>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function DeckOutline({ outline, deck }: { outline: KbOutline; deck: KbDeck }) {
-  const slides = slidesOf(outline, deck.id);
-  const bySection: { name: string; description: string; slides: typeof slides }[] = [];
-  for (const s of slides) {
-    const last = bySection[bySection.length - 1];
-    if (last && last.name === s.section) last.slides.push(s);
-    else bySection.push({ name: s.section, description: deck.sections.find((x) => x.name === s.section)?.description ?? '', slides: [s] });
+  const deckSlides = slidesOf(p.outline, d.id);
+  const sameSection = deckSlides.filter((x) => x.section === s.section);
+  // Up to 6 slides of this section, centred on this one.
+  const at = sameSection.findIndex((x) => x.id === s.id);
+  const from = Math.max(0, Math.min(at - 2, sameSection.length - 6));
+  const around = sameSection.slice(from, from + 6);
+  const sections: { name: string; slides: KbSlide[] }[] = [];
+  for (const x of deckSlides) {
+    const last = sections[sections.length - 1];
+    if (last && last.name === x.section) last.slides.push(x);
+    else sections.push({ name: x.section, slides: [x] });
   }
+  const also = related(p.outline, s);
+  const tags = s.tags.filter((t) => !/dan['’]s work/i.test(t));
+  const summary = detail?.body ? (detail.body.length > 420 ? `${detail.body.slice(0, 420).replace(/\s+\S*$/, '')}…` : detail.body) : '';
+  const sheet = d.kind === 'sheet';
+
   return (
-    <div className="kb-outline">
-      <a className="kb-open-deck" href={deck.url} target="_blank" rel="noopener noreferrer">
-        Open {deck.kind === 'sheet' ? 'the cheat sheets' : 'the deck'}
-      </a>
-      {bySection.map((sec, i) => (
-        <div key={`${sec.name}-${i}`} className="kb-outline-sec">
-          <p className="kb-outline-name" title={sec.description}>
-            {sec.name || 'Slides'}
-          </p>
-          <ul>
-            {sec.slides.map((s) => (
-              <li key={s.id}>
-                <a href={s.link} target="_blank" rel="noopener noreferrer">
-                  <span className="kb-num">{s.num}</span>
-                  <span>{s.title}</span>
-                  {s.isDansWork && <span className="chip kb-chip-dan">Dan’s work</span>}
+    <div className="kb-page">
+      <div className="kb-bar">
+        <Wordmark small onHome={p.onHome} />
+        <nav aria-label="Breadcrumb" className="kb-crumbs">
+          {c && (
+            <button type="button" className="kb-link" onClick={() => p.onBrowse(c.id)}>
+              {c.course}
+            </button>
+          )}
+          <span aria-hidden="true">›</span>
+          <a className="kb-link" href={d.url} target="_blank" rel="noopener noreferrer">
+            {d.title}
+          </a>
+          <span aria-hidden="true">›</span>
+          <span className="kb-crumb-here">{s.title}</span>
+        </nav>
+        <button type="button" className="kb-link kb-bar-end" onClick={p.onBack}>
+          ← Back to {p.back}
+        </button>
+      </div>
+      <div className="kb-split">
+        <div className="kb-topic-main">
+          <div className="kb-topic-head">
+            <p className="kb-eyebrow">
+              {metaOf(s)}
+              {s.isDansWork && <span className="kb-badge">Dan’s work</span>}
+            </p>
+            <h1>{s.title}</h1>
+            {summary ? <p className="kb-lead">{summary}</p> : detail === null ? <p className="kb-lead kb-dim">Loading…</p> : null}
+            <div className="kb-actions">
+              <a className="kb-btn kb-btn-dark" href={s.link} target="_blank" rel="noopener noreferrer" onClick={() => p.onOpen(s)}>
+                {sheet ? 'Open cheat sheets' : `Open deck at slide ${s.num}`}
+              </a>
+              {!sheet && (
+                <a className="kb-btn" href={d.url} target="_blank" rel="noopener noreferrer">
+                  Open full deck
                 </a>
-              </li>
-            ))}
-          </ul>
+              )}
+            </div>
+          </div>
+          {around.length > 1 && (
+            <section className="kb-block" aria-labelledby="kb-around">
+              <h2 id="kb-around">{s.section ? `${s.section} in this deck` : 'Around this slide'}</h2>
+              <div className="kb-thumbs">
+                {around.map((x) => (
+                  <button key={x.id} type="button" className={`kb-thumb${x.id === s.id ? ' is-here' : ''}`} onClick={() => p.onTopic(x.id)} aria-current={x.id === s.id || undefined}>
+                    <span className="kb-thumb-card">
+                      <span>{x.title}</span>
+                    </span>
+                    <span className="kb-mono">
+                      {sheet ? 'Page' : 'Slide'} {x.num}
+                      {metaOf(x) !== x.section ? ` · ${metaOf(x).replace(/^Key topic · /, '')}` : ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+          {detail?.notes && (
+            <section className="kb-card kb-notes" aria-labelledby="kb-notes-h">
+              <h2 id="kb-notes-h">Notes</h2>
+              <p>{detail.notes}</p>
+            </section>
+          )}
         </div>
-      ))}
+        <aside className="kb-topic-side">
+          <section className="kb-card kb-card-beige">
+            <h2>{d.title}</h2>
+            {sections.map((sec, i) => (
+              <div key={`${sec.name}-${i}`} className="kb-side-sec">
+                <p className="kb-side-name">{sec.name || 'Slides'}</p>
+                {sec.slides.map((x) => (
+                  <button key={x.id} type="button" className={`kb-side-item${x.id === s.id ? ' is-here' : ''}`} aria-current={x.id === s.id ? 'page' : undefined} onClick={() => p.onTopic(x.id)}>
+                    <span className="kb-mono">{x.num}</span> {x.title}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </section>
+          {(also.length > 0 || tags.length > 0) && (
+            <section className="kb-card">
+              {also.length > 0 && (
+                <>
+                  <h2>Also appears in</h2>
+                  {also.map((x) => {
+                    const xd = p.ctx.deckById.get(x.deckId);
+                    return (
+                      <button key={x.id} type="button" className="kb-link kb-also" onClick={() => p.onTopic(x.id)}>
+                        {xd?.title} · {x.title}
+                      </button>
+                    );
+                  })}
+                </>
+              )}
+              {tags.length > 0 && (
+                <>
+                  <h2 className={also.length ? 'kb-gap' : ''}>Tags</h2>
+                  <div className="kb-tags">
+                    {tags.map((t) => (
+                      <button key={t} type="button" className="kb-tag" onClick={() => p.onTag(t)} title={`Search “${t}”`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </section>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }
 
-// ---------- Cheat sheets ----------
+// ---------- 5 · Browse ----------
 
-function SheetsView({ outline, sheets }: { outline: KbOutline; sheets: KbDeck[] }) {
-  const courseById = new Map(outline.courses.map((c) => [c.id, c]));
-  const order = (d: KbDeck) => {
-    const c = courseById.get(d.courseId);
-    return c ? c.domainSort * 1000 + c.courseSort : 0;
-  };
-  sheets = [...sheets].sort((a, b) => order(a) - order(b) || a.sort - b.sort);
-  if (!sheets.length) return <p className="panel-empty">No cheat sheets imported yet.</p>;
+function Browse({ outline, openCourse, onHome, onTopic }: { outline: KbOutline; openCourse: string | null; onHome: () => void; onTopic: (id: string) => void }) {
+  const domains = tree(outline);
+  const first = openCourse ?? domains[0]?.courses[0]?.course.id ?? null;
+  const [open, setOpen] = useState<Set<string>>(() => new Set(first ? [first] : []));
+  const [deckOpen, setDeckOpen] = useState<string | null>(null);
+  const toggle = (id: string) =>
+    setOpen((o) => {
+      const n = new Set(o);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   return (
-    <div className="kb-sheets">
-      {sheets.map((d) => (
-        <div key={d.id} className="kb-sheet">
-          <div className="kb-deck-head">
-            <div>
-              <p className="kb-deck-title">{d.title}</p>
-              <p className="kb-hit-meta">{courseById.get(d.courseId)?.course ?? ''}</p>
-            </div>
-            <a className="btn btn-quiet kb-open" href={d.url} target="_blank" rel="noopener noreferrer">
-              <Icon d={OPEN} />
-              <span>Open</span>
-            </a>
+    <div className="kb-page">
+      <div className="kb-bar">
+        <Wordmark small onHome={onHome} />
+        <h1 className="kb-bar-title">Browse</h1>
+        <button type="button" className="kb-link kb-bar-end" onClick={onHome}>
+          Search instead
+        </button>
+      </div>
+      <div className="kb-browse">
+        {domains.map((dom) => (
+          <div key={dom.domain} className="kb-domain">
+            {domains.length > 1 && <h2 className="kb-eyebrow">{dom.domain}</h2>}
+            {dom.courses.map(({ course: c, decks }) => {
+              const isOpen = open.has(c.id);
+              return (
+                <section key={c.id} className={`kb-course${isOpen ? ' is-open' : ''}`}>
+                  <button type="button" className="kb-course-head" aria-expanded={isOpen} onClick={() => toggle(c.id)}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d={isOpen ? 'M6 9l6 6 6-6' : 'M9 6l6 6-6 6'} />
+                    </svg>
+                    <span className="kb-course-name">{c.course}</span>
+                    <span className="kb-course-sub">
+                      {deckCountLabel(decks)}
+                      {c.source ? ` · ${c.source}` : ''}
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="kb-table-wrap">
+                      <table className="kb-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Deck</th>
+                            <th scope="col">Slides</th>
+                            <th scope="col">Dan’s work</th>
+                            <th scope="col" className="kb-right">
+                              Deck
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {decks.map((d, i) => {
+                            const slides = slidesOf(outline, d.id);
+                            const secs = d.sections.length ? d.sections.map((x) => x.name) : [...new Set(slides.map((x) => x.section))];
+                            const mine = slides.filter((x) => x.isDansWork).length;
+                            const shown = deckOpen === d.id;
+                            return [
+                              <tr key={d.id} className={shown ? 'is-open' : ''}>
+                                <td>
+                                  <button type="button" className="kb-deck-btn" aria-expanded={shown} onClick={() => setDeckOpen(shown ? null : d.id)}>
+                                    <b>{d.kind === 'sheet' ? '▤' : i + 1 - decks.slice(0, i).filter((x) => x.kind === 'sheet').length}</b> · {d.title}
+                                  </button>
+                                  <span className="kb-secs">{d.kind === 'sheet' ? slides.map((x) => x.title).join(', ') : secs.join(' · ')}</span>
+                                </td>
+                                <td>
+                                  {slides.length}
+                                  {d.kind === 'sheet' ? ' pages' : ''}
+                                </td>
+                                <td>{mine || ''}</td>
+                                <td className="kb-right">
+                                  <a className="kb-link" href={d.url} target="_blank" rel="noopener noreferrer">
+                                    Open
+                                  </a>
+                                </td>
+                              </tr>,
+                              shown ? (
+                                <tr key={`${d.id}-slides`} className="kb-slides-row">
+                                  <td colSpan={4}>
+                                    <ol className="kb-slide-list">
+                                      {slides.map((x) => (
+                                        <li key={x.id}>
+                                          <button type="button" className="kb-side-item" onClick={() => onTopic(x.id)}>
+                                            <span className="kb-mono">{x.num}</span> {x.title}
+                                            {x.isDansWork && <span className="kb-badge">Dan’s work</span>}
+                                          </button>
+                                        </li>
+                                      ))}
+                                    </ol>
+                                  </td>
+                                </tr>
+                              ) : null
+                            ];
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              );
+            })}
           </div>
-          <ul className="kb-sheet-pages">
-            {slidesOf(outline, d.id).map((p) => (
-              <li key={p.id}>
-                <a href={p.link} target="_blank" rel="noopener noreferrer">
-                  <span className="kb-sheet-page">{p.title}</span>
-                  <span className="kb-sheet-heads">{p.tags.filter((t) => t !== 'cheat sheet').slice(0, 5).join(' · ')}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

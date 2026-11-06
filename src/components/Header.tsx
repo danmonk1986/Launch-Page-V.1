@@ -19,13 +19,24 @@ const PAGES: { id: PageId; label: string }[] = [
 
 type Props = {
   settings: BrandSettings;
+  /** KNOWLEDGE!B4SE: just the logo, the page menu and ⚙ (no headline, mantra, clock or routine). */
+  slim?: boolean;
   page: PageId;
   onPage: (p: PageId) => void;
   /** Top right: the routine picker with the date and time under it. */
   right?: ReactNode;
 };
 
-export function Header({ settings, page, onPage, right }: Props) {
+export function Header({ settings, slim, page, onPage, right }: Props) {
+  if (slim) {
+    return (
+      <header className="topbar topbar-slim">
+        <img className="topbar-logo" src={settings.logoUrl || '/launchpage-logo.png'} alt={settings.logoUrl ? settings.logoText || 'Logo' : 'LaunchPage'} />
+        <TabBar page={page} onPage={onPage} />
+        {right && <div className="topbar-slim-right">{right}</div>}
+      </header>
+    );
+  }
   return (
     <header className="topbar">
       <img
