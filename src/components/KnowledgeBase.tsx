@@ -262,21 +262,11 @@ function Home(p: {
       <Wordmark />
       <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => p.q.trim() && p.onSearch()} big autoFocus onBulb={() => p.onBrowse(null)} />
       <div className="kb-pills kb-domains" role="group" aria-label="Search">
-        {['', ...DOMAINS].map((d) => {
-          const n = d ? p.outline.courses.filter((c) => c.domain.toLowerCase() === d.toLowerCase()).length : p.outline.courses.length;
-          return (
-            <button
-              key={d || 'all'}
-              type="button"
-              className={`kb-pill${n ? '' : ' is-empty'}`}
-              aria-pressed={p.domain === d}
-              title={n ? undefined : 'Nothing here yet'}
-              onClick={() => p.setDomain(d)}
-            >
-              {d || 'All'}
-            </button>
-          );
-        })}
+        {['', ...DOMAINS].map((d) => (
+          <button key={d || 'all'} type="button" className="kb-pill" aria-pressed={p.domain === d} onClick={() => p.setDomain(d)}>
+            {d || 'All'}
+          </button>
+        ))}
       </div>
       {p.children}
       <div className="kb-home-cards">

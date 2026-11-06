@@ -2602,7 +2602,6 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-pill:hover { border-color: var(--kb-teal); }
 .kb-pill[aria-pressed='true'] { border-color: var(--kb-teal); background: var(--kb-teal-soft); font-weight: 600; }
 .kb-domains .kb-pill { text-transform: uppercase; letter-spacing: 0.08em; font-size: 13px; font-weight: 600; }
-.kb-domains .kb-pill.is-empty:not([aria-pressed='true']) { color: #9a9898; border-style: dashed; }
 
 /* 1 · Home */
 .kb-home { display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 40px 24px 32px; max-width: 1008px; margin: 0 auto; }

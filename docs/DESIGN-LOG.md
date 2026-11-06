@@ -258,3 +258,4 @@ Dan didn't love the first layout: rebuilt from the "Knowledge Base Wireframe" ca
 - Home: KNOWLEDGE!B4SE centred. "Search in" course pills replaced by parent groups: ALL / SOFTWARE DEVELOPMENT / MARKETING / FINANCE / CFA / MWD (empty ones dashed until something's imported there). Results' scope dropdown uses the same groups.
 - Search bar from Dan's original wireframe: slim beige bar, "Search." placeholder, round neon-teal icons with the LaunchPage purple outline (💡 left opens Browse, 🔍 right searches).
 - Courses and Recently opened show 3 rows each ("Browse all 5").
+- Follow-up (Dan): the five groups are real parent groups, some just have no pages yet, so all pills look the same. CFA stays its own group (not under Finance).
