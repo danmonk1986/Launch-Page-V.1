@@ -2557,7 +2557,8 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .app.is-kb .topbar-slim > * { grid-area: auto; }
 .app.is-kb .topbar-slim .tabs { justify-content: flex-start; margin-left: -10px; flex-wrap: nowrap; min-width: 0; }
 .app.is-kb .topbar-slim .tab { min-height: 40px; }
-.app.is-kb .topbar-slim-right { padding-bottom: 8px; }
+/* ⚙ where it sits on every other page: above the date/time row (8px + 36px clock + 8px gap). */
+.app.is-kb .topbar-slim-right { padding-bottom: 52px; }
 .app.is-kb .topbar-slim .tab { color: #5d5b5b; }
 .app.is-kb .topbar-slim .tab[aria-current='page'] { color: #1a1338; border-bottom: 2px solid #06f9c2; }
 .app.is-kb .topbar-slim .tab:hover { color: #1a1338; }
@@ -2588,13 +2589,13 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-searchrow { display: flex; align-items: center; gap: 10px; flex: 1 1 360px; max-width: 560px; min-width: 0; }
 /* Home: the bar sits offset to the right of the wordmark, as in Dan's original wireframe. */
 .kb-searchrow.is-big { width: 100%; max-width: 540px; flex: none; transform: translateX(min(96px, 8vw)); }
-.kb-search { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; background: var(--kb-beige); border-radius: 12px; padding: 0 4px 0 16px; min-height: 48px; }
+.kb-search { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; background: var(--kb-beige); border-radius: 999px; padding: 0 4px 0 20px; min-height: 48px; }
 .kb-search:focus-within { box-shadow: none; }
 .kb-search input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 16px; font-weight: 600; color: var(--kb-ink); padding: 10px 0; outline: none; -webkit-text-fill-color: var(--kb-ink); }
 .kb-search input::placeholder { color: var(--kb-ink); -webkit-text-fill-color: var(--kb-ink); font-weight: 700; opacity: 1; }
 .kb-search input::-webkit-search-cancel-button { filter: grayscale(1); }
-/* The LaunchPage icon button: night square, purple edge, beige icon. */
-.kb-go { width: 40px; height: 40px; flex: none; border-radius: 10px; border: 1px solid rgb(136 105 203 / 0.6); background: #1a1338; color: #f5f5dc; display: grid; place-items: center; cursor: pointer; padding: 0; }
+/* Round button: dark blue, lavender edge, beige icon. */
+.kb-go { width: 40px; height: 40px; flex: none; border-radius: 999px; border: 2px solid #8869cb; background: #1a1338; color: #f5f5dc; display: grid; place-items: center; cursor: pointer; padding: 0; }
 .kb-go:hover { border-color: var(--kb-neon); color: var(--kb-neon); }
 .kb-go:focus-visible { outline: 2px solid var(--kb-neon); outline-offset: 2px; }
 
@@ -2607,12 +2608,13 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-domains .kb-pill { text-transform: uppercase; letter-spacing: 0.08em; font-size: 13px; font-weight: 600; }
 
 /* 1 · Home */
-.kb-home { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 190px - 72px); min-height: calc(100dvh - 190px - 72px); gap: 28px; padding: 24px 24px 32px; max-width: 1008px; margin: 0 auto; }
+.kb-home { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-height: calc(100vh - 190px - 72px); min-height: calc(100dvh - 190px - 72px); gap: 24px; padding: 24px 24px 16px; max-width: 1008px; margin: 0 auto; }
 .kb-mark { width: 520px; max-width: 100%; height: auto; }
+.kb-hero { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 24px 0; }
 .kb-mark-sm { height: 26px; width: auto; display: block; }
 .kb-mark-btn { all: unset; cursor: pointer; display: block; }
 .kb-empty { max-width: 640px; text-align: center; color: var(--kb-grey); }
-.kb-home-cards { width: 100%; display: flex; flex-wrap: wrap; gap: 24px; margin-top: 12px; }
+.kb-home-cards { width: 100%; display: flex; flex-wrap: wrap; gap: 24px; }
 .kb-card { flex: 1 1 400px; min-width: 0; border: 1px solid var(--kb-line); border-radius: 16px; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px; background: #ffffff; }
 .kb-card h2 { font-size: 18px; }
 .kb-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
@@ -2729,6 +2731,7 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
   .app.is-kb .topbar.topbar-slim { min-height: 0; padding: 8px 16px 0; column-gap: 10px; }
   .kb-searchrow.is-big { transform: none; }
   .kb-home { min-height: calc(100dvh - 120px); }
+  .app.is-kb .topbar-slim-right { padding-bottom: 0; }
   .kb-home { padding-top: 36px; gap: 22px; }
   .kb-bar, .kb-split, .kb-filters { padding-left: 16px; padding-right: 16px; }
   .kb-bar .kb-searchrow { flex-basis: 100%; max-width: none; order: 3; }

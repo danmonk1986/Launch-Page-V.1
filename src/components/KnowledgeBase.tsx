@@ -273,8 +273,10 @@ function Home(p: {
   const courses = domains.flatMap((d) => d.courses);
   return (
     <div className="kb-home">
-      <Wordmark />
-      <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => p.q.trim() && p.onSearch()} big autoFocus />
+      <div className="kb-hero">
+        <Wordmark />
+        <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => p.q.trim() && p.onSearch()} big autoFocus />
+      </div>
       <div className="kb-pills kb-domains" role="group" aria-label="Search">
         {['', ...DOMAINS].map((d) => (
           <button key={d || 'all'} type="button" className="kb-pill" aria-pressed={p.domain === d} onClick={() => p.setDomain(d)}>
