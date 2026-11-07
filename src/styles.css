@@ -2632,8 +2632,9 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-import { font-size: 13px; }
 
 /* Shared page bar for Results, Topic and Browse */
-.kb-page { max-width: 1280px; margin: 0 auto; }
-.kb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 6px 32px 10px; }
+.kb-page { width: 100%; }
+/* The KNOWLEDGE!B4SE header on inner pages: on the menu's left edge, pinned while you scroll. */
+.kb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 10px 32px; position: sticky; top: 0; z-index: 30; background: #ffffff; }
 .kb-bar-end { margin-left: auto; }
 .kb-bar-title { font-size: 20px; }
 .kb-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 13px; color: var(--kb-grey); min-width: 0; }
@@ -2702,11 +2703,11 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 
 /* 5 · Browse */
 @media (max-width: 900px) { .kb-searchrow.is-big { transform: none; } }
-.kb-browse-pills { padding: 8px 24px 0; }
+.kb-browse-pills { padding: 8px 32px 0; justify-content: flex-start; }
 .kb-group-title { display: grid; gap: 0; }
 .kb-group-title .kb-dim { font-size: 13px; }
-.kb-browse-empty { margin: 24px auto; }
-.kb-browse { max-width: 1040px; margin: 0 auto; padding: 28px 24px 40px; display: flex; flex-direction: column; gap: 14px; }
+.kb-browse-empty { margin: 24px 0; text-align: left; }
+.kb-browse { max-width: 1104px; margin: 0; padding: 20px 32px 40px; display: flex; flex-direction: column; gap: 14px; }
 .kb-domain { display: flex; flex-direction: column; gap: 14px; }
 .kb-course { border: 1px solid var(--kb-line); border-radius: 16px; overflow: hidden; }
 .kb-course.is-open { border: 2px solid var(--kb-teal); }
@@ -2745,6 +2746,7 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
   .kb-bar .kb-searchrow { flex-basis: 100%; max-width: none; order: 3; }
   .kb-topic-head h1 { font-size: 30px; }
   .kb-thumbs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .kb-browse { padding: 20px 16px 32px; }
+  .kb-browse { padding: 16px 16px 32px; }
+  .kb-browse-pills { padding: 8px 16px 0; }
   .kb-card { flex-basis: 100%; }
 }
