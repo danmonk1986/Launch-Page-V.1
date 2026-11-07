@@ -269,3 +269,4 @@ Dan didn't love the first layout: rebuilt from the "Knowledge Base Wireframe" ca
 - V20-035: home search matches Dan's drawing exactly (bar as wide as the wordmark, starts ⅓ in, overhangs ⅓; no offset under 900px). Search button = the Tasks 🔍 tool button (same icon and weight, lavender edge, beige icon, teal hover) on dark blue, round. ⚙ moved to the top-right corner.
 - V20-035 follow-up: search button back to the 2px lavender ring + bold beige icon (the thin Tasks edge looked black on white).
 - V20-036: inner pages (Results, Dig deeper, Browse) get one KNOWLEDGE!B4SE header on the menu's left edge, pinned on scroll; everything below aligns to the same edge (no centred column).
+- V20-037: inner pages put the wordmark + page title (headline caps, purple subline) up top in the Launch Page's logo/headline spot; search, pills and content stay exactly where they were. Recently opened rows stack the slide title over its course · deck · slide line.

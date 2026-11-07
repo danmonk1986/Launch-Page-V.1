@@ -2549,12 +2549,20 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .app.is-kb { background: #ffffff; --surface: #ffffff; --surface-solid: #ffffff; --deep: #ffffff; }
 .app.is-kb .sky { display: none; }
 .app.is-kb .topbar.topbar-slim {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: none; grid-template-rows: auto;
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: none; grid-template-rows: 1fr auto;
   align-items: end; column-gap: 16px; row-gap: 0; min-height: 190px; padding: 16px 32px 0;
   background: transparent; border: 0 !important; box-shadow: none; position: relative; z-index: 40;
   -webkit-backdrop-filter: none; backdrop-filter: none;
 }
 .app.is-kb .topbar-slim > * { grid-area: auto; }
+.app.is-kb .topbar-slot { align-self: center; min-height: 0; }
+.app.is-kb .topbar-slot:empty { display: none; }
+/* Wordmark + title in the Launch Page's logo/headline spot (logo 54px, headline 21px caps, purple subline). */
+.kb-mast { display: flex; align-items: center; gap: 28px; min-width: 0; }
+.kb-mast .kb-mark-sm { height: 40px; }
+.kb-mast-words { display: grid; gap: 2px; min-width: 0; }
+.kb-mast-title { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #1a1338; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kb-mast-sub { margin: 0; font-size: 18px; font-weight: 600; color: #6a4fa3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .app.is-kb .topbar-slim .tabs { justify-content: flex-start; margin-left: -10px; flex-wrap: nowrap; min-width: 0; }
 .app.is-kb .topbar-slim .tab { min-height: 40px; }
 /* ⚙ on its own in the very top-right corner of this page (Dan, Nov 6). */
@@ -2628,6 +2636,9 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-row-left { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kb-row-right { color: var(--kb-teal); font-weight: 600; font-size: 14px; white-space: nowrap; margin-left: auto; flex: none; }
 .kb-row .kb-mono { flex: none; white-space: nowrap; }
+.kb-row.kb-row-stack { flex-direction: column; align-items: flex-start; gap: 0; }
+.kb-row-stack .kb-row-left, .kb-row-stack .kb-row-where { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kb-row-stack .kb-row-where { flex: initial; font-size: 12px; }
 .kb-foot { font-size: 13px; text-align: center; }
 .kb-import { font-size: 13px; }
 
@@ -2635,6 +2646,8 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-page { width: 100%; }
 /* The KNOWLEDGE!B4SE header on inner pages: on the menu's left edge, pinned while you scroll. */
 .kb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 10px 32px; position: sticky; top: 0; z-index: 30; background: #ffffff; }
+/* The search keeps the spot it had beside the wordmark + title (Dan): only the title moved up; pills and content stay put. */
+@media (min-width: 901px) { .kb-bar .kb-searchrow { margin-left: 399px; flex: 0 1 560px; } }
 .kb-bar-end { margin-left: auto; }
 .kb-bar-title { font-size: 20px; }
 .kb-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 13px; color: var(--kb-grey); min-width: 0; }
@@ -2736,7 +2749,11 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
   .kb-preview { display: none; }
 }
 @media (max-width: 640px) {
-  .app.is-kb .topbar.topbar-slim { min-height: 0; padding: 8px 16px 0; column-gap: 10px; }
+  .app.is-kb .topbar.topbar-slim { min-height: 0; padding: 8px 16px 0; column-gap: 10px; row-gap: 8px; }
+  .kb-mast { gap: 14px; padding-right: 48px; }
+  .kb-mast .kb-mark-sm { height: 24px; }
+  .kb-mast-title { font-size: 15px; }
+  .kb-mast-sub { font-size: 14px; }
   .kb-searchrow.is-big { transform: none; }
   .kb-home { min-height: calc(100dvh - 120px); }
   .app.is-kb .topbar-slim-right { top: 8px; right: 16px; }

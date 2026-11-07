@@ -31,6 +31,8 @@ export function Header({ settings, slim, page, onPage, right }: Props) {
   if (slim) {
     return (
       <header className="topbar topbar-slim">
+        {/* KNOWLEDGE!B4SE inner pages put their wordmark and title here, like the Launch Page's logo and headline. */}
+        <div className="topbar-slot" id="kb-topbar-slot" />
         <TabBar page={page} onPage={onPage} />
         {right && <div className="topbar-slim-right">{right}</div>}
       </header>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   DOMAINS,
   SECTION_ORDER,
@@ -252,6 +253,25 @@ function SearchBox({ q, setQ, onSubmit, big, autoFocus }: { q: string; setQ: (v:
   );
 }
 
+/**
+ * Inner pages (Dan, Nov 6): the wordmark and the page title sit up top above the menu, where the
+ * Launch Page has its logo, headline and mantra. Rendered into the slim header's slot.
+ */
+function Masthead({ title, sub, onHome }: { title: string; sub?: string; onHome: () => void }) {
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => setSlot(document.getElementById('kb-topbar-slot')), []);
+  const content = (
+    <div className="kb-mast">
+      <Wordmark small onHome={onHome} />
+      <div className="kb-mast-words">
+        <p className="kb-mast-title">{title}</p>
+        {sub && <p className="kb-mast-sub">{sub}</p>}
+      </div>
+    </div>
+  );
+  return slot ? createPortal(content, slot) : null;
+}
+
 function Wordmark({ onHome, small }: { onHome?: () => void; small?: boolean }) {
   const img = <img src="/knowledge-b4se.png" alt="KNOWLEDGE!B4SE" className={small ? 'kb-mark-sm' : 'kb-mark'} />;
   return onHome ? (
@@ -333,11 +353,11 @@ function Home(p: {
           </div>
           {p.recent && p.recent.length ? (
             p.recent.slice(0, 3).map((r) => (
-              <button key={r.id} type="button" className="kb-row" onClick={() => p.onRecent?.(r.id)}>
+              <button key={r.id} type="button" className="kb-row kb-row-stack" onClick={() => p.onRecent?.(r.id)}>
                 <span className="kb-row-left">
                   <b>{r.title}</b>
                 </span>
-                <span className="kb-mono">{r.where}</span>
+                <span className="kb-mono kb-row-where">{r.where}</span>
               </button>
             ))
           ) : (
@@ -408,8 +428,8 @@ function Results(p: {
 
   return (
     <div className="kb-page">
+      <Masthead title="Search" sub={p.q.trim() ? `“${p.q.trim()}”` : 'every lesson, slide and cheat sheet'} onHome={p.onHome} />
       <div className="kb-bar">
-        <Wordmark small onHome={p.onHome} />
         <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => undefined} autoFocus />
         <button type="button" className="kb-link kb-bar-end" onClick={p.onBrowse}>
           Browse
@@ -587,8 +607,8 @@ function Topic(p: {
 
   return (
     <div className="kb-page">
+      <Masthead title={d.title} sub={c?.course} onHome={p.onHome} />
       <div className="kb-bar">
-        <Wordmark small onHome={p.onHome} />
         <nav aria-label="Breadcrumb" className="kb-crumbs">
           {c && (
             <button type="button" className="kb-link" onClick={() => p.onBrowse(c.id)}>
@@ -744,12 +764,8 @@ function Browse({
     });
   return (
     <div className="kb-page">
+      <Masthead title={domain || 'Browse'} sub={counts} onHome={onHome} />
       <div className="kb-bar">
-        <Wordmark small onHome={onHome} />
-        <div className="kb-group-title">
-          <h1 className="kb-bar-title">{domain || 'Browse'}</h1>
-          <p className="kb-dim">{counts}</p>
-        </div>
         {/* Searching from a group page searches just that group. */}
         <SearchBox q={q} setQ={setQ} onSubmit={() => q.trim() && onSearch()} />
       </div>
