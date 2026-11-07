@@ -270,3 +270,4 @@ Dan didn't love the first layout: rebuilt from the "Knowledge Base Wireframe" ca
 - V20-035 follow-up: search button back to the 2px lavender ring + bold beige icon (the thin Tasks edge looked black on white).
 - V20-036: inner pages (Results, Dig deeper, Browse) get one KNOWLEDGE!B4SE header on the menu's left edge, pinned on scroll; everything below aligns to the same edge (no centred column).
 - V20-037: inner pages put the wordmark + page title (headline caps, purple subline) up top in the Launch Page's logo/headline spot; search, pills and content stay exactly where they were. Recently opened rows stack the slide title over its course · deck · slide line.
+- V20-038: inner pages tightened (smaller gaps under the header, pills and content start higher).

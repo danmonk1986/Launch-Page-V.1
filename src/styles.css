@@ -2645,7 +2645,7 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 /* Shared page bar for Results, Topic and Browse */
 .kb-page { width: 100%; }
 /* The KNOWLEDGE!B4SE header on inner pages: on the menu's left edge, pinned while you scroll. */
-.kb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 10px 32px; position: sticky; top: 0; z-index: 30; background: #ffffff; }
+.kb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding: 6px 32px; position: sticky; top: 0; z-index: 30; background: #ffffff; }
 /* The search keeps the spot it had beside the wordmark + title (Dan): only the title moved up; pills and content stay put. */
 @media (min-width: 901px) { .kb-bar .kb-searchrow { margin-left: 399px; flex: 0 1 560px; } }
 .kb-bar-end { margin-left: auto; }
@@ -2653,12 +2653,12 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 13px; color: var(--kb-grey); min-width: 0; }
 .kb-crumbs .kb-link { font-size: 13px; }
 .kb-crumb-here { color: var(--kb-ink); }
-.kb-split { display: flex; flex-wrap: wrap; gap: 28px; padding: 20px 32px 40px; align-items: flex-start; }
+.kb-split { display: flex; flex-wrap: wrap; gap: 24px; padding: 12px 32px 40px; align-items: flex-start; }
 
 /* 2 · Results */
-.kb-filters { justify-content: flex-start; padding: 18px 32px 0; }
+.kb-filters { justify-content: flex-start; padding: 6px 32px 0; }
 .kb-course-pick select { min-height: 36px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--kb-line); background: #ffffff; color: var(--kb-ink); font: inherit; font-size: 14px; max-width: 260px; }
-.kb-results { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.kb-results { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 .kb-count { font-size: 14px; color: var(--kb-grey); }
 .kb-result { border: 1px solid var(--kb-line); border-radius: 16px; padding: 18px 22px; display: flex; flex-direction: column; gap: 8px; background: #ffffff; }
 .kb-result.is-top { border: 2px solid var(--kb-teal); padding: 17px 21px; }
@@ -2679,7 +2679,7 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-btn-dark:hover { background: #2a2152; color: #ffffff; }
 .kb-btn-block { width: 100%; min-height: 44px; }
 .kb-more { align-self: center; }
-.kb-preview { flex: 1 1 320px; min-width: 0; position: sticky; top: 72px; border: 1px solid var(--kb-line); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; background: var(--kb-beige); }
+.kb-preview { flex: 1 1 320px; min-width: 0; position: sticky; top: 64px; border: 1px solid var(--kb-line); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; background: var(--kb-beige); }
 .kb-slide { aspect-ratio: 16 / 9; border-radius: 10px; background: #ffffff; border: 1px solid var(--kb-line); padding: 18px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
 .kb-slide-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--kb-purple); }
 .kb-slide-title { font-size: 20px; font-weight: 700; line-height: 1.2; }
@@ -2688,7 +2688,7 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-slide-tags span.is-last { background: var(--kb-lilac); }
 
 /* 3 · Dig deeper */
-.kb-topic-main { flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+.kb-topic-main { flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
 .kb-topic-head { display: flex; flex-direction: column; gap: 10px; }
 .kb-topic-head h1 { font-size: 40px; line-height: 1.1; }
 .kb-lead { font-size: 16px; line-height: 1.55; color: var(--kb-grey); max-width: 680px; }
@@ -2716,11 +2716,11 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 
 /* 5 · Browse */
 @media (max-width: 900px) { .kb-searchrow.is-big { transform: none; } }
-.kb-browse-pills { padding: 8px 32px 0; justify-content: flex-start; }
+.kb-browse-pills { padding: 4px 32px 0; justify-content: flex-start; }
 .kb-group-title { display: grid; gap: 0; }
 .kb-group-title .kb-dim { font-size: 13px; }
 .kb-browse-empty { margin: 24px 0; text-align: left; }
-.kb-browse { max-width: 1104px; margin: 0; padding: 20px 32px 40px; display: flex; flex-direction: column; gap: 14px; }
+.kb-browse { max-width: 1104px; margin: 0; padding: 12px 32px 40px; display: flex; flex-direction: column; gap: 14px; }
 .kb-domain { display: flex; flex-direction: column; gap: 14px; }
 .kb-course { border: 1px solid var(--kb-line); border-radius: 16px; overflow: hidden; }
 .kb-course.is-open { border: 2px solid var(--kb-teal); }
