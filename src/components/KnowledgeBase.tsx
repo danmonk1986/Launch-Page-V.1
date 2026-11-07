@@ -257,7 +257,7 @@ function SearchBox({ q, setQ, onSubmit, big, autoFocus }: { q: string; setQ: (v:
  * Inner pages (Dan, Nov 6): the wordmark and the page title sit up top above the menu, where the
  * Launch Page has its logo, headline and mantra. Rendered into the slim header's slot.
  */
-function Masthead({ title, sub, onHome }: { title: string; sub?: string; onHome: () => void }) {
+function Masthead({ title, sub, onHome, right }: { title: string; sub?: string; onHome: () => void; right?: ReactNode }) {
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   useEffect(() => setSlot(document.getElementById('kb-topbar-slot')), []);
   const content = (
@@ -267,6 +267,8 @@ function Masthead({ title, sub, onHome }: { title: string; sub?: string; onHome:
         <p className="kb-mast-title">{title}</p>
         {sub && <p className="kb-mast-sub">{sub}</p>}
       </div>
+      {/* Inner pages (Dan, Nov 6): the search sits up top beside the title. */}
+      {right && <div className="kb-mast-right">{right}</div>}
     </div>
   );
   return slot ? createPortal(content, slot) : null;
@@ -428,13 +430,19 @@ function Results(p: {
 
   return (
     <div className="kb-page">
-      <Masthead title="Search" sub={p.q.trim() ? `“${p.q.trim()}”` : 'every lesson, slide and cheat sheet'} onHome={p.onHome} />
-      <div className="kb-bar">
-        <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => undefined} autoFocus />
-        <button type="button" className="kb-link kb-bar-end" onClick={p.onBrowse}>
-          Browse
-        </button>
-      </div>
+      <Masthead
+        title="Search"
+        sub={p.q.trim() ? `“${p.q.trim()}”` : 'every lesson, slide and cheat sheet'}
+        onHome={p.onHome}
+        right={
+          <>
+            <SearchBox q={p.q} setQ={p.setQ} onSubmit={() => undefined} autoFocus />
+            <button type="button" className="kb-link" onClick={p.onBrowse}>
+              Browse
+            </button>
+          </>
+        }
+      />
       <div className="kb-pills kb-filters">
         {counts
           .filter((f) => f.id === '' || f.n > 0 || f.id === filter)
@@ -764,11 +772,8 @@ function Browse({
     });
   return (
     <div className="kb-page">
-      <Masthead title={domain || 'Browse'} sub={counts} onHome={onHome} />
-      <div className="kb-bar">
-        {/* Searching from a group page searches just that group. */}
-        <SearchBox q={q} setQ={setQ} onSubmit={() => q.trim() && onSearch()} />
-      </div>
+      {/* Searching from a group page searches just that group. */}
+      <Masthead title={domain || 'Browse'} sub={counts} onHome={onHome} right={<SearchBox q={q} setQ={setQ} onSubmit={() => q.trim() && onSearch()} />} />
       <div className="kb-pills kb-domains kb-browse-pills" role="group" aria-label="Group">
         {['', ...DOMAINS].map((d) => (
           <button key={d || 'all'} type="button" className="kb-pill" aria-pressed={domain === d} onClick={() => onDomain(d)}>

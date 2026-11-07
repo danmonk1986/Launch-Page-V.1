@@ -2576,12 +2576,13 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .app.is-kb .toolbar { max-width: 1200px; margin: 0 auto; width: calc(100% - 48px); border-top: 0; }
 .app.is-kb .toolbar-logo { display: none; }
 
-.kb {
+/* The header slot (masthead + search) sits outside .kb, so it gets the same colours. */
+.kb, .kb-mast {
   --kb-ink: #1a1338; --kb-grey: #5d5b5b; --kb-line: #dadada; --kb-beige: #f5f5dc; --kb-teal: #2f7a6d;
   --kb-teal-soft: #ddf1ec; --kb-purple: #6a4fa3; --kb-lilac: #e9e2f4; --kb-neon: #06f9c2; --kb-pink: #c2338f;
   background: #ffffff; color: var(--kb-ink); font-family: var(--font-head);
 }
-.kb :where(button) { font: inherit; color: inherit; }
+.kb :where(button), .kb-mast :where(button) { font: inherit; color: inherit; }
 .kb h1, .kb h2, .kb p { margin: 0; }
 .kb-note { max-width: 1200px; margin: 12px auto 0; padding: 0 24px; font-size: 13px; color: var(--kb-grey); }
 .kb-problem { color: #b3261e; }
@@ -2646,8 +2647,6 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-page { width: 100%; }
 /* The KNOWLEDGE!B4SE header on inner pages: on the menu's left edge, pinned while you scroll. */
 .kb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding: 6px 32px; position: sticky; top: 0; z-index: 30; background: #ffffff; }
-/* The search keeps the spot it had beside the wordmark + title (Dan): only the title moved up; pills and content stay put. */
-@media (min-width: 901px) { .kb-bar .kb-searchrow { margin-left: 399px; flex: 0 1 560px; } }
 .kb-bar-end { margin-left: auto; }
 .kb-bar-title { font-size: 20px; }
 .kb-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 13px; color: var(--kb-grey); min-width: 0; }
@@ -2766,4 +2765,36 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
   .kb-browse { padding: 16px 16px 32px; }
   .kb-browse-pills { padding: 8px 16px 0; }
   .kb-card { flex-basis: 100%; }
+}
+
+/* ---- Inner pages, chiller (Dan, Nov 6 late) ---- */
+.kb-mast { width: 100%; padding-right: 64px; font-family: var(--font-head); color: #1a1338; }
+.kb-mast-right { margin-left: auto; display: flex; align-items: center; gap: 16px; flex: 0 1 520px; min-width: 0; }
+.kb-mast-right .kb-searchrow { flex: 1 1 auto; max-width: none; }
+.kb-page { padding-top: 28px; }
+.kb-filters, .kb-browse-pills { justify-content: center; }
+.kb-split { padding-top: 24px; gap: 28px; max-width: 1280px; margin: 0 auto; }
+.kb-filters { max-width: 1280px; margin: 0 auto; }
+/* Browse: centred, Dan's house card style (lavender border, neon offset shadow, night header, lilac highlight). */
+.kb-browse { margin: 0 auto !important; padding-top: 28px !important; gap: 28px !important; }
+.kb-browse-pills { max-width: 1104px; margin: 0 auto; }
+.kb-browse-empty { text-align: center !important; margin: 32px auto !important; }
+.kb-course { border: 2px solid #e9e2f4; border-radius: 16px; box-shadow: none; background: #ffffff; }
+.kb-course.is-open { border: 4px solid #8869cb; box-shadow: 10px 10px 0 #06f9c2; }
+.kb-course.is-open .kb-course-head { background: #1a1338; color: #f5f5dc; }
+.kb-course.is-open .kb-course-head svg { color: #06f9c2; }
+.kb-course.is-open .kb-course-sub { color: #c9c2e6; }
+.kb-course-head:hover .kb-course-name { color: #6a4fa3; }
+.kb-course.is-open .kb-course-head:hover .kb-course-name { color: #06f9c2; }
+.kb-table th { color: #6a4fa3; letter-spacing: 0.06em; text-transform: uppercase; font-size: 12px; }
+.kb-table td { border-top-color: #e9e2f4; }
+.kb-table tr.is-open td, .kb-slides-row td { background: #e9e2f4; }
+.kb-secs { color: #6a4fa3; font-weight: 500; }
+@media (max-width: 900px) {
+  .kb-mast { flex-wrap: wrap; padding-right: 48px; }
+  .kb-mast-right { flex: 1 1 100%; margin-left: 0; }
+}
+@media (max-width: 640px) {
+  .kb-course.is-open { box-shadow: 6px 6px 0 #06f9c2; }
+  .kb-browse { padding-right: 22px !important; }
 }
