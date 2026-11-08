@@ -1384,7 +1384,7 @@ export default function App() {
   // KNOWLEDGE!B4SE (Nov 6, Dan): a white page of its own, whatever the theme, with a slim header.
   const kb = page === 'kb';
   const shellStyle = kb
-    ? ({ ...theme, '--accent-teal': '#2F7A6D', '--accent-purple': '#6A4FA3', '--accent-pink': '#C2338F' } as CSSProperties)
+    ? ({ ...theme, '--accent-teal': '#0DAEAA', '--accent-purple': '#6A4FA3', '--accent-pink': '#C2338F' } as CSSProperties)
     : theme;
 
   return (
