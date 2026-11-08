@@ -7,7 +7,7 @@ import { supabase } from './supabase';
  */
 
 export type KbSection = { name: string; description: string; start: string; num: number };
-export type KbCourse = { id: string; domain: string; course: string; domainSort: number; courseSort: number; source: string | null };
+export type KbCourse = { id: string; domain: string; course: string; domainSort: number; courseSort: number; source: string | null; program: string; programSort: number };
 export type KbDeck = { id: string; courseId: string; kind: 'deck' | 'sheet'; title: string; url: string; sort: number; sections: KbSection[]; slideCount: number; extractedAt: string };
 export type KbSlide = { id: string; deckId: string; slideId: string; num: number; section: string; eyebrow: string; title: string; tags: string[]; isDansWork: boolean; link: string };
 export type KbOutline = { courses: KbCourse[]; decks: KbDeck[]; slides: KbSlide[] };
@@ -33,7 +33,7 @@ function keep(o: KbOutline) {
   }
 }
 
-type CourseRow = { id: string; domain: string; course: string; domain_sort: number; course_sort: number; source: string | null };
+type CourseRow = { id: string; domain: string; course: string; domain_sort: number; course_sort: number; source: string | null; program: string | null; program_sort: number | null };
 type DeckRow = { id: string; course_id: string; kind: 'deck' | 'sheet'; title: string; url: string; sort: number; sections: KbSection[] | null; slide_count: number; extracted_at: string };
 type SlideRow = { id: string; deck_id: string; slide_id: string; num: number; section: string; eyebrow: string; title: string; tags: string[] | null; is_dans_work: boolean; link: string };
 
@@ -54,7 +54,7 @@ const slideFrom = (r: SlideRow): KbSlide => ({
 export async function loadOutline(): Promise<{ outline: KbOutline; offline: boolean; problem?: string }> {
   if (!supabase) return { outline: cachedOutline(), offline: true };
   const [c, d] = await Promise.all([
-    supabase.from('kb_courses').select('id, domain, course, domain_sort, course_sort, source').order('domain_sort').order('course_sort'),
+    supabase.from('kb_courses').select('id, domain, course, domain_sort, course_sort, source, program, program_sort').order('domain_sort').order('course_sort'),
     supabase.from('kb_decks').select('id, course_id, kind, title, url, sort, sections, slide_count, extracted_at').order('sort')
   ]);
   if (c.error || d.error) {
@@ -70,7 +70,7 @@ export async function loadOutline(): Promise<{ outline: KbOutline; offline: bool
     if ((s.data ?? []).length < 1000) break;
   }
   const outline: KbOutline = {
-    courses: ((c.data ?? []) as CourseRow[]).map((r) => ({ id: r.id, domain: r.domain, course: r.course, domainSort: r.domain_sort, courseSort: r.course_sort, source: r.source })),
+    courses: ((c.data ?? []) as CourseRow[]).map((r) => ({ id: r.id, domain: r.domain, course: r.course, domainSort: r.domain_sort, courseSort: r.course_sort, source: r.source, program: r.program ?? '', programSort: r.program_sort ?? 0 })),
     decks: ((d.data ?? []) as DeckRow[]).map((r) => ({ id: r.id, courseId: r.course_id, kind: r.kind, title: r.title, url: r.url, sort: r.sort, sections: Array.isArray(r.sections) ? r.sections : [], slideCount: r.slide_count, extractedAt: r.extracted_at })),
     slides: rows.map(slideFrom)
   };
@@ -132,7 +132,7 @@ export function snippetParts(snippet: string): { text: string; mark: boolean }[]
 
 type IndexSlide = { slide_id: string; num: number; section: string; eyebrow: string; title: string; body: string; notes: string; tags: string[]; is_dans_work: boolean; link: string };
 type IndexDeck = { kind: 'deck' | 'sheet'; title: string; url: string; sort: number; version: string | null; sections: KbSection[]; slides: IndexSlide[] };
-type IndexCourse = { domain: string; course: string; domainSort: number; courseSort: number; source: string | null; decks: IndexDeck[] };
+type IndexCourse = { domain: string; program?: string; programSort?: number; course: string; domainSort: number; courseSort: number; source: string | null; decks: IndexDeck[] };
 export type KbIndex = { kind: 'launchpage-kb-index'; version: number; generatedAt: string; courses: IndexCourse[] };
 
 const ARTIFACT_URL = /^https:\/\/claude\.ai\/(artifact|code\/artifact)\/[A-Za-z0-9_-]+$/;
@@ -166,7 +166,19 @@ export async function importIndex(userId: string, index: KbIndex, progress: (msg
   for (const c of index.courses) {
     const course = await supabase
       .from('kb_courses')
-      .upsert({ user_id: userId, domain: c.domain, course: c.course, domain_sort: c.domainSort | 0, course_sort: c.courseSort | 0, source: c.source ?? null }, { onConflict: 'user_id,domain,course' })
+      .upsert(
+        {
+          user_id: userId,
+          domain: c.domain,
+          course: c.course,
+          domain_sort: c.domainSort | 0,
+          course_sort: c.courseSort | 0,
+          source: c.source ?? null,
+          // An older index has no program: leave the one already set.
+          ...(c.program ? { program: c.program, program_sort: (c.programSort ?? 0) | 0 } : {})
+        },
+        { onConflict: 'user_id,domain,course' }
+      )
       .select('id')
       .single();
     if (course.error) throw new Error(course.error.message);
@@ -214,14 +226,28 @@ export async function importIndex(userId: string, index: KbIndex, progress: (msg
 
 // ---------- Shaping for the screens ----------
 
-/** Domain → course → decks, in library order. */
-export function tree(o: KbOutline) {
+export type KbCourseNode = { course: KbCourse; decks: KbDeck[] };
+export type KbProgramNode = { program: string; sort: number; source: string | null; courses: KbCourseNode[] };
+export type KbDomainNode = { domain: string; sort: number; programs: KbProgramNode[]; courses: KbCourseNode[] };
+
+/** Domain → program → course → decks (Dan, Nov 7), in library order. `courses` is the flat list. */
+export function tree(o: KbOutline): KbDomainNode[] {
   const decksBy = new Map<string, KbDeck[]>();
   for (const d of o.decks) decksBy.set(d.courseId, [...(decksBy.get(d.courseId) ?? []), d]);
-  const domains = new Map<string, { domain: string; sort: number; courses: { course: KbCourse; decks: KbDeck[] }[] }>();
-  for (const c of [...o.courses].sort((a, b) => a.domainSort - b.domainSort || a.courseSort - b.courseSort)) {
-    const dom = domains.get(c.domain) ?? { domain: c.domain, sort: c.domainSort, courses: [] };
-    dom.courses.push({ course: c, decks: (decksBy.get(c.id) ?? []).sort((a, b) => a.sort - b.sort) });
+  const domains = new Map<string, KbDomainNode>();
+  const sorted = [...o.courses].sort((a, b) => a.domainSort - b.domainSort || a.programSort - b.programSort || a.courseSort - b.courseSort);
+  for (const c of sorted) {
+    const dom = domains.get(c.domain) ?? { domain: c.domain, sort: c.domainSort, programs: [], courses: [] };
+    const node = { course: c, decks: (decksBy.get(c.id) ?? []).sort((a, b) => a.sort - b.sort) };
+    dom.courses.push(node);
+    const name = c.program || c.course;
+    let prog = dom.programs.find((x) => x.program === name);
+    if (!prog) {
+      prog = { program: name, sort: c.programSort, source: null, courses: [] };
+      dom.programs.push(prog);
+    }
+    prog.courses.push(node);
+    prog.source = prog.source ?? c.source;
     domains.set(c.domain, dom);
   }
   return [...domains.values()].sort((a, b) => a.sort - b.sort);

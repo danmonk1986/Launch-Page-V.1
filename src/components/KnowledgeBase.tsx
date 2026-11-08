@@ -308,7 +308,7 @@ function Home(p: {
   children?: ReactNode;
 }) {
   const domains = tree(p.outline);
-  const courses = domains.flatMap((d) => d.courses);
+  const programs = domains.flatMap((d) => d.programs.map((pg) => ({ ...pg, domain: d.domain })));
   return (
     <div className="kb-home">
       <div className="kb-hero">
@@ -329,22 +329,27 @@ function Home(p: {
       <div className="kb-home-cards">
         <section className="kb-card">
           <div className="kb-card-head">
-            <h2>Courses</h2>
-            {courses.length > 0 && (
+            <h2>Programs</h2>
+            {programs.length > 0 && (
               <button type="button" className="kb-link" onClick={() => p.onBrowse(null)}>
-                {courses.length > 3 ? `Browse all ${courses.length}` : 'Browse all'}
+                {programs.length > 3 ? `Browse all ${programs.length}` : 'Browse all'}
               </button>
             )}
           </div>
-          {courses.length ? (
-            courses.slice(0, 3).map(({ course: c, decks }) => (
-              <button key={c.id} type="button" className="kb-row" onClick={() => p.onBrowse(c.id)}>
-                <span className="kb-row-left">
-                  <b>{c.course}</b>
-                </span>
-                <span className="kb-row-right">{deckCountLabel(decks)}</span>
-              </button>
-            ))
+          {programs.length ? (
+            programs.slice(0, 3).map((pg) => {
+              const decks = pg.courses.flatMap((c) => c.decks);
+              return (
+                <button key={`${pg.domain}|${pg.program}`} type="button" className="kb-row" onClick={() => p.onBrowse(pg.courses[0].course.id)}>
+                  <span className="kb-row-left">
+                    <b>{pg.program}</b>
+                  </span>
+                  <span className="kb-row-right">
+                    {pg.courses.length} {pg.courses.length === 1 ? 'course' : 'courses'} · {deckCountLabel(decks)}
+                  </span>
+                </button>
+              );
+            })
           ) : (
             <p className="kb-dim">No courses yet.</p>
           )}
@@ -755,11 +760,12 @@ function Browse({
   const domains = tree(outline).filter((d) => !domain || d.domain.toLowerCase() === domain.toLowerCase());
   const first = openCourse ?? domains[0]?.courses[0]?.course.id ?? null;
   const groupCourses = domains.flatMap((d) => d.courses);
+  const nPrograms = domains.reduce((n, d) => n + d.programs.length, 0);
   const groupDecks = groupCourses.flatMap((c) => c.decks);
   const nDecks = groupDecks.filter((d) => d.kind === 'deck').length;
   const nSlides = groupDecks.reduce((n, d) => n + d.slideCount, 0);
   const counts = groupCourses.length
-    ? `${groupCourses.length} ${groupCourses.length === 1 ? 'course' : 'courses'} · ${nDecks} ${nDecks === 1 ? 'deck' : 'decks'} · ${nSlides} slides`
+    ? `${nPrograms} ${nPrograms === 1 ? 'program' : 'programs'} · ${groupCourses.length} ${groupCourses.length === 1 ? 'course' : 'courses'} · ${nDecks} ${nDecks === 1 ? 'deck' : 'decks'} · ${nSlides} slides`
     : 'Nothing imported yet';
   const [open, setOpen] = useState<Set<string>>(() => new Set(first ? [first] : []));
   const [deckOpen, setDeckOpen] = useState<string | null>(null);
@@ -786,7 +792,13 @@ function Browse({
         {domains.map((dom) => (
           <div key={dom.domain} className="kb-domain">
             {!domain && <h2 className="kb-eyebrow">{dom.domain}</h2>}
-            {dom.courses.map(({ course: c, decks }) => {
+            {dom.programs.map((pg) => (
+              <div key={pg.program} className="kb-program">
+                <div className="kb-program-head">
+                  <h3>{pg.program}</h3>
+                  <span>{[pg.source, `${pg.courses.length} ${pg.courses.length === 1 ? 'course' : 'courses'}`].filter(Boolean).join(' · ')}</span>
+                </div>
+            {pg.courses.map(({ course: c, decks }) => {
               const isOpen = open.has(c.id);
               return (
                 <section key={c.id} className={`kb-course${isOpen ? ' is-open' : ''}`}>
@@ -797,7 +809,6 @@ function Browse({
                     <span className="kb-course-name">{c.course}</span>
                     <span className="kb-course-sub">
                       {deckCountLabel(decks)}
-                      {c.source ? ` · ${c.source}` : ''}
                     </span>
                   </button>
                   {isOpen && (
@@ -820,7 +831,7 @@ function Browse({
                             const mine = slides.filter((x) => x.isDansWork).length;
                             const shown = deckOpen === d.id;
                             return [
-                              <tr key={d.id} className={shown ? 'is-open' : ''}>
+                              <tr key={d.id} className={[shown ? 'is-open' : '', i % 2 ? 'is-alt' : ''].filter(Boolean).join(' ') || undefined}>
                                 <td>
                                   <button type="button" className="kb-deck-btn" aria-expanded={shown} onClick={() => setDeckOpen(shown ? null : d.id)}>
                                     <b>{d.kind === 'sheet' ? '▤' : i + 1 - decks.slice(0, i).filter((x) => x.kind === 'sheet').length}</b> · {d.title}
@@ -829,7 +840,7 @@ function Browse({
                                 </td>
                                 <td>
                                   {slides.length}
-                                  {d.kind === 'sheet' ? ' pages' : ''}
+                                  {d.kind === 'sheet' ? (slides.length === 1 ? ' page' : ' pages') : ''}
                                 </td>
                                 <td>{mine || ''}</td>
                                 <td className="kb-right">
@@ -863,6 +874,8 @@ function Browse({
                 </section>
               );
             })}
+              </div>
+            ))}
           </div>
         ))}
       </div>

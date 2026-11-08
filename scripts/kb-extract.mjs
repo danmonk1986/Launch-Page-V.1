@@ -8,7 +8,7 @@
 // that were removed from a deck are deleted from the index.
 // The manifest and the SQL hold Dan's content: keep both OUT of the repo (scratchpad only).
 //
-// Manifest: { "courses": [ { "domain", "course", "domainSort", "courseSort", "source",
+// Manifest: { "courses": [ { "domain", "program"?, "programSort"?, "course", "domainSort", "courseSort", "source",
 //              "items": [ { "kind": "deck" | "sheet", "url", "dir", "title"?, "version"? } ] } ] }
 //   deck  → dir holds project/deck.json + project/slides/<id>.html
 //   sheet → dir holds project/canvas.json + project/<board>.dc.html
@@ -189,6 +189,8 @@ export function build(manifest) {
   const report = { count: 0, missing: [], decks: 0, slides: 0 };
   const courses = (manifest.courses || []).map((c) => ({
     domain: c.domain,
+    program: c.program ?? null,
+    programSort: c.programSort | 0,
     course: c.course,
     domainSort: c.domainSort | 0,
     courseSort: c.courseSort | 0,
@@ -216,8 +218,8 @@ export function toSql(manifest, userId) {
   const out = ['-- KNOWLEDGE!B4SE load (generated). Holds personal content: do not commit.', 'begin;'];
   for (const c of courses) {
     out.push(
-      `insert into public.kb_courses (user_id, domain, course, domain_sort, course_sort, source) values (${u}, ${q(c.domain)}, ${q(c.course)}, ${c.domainSort}, ${c.courseSort}, ${q(c.source)})` +
-        ` on conflict (user_id, domain, course) do update set domain_sort = excluded.domain_sort, course_sort = excluded.course_sort, source = excluded.source;`
+      `insert into public.kb_courses (user_id, domain, program, program_sort, course, domain_sort, course_sort, source) values (${u}, ${q(c.domain)}, ${q(c.program)}, ${c.programSort}, ${q(c.course)}, ${c.domainSort}, ${c.courseSort}, ${q(c.source)})` +
+        ` on conflict (user_id, domain, course) do update set program = coalesce(excluded.program, public.kb_courses.program), program_sort = excluded.program_sort, domain_sort = excluded.domain_sort, course_sort = excluded.course_sort, source = excluded.source;`
     );
     const courseId = `(select id from public.kb_courses where user_id = ${u} and domain = ${q(c.domain)} and course = ${q(c.course)})`;
     for (const d of c.decks) {

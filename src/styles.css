@@ -2798,3 +2798,16 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
   .kb-course.is-open { box-shadow: 6px 6px 0 #06f9c2; }
   .kb-browse { padding-right: 22px !important; }
 }
+
+/* Programs (Dan, Nov 7): Domain → Program → Course → Deck. */
+.kb-program { display: flex; flex-direction: column; gap: 14px; }
+.kb-program + .kb-program { margin-top: 18px; }
+.kb-program-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 0 4px; }
+.kb-program-head h3 { margin: 0; font-size: 22px; font-weight: 700; color: #1a1338; }
+.kb-program-head span { font-size: 14px; color: #6a4fa3; font-weight: 600; }
+.kb-domain > .kb-eyebrow { margin-top: 8px; }
+/* Striped deck rows (#f5f5eb); the open row stays lilac. */
+.kb-table tr.is-alt td { background: #f5f5eb; }
+.kb-table tr.is-open td { background: #e9e2f4; }
+.kb-mast-words { flex: 0 0 auto; max-width: 56%; }
+.kb-mast-sub { white-space: normal; }
