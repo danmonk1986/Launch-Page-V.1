@@ -273,19 +273,22 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
             </button>
           )}
         </h2>
+        {/* Nov 8: the view toggle sits beside the title, like Tasks and Budget. */}
+        <div className="view-switch">
+        {!mobile && (
+          <button
+            type="button"
+            className="icon-btn tool-btn view-toggle"
+            aria-label={view === '28' ? '28 days: tap for Week view' : 'Week view: tap for 28 days'}
+            title={view === '28' ? '28 days: tap for Week view' : 'Week view: tap for 28 days'}
+            aria-pressed={view === '28'}
+            onClick={toggleView}
+          >
+            <Icon d={view === '28' ? GRID_ICON : WEEK_ICON} />
+          </button>
+        )}
+        </div>
         <div className="panel-actions week-tools">
-          {!mobile && (
-            <button
-              type="button"
-              className="icon-btn tool-btn view-toggle"
-              aria-label={view === '28' ? '28 days: tap for Week view' : 'Week view: tap for 28 days'}
-              title={view === '28' ? '28 days: tap for Week view' : 'Week view: tap for 28 days'}
-              aria-pressed={view === '28'}
-              onClick={toggleView}
-            >
-              <Icon d={view === '28' ? GRID_ICON : WEEK_ICON} />
-            </button>
-          )}
           <button type="button" className="week-arrow" aria-label={mobile ? 'Previous 3 days' : 'Previous week'} title={mobile ? 'Previous 3 days' : 'Previous week'} onClick={() => setOffset((o) => o - 1)}>
             {"<"}
           </button>
