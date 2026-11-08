@@ -56,6 +56,25 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
   // Phones (Oct 30): 3 days at a time starting today; swipe left/right moves 3 days.
   const mobile = useMobile();
   const span = mobile ? 3 : 7;
+  // V20-042 (Nov 8): Week ↔ 28 days. 28 days = this week on top plus the next three below
+  // (a 26 Days run fits). The arrows still move one week. Phones keep the 3-day view.
+  const [view, setView] = useState<'week' | '28'>(() => {
+    try {
+      return localStorage.getItem('launchpage.week.view') === '28' ? '28' : 'week';
+    } catch {
+      return 'week';
+    }
+  });
+  const toggleView = () => {
+    const next = view === '28' ? 'week' : '28';
+    setView(next);
+    try {
+      localStorage.setItem('launchpage.week.view', next);
+    } catch {
+      /* this device only */
+    }
+  };
+  const rowsShown = view === '28' && !mobile ? 4 : 1;
   useEffect(() => setOffset(0), [mobile]);
   const swipe = useSwipe(() => setOffset((o) => o + 1), () => setOffset((o) => o - 1), mobile);
   const todayStart = new Date();
@@ -63,7 +82,7 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
   const start = mobile ? addDays(todayStart, offset * 3) : addDays(weekStart(new Date()), offset * 7);
   const days = Array.from({ length: span }, (_, i) => addDays(start, i));
   const from = isoDate(days[0]);
-  const to = isoDate(days[span - 1]);
+  const to = isoDate(addDays(start, rowsShown === 4 ? 27 : span - 1));
 
   useEffect(preloadGoogle, []);
 
@@ -190,9 +209,8 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
     !e.google?.time && (onNorthStar(e) || (e.startDate === e.endDate && themeTitles.has(e.title.trim().toLowerCase())));
   // One tile per day (Oct 20): anything that runs over several days, themes and the North
   // Star included, shows as its own tile on each day it covers instead of one stretched bar.
-  const weekDays = days.map(isoDate);
   const original = new Map<string, CalEvent>();
-  const perDay = (list: CalEvent[]) => {
+  const perDay = (list: CalEvent[], weekDays: string[]) => {
     const out: CalEvent[] = [];
     const seen = new Set<string>();
     for (const e of list) {
@@ -208,12 +226,20 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
     }
     return out;
   };
-  const main = layoutWeek(perDay(all.filter((e) => !isTheme(e))), start);
-  const mainLanes = main.reduce((m, p) => Math.max(m, p.lane + 1), 0);
-  const themes = layoutWeek(perDay(all.filter(isTheme)), start).map((p) => ({ ...p, lane: p.lane + mainLanes, theme: true }));
-  const placed = [...main, ...themes];
-  const lanes = placed.reduce((m, p) => Math.max(m, p.lane + 1), 0);
-  const end = days[span - 1];
+  const placeRow = (rowStart: Date, rowDays: Date[]) => {
+    const weekDays = rowDays.map(isoDate);
+    const main = layoutWeek(perDay(all.filter((e) => !isTheme(e)), weekDays), rowStart);
+    const mainLanes = main.reduce((m, p) => Math.max(m, p.lane + 1), 0);
+    const themes = layoutWeek(perDay(all.filter(isTheme), weekDays), rowStart).map((p) => ({ ...p, lane: p.lane + mainLanes, theme: true }));
+    const placed = [...main, ...themes];
+    return { rowDays, placed, lanes: placed.reduce((m, p) => Math.max(m, p.lane + 1), 0) };
+  };
+  const rows = Array.from({ length: rowsShown }, (_, r) => {
+    const rowStart = addDays(start, r * 7);
+    return placeRow(rowStart, r === 0 ? days : Array.from({ length: 7 }, (_, i) => addDays(rowStart, i)));
+  });
+  const anyPlaced = rows.some((r) => r.placed.length > 0);
+  const end = addDays(start, rowsShown === 4 ? 27 : span - 1);
   const range = `${start.toLocaleDateString('en-CA', { month: 'long', day: 'numeric' })} – ${end.toLocaleDateString('en-CA', {
     month: start.getMonth() === end.getMonth() ? undefined : 'long',
     day: 'numeric'
@@ -223,7 +249,15 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
     <section className="panel panel-week" aria-labelledby="h-week">
       <div className="panel-head">
         <h2 id="h-week" className="panel-title" title={range}>
-          {offset === 0 ? (
+          {rowsShown === 4 ? (
+            offset === 0 ? (
+              '28 days'
+            ) : (
+              <button type="button" className="title-btn" title="Back to this week" onClick={() => setOffset(0)}>
+                {`28 days from ${start.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}`}
+              </button>
+            )
+          ) : offset === 0 ? (
             mobile ? 'Next 3 days' : 'This week'
           ) : mobile ? (
             <button type="button" className="title-btn" title="Back to today" onClick={() => setOffset(0)}>
@@ -240,6 +274,18 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
           )}
         </h2>
         <div className="panel-actions week-tools">
+          {!mobile && (
+            <button
+              type="button"
+              className="icon-btn tool-btn view-toggle"
+              aria-label={view === '28' ? '28 days: tap for Week view' : 'Week view: tap for 28 days'}
+              title={view === '28' ? '28 days: tap for Week view' : 'Week view: tap for 28 days'}
+              aria-pressed={view === '28'}
+              onClick={toggleView}
+            >
+              <Icon d={view === '28' ? GRID_ICON : WEEK_ICON} />
+            </button>
+          )}
           <button type="button" className="week-arrow" aria-label={mobile ? 'Previous 3 days' : 'Previous week'} title={mobile ? 'Previous 3 days' : 'Previous week'} onClick={() => setOffset((o) => o - 1)}>
             {"<"}
           </button>
@@ -281,8 +327,9 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
       {gError && <p className="panel-empty">{gError}</p>}
 
       <div className={`week-scroll${mobile ? ' is-3day' : ''}`} {...swipe}>
-        <div className="week-grid" style={{ gridTemplateColumns: `repeat(${span}, minmax(0, 1fr))`, gridTemplateRows: `auto repeat(${Math.max(lanes, 1)}, 24px)` }}>
-          {days.map((d, i) => {
+        {rows.map(({ rowDays, placed, lanes }, r) => (
+        <div key={isoDate(rowDays[0])} className={`week-grid${rowsShown === 4 ? ' is-28' : ''}${r > 0 ? ' week-grid-next' : ''}`} style={{ gridTemplateColumns: `repeat(${rowDays.length}, minmax(0, 1fr))`, gridTemplateRows: `auto repeat(${Math.max(lanes, 1)}, 24px)` }}>
+          {rowDays.map((d, i) => {
             const iso = isoDate(d);
             return (
               <button
@@ -298,7 +345,7 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
                 }}
               >
                 <span className="week-dow">{d.toLocaleDateString('en-CA', { weekday: 'short' }).replace('.', '')}</span>
-                <span className="week-num">{d.getDate()}</span>
+                <span className="week-num">{rowsShown === 4 && d.getDate() === 1 ? d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }).replace('.', '') : d.getDate()}</span>
               </button>
             );
           })}
@@ -329,7 +376,8 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
             </button>
           ))}
         </div>
-        {placed.length === 0 && <p className="panel-empty week-empty">{mobile ? 'Nothing in these 3 days. Tap a day to add an event.' : 'Nothing this week yet. Tap a day to add an event.'}</p>}
+        ))}
+        {!anyPlaced && <p className="panel-empty week-empty">{mobile ? 'Nothing in these 3 days. Tap a day to add an event.' : rowsShown === 4 ? 'Nothing in these 28 days yet. Tap a day to add an event.' : 'Nothing this week yet. Tap a day to add an event.'}</p>}
       </div>
 
       <Sheet open={open} title={editing ? `Edit ${editing.title}` : 'Add event'} onClose={() => setOpen(false)}>
@@ -376,6 +424,9 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
     </section>
   );
 }
+
+const WEEK_ICON = 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16M9 3v4M15 3v4';
+const GRID_ICON = 'M4 4h16v16H4zM4 8h16M4 12h16M4 16h16M9.3 8v12M14.7 8v12';
 
 function Icon({ d }: { d: string }) {
   return (

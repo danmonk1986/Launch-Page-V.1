@@ -2812,3 +2812,7 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-table tr.is-open td { background: #e9e2f4; }
 .kb-mast-words { flex: 0 0 auto; max-width: 56%; }
 .kb-mast-sub { white-space: normal; }
+
+/* ---------- This Week · 28 days (Nov 8, V20-042): four week rows, each with its own day header ---------- */
+.week-grid-next { margin-top: 10px; padding-top: 8px; border-top: 1px dashed color-mix(in srgb, var(--accent-purple) 40%, transparent); }
+.week-grid.is-28 .week-day { padding-top: 4px; padding-bottom: 4px; }
