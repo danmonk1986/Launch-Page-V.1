@@ -2676,6 +2676,7 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 .kb-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--kb-line); background: #ffffff; color: var(--kb-ink); text-decoration: none; font-size: 14px; cursor: pointer; }
 .kb-btn:hover { border-color: var(--kb-teal); }
 .kb-btn-dark { background: var(--kb-ink); border-color: var(--kb-ink); color: var(--kb-beige); font-weight: 600; }
+button.kb-btn { font-family: inherit; }
 .kb-btn-dark:hover { background: #2a2152; color: #ffffff; }
 .kb-btn-block { width: 100%; min-height: 44px; }
 .kb-more { align-self: center; }
@@ -2816,3 +2817,29 @@ select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-
 /* ---------- This Week · 28 days (Nov 8, V20-042): four week rows, each with its own day header ---------- */
 .week-grid-next { margin-top: 10px; padding-top: 8px; border-top: 1px dashed color-mix(in srgb, var(--accent-purple) 40%, transparent); }
 .week-grid.is-28 .week-day { padding-top: 4px; padding-bottom: 4px; }
+/* KNOWLEDGE!B4SE slide viewer (KB-034): finished decks open here instead of on claude.ai. */
+.kb-viewer { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; background: #110c29; color: #f5f5dc; font-family: 'Space Grotesk', Arial, sans-serif; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.kb-viewer-bar { display: flex; align-items: center; gap: 16px; padding: 12px 16px; min-height: 56px; }
+.kb-viewer-title { flex: 1 1 auto; min-width: 0; margin: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.kb-viewer-title b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kb-viewer-title span { font-size: 13px; color: #c9c2e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kb-viewer-tools { display: flex; align-items: center; gap: 8px; flex: none; }
+.kb-viewer-count { font-family: 'Roboto Mono', monospace; font-size: 13px; color: #c9c2e6; margin-right: 4px; font-variant-numeric: tabular-nums; }
+.kb-viewer-btn { all: unset; box-sizing: border-box; cursor: pointer; min-width: 40px; height: 36px; padding: 0 12px; border-radius: 999px; border: 2px solid #8869cb; color: #f5f5dc; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
+.kb-viewer-btn:hover, .kb-viewer-btn:focus-visible { border-color: #06f9c2; }
+.kb-viewer-btn.is-on { background: #06f9c2; border-color: #06f9c2; color: #1a1338; }
+.kb-viewer-close { font-size: 22px; padding: 0; width: 36px; }
+.kb-viewer-stage { position: relative; flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; touch-action: pan-y; }
+.kb-viewer-slide { position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.kb-viewer-nav { all: unset; cursor: pointer; flex: none; width: 48px; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #c9c2e6; }
+.kb-viewer-nav:hover:not(:disabled), .kb-viewer-nav:focus-visible { color: #06f9c2; }
+.kb-viewer-nav:disabled { opacity: 0.25; cursor: default; }
+.kb-viewer-msg { position: absolute; inset: 0; margin: auto; height: fit-content; text-align: center; color: #c9c2e6; padding: 16px; }
+.kb-viewer-msg a { color: #06f9c2; }
+.kb-viewer-notes { flex: none; max-height: 28vh; overflow: auto; padding: 14px 64px 18px; font-size: 15px; line-height: 1.5; color: #c9c2e6; border-top: 1px solid rgba(201, 194, 230, 0.2); white-space: pre-wrap; }
+@media (max-width: 700px) {
+  .kb-viewer-nav { width: 28px; font-size: 30px; }
+  .kb-viewer-title span { display: none; }
+  .kb-viewer-count { display: none; }
+  .kb-viewer-notes { padding: 12px 16px 16px; }
+}

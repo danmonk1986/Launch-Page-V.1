@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { extractDeck, extractSheet, parseSlide, toSql, toJson, scrub } from './kb-extract.mjs';
+import { extractDeck, extractSheet, parseSlide, toSql, toJson, scrub, slideHtml } from './kb-extract.mjs';
 
 function fakeDeck() {
   const dir = mkdtempSync(join(tmpdir(), 'kbdeck-'));
@@ -122,4 +122,21 @@ test('JSON index for the app: courses → decks → slides, no user id', () => {
   assert.equal(json.courses[0].decks[0].sort, 0);
   assert.equal(report.slides, 8);
   assert.ok(!JSON.stringify(json).includes('user_id'));
+});
+
+test('slideHtml: notes out, images inlined, link slugs kept, keys still removed (KB-034)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'kbhtml-'));
+  mkdirSync(join(dir, 'project/blobs'), { recursive: true });
+  writeFileSync(join(dir, 'project/blobs/0123456789abcdef0123456789abcdef.png'), Buffer.from([137, 80, 78, 71]));
+  const report = { count: 0, missing: [] };
+  const raw =
+    '<section id="s"><p>api_key=abc123def456ghi789jkl</p><a href="https://example.com/article/what-is-design-thinking-and-why-is-it-so-popular-2026">x</a>' +
+    '<img src="/_blob/0123456789abcdef0123456789abcdef" alt="chart"><img src="/_blob/ffffffffffffffffffffffffffffffff" alt="gone"><aside>Secret notes. Tags: a</aside></section>';
+  const html = slideHtml(raw, dir, report);
+  assert.ok(!html.includes('<aside'));
+  assert.ok(html.includes('what-is-design-thinking-and-why-is-it-so-popular-2026'));
+  assert.ok(html.includes('src="data:image/png;base64,iVBORw=="'));
+  assert.ok(!html.includes('abc123def456ghi789jkl'));
+  assert.ok(!html.includes('/_blob/'));
+  assert.deepEqual(report.missing, ['image ffffffffffffffffffffffffffffffff']);
 });

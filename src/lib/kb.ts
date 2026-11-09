@@ -8,7 +8,7 @@ import { supabase } from './supabase';
 
 export type KbSection = { name: string; description: string; start: string; num: number };
 export type KbCourse = { id: string; domain: string; course: string; domainSort: number; courseSort: number; source: string | null; program: string; programSort: number };
-export type KbDeck = { id: string; courseId: string; kind: 'deck' | 'sheet'; title: string; url: string; sort: number; sections: KbSection[]; slideCount: number; extractedAt: string };
+export type KbDeck = { id: string; courseId: string; kind: 'deck' | 'sheet'; title: string; url: string; sort: number; sections: KbSection[]; slideCount: number; extractedAt: string; hosted: boolean };
 export type KbSlide = { id: string; deckId: string; slideId: string; num: number; section: string; eyebrow: string; title: string; tags: string[]; isDansWork: boolean; link: string };
 export type KbOutline = { courses: KbCourse[]; decks: KbDeck[]; slides: KbSlide[] };
 export type KbHit = KbSlide & { snippet: string; rank: number };
@@ -34,7 +34,7 @@ function keep(o: KbOutline) {
 }
 
 type CourseRow = { id: string; domain: string; course: string; domain_sort: number; course_sort: number; source: string | null; program: string | null; program_sort: number | null };
-type DeckRow = { id: string; course_id: string; kind: 'deck' | 'sheet'; title: string; url: string; sort: number; sections: KbSection[] | null; slide_count: number; extracted_at: string };
+type DeckRow = { id: string; course_id: string; kind: 'deck' | 'sheet'; title: string; url: string; sort: number; sections: KbSection[] | null; slide_count: number; extracted_at: string; hosted?: boolean };
 type SlideRow = { id: string; deck_id: string; slide_id: string; num: number; section: string; eyebrow: string; title: string; tags: string[] | null; is_dans_work: boolean; link: string };
 
 const slideFrom = (r: SlideRow): KbSlide => ({
@@ -55,7 +55,7 @@ export async function loadOutline(): Promise<{ outline: KbOutline; offline: bool
   if (!supabase) return { outline: cachedOutline(), offline: true };
   const [c, d] = await Promise.all([
     supabase.from('kb_courses').select('id, domain, course, domain_sort, course_sort, source, program, program_sort').order('domain_sort').order('course_sort'),
-    supabase.from('kb_decks').select('id, course_id, kind, title, url, sort, sections, slide_count, extracted_at').order('sort')
+    supabase.from('kb_decks').select('id, course_id, kind, title, url, sort, sections, slide_count, extracted_at, hosted').order('sort')
   ]);
   if (c.error || d.error) {
     const problem = (c.error ?? d.error)!.message;
@@ -71,7 +71,7 @@ export async function loadOutline(): Promise<{ outline: KbOutline; offline: bool
   }
   const outline: KbOutline = {
     courses: ((c.data ?? []) as CourseRow[]).map((r) => ({ id: r.id, domain: r.domain, course: r.course, domainSort: r.domain_sort, courseSort: r.course_sort, source: r.source, program: r.program ?? '', programSort: r.program_sort ?? 0 })),
-    decks: ((d.data ?? []) as DeckRow[]).map((r) => ({ id: r.id, courseId: r.course_id, kind: r.kind, title: r.title, url: r.url, sort: r.sort, sections: Array.isArray(r.sections) ? r.sections : [], slideCount: r.slide_count, extractedAt: r.extracted_at })),
+    decks: ((d.data ?? []) as DeckRow[]).map((r) => ({ id: r.id, courseId: r.course_id, kind: r.kind, title: r.title, url: r.url, sort: r.sort, sections: Array.isArray(r.sections) ? r.sections : [], slideCount: r.slide_count, extractedAt: r.extracted_at, hosted: !!r.hosted })),
     slides: rows.map(slideFrom)
   };
   keep(outline);
@@ -130,8 +130,8 @@ export function snippetParts(snippet: string): { text: string; mark: boolean }[]
 
 // ---------- Import (kb-index.json from scripts/kb-extract.mjs) ----------
 
-type IndexSlide = { slide_id: string; num: number; section: string; eyebrow: string; title: string; body: string; notes: string; tags: string[]; is_dans_work: boolean; link: string };
-type IndexDeck = { kind: 'deck' | 'sheet'; title: string; url: string; sort: number; version: string | null; sections: KbSection[]; slides: IndexSlide[] };
+type IndexSlide = { slide_id: string; num: number; section: string; eyebrow: string; title: string; body: string; notes: string; tags: string[]; is_dans_work: boolean; link: string; html?: string | null };
+type IndexDeck = { kind: 'deck' | 'sheet'; title: string; url: string; sort: number; version: string | null; hosted?: boolean; sections: KbSection[]; slides: IndexSlide[] };
 type IndexCourse = { domain: string; program?: string; programSort?: number; course: string; domainSort: number; courseSort: number; source: string | null; decks: IndexDeck[] };
 export type KbIndex = { kind: 'launchpage-kb-index'; version: number; generatedAt: string; courses: IndexCourse[] };
 
@@ -187,7 +187,7 @@ export async function importIndex(userId: string, index: KbIndex, progress: (msg
       const deck = await supabase
         .from('kb_decks')
         .upsert(
-          { user_id: userId, course_id: course.data.id, kind: d.kind, title: d.title, url: d.url, sort: d.sort | 0, sections: d.sections ?? [], slide_count: d.slides.length, version: d.version ?? null, extracted_at: new Date().toISOString() },
+          { user_id: userId, course_id: course.data.id, kind: d.kind, title: d.title, url: d.url, sort: d.sort | 0, sections: d.sections ?? [], slide_count: d.slides.length, version: d.version ?? null, hosted: !!d.hosted && d.slides.every((s) => !!s.html), extracted_at: new Date().toISOString() },
           { onConflict: 'user_id,url' }
         )
         .select('id')
@@ -212,7 +212,8 @@ export async function importIndex(userId: string, index: KbIndex, progress: (msg
           tags: s.tags ?? [],
           tag_text: (s.tags ?? []).join(' '),
           is_dans_work: !!s.is_dans_work,
-          link: s.link
+          link: s.link,
+          html: s.html ?? null
         }));
         const up = await supabase.from('kb_slides').upsert(rows, { onConflict: 'deck_id,slide_id' });
         if (up.error) throw new Error(up.error.message);
@@ -222,6 +223,24 @@ export async function importIndex(userId: string, index: KbIndex, progress: (msg
     }
   }
   return { courses: index.courses.length, decks, slides };
+}
+
+// ---------- Slides inside the app (KB-034) ----------
+export type KbSlideView = { slideId: string; num: number; title: string; notes: string; html: string };
+const viewCache = new Map<string, KbSlideView[]>();
+
+/** A hosted deck's slides, with their design, for the slide viewer. Kept in memory for the visit. */
+export async function deckSlides(deckId: string): Promise<KbSlideView[]> {
+  const hit = viewCache.get(deckId);
+  if (hit) return hit;
+  if (!supabase) throw new Error('Sign in to open slides here.');
+  const { data, error } = await supabase.from('kb_slides').select('slide_id, num, title, notes, html').eq('deck_id', deckId).order('num');
+  if (error) throw new Error(error.message);
+  const views = ((data ?? []) as { slide_id: string; num: number; title: string; notes: string; html: string | null }[])
+    .filter((r) => !!r.html)
+    .map((r) => ({ slideId: r.slide_id, num: r.num, title: r.title, notes: r.notes ?? '', html: r.html as string }));
+  viewCache.set(deckId, views);
+  return views;
 }
 
 // ---------- Shaping for the screens ----------

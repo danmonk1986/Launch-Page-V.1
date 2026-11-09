@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { SlideViewer } from './SlideViewer';
 import {
   DOMAINS,
   SECTION_ORDER,
@@ -85,6 +86,9 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
     const slideById = new Map(outline.slides.map((s) => [s.id, s]));
     return { deckById, courseById, slideById };
   }, [outline]);
+
+  const [viewer, setViewer] = useState<{ deck: KbDeck; num: number } | null>(null);
+  const view = useCallback((deck: KbDeck, num: number) => setViewer({ deck, num }), []);
 
   /** Opening a slide: remembered for Recently opened. */
   function opened(s: KbSlide) {
@@ -198,6 +202,7 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
   }
 
   return (
+    <ViewerCtx.Provider value={view}>
     <div className="kb" ref={top}>
       <input
         ref={pick}
@@ -217,11 +222,40 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
         </p>
       )}
       {body}
+      {viewer && createPortal(<SlideViewer deck={viewer.deck} start={viewer.num} onClose={() => setViewer(null)} />, document.body)}
     </div>
+    </ViewerCtx.Provider>
   );
 }
 
 type Ctx = { deckById: Map<string, KbDeck>; courseById: Map<string, KbCourse>; slideById: Map<string, KbSlide> };
+
+/** Opens a deck at a slide: in the app's viewer when the deck is stored here (hosted), else on claude.ai. */
+const ViewerCtx = createContext<(deck: KbDeck, num: number) => void>(() => undefined);
+
+function OpenLink({ deck, num, slide, className, onOpen, children }: { deck: KbDeck; num?: number; slide?: KbSlide; className: string; onOpen?: (s: KbSlide) => void; children: ReactNode }) {
+  const view = useContext(ViewerCtx);
+  const n = num ?? slide?.num ?? 1;
+  if (deck.hosted && deck.kind === 'deck') {
+    return (
+      <button
+        type="button"
+        className={className}
+        onClick={() => {
+          if (slide) onOpen?.(slide);
+          view(deck, n);
+        }}
+      >
+        {children}
+      </button>
+    );
+  }
+  return (
+    <a className={className} href={slide ? slide.link : num ? `${deck.url}#slide-${num}` : deck.url} target="_blank" rel="noopener noreferrer" onClick={() => slide && onOpen?.(slide)}>
+      {children}
+    </a>
+  );
+}
 
 const SearchIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
@@ -509,13 +543,13 @@ function Results(p: {
                   <p className="kb-snip">{parts.map((x, j) => (x.mark ? <mark key={j}>{x.text}</mark> : <span key={j}>{x.text}</span>))}</p>
                 )}
                 <div className="kb-actions">
-                  <a className="kb-btn kb-btn-dark" href={h.link} target="_blank" rel="noopener noreferrer" onClick={() => p.onOpen(h)}>
+                  <OpenLink className="kb-btn kb-btn-dark" deck={d} slide={h} onOpen={p.onOpen}>
                     {sheet ? 'Open cheat sheets' : `Open at slide ${h.num}`}
-                  </a>
+                  </OpenLink>
                   {!sheet && (
-                    <a className="kb-btn" href={d.url} target="_blank" rel="noopener noreferrer">
+                    <OpenLink className="kb-btn" deck={d} num={1}>
                       Open deck
-                    </a>
+                    </OpenLink>
                   )}
                   <button type="button" className="kb-btn" onClick={() => p.onTopic(h.id)}>
                     Dig deeper →
@@ -566,9 +600,15 @@ function Preview({ hit, ctx, onOpen }: { hit: KbHit; ctx: Ctx; onOpen: (s: KbSli
         {d?.title} · {d?.kind === 'sheet' ? 'page' : 'slide'} {hit.num}
         {d && d.kind === 'deck' ? ` of ${d.slideCount}` : ''}
       </p>
-      <a className="kb-btn kb-btn-dark kb-btn-block" href={hit.link} target="_blank" rel="noopener noreferrer" onClick={() => onOpen(hit)}>
-        Open this slide
-      </a>
+      {d ? (
+        <OpenLink className="kb-btn kb-btn-dark kb-btn-block" deck={d} slide={hit} onOpen={onOpen}>
+          Open this slide
+        </OpenLink>
+      ) : (
+        <a className="kb-btn kb-btn-dark kb-btn-block" href={hit.link} target="_blank" rel="noopener noreferrer" onClick={() => onOpen(hit)}>
+          Open this slide
+        </a>
+      )}
     </aside>
   );
 }
@@ -629,9 +669,9 @@ function Topic(p: {
             </button>
           )}
           <span aria-hidden="true">›</span>
-          <a className="kb-link" href={d.url} target="_blank" rel="noopener noreferrer">
+          <OpenLink className="kb-link" deck={d} num={1}>
             {d.title}
-          </a>
+          </OpenLink>
           <span aria-hidden="true">›</span>
           <span className="kb-crumb-here">{s.title}</span>
         </nav>
@@ -649,13 +689,13 @@ function Topic(p: {
             <h1>{s.title}</h1>
             {summary ? <p className="kb-lead">{summary}</p> : detail === null ? <p className="kb-lead kb-dim">Loading…</p> : null}
             <div className="kb-actions">
-              <a className="kb-btn kb-btn-dark" href={s.link} target="_blank" rel="noopener noreferrer" onClick={() => p.onOpen(s)}>
+              <OpenLink className="kb-btn kb-btn-dark" deck={d} slide={s} onOpen={p.onOpen}>
                 {sheet ? 'Open cheat sheets' : `Open deck at slide ${s.num}`}
-              </a>
+              </OpenLink>
               {!sheet && (
-                <a className="kb-btn" href={d.url} target="_blank" rel="noopener noreferrer">
+                <OpenLink className="kb-btn" deck={d} num={1}>
                   Open full deck
-                </a>
+                </OpenLink>
               )}
             </div>
           </div>
@@ -844,9 +884,9 @@ function Browse({
                                 </td>
                                 <td>{mine || ''}</td>
                                 <td className="kb-right">
-                                  <a className="kb-link" href={d.url} target="_blank" rel="noopener noreferrer">
+                                  <OpenLink className="kb-link" deck={d} num={1}>
                                     Open
-                                  </a>
+                                  </OpenLink>
                                 </td>
                               </tr>,
                               shown ? (

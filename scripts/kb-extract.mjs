@@ -12,7 +12,7 @@
 //              "items": [ { "kind": "deck" | "sheet", "url", "dir", "title"?, "version"? } ] } ] }
 //   deck  → dir holds project/deck.json + project/slides/<id>.html
 //   sheet → dir holds project/canvas.json + project/<board>.dc.html
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 // ---------- text helpers ----------
@@ -53,9 +53,9 @@ const SECRET_PATTERNS = [
   /\bsk-[A-Za-z0-9_-]{16,}/g, // generic secret-key prefix
   /\b(?=[A-Za-z0-9_-]*\d)(?=[A-Za-z0-9_-]*[A-Za-z])[A-Za-z0-9_-]{32,}\b/g // long random-looking strings
 ];
-export function scrub(s, report) {
+export function scrub(s, report, patterns = SECRET_PATTERNS) {
   let out = s;
-  for (const re of SECRET_PATTERNS) {
+  for (const re of patterns) {
     out = out.replace(re, () => {
       report.count++;
       return '[removed]';
@@ -108,7 +108,41 @@ export function parseSlide(html) {
   return { title, eyebrow, body, notes, tags };
 }
 
+const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' };
+
+/**
+ * The slide's design for the in-app viewer (KB-034): the <section> without its speaker notes, secrets
+ * scrubbed, and each uploaded image (/_blob/<id>) inlined from project/blobs/<id>.<ext> as a data: URI.
+ * An image that wasn't saved is dropped (its alt text stays in the notes/body for search).
+ */
+export function slideHtml(raw, dir, report) {
+  // Images go in after the scrub: an image id or its base64 would look like a key to it.
+  const blobs = [];
+  let html = raw
+    .replace(/<aside\b[\s\S]*?<\/aside>/gi, '')
+    .trim()
+    .replace(/\/_blob\/([0-9a-f]{32})/g, (m, id) => `\u0000IMG${blobs.push(id) - 1}\u0000`);
+  // Link addresses keep their page slugs and file ids (those look random but aren't keys); key=value
+  // and token-prefix patterns are still removed from them.
+  const hrefs = [];
+  html = html.replace(/href="([^"]*)"/g, (m, u) => `href="\u0000URL${hrefs.push(scrub(u, report, SECRET_PATTERNS.slice(0, -1))) - 1}\u0000"`);
+  html = scrub(html, report).replace(/\u0000URL(\d+)\u0000/g, (m, n) => hrefs[+n]);
+  return html.replace(/\u0000IMG(\d+)\u0000/g, (m, n) => {
+    const id = blobs[+n];
+    const blobDir = join(dir, 'project/blobs');
+    const name = existsSync(blobDir) ? readdirSync(blobDir).find((f) => f.startsWith(id + '.')) : undefined;
+    const ext = name ? name.split('.').pop().toLowerCase() : '';
+    if (!name || !MIME[ext]) {
+      report.missing.push(`image ${id}`);
+      return '';
+    }
+    return `data:${MIME[ext]};base64,${readFileSync(join(blobDir, name)).toString('base64')}`;
+  });
+}
+
 export function extractDeck(item, report) {
+  // A deck still being built keeps opening on claude.ai: "hosted": false in the manifest.
+  const hosted = item.hosted !== false;
   const deck = JSON.parse(readFileSync(join(item.dir, 'project/deck.json'), 'utf8'));
   const order = Array.isArray(deck.order) ? deck.order : [];
   const sections = Object.values(deck.sections || {})
@@ -122,7 +156,8 @@ export function extractDeck(item, report) {
       report.missing.push(`${item.url} · ${id}`);
       return;
     }
-    const p = parseSlide(readFileSync(file, 'utf8'));
+    const raw = readFileSync(file, 'utf8');
+    const p = parseSlide(raw);
     const sec = [...sections].reverse().find((s) => s.index <= i);
     const tags = p.tags.map((t) => scrub(t, report));
     slides.push({
@@ -135,7 +170,8 @@ export function extractDeck(item, report) {
       notes: scrub(p.notes, report),
       tags,
       is_dans_work: tags.some((t) => DANS_WORK.test(t)) || DANS_WORK.test(p.notes),
-      link: `${item.url}#slide-${i + 1}`
+      link: `${item.url}#slide-${i + 1}`,
+      html: hosted ? slideHtml(raw, item.dir, report) : null
     });
   });
   return {
@@ -143,6 +179,7 @@ export function extractDeck(item, report) {
     title: item.title || deck.title || item.url,
     url: item.url,
     version: item.version || null,
+    hosted,
     sections: sections.map(({ name, description, start, index }) => ({ name, description, start, num: index + 1 })),
     slides
   };
@@ -224,16 +261,16 @@ export function toSql(manifest, userId) {
     const courseId = `(select id from public.kb_courses where user_id = ${u} and domain = ${q(c.domain)} and course = ${q(c.course)})`;
     for (const d of c.decks) {
       out.push(
-        `insert into public.kb_decks (user_id, course_id, kind, title, url, sort, sections, slide_count, version, extracted_at) values (${u}, ${courseId}, ${q(d.kind)}, ${q(d.title)}, ${q(d.url)}, ${d.sort}, ${q(JSON.stringify(d.sections))}::jsonb, ${d.slides.length}, ${q(d.version)}, now())` +
-          ` on conflict (user_id, url) do update set course_id = excluded.course_id, kind = excluded.kind, title = excluded.title, sort = excluded.sort, sections = excluded.sections, slide_count = excluded.slide_count, version = excluded.version, extracted_at = now();`
+        `insert into public.kb_decks (user_id, course_id, kind, title, url, sort, sections, slide_count, version, hosted, extracted_at) values (${u}, ${courseId}, ${q(d.kind)}, ${q(d.title)}, ${q(d.url)}, ${d.sort}, ${q(JSON.stringify(d.sections))}::jsonb, ${d.slides.length}, ${q(d.version)}, ${!!d.hosted}, now())` +
+          ` on conflict (user_id, url) do update set course_id = excluded.course_id, kind = excluded.kind, title = excluded.title, sort = excluded.sort, sections = excluded.sections, slide_count = excluded.slide_count, version = excluded.version, hosted = excluded.hosted, extracted_at = now();`
       );
       const deckId = `(select id from public.kb_decks where user_id = ${u} and url = ${q(d.url)})`;
       const ids = d.slides.map((s) => q(s.slide_id)).join(',') || q('');
       out.push(`delete from public.kb_slides where deck_id = ${deckId} and slide_id not in (${ids});`);
       for (const s of d.slides) {
         out.push(
-          `insert into public.kb_slides (user_id, deck_id, slide_id, num, section, eyebrow, title, body, notes, tags, tag_text, is_dans_work, link) values (${u}, ${deckId}, ${q(s.slide_id)}, ${s.num}, ${q(s.section)}, ${q(s.eyebrow)}, ${q(s.title)}, ${q(s.body)}, ${q(s.notes)}, ${arr(s.tags)}, ${q(s.tags.join(' '))}, ${s.is_dans_work}, ${q(s.link)})` +
-            ` on conflict (deck_id, slide_id) do update set num = excluded.num, section = excluded.section, eyebrow = excluded.eyebrow, title = excluded.title, body = excluded.body, notes = excluded.notes, tags = excluded.tags, tag_text = excluded.tag_text, is_dans_work = excluded.is_dans_work, link = excluded.link;`
+          `insert into public.kb_slides (user_id, deck_id, slide_id, num, section, eyebrow, title, body, notes, tags, tag_text, is_dans_work, link, html) values (${u}, ${deckId}, ${q(s.slide_id)}, ${s.num}, ${q(s.section)}, ${q(s.eyebrow)}, ${q(s.title)}, ${q(s.body)}, ${q(s.notes)}, ${arr(s.tags)}, ${q(s.tags.join(' '))}, ${s.is_dans_work}, ${q(s.link)}, ${q(s.html ?? null)})` +
+            ` on conflict (deck_id, slide_id) do update set num = excluded.num, section = excluded.section, eyebrow = excluded.eyebrow, title = excluded.title, body = excluded.body, notes = excluded.notes, tags = excluded.tags, tag_text = excluded.tag_text, is_dans_work = excluded.is_dans_work, link = excluded.link, html = excluded.html;`
         );
       }
     }
