@@ -280,3 +280,10 @@ Dan didn't love the first layout: rebuilt from the "Knowledge Base Wireframe" ca
 ## Tasks · overdue steps (V20-043, Nov 9)
 - Bug Dan caught: seven steps under L4UNCH P4GE BETA were dated Nov 8, never ticked, but nothing showed OVERDUE and Due today stayed at 0. Steps travel with their task, so only the task's own Required date (Dec 8) was checked.
 - Fix: a task goes to Due today when any open step is due today or earlier, and its status reads DUE / OVERDUE from the earlier of its own date and its earliest open step. Steps that are due show their own DUE / OVERDUE badge. On the Launch Page, Due today shows just the due steps under their task. Ticking the last due step sends the task back to its usual group.
+
+## Timed launches · several steps in one launch (V20-044, Nov 9)
+- Dan's ask: couple several steps of a task (L4UNCH P4GE BETA) into one timed launch, a work block.
+- ⋯ → Create launch on a task with open steps opens **Steps for this launch**: tick the steps (due or overdue start ticked), or "Just the task" for the old behaviour. Next opens Add timed launch filled in: "Work Block - <task> · N steps", once, today or the earliest step date (never in the past), the task's time or 9:30, logs Productivity. Saving links every picked step to the launch (task.launchId; no migration).
+- The reminder and Time's up list the open steps on the launch.
+- Done (reminder, Time's up, Missed, ritual, Missed tab) with more than one open step asks **What did you finish?**: ticked steps are done; the rest stay open and, on a one-time launch, come off it so they show in Due today for the next block. "None finished" still checks the launch off and logs the time. Closing it leaves the launch not checked off, snoozed 10 min.
+- Not built yet: "Add to a launch…" on a single step (adding to a block that already exists).
