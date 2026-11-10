@@ -53,7 +53,6 @@ import { readScrollMode, writeScrollMode, type ScrollMode } from './lib/view';
 import { TodayPanel, useNow } from './components/TodayPanel';
 import { BLOCKED_HELP, LaunchersPanel, nameFromUrl, rocketOptions, type TimedPreset } from './components/Launchers';
 import { LaunchReminder, MissedLaunches, TimeUpReminder } from './components/LaunchReminder';
-import { StepCheckoff, StepPicker } from './components/StepSheets';
 import { chime, unlockAudioOnFirstGesture } from './lib/alerts';
 import { WeekCalendar } from './components/WeekCalendar';
 import { TasksPage, TasksPanel } from './components/Tasks';
@@ -389,9 +388,6 @@ export default function App() {
   const activeRoutine = shownRoutines.find((r) => r.id === activeId) ?? shownRoutines[0] ?? null;
   // "+ Timed launch" from a routine step: opens Add timed launch on the Launch Page, filled in.
   const [timedPreset, setTimedPreset] = useState<TimedPreset | null>(null);
-  // V20-044: steps into one launch (picker), and what got finished at Done (checklist).
-  const [stepPick, setStepPick] = useState<{ task: Task; steps: Task[] } | null>(null);
-  const [stepCheck, setStepCheck] = useState<{ launch: Launch; steps: Task[]; settle?: boolean } | null>(null);
   const [editLaunch, setEditLaunch] = useState<Launch | null>(null);
 
   function pickRoutine(id: string, s: Shift) {
@@ -1061,48 +1057,7 @@ export default function App() {
 
   /** ⋯ → Create launch: a timed launch from the task, opening its link at its time. */
   /** Create launch from a task: opens Add timed launch filled in, so it can be checked before saving. */
-  /** V20-044: the open tasks and steps a launch covers (linked by launchId). */
-  function linkedOpen(l: Launch, when = new Date()) {
-    return tasksRef.current.filter((t) => !t.deletedAt && t.launchId === l.id && (isRecurring(t) ? !doneToday(t, when) : !t.done));
-  }
-
-  function createLaunchFromTask(t: Task, stepIds?: string[]) {
-    // V20-044: a task with open steps asks first which steps go into this launch (a work block).
-    const openSteps = tasksRef.current.filter((s) => s.parentId === t.id && !s.done && !s.deletedAt).sort((a, b) => a.sort - b.sort);
-    if (stepIds === undefined && !t.parentId && !isRecurring(t) && openSteps.length) {
-      setStepPick({ task: t, steps: openSteps });
-      return;
-    }
-    if (stepIds?.length) {
-      const picked = openSteps.filter((s) => stepIds.includes(s.id));
-      const today = isoDate(new Date());
-      // The earliest picked date, but never in the past (an overdue step launches today).
-      const first = picked.map((s) => s.endDate).filter((x): x is string => !!x).sort()[0];
-      setPage('launch');
-      setTimedPreset({
-        fill: {
-          title: `Work Block - ${t.task.trim() || taskName(t)} · ${picked.length} step${picked.length === 1 ? '' : 's'}`,
-          atTime: t.atTime ?? picked.find((s) => s.atTime)?.atTime ?? '09:30',
-          repeat: 'once',
-          onDate: !first || first < today ? today : first,
-          logKind: 'productivity',
-          urls: t.link ? [t.link] : []
-        },
-        n: Date.now(),
-        onSaved: (l) => {
-          // Link every picked step to the one launch; Done asks which of them got finished.
-          const ids = new Set(picked.map((s) => s.id));
-          const items = tasksRef.current.filter((x) => ids.has(x.id)).map((x) => ({ ...x, launchId: l.id }));
-          const next = tasksRef.current.map((x) => items.find((y) => y.id === x.id) ?? x);
-          tasksRef.current = next;
-          setTasks(next);
-          void (async () => {
-            for (const i of items) await taskStore.save(userId, i, next);
-          })();
-        }
-      });
-      return;
-    }
+  function createLaunchFromTask(t: Task) {
     // Repeats carry over: weekly days, a monthly date; anything else launches once on its next date.
     const rep = repeatOf(t);
     const monthly = rep.kind === 'monthly' && /^\d{1,2}$/.test(rep.rule);
@@ -1227,12 +1182,7 @@ export default function App() {
     logRef.current = next;
     setLaunchLog(next);
     void launchLogStore.save(userId, item, next);
-    if (how === 'done' && day === isoDate(new Date())) {
-      // V20-044: more than one step on it: ask which ones got finished.
-      const open = linkedOpen(l);
-      if (open.length > 1) setStepCheck({ launch: l, steps: open, settle: true });
-      else void completeTasksFor(l);
-    }
+    if (how === 'done' && day === isoDate(new Date())) void completeTasksFor(l);
     setStatus(how === 'done' ? `${l.title} (${day}): marked done, no time logged.` : `${l.title} (${day}): cleared, it won't count either way.`);
   }
 
@@ -1241,38 +1191,22 @@ export default function App() {
    * (task.launchId), or a task with exactly the same name. Repeating tasks are done for this time
    * and come back on their next date; one-off tasks are done for good. Returns the names ticked.
    */
-  async function completeTasksFor(l: Launch, when = new Date(), only?: string[]): Promise<string[]> {
+  async function completeTasksFor(l: Launch, when = new Date()): Promise<string[]> {
     const norm = (x: string) => x.toLowerCase().replace(/\s*[-·–—]\s*/g, ' ').replace(/\s+/g, ' ').trim();
     const list = tasksRef.current;
-    const linked = list.filter(
+    const todo = list.filter(
       (t) =>
         !t.deletedAt &&
         (t.launchId === l.id || (!t.launchId && norm(taskName(t)) === norm(l.title))) &&
         (isRecurring(t) ? !doneToday(t, when) : !t.done)
     );
-    // V20-044: from the checklist, only the ticked ones are done. On a one-time launch the rest
-    // come off it, so they show in Due today and can go into the next block.
-    const todo = only ? linked.filter((t) => only.includes(t.id)) : linked;
-    const left = only && l.repeat === 'once' ? linked.filter((t) => !only.includes(t.id) && t.launchId === l.id) : [];
-    if (!todo.length && !left.length) return [];
+    if (!todo.length) return [];
     const at = when.toISOString();
-    await saveTasks([
-      ...todo.map((t) => (isRecurring(t) ? { ...t, doneAt: at } : { ...t, done: true, doneAt: at })),
-      ...left.map((t) => ({ ...t, launchId: null }))
-    ]);
+    await saveTasks(todo.map((t) => (isRecurring(t) ? { ...t, doneAt: at } : { ...t, done: true, doneAt: at })));
     return todo.map(taskName);
   }
 
-  async function finishLaunch(l: Launch, how: 'done' | 'skipped', picked?: string[]) {
-    // V20-044: a launch covering more than one step asks what got finished before it's checked off.
-    if (how === 'done' && picked === undefined) {
-      const open = linkedOpen(l);
-      if (open.length > 1) {
-        if (reminder?.id === l.id) setReminder(null);
-        setStepCheck({ launch: l, steps: open });
-        return;
-      }
-    }
+  async function finishLaunch(l: Launch, how: 'done' | 'skipped') {
     setHandled(markHandled(l, new Date(), how));
     logLaunch(l, () => ({ outcome: how, finishedAt: new Date().toISOString() }));
     if (reminder?.id === l.id) setReminder(null);
@@ -1284,8 +1218,8 @@ export default function App() {
     } else {
       const ticked = tickNonNegsFor(l.title);
       const logged = await logFromLaunch(l);
-      const tasksDone = await completeTasksFor(l, new Date(), picked);
-      const task = picked ? ` ${tasksDone.length} step${tasksDone.length === 1 ? '' : 's'} done.` : tasksDone.length ? ` Task done.` : '';
+      const tasksDone = await completeTasksFor(l);
+      const task = tasksDone.length ? ` Task done.` : '';
       if (ticked.length && !logged) return setStatus(`${l.title} checked off: ${ticked.join(', ')} ticked.${task}`);
       setStatus(logged ? `${l.title} checked off: ${logged} logged.${task}` : `${l.title} checked off.${task}`);
     }
@@ -1767,42 +1701,8 @@ export default function App() {
         onSkip={(l) => finishLaunch(l, 'skipped')}
         onClose={closeMissed}
       />
-      <StepPicker
-        task={stepPick?.task ?? null}
-        steps={stepPick?.steps ?? []}
-        todayIso={isoDate(new Date())}
-        onClose={() => setStepPick(null)}
-        onPick={(ids) => {
-          const t = stepPick?.task;
-          setStepPick(null);
-          if (t) createLaunchFromTask(t, ids);
-        }}
-      />
-      <StepCheckoff
-        title={stepCheck?.launch.title ?? null}
-        steps={stepCheck?.steps ?? []}
-        todayIso={isoDate(new Date())}
-        onClose={() => {
-          // Closed without choosing: not checked off; snoozed 10 so the reminder doesn't pop straight back.
-          if (stepCheck) {
-            const id = stepCheck.launch.id;
-            setSnoozed((m) => ({ ...m, [id]: Date.now() + 10 * 60_000 }));
-            setStatus(`${stepCheck.launch.title}: not checked off yet.`);
-          }
-          setStepCheck(null);
-        }}
-        onConfirm={(ids) => {
-          // Run with this render's functions, so the newest task list is saved.
-          const c = stepCheck;
-          setStepCheck(null);
-          if (!c) return;
-          if (c.settle) void completeTasksFor(c.launch, new Date(), ids);
-          else void finishLaunch(c.launch, 'done', ids);
-        }}
-      />
       <LaunchReminder
         launch={reminder}
-        steps={reminder ? linkedOpen(reminder) : []}
         onLaunch={launchNow}
         titles={launches.map((l) => l.title)}
         onSnooze={(l, minutes, title) => {
@@ -1825,7 +1725,6 @@ export default function App() {
       />
       <TimeUpReminder
         launch={timeUp}
-        steps={timeUp ? linkedOpen(timeUp) : []}
         onDone={(l) => {
           setTimeUp(null);
           finishLaunch(l, 'done');

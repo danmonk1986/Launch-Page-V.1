@@ -4,8 +4,6 @@ import { TitleCombo, joinTitle, splitTitle } from './Launchers';
 import { launchListFor } from '../lib/hiddenPicks';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { describeLog, describeOpens, opensSomething, runsOnClock, timeFor, type Launch } from '../lib/launchers';
-import type { Task } from '../lib/tasks';
-import { StepList } from './StepSheets';
 
 type Props = {
   launch: Launch | null;
@@ -19,12 +17,10 @@ type Props = {
   onSkip: (l: Launch) => void;
   /** Nothing to open: LOG (or Done) logs it and checks it off. */
   onDone: (l: Launch) => void;
-  /** V20-044: the open steps this launch covers, listed under the time. */
-  steps?: Task[];
 };
 
 /** The reminder that pops up at a timed launch. Launching from here is a tap, so the browser allows the tabs. */
-export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone, onEdit, titles = [], steps = [] }: Props) {
+export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone, onEdit, titles = [] }: Props) {
   // Oct 24: Snooze opens its own choices (+10 / +30 / +60) with the description to add to.
   const [snoozing, setSnoozing] = useState(false);
   const [desc, setDesc] = useState('');
@@ -84,7 +80,6 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone, onE
                   ? `Logs ${describeLog(launch)}.`
                   : 'A reminder: nothing to open or log.'}
           </p>
-          <StepList steps={steps} />
           <div className="reminder-actions">
             <button type="button" className="btn btn-quiet" title={launch.repeat === 'hourly' ? 'Skip this hour' : 'Skip today: back tomorrow, same time'} onClick={() => onSkip(launch)}>
               Skip
@@ -119,12 +114,10 @@ type TimeUpProps = {
   onMore: (l: Launch, minutes: number, title?: string) => void;
   onTomorrow: (l: Launch) => void;
   titles?: string[];
-  /** V20-044: the open steps this launch covers. */
-  steps?: Task[];
 };
 
 /** The end alarm: the time allotted for a launched launch has run out. */
-export function TimeUpReminder({ launch, onDone, onMore, onTomorrow, titles = [], steps = [] }: TimeUpProps) {
+export function TimeUpReminder({ launch, onDone, onMore, onTomorrow, titles = [] }: TimeUpProps) {
   const [more, setMore] = useState(false);
   const [desc, setDesc] = useState('');
   useEffect(() => {
@@ -163,8 +156,7 @@ export function TimeUpReminder({ launch, onDone, onMore, onTomorrow, titles = []
           <p className="reminder-time">
             {formatMinutes((toMinutes(timeFor(launch, new Date())) + launch.minutes) % 1440)} · {launch.minutes} minutes are up
           </p>
-          <p className="panel-empty">{steps.length > 1 ? 'Done asks which steps you finished; the rest stay open.' : 'Did you finish? Check it off, take more time, or move it to tomorrow.'}</p>
-          <StepList steps={steps} />
+          <p className="panel-empty">Did you finish? Check it off, take more time, or move it to tomorrow.</p>
           <div className="sheet-actions">
             <button type="button" className="btn btn-quiet" onClick={() => onTomorrow(launch)}>
               Move to tomorrow
