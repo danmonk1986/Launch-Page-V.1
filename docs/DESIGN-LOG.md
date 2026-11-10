@@ -283,3 +283,4 @@ Dan didn't love the first layout: rebuilt from the "Knowledge Base Wireframe" ca
 
 ## Timed launches · steps in one launch: tried and rolled back (V20-044, Nov 9)
 - Built a step picker at ⋯ → Create launch and a "What did you finish?" checklist at Done, then reverted the same night (Dan's call): starting from the ⋯ menu wasn't the right way in, and steps can't be added or changed in Edit timed launch. Redesign it in the beta, with steps managed inside the timed launch itself. The data side still works the same: several tasks can share one launchId, and Done ticks all of them.
+- Beta build plan (Dan, Nov 9): 1) In Edit timed launch, Description becomes a task list: each line a linked task or step, added, removed and reordered there; the reminder lists them and Done asks which got finished. 2) Then the task ⋯ menu's Create launch offers "Add to timed launch" (pick an existing one, e.g. Work Block #2 at 1:00 AM) as well as a new launch.
