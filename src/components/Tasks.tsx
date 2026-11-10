@@ -20,6 +20,8 @@ import {
   repeatOf,
   SECTIONS,
   stepsByParent,
+  stepDue,
+  dueSteps,
   autoStatus,
   type Section,
   type Task
@@ -66,7 +68,6 @@ export function Icon({ d, size = 16 }: { d: string; size?: number }) {
 const PLUS = 'M12 5v14M5 12h14';
 const CLOSE = 'M6 6l12 12M18 6L6 18';
 /** The Launch Page shows tasks without their steps. */
-const NO_STEPS = new Map<string, Task[]>();
 const FOLDER = 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z';
 
 const shortDate = (iso: string | null) =>
@@ -236,8 +237,8 @@ function RowActions({ t, act, checked }: { t: Task; act: Actions; checked: boole
   );
 }
 
-function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boolean; alt?: boolean; projects: Project[]; today: Date; act: Actions }) {
-  const badge = dueBadge(t, today);
+function TaskRow({ t, step, alt, projects, today, act, stepsDue = null }: { t: Task; step?: boolean; alt?: boolean; projects: Project[]; today: Date; act: Actions; stepsDue?: string | null }) {
+  const badge = dueBadge(t, today, stepsDue);
   const checked = isRecurring(t) ? doneToday(t, today) : t.done;
   return (
     <tr id={`task-${t.id}`} className={`task-row${checked ? ' is-done' : ''}${step ? ' is-step' : ''}${alt ? ' is-alt' : ''}`}>
@@ -269,6 +270,8 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
         )}
       </td>
       <td className="col-status col-center">
+        {/* V20-043: a step due today or earlier shows its own DUE / OVERDUE. */}
+        {step && badge && <span className={`status status-${badge.toLowerCase()}`}>{badge}</span>}
         {!step && (() => {
           // Recurring tasks show how they repeat (WEEKLY, MONTHLY…) in place of a status.
           if (isRecurring(t)) {
@@ -276,7 +279,7 @@ function TaskRow({ t, step, alt, projects, today, act }: { t: Task; step?: boole
             return <span className={`status status-${shown.replace(/\s+/g, '-').toLowerCase()}`}>{shown}</span>;
           }
           // Oct 28: status is automatic; this dropdown only picks a key task (THREE).
-          const auto = autoStatus(t, today);
+          const auto = autoStatus(t, today, stepsDue);
           const key = t.status === 'THREE';
           const shown = key ? 'THREE' : auto;
           return (
@@ -397,7 +400,7 @@ function TaskTable({
                           <tbody>
                             {pg.map((t, i) => (
                               <Fragment key={t.id}>
-                                <TaskRow t={t} alt={i % 2 === 1} projects={projects} today={today} act={act} />
+                                <TaskRow t={t} alt={i % 2 === 1} projects={projects} today={today} act={act} stepsDue={isRecurring(t) ? null : stepDue(steps.get(t.id))} />
                                 {(steps.get(t.id) ?? []).map((st) => (
                                   <TaskRow key={st.id} t={st} step alt={i % 2 === 1} projects={projects} today={today} act={act} />
                                 ))}
@@ -419,7 +422,7 @@ function TaskTable({
                 !shut &&
                 rows.map((t, i) => (
                   <Fragment key={t.id}>
-                    <TaskRow t={t} alt={i % 2 === 1} projects={projects} today={today} act={act} />
+                    <TaskRow t={t} alt={i % 2 === 1} projects={projects} today={today} act={act} stepsDue={isRecurring(t) ? null : stepDue(steps.get(t.id))} />
                     {(steps.get(t.id) ?? []).map((st) => (
                       <TaskRow key={st.id} t={st} step alt={i % 2 === 1} projects={projects} today={today} act={act} />
                     ))}
@@ -616,7 +619,8 @@ export function TasksPanel(p: PageProps & { onOpenAll: () => void; onOpenTask: (
           </button>
         </div>
       </div>
-      <TaskTable sections={['due', 'key']} grouped={grouped} steps={NO_STEPS} projects={p.projects} today={p.today} act={act} />
+      {/* V20-043: only the steps that are due show here, under their task. */}
+      <TaskTable sections={['due', 'key']} grouped={grouped} steps={dueSteps(p.tasks, p.today)} projects={p.projects} today={p.today} act={act} />
       {editor.sheet}
     </section>
   );

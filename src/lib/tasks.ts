@@ -194,7 +194,17 @@ const dayDiff = (iso: string, today: Date) => {
 /** Recurring tasks checked off today count as done for today only. */
 export const doneToday = (t: Task, today: Date) => !!t.doneAt && isoDate(new Date(t.doneAt)) === isoDate(today);
 
-export function sectionOf(t: Task, today: Date): Section {
+/**
+ * V20-043 (Nov 9): the earliest Required date among a task's open steps. A step due today or
+ * earlier pulls its task into Due today, so an overdue step can't hide under a task due later.
+ */
+export function stepDue(steps: Task[] | undefined): string | null {
+  let min: string | null = null;
+  for (const s of steps ?? []) if (!s.done && !s.deletedAt && s.endDate && (!min || s.endDate < min)) min = s.endDate;
+  return min;
+}
+
+export function sectionOf(t: Task, today: Date, stepsDue: string | null = null): Section {
   if (t.deletedAt) return 'deleted';
   if (isRecurring(t)) {
     if (repeatsOn(t, today) && !doneToday(t, today)) return 'due';
@@ -203,6 +213,7 @@ export function sectionOf(t: Task, today: Date): Section {
   if (t.done) return 'done';
   const due = t.endDate ?? null;
   if (due && dayDiff(due, today) <= 0) return 'due';
+  if (stepsDue && dayDiff(stepsDue, today) <= 0) return 'due';
   // Oct 28: only THREE (a key task) is picked by hand; the rest comes from the task itself.
   if (t.status === 'THREE') return 'key';
   if (isAppointment(t)) return 'appts';
@@ -214,17 +225,30 @@ export function sectionOf(t: Task, today: Date): Section {
 export const isAppointment = (t: Task) => /\bappointment/i.test(`${t.task} ${t.description}`);
 
 /** The status a task gets without THREE: what the Status cell shows. */
-export function autoStatus(t: Task, today: Date): string {
-  const s = sectionOf({ ...t, status: 'PENDING' }, today);
-  return s === 'due' ? (dueBadge(t, today) ?? 'DUE') : s === 'wip' ? 'WIP' : s === 'appts' ? 'APPT' : s === 'ondeck' ? 'ON DECK' : s === 'pending' ? 'PENDING' : s === 'done' ? 'DONE' : '';
+export function autoStatus(t: Task, today: Date, stepsDue: string | null = null): string {
+  const s = sectionOf({ ...t, status: 'PENDING' }, today, stepsDue);
+  return s === 'due' ? (dueBadge(t, today, stepsDue) ?? 'DUE') : s === 'wip' ? 'WIP' : s === 'appts' ? 'APPT' : s === 'ondeck' ? 'ON DECK' : s === 'pending' ? 'PENDING' : s === 'done' ? 'DONE' : '';
 }
 
 /** DUE / OVERDUE badge for rows in Due today. */
-export function dueBadge(t: Task, today: Date): 'DUE' | 'OVERDUE' | null {
+export function dueBadge(t: Task, today: Date, stepsDue: string | null = null): 'DUE' | 'OVERDUE' | null {
   if (isRecurring(t)) return repeatsOn(t, today) ? 'DUE' : null;
-  if (!t.endDate || t.done) return null;
-  const d = dayDiff(t.endDate, today);
+  if (t.done) return null;
+  // The earlier of the task's own date and its earliest open step (V20-043).
+  const due = [t.endDate, stepsDue].filter((x): x is string => !!x).sort()[0];
+  if (!due) return null;
+  const d = dayDiff(due, today);
   return d < 0 ? 'OVERDUE' : d === 0 ? 'DUE' : null;
+}
+
+/** V20-043: each task's open steps that are due today or earlier (the Launch Page shows these). */
+export function dueSteps(list: Task[], today: Date) {
+  const m = new Map<string, Task[]>();
+  for (const [id, steps] of stepsByParent(list)) {
+    const due = steps.filter((s) => !s.done && !s.deletedAt && s.endDate && dayDiff(s.endDate, today) <= 0);
+    if (due.length) m.set(id, due);
+  }
+  return m;
 }
 
 export function groupTasks(list: Task[], today: Date) {
@@ -232,12 +256,14 @@ export function groupTasks(list: Task[], today: Date) {
   const ids = new Set(list.map((t) => t.id));
   // Steps travel with their task, so only top-level tasks are sorted into groups.
   const deleted = new Set(list.filter((t) => t.deletedAt).map((t) => t.id));
+  const steps = stepsByParent(list);
   for (const t of list) {
     if (t.done && t.cleared && !t.deletedAt) continue;
     // A step stays under its task, unless the step alone was deleted (then it shows in Recently deleted).
     const underParent = !!t.parentId && ids.has(t.parentId);
     if (underParent && !(t.deletedAt && !deleted.has(t.parentId!))) continue;
-    out[sectionOf(t, today)].push(t);
+    // V20-043: an open step due today or earlier brings its task into Due today.
+    out[sectionOf(t, today, t.parentId || isRecurring(t) ? null : stepDue(steps.get(t.id)))].push(t);
   }
   // Oct 28: every group reads A-Z (Task, then Description); steps stay in their own order.
   const az = (x: string, y: string) => x.localeCompare(y, undefined, { sensitivity: 'base' });
