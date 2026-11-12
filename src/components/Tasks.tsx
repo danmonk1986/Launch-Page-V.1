@@ -246,7 +246,7 @@ function TaskRow({ t, step, alt, projects, today, act, stepsDue = null }: { t: T
       <td className="col-task">
         {!step && (
           <span className="task-cell">
-            <button type="button" className="task-name" onClick={() => act.open(t)}>
+            <button type="button" className="task-name" title={t.task} onClick={() => act.open(t)}>
               {t.task || t.description}
               {t.task && t.description && <span className="task-desc-inline"> · {t.description}</span>}
             </button>
@@ -261,7 +261,7 @@ function TaskRow({ t, step, alt, projects, today, act, stepsDue = null }: { t: T
         {step ? (
           <span className="task-cell step-cell">
             <span className="step-mark" aria-hidden="true">↳</span>
-            <button type="button" className="task-name" onClick={() => act.open(t)}>
+            <button type="button" className="task-name" title={t.task} onClick={() => act.open(t)}>
               {t.task}
             </button>
           </span>

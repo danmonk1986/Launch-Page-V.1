@@ -2884,3 +2884,17 @@ button.kb-btn { font-family: inherit; }
   width: 30px; height: 30px; min-height: 30px; border-radius: 8px;
 }
 .app .quick-btn svg, .app .task-quick svg { width: 14px; height: 14px; }
+
+/* V20-056 (Dan, Nov 11): every task row is one line and the same height, task or step, so stripes, the
+   hover band and the ✓ ⋯ buttons never overlap; long names end in … (the full name shows on hover).
+   The row line is 2px. Phones keep their own stacked layout. */
+@media (min-width: 601px) {
+  .task-table .task-row td, .task-table .task-row.is-step td { padding-top: 7px; padding-bottom: 7px; height: 46px; box-sizing: border-box; }
+  .task-table .task-row .task-name { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-top: 0; padding-bottom: 0; }
+  .task-table .task-row .step-cell { min-width: 0; max-width: 100%; }
+  .task-table .task-row.is-step td.col-desc { max-width: 320px; }
+  .task-table .task-row td.col-date, .task-table .task-row td.col-time, .task-table .task-row td.col-expense { white-space: nowrap; }
+}
+@media (hover: hover) {
+  .task-table .task-row:hover td { box-shadow: inset 0 -2px 0 var(--row-hover-line, var(--accent-teal)); }
+}
