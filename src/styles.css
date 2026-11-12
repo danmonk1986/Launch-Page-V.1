@@ -1209,7 +1209,9 @@ input:-webkit-autofill:focus {
 .app[data-tone='light'] .sheet::backdrop { background: rgb(68 66 66 / 0.35); }
 /* Nov 11 (Dan): day mode cards are beige boxes, like the beta white sheet; what sits inside a card stays white. */
 /* V20-049 (Nov 11): cards are #f5f5eb, a softer cream than beige. */
-.app[data-tone='light']:not(.is-kb) { --surface: #f5f5eb; }
+/* V20-066 (Nov 11): day cards are see-through like night (0.82), so Damascus peeks through a little.
+   The pinned column and anything that must stay solid keep --surface-solid / --pin. */
+.app[data-tone='light']:not(.is-kb) { --surface: rgb(245 245 235 / 0.82); }
 .app[data-tone='light']:not(.is-kb) .panel { --surface-solid: #f5f5eb; --pin: #f5f5eb; }
 .app[data-tone='light'] .panel .combo-list { background: #ffffff; }
 /* V20-053 (Dan, Nov 11): a card inside a card in day mode is a soft grey tint; rocket tiles now match the
