@@ -3150,10 +3150,11 @@ button.kb-btn { font-family: inherit; }
 .app[data-tone='light'] .logo-box { background: #ffffff; }
 .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .field .logo-box input.logo-type {
-  all: unset; width: 100%; text-align: center; font-family: 'L4UNCH P4GE Hand', sans-serif; font-size: clamp(34px, 9vw, 64px); line-height: 1.1;
+  all: unset; width: 100%; text-align: left; font-family: 'L4UNCH P4GE Hand', sans-serif; font-size: clamp(34px, 9vw, 64px); line-height: 1.1;
   letter-spacing: 2px; text-transform: uppercase; color: var(--accent-teal); -webkit-text-stroke: 8px var(--accent-purple); paint-order: stroke fill; caret-color: var(--accent-teal);
 }
 .field .logo-box input.logo-type::placeholder { color: var(--dim); -webkit-text-stroke: 0; font-size: 0.5em; letter-spacing: 0.1em; }
 .logo-box:focus-within { border-color: var(--accent-teal); box-shadow: 0 0 0 1px var(--accent-teal); }
 .logo-tools { display: flex; flex-direction: column; gap: 8px; }
 .app .field .logo-box input.logo-type { border: 0 !important; background: none !important; box-shadow: none !important; padding: 0 !important; min-height: 0 !important; height: auto !important; outline: none; }
+.logo-box { place-items: center start; } .logo-box img { justify-self: start; }
