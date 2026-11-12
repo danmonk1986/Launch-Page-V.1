@@ -94,7 +94,6 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 // (never settled, skipped or cleared), Complete = every done run.
 type TimedView = 'active' | 'tomorrow' | 'scheduled' | 'missed' | 'complete';
 
-const CLEARED_KEY = 'launchpage.launches.cleared.v1';
 
 const TIMED_VIEWS: [TimedView, string][] = [
   ['active', 'Active'],
@@ -243,14 +242,6 @@ export function LaunchersPanel(p: Props) {
     const h = p.handled[runKey(l, p.today)];
     return h === true ? 'done' : h;
   };
-  // Rows cleared from today's Complete list (this device). The launch itself stays.
-  const [cleared, setCleared] = useState<Record<string, true>>(() => {
-    try {
-      return JSON.parse(localStorage.getItem(CLEARED_KEY) ?? '{}');
-    } catch {
-      return {};
-    }
-  });
   // V20-067 (Nov 12): Tomorrow and Scheduled skip runs already done, skipped, cleared or running (they live
   // in Complete, Missed or Active), so a launch shows its next open run.
   const logged = new Set((p.log ?? []).map((g) => `${g.launchId}:${g.day}`));
@@ -284,7 +275,17 @@ export function LaunchersPanel(p: Props) {
     .filter((g) => g.outcome !== 'launched' || g.finishedAt)
     .sort((a, b) => (b.finishedAt ?? b.launchedAt ?? b.day).localeCompare(a.finishedAt ?? a.launchedAt ?? a.day));
   const isDone = (g: (typeof history)[number]) => g.outcome === 'done' || g.outcome === 'launched';
-  const doneRuns = history.filter(isDone);
+  const runTime = (g: (typeof history)[number]) => {
+    if (g.launchedAt) {
+      const t = new Date(g.launchedAt);
+      return t.getHours() * 60 + t.getMinutes();
+    }
+    const l = p.launches.find((x) => x.id === g.launchId);
+    return l ? toMinutes(l.atTime) : null;
+  };
+  const doneRuns = history
+    .filter(isDone)
+    .sort((a, b) => b.day.localeCompare(a.day) || (runTime(a) ?? 0) - (runTime(b) ?? 0));
   // V20-062 (revised): Missed = runs never settled, plus skipped runs (each can still be started, checked
   // off or removed). Cleared runs were taken out on purpose, so they stay out. A skipped run whose launch
   // was deleted gets a stand-in so it can still be checked off or removed (no start or edit).
@@ -345,51 +346,35 @@ export function LaunchersPanel(p: Props) {
     if (moved !== l) await p.onSaveLaunch(moved);
     p.onLaunchNow(moved);
   }
-  // V20-061: one finished run (Missed and Complete lists), with Undo.
-  const runItem = (g: (typeof history)[number]) => {
-                const spent = g.launchedAt && g.finishedAt ? Math.round((new Date(g.finishedAt).getTime() - new Date(g.launchedAt).getTime()) / 60_000) : null;
-                return (
-                  <li key={g.id} className={`timed-item is-${g.outcome === 'skipped' ? 'skipped' : g.outcome === 'cleared' ? 'cleared' : 'done'}`}>
-                    <div className="timed-row">
-                      <span className="timed-time">{new Date(`${g.day}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}</span>
-                      <span className="timed-name">{g.title}</span>
-                      <span className="timed-meta">
-                        {g.outcome === 'skipped' ? 'Skipped' : g.outcome === 'cleared' ? 'Cleared · not counted' : 'Done'}
-                        {g.outcome === 'done' && ` · ${spent ?? g.planned + g.extra} min${spent === null ? ' planned' : ''}`}
-                        {g.extra > 0 && ` · +${g.extra} added`}
-                      </span>
-                    </div>
-                    {p.onUndoRun && (
-                      <div className="timed-quick">
-                        <button
-                          type="button"
-                          className="quick-btn quick-undo"
-                          aria-label={`Undo ${g.title} (${g.day})`}
-                          title="Undo: open this run again"
-                          onClick={() => {
-                            const key = `${g.launchId}:${g.day}`;
-                            if (cleared[key]) {
-                              const next = { ...cleared };
-                              delete next[key];
-                              setCleared(next);
-                              try {
-                                localStorage.setItem(CLEARED_KEY, JSON.stringify(next));
-                              } catch {
-                                /* ignore */
-                              }
-                            }
-                            p.onUndoRun?.(g.id);
-                          }}
-                        >
-                          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M9 14L4 9l5-5" />
-                            <path d="M4 9h10.5a5.5 5.5 0 010 11H11" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                );
+  // V20-069 (Nov 12): a Complete row, styled like Scheduled: a date line above each day (11/12/26, solid
+  // colour-1 line), the time it started on the left (or its set time if it was ticked off without starting),
+  // then the name and the minutes. No Undo.
+  const runItem = (g: (typeof history)[number], i: number, arr: (typeof history)[number][]) => {
+    const spent = g.launchedAt && g.finishedAt ? Math.round((new Date(g.finishedAt).getTime() - new Date(g.launchedAt).getTime()) / 60_000) : null;
+    const t = runTime(g);
+    const showDay = i === 0 || arr[i - 1].day !== g.day;
+    return (
+      <Fragment key={g.id}>
+        {showDay && (
+          <li className="timed-day" aria-label={new Date(`${g.day}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}>
+            <span className="timed-day-date">{`${g.day.slice(5, 7)}/${g.day.slice(8, 10)}/${g.day.slice(2, 4)}`}</span>
+            <span className="timed-day-line" aria-hidden="true" />
+          </li>
+        )}
+        <li className="timed-item is-run">
+          <div className="timed-row">
+            <span className="timed-time">{t === null ? '' : formatMinutes(t)}</span>
+            <span className="timed-name">{g.title}</span>
+            <span className="timed-meta">
+              {new Date(`${g.day}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} · {spent ?? g.planned + g.extra} min
+              {spent === null ? ' planned' : ' spent'}
+              {g.extra > 0 && ` · +${g.extra} added`}
+              {!g.launchedAt && ' · checked off without starting'}
+            </span>
+          </div>
+        </li>
+      </Fragment>
+    );
   };
   const countOf = (id: TimedView) => (id === 'complete' ? doneRuns.length : id === 'missed' ? missedRows.length : views[id].length);
   const list = views[view];
