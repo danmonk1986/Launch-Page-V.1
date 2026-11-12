@@ -1186,6 +1186,19 @@ export default function App() {
     setStatus(how === 'done' ? `${l.title} (${day}): marked done, no time logged.` : `${l.title} (${day}): cleared, it won't count either way.`);
   }
 
+  /** V20-060 (Nov 11): undo a run from History. The log entry goes, so the run is back in Active
+   * (today), Tomorrow, or Missed (a past day). Tasks it completed stay done. */
+  function undoRun(id: string) {
+    const list = logRef.current;
+    const g = list.find((x) => x.id === id);
+    if (!g) return;
+    const next = list.filter((x) => x.id !== id);
+    logRef.current = next;
+    setLaunchLog(next);
+    void launchLogStore.remove(userId, id, next);
+    setStatus(`${g.title} (${g.day}): undone, it's open again.`);
+  }
+
   /**
    * Nov 4 (V20-027): a launch checked off Done completes its task: the one it was created from
    * (task.launchId), or a task with exactly the same name. Repeating tasks are done for this time
@@ -1468,6 +1481,7 @@ export default function App() {
                   onPause={togglePause}
                   log={launchLog}
                   onSettleMissed={settleMissed}
+                  onUndoRun={undoRun}
                   offDays={d26Days.filter((d) => d.off).map((d) => d.day)}
                   offToday={offToday}
                   preset={timedPreset}

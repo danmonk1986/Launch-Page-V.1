@@ -67,6 +67,8 @@ type Props = {
   log?: LaunchLog[];
   /** Oct 29 · Missed tab: done without logging time, or cleared out of the counts. */
   onSettleMissed?: (l: Launch, day: string, how: 'done' | 'cleared') => void;
+  /** V20-060: take a run out of the log (History → Undo). */
+  onUndoRun?: (id: string) => void;
   /** V12-043: off days (a quiet card today; their runs aren't Missed). */
   offDays?: string[];
   offToday?: boolean;
@@ -617,6 +619,22 @@ export function LaunchersPanel(p: Props) {
                         {g.extra > 0 && ` · +${g.extra} added`}
                       </span>
                     </div>
+                    {p.onUndoRun && (
+                      <div className="timed-quick">
+                        <button
+                          type="button"
+                          className="quick-btn quick-undo"
+                          aria-label={`Undo ${g.title} (${g.day})`}
+                          title="Undo: open this run again"
+                          onClick={() => p.onUndoRun?.(g.id)}
+                        >
+                          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 14L4 9l5-5" />
+                            <path d="M4 9h10.5a5.5 5.5 0 010 11H11" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
                   </li>
                 );
               })}
