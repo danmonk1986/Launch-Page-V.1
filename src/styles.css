@@ -1209,7 +1209,11 @@ input:-webkit-autofill:focus {
 .app[data-tone='light']:not(.is-kb) { --surface: #f5f5eb; }
 .app[data-tone='light']:not(.is-kb) .panel { --surface-solid: #f5f5eb; }
 .app[data-tone='light'] .panel .combo-list { background: #ffffff; }
-/* V20-052: a card inside a card (rocket tiles, 26 Days sections, ritual steps) looks the same in both modes. */
+/* V20-053 (Dan, Nov 11): a card inside a card in day mode is a soft grey tint; rocket tiles now match the
+   26 Days sections and ritual steps. */
+.app[data-tone='light'] .tile { background: rgb(68 66 66 / 0.04); }
+.app[data-tone='light'] .d26-takeaway, .app[data-tone='light'] .d26-sec, .app[data-tone='light'] .d26-tile, .app[data-tone='light'] .d26-stat { background: rgb(68 66 66 / 0.04); }
+.app[data-tone='light'] .rit-step { background: rgb(68 66 66 / 0.04); }
 /* V20-048 (Dan, Nov 11): the next timed launch and the routine's NOW step sit in a teal box with a soft glow, in both modes. */
 .timed-item.is-next { border: 2px solid var(--accent-teal); border-radius: 14px; padding: 2px 8px 2px 0; box-shadow: 0 0 16px color-mix(in srgb, var(--accent-teal) 30%, transparent); }
 .timed-item.is-next .timed-time { color: var(--accent-teal); }
