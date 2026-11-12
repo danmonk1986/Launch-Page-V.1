@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
@@ -204,7 +204,7 @@ export default function App() {
       /* ignore */
     }
   }, [snoozed]);
-  const [handled, setHandled] = useState(() => readHandled());
+  const [handledHere, setHandled] = useState(() => readHandled());
   const [timeUp, setTimeUp] = useState<Launch | null>(null);
   // Each run of a timed launch (launched, +10s, done or skipped), kept for 26 Days.
   const [launchLog, setLaunchLog] = useState<LaunchLog[]>([]);
@@ -224,6 +224,15 @@ export default function App() {
   const extraToday = (l: Launch) => logFor(launchLog, l, now).extra;
   // The launch log has loaded: until then the end alarm can't see minutes already added.
   const [logReady, setLogReady] = useState(false);
+  // V20-068 (Nov 12): the saved log decides. Once it has loaded, a done / skipped / launched mark kept in this
+  // browser only counts if the log has that run too (the log syncs to every device; the mark doesn't, and a
+  // run taken out of the log, by Undo or by hand, left the mark behind showing 'done today'). Hourly runs
+  // keep the browser mark.
+  const handled = useMemo(() => {
+    if (!logReady) return handledHere;
+    const loggedRuns = new Set(launchLog.map((g) => `${g.launchId}:${g.day}`));
+    return Object.fromEntries(Object.entries(handledHere).filter(([k]) => k.includes('@') || loggedRuns.has(k)));
+  }, [logReady, handledHere, launchLog]);
   // Oct 25: pause a launched run (lunch, a call). Paused minutes push the end alarm back and don't
   // count as time spent. Kept in this browser per run: { at: paused since (ms) or null, min: paused so far }.
   const PAUSE_KEY = 'launchpage.paused.v1';
