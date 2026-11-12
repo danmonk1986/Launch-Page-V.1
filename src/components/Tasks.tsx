@@ -437,7 +437,7 @@ function TaskTable({
   );
 }
 
-type EditorProps = Common & { onSaveMany: (t: Task[]) => Promise<void> };
+type EditorProps = Common & { onSaveMany: (t: Task[]) => Promise<void>; /** V20-090: the rocket + in the form. */ onCreateLaunch?: (t: Task) => void };
 
 /**
  * The task form on its own (LP-030): Budget opens it for a budget line's linked task, so the
@@ -535,6 +535,7 @@ function useTaskEditor(p: EditorProps) {
           picks={formPicks(p.tasks)}
           projects={p.projects}
           onCancel={() => setOpen(false)}
+          onPushRocket={p.onCreateLaunch}
           onSave={async (t, newSteps, push) => {
             const base = p.tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0);
             const kids = newSteps.filter((s) => s.trim()).map((s, i) => newStep(t, s, base + i));
@@ -822,7 +823,8 @@ function TaskForm({
   picks,
   projects,
   onSave,
-  onDelete
+  onDelete,
+  onPushRocket
 }: {
   task: Task;
   isNew: boolean;
@@ -834,8 +836,11 @@ function TaskForm({
   /** newSteps: names typed into the Steps list, created underneath on save. push: also put it in Budget. */
   onSave: (t: Task, newSteps: string[], push: boolean) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  /** V20-090: rocket + beside Save: save, then open Add timed launch filled in from the task. */
+  onPushRocket?: (t: Task) => void;
 }) {
   const [d, setD] = useState<Task>(task);
+  const pushRocket = useRef(false);
   const [steps, setSteps] = useState<string[]>([]);
   const [push, setPush] = useState(false);
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setD((x) => ({ ...x, [k]: v }));
@@ -861,7 +866,12 @@ function TaskForm({
         const repeatRule = writeRepeat(rep);
         // Status is automatic now; only THREE (a key task) is kept.
         const status = d.status === 'THREE' ? 'THREE' : 'PENDING';
-        await onSave({ ...d, task: d.task.trim(), description: d.description.trim(), notes: d.notes.trim(), endDate: recurring ? null : endDate, repeatRule, status }, steps, push && !linked);
+        const out = { ...d, task: d.task.trim(), description: d.description.trim(), notes: d.notes.trim(), endDate: recurring ? null : endDate, repeatRule, status };
+        await onSave(out, steps, push && !linked);
+        if (pushRocket.current) {
+          pushRocket.current = false;
+          onPushRocket?.(out);
+        }
       }}
     >
       {isStep ? (
@@ -997,7 +1007,32 @@ function TaskForm({
             </label>
           ))}
       </div>
-      <FormActions formId={formId} saveDisabled={!named} onDelete={!isNew ? () => onDelete(task.id) : undefined} deleteLabel={taskName(task)} />
+      <FormActions
+        formId={formId}
+        saveDisabled={!named}
+        onDelete={!isNew ? () => onDelete(task.id) : undefined}
+        deleteLabel={taskName(task)}
+        extra={
+          onPushRocket ? (
+            <button
+              type="submit"
+              form={formId}
+              className="icon-btn tool-btn push-btn"
+              disabled={!named}
+              aria-label="Push rocket"
+              title={named ? 'Push rocket: save, then Add timed launch filled in from this task' : 'Name the task first'}
+              onClick={() => {
+                pushRocket.current = true;
+              }}
+            >
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+                <path d="M5.5 15.5v6M2.5 18.5h6" />
+              </svg>
+            </button>
+          ) : undefined
+        }
+      />
     </form>
   );
 }

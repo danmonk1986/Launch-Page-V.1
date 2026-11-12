@@ -553,23 +553,6 @@ function EventForm({
           </div>
         </fieldset>
       )}
-      {onAddTask && !readOnly && (
-        <div className="event-push-row">
-          <button
-            type="button"
-            className="btn event-push-task"
-            // V20-088: like Save, it waits for a name (the ⊘ cursor, no 'Please fill out this field').
-            disabled={!d.title.trim()}
-            title={d.title.trim() ? 'Save the event and open Add task with its name and dates' : 'Name the event first'}
-            onClick={(e) => {
-              pushTask.current = true;
-              e.currentTarget.form?.requestSubmit();
-            }}
-          >
-            Push task
-          </button>
-        </div>
-      )}
       {isGoogle && d.google?.link && (
         <p className="field-hint">
           <a href={d.google.link} target="_blank" rel="noopener noreferrer" className="link-btn link-btn-inline">
@@ -577,7 +560,36 @@ function EventForm({
           </a>
         </p>
       )}
-      <FormActions formId={formId} hideSave={readOnly} saveDisabled={!d.title.trim()} onDelete={event && !readOnly ? () => onDelete(event) : undefined} deleteLabel={event?.title} />
+      {/* V20-090 (Dan, Nov 12): Push task is an icon beside Save (a ticked box +). It saves the event, then opens
+          Add task filled in; from the task, the rocket + pushes on to a timed launch, so nothing is missed. */}
+      <FormActions
+        formId={formId}
+        hideSave={readOnly}
+        saveDisabled={!d.title.trim()}
+        onDelete={event && !readOnly ? () => onDelete(event) : undefined}
+        deleteLabel={event?.title}
+        extra={
+          onAddTask && !readOnly ? (
+            <button
+              type="submit"
+              form={formId}
+              className="icon-btn tool-btn push-btn"
+              disabled={!d.title.trim()}
+              aria-label="Push task"
+              title={d.title.trim() ? 'Push task: save, then Add task with its name and dates' : 'Name the event first'}
+              onClick={() => {
+                pushTask.current = true;
+              }}
+            >
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 7h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z" />
+                <path d="M6.5 14l2.5 2.5 4.5-5" />
+                <path d="M20 2v6M17 5h6" />
+              </svg>
+            </button>
+          ) : undefined
+        }
+      />
     </form>
   );
 }
