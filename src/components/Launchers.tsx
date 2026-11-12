@@ -4,6 +4,7 @@ import { FormActions, Sheet } from './Sheet';
 import {
   describeSchedule,
   LAUNCHER_PRESETS,
+  happensOn,
   happensToday,
   launchDate,
   isoDate,
@@ -250,11 +251,23 @@ export function LaunchersPanel(p: Props) {
       return {};
     }
   });
-  const nextOf = (l: Launch) => nextDate(l, p.today);
+  // V20-067 (Nov 12): Tomorrow and Scheduled skip runs already done, skipped, cleared or running (they live
+  // in Complete, Missed or Active), so a launch shows its next open run.
+  const logged = new Set((p.log ?? []).map((g) => `${g.launchId}:${g.day}`));
+  const nextOf = (l: Launch): string | null => {
+    const first = nextDate(l, p.today);
+    if (!first || !logged.has(`${l.id}:${first}`)) return first;
+    for (let i = 0; i < 62; i++) {
+      const d = new Date(p.today.getFullYear(), p.today.getMonth(), p.today.getDate() + i, 12);
+      const iso = isoDate(d);
+      if (iso > first && happensOn(l, d) && !logged.has(`${l.id}:${iso}`)) return iso;
+    }
+    return null;
+  };
   const views: Record<TimedView, Launch[]> = {
     active: ordered.filter((l) => l.active && happensToday(l, p.today) && (!stateOf(l) || stateOf(l) === 'launched')),
     tomorrow: [...p.launches]
-      .filter((l) => l.active && happensToday(l, tomorrow))
+      .filter((l) => l.active && happensToday(l, tomorrow) && !logged.has(`${l.id}:${isoDate(launchDate(l, tomorrow))}`))
       .sort((a, b) => dayOrder(a.atTime) - dayOrder(b.atTime)),
     // Scheduled (Oct 22): every launch that's on and still ahead, once each (not once per day),
     // soonest first, so you can look forward without the daily ones repeating.
@@ -316,8 +329,8 @@ export function LaunchersPanel(p: Props) {
   })();
   // V20-062 (Nov 11): ▶ on a missed run. The missed day is taken out of the counts, the launch moves
   // to today (Active), and it starts now.
-  async function startMissedNow(l: Launch, day: string) {
-    p.onSettleMissed?.(l, day, 'cleared');
+  async function startMissedNow(l: Launch, day: string | null) {
+    if (day) p.onSettleMissed?.(l, day, 'cleared');
     // A one-time launch starts over: today, at this minute, so its clock runs its full time from now
     // (V20-063: it kept its old date and time, so Time's up popped at once and added the lost hours).
     const n = new Date();
@@ -718,8 +731,11 @@ export function LaunchersPanel(p: Props) {
               const dayOf = (x: Launch) => (view === 'tomorrow' ? isoDate(tomorrow) : view === 'scheduled' ? nextOf(x) : null);
               const day = dayOf(l);
               const showDay = !!day && (li === 0 || dayOf(items[li - 1]) !== day);
-              const todays = !ahead && l.active && happensToday(l, p.today);
-              const how = ahead ? undefined : stateOf(l);
+              // V20-067: in Tomorrow and Scheduled, the run each row stands for. Today's run gets Active's buttons.
+              const runDay = view === 'tomorrow' ? isoDate(launchDate(l, tomorrow)) : view === 'scheduled' ? nextOf(l) : null;
+              const todays = (!ahead || runDay === isoDate(launchDate(l, p.today))) && l.active && happensToday(l, p.today);
+              const how = todays ? stateOf(l) : undefined;
+              const later = ahead && !todays && !!runDay;
               const isNext = view === 'active' && todays && (!how || how === 'launched') && !nextMarked;
               if (isNext) nextMarked = true;
               return (
@@ -742,7 +758,6 @@ export function LaunchersPanel(p: Props) {
                     <span className="timed-time">{formatMinutes(toMinutes(ahead ? timeFor(l, tomorrow) : timeFor(l, p.today)))}</span>
                     <span className="timed-name">{l.title}</span>
                     <span className="timed-meta">
-                      {view === 'scheduled' && nextOf(l) ? `Next ${new Date(`${nextOf(l)}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} · ` : ''}
                       {describeSchedule(l)} · {l.minutes} min
                       {(() => {
                         const g = !ahead && p.log?.find((x) => x.launchId === l.id && x.day === isoDate(launchDate(l, p.today)));
@@ -757,6 +772,66 @@ export function LaunchersPanel(p: Props) {
                       {how === 'skipped' && (l.repeat === 'hourly' ? ' · skipped this hour' : ' · skipped, back tomorrow')}
                     </span>
                   </button>
+                  {later && runDay && xAsk === l.id && (
+                    <div className="timed-quick timed-xask" role="group" aria-label={`Skip or remove ${l.title}`}>
+                      <button type="button" className="btn btn-quiet" onClick={() => { setXAsk(null); p.onSettleMissed?.(l, runDay, 'cleared'); }}>
+                        Skip
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-quiet"
+                        onClick={async () => {
+                          setXAsk(null);
+                          await p.onDeleteLaunch(l.id);
+                          p.onStatus(`${l.title} removed.`);
+                        }}
+                      >
+                        Remove
+                      </button>
+                      <button type="button" className="quick-btn" aria-label="Cancel" title="Cancel" onClick={() => setXAsk(null)}>
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M15 18l-6-6 6-6" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  {later && runDay && xAsk !== l.id && (
+                    <div className="timed-quick">
+                      <button
+                        type="button"
+                        className="quick-btn quick-launch"
+                        aria-label={`Start ${l.title} now`}
+                        title="Start now: it moves to today and the clock starts"
+                        onClick={() => void startMissedNow(l, null)}
+                      >
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M7 4v16l13-8z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-btn quick-done"
+                        aria-label={`Check off ${l.title} early`}
+                        title="Done early: this run is checked off (no time logged)"
+                        onClick={() => p.onSettleMissed?.(l, runDay, 'done')}
+                      >
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12.5l4.5 4.5L19 7.5" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-btn quick-skip"
+                        aria-label={`Skip or remove ${l.title}`}
+                        title="Skip this run or remove the launch"
+                        onClick={() => setXAsk(l.id)}
+                      >
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                          <path d="M6 6l12 12M18 6L6 18" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
                   {todays && (!how || how === 'launched') && xAsk === l.id && (
                     <div className="timed-quick timed-xask" role="group" aria-label={`Remove ${l.title}`}>
                       <button type="button" className="btn btn-quiet" onClick={() => { setXAsk(null); p.onFinish(l, 'skipped'); }}>
