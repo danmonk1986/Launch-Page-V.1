@@ -81,6 +81,7 @@ import {
   type Launch,
   type LaunchLog,
   type TimeSource,
+  type HandledHow,
   launchLogStore,
   runKey,
   setLaunchDayReset,
@@ -231,10 +232,18 @@ export default function App() {
   // browser only counts if the log has that run too (the log syncs to every device; the mark doesn't, and a
   // run taken out of the log, by Undo or by hand, left the mark behind showing 'done today'). Hourly runs
   // keep the browser mark.
+  // V20-079 (Nov 12): and the other way: every saved run marks its launch as launched / done / skipped on
+  // every device, so a run done on the laptop isn't still to do on the phone.
   const handled = useMemo(() => {
     if (!logReady) return handledHere;
-    const loggedRuns = new Set(launchLog.map((g) => `${g.launchId}:${g.day}`));
-    return Object.fromEntries(Object.entries(handledHere).filter(([k]) => k.includes('@') || loggedRuns.has(k)));
+    const fromLog: Record<string, HandledHow | true> = {};
+    for (const g of launchLog) {
+      fromLog[`${g.launchId}:${g.day}`] =
+        g.outcome === 'launched' ? (g.finishedAt ? 'done' : 'launched') : g.outcome === 'done' ? 'done' : 'skipped';
+    }
+    // Hourly runs keep this browser's marks (their log line is per day, not per hour).
+    for (const [k, v] of Object.entries(handledHere)) if (k.includes('@')) fromLog[k] = v as HandledHow | true;
+    return fromLog;
   }, [logReady, handledHere, launchLog]);
   // Oct 25: pause a launched run (lunch, a call). Paused minutes push the end alarm back and don't
   // count as time spent. Kept in this browser per run: { at: paused since (ms) or null, min: paused so far }.
