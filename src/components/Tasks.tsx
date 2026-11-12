@@ -388,13 +388,10 @@ function TaskTable({
   // Each ✓ ⋯ row takes its table row's height, and on the Tasks page both scroll up and down together.
   const scroller = useRef<HTMLDivElement>(null);
   const pins = useRef<HTMLDivElement>(null);
-  const [over, setOver] = useState(false);
   const sync = () => {
     const L = scroller.current;
     const R = pins.current;
-    if (!L) return;
-    setOver(L.scrollWidth > L.clientWidth + 1);
-    if (!R) return;
+    if (!L || !R) return;
     const h = new Map<string, number>();
     L.querySelectorAll<HTMLElement>('tr[data-row]').forEach((tr) => h.set(tr.dataset.row!, tr.getBoundingClientRect().height));
     R.querySelectorAll<HTMLElement>('tr[data-row]').forEach((tr) => {
@@ -403,9 +400,17 @@ function TaskTable({
     });
     // The table's box has a sideways scroll bar under it; the column gets the same room so the two end together.
     R.style.paddingBottom = `${12 + (L.offsetHeight - L.clientHeight)}px`;
-    R.scrollTop = L.scrollTop;
+    // V20-105: how wide the table half's own up-and-down bar is, so it can be tucked out of sight.
+    const sbw = Math.max(0, L.offsetWidth - L.clientWidth);
+    const clip = L.parentElement;
+    if (clip?.classList.contains('task-clip') && clip.style.getPropertyValue('--sbw') !== `${sbw}px`) clip.style.setProperty('--sbw', `${sbw}px`);
+    follow(L, R);
   };
   useLayoutEffect(sync);
+  // V20-105: the up-and-down scroll bar sits on the outside (the ✓ ⋯ column); either half scrolls the other.
+  const follow = (from: HTMLElement | null, to: HTMLElement | null) => {
+    if (from && to && to.scrollTop !== from.scrollTop) to.scrollTop = from.scrollTop;
+  };
   useEffect(() => {
     const L = scroller.current;
     if (!L || typeof ResizeObserver === 'undefined') return;
@@ -419,7 +424,7 @@ function TaskTable({
   const hover = (e: { target: EventTarget }) => {
     const row = (e.target as Element).closest?.('tr[data-row]') as HTMLElement | null;
     const id = row?.dataset.row ?? null;
-    const box = scroller.current?.parentElement;
+    const box = scroller.current?.closest('.task-split');
     box?.querySelectorAll('tr.is-hover').forEach((tr) => tr.classList.remove('is-hover'));
     if (id) box?.querySelectorAll(`tr[data-row="${CSS.escape(id)}"].task-row`).forEach((tr) => tr.classList.add('is-hover'));
   };
@@ -445,7 +450,7 @@ function TaskTable({
     ]);
   const shown = sections.filter((id) => !(!grouped[id].length && id === 'due') && !(collapsible && !grouped[id].length && id !== 'key'));
   const table = (
-    <div className={`task-scroll${over ? ' is-over' : ''}`} ref={scroller} onScroll={() => pins.current && scroller.current && (pins.current.scrollTop = scroller.current.scrollTop)}>
+    <div className="task-scroll" ref={scroller} onScroll={() => follow(scroller.current, pins.current)}>
       <table className="task-table">
         <thead>
           <tr data-row="head">
@@ -533,15 +538,9 @@ function TaskTable({
   );
   if (!split) return table;
   return (
-    <div className={`task-split${over ? ' is-over' : ''}`} onMouseOver={hover} onMouseLeave={hover}>
-      {table}
-      <div
-        className="task-pins"
-        ref={pins}
-        onWheel={(e) => {
-          if (scroller.current) scroller.current.scrollTop += e.deltaY;
-        }}
-      >
+    <div className="task-split" onMouseOver={hover} onMouseLeave={hover}>
+      <div className="task-clip">{table}</div>
+      <div className="task-pins" ref={pins} onScroll={() => follow(pins.current, scroller.current)}>
         <table className="task-table task-pin-table">
           <thead>
             <tr data-row="head">

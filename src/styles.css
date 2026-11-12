@@ -3065,11 +3065,10 @@ button.kb-btn { font-family: inherit; }
 
 /* V20-104 (Dan, Nov 12): on a computer the Tasks card splits where the ✓ ⋯ start, like the Now box in the routine:
    the table scrolls sideways in its own box that ends there (rows are cut off cleanly at its edge), and the ✓ ⋯ sit
-   in their own column beside it with nothing behind them. A thin line marks the split only when the table runs past it. */
+   in their own column beside it with nothing behind them. V20-105: no line at the split. */
 .task-split { display: flex; align-items: flex-start; margin: 0 -8px; }
-.task-split > .task-scroll { flex: 1 1 auto; min-width: 0; margin-left: 0; margin-right: 0; }
-.task-pins { flex: none; overflow: hidden; margin-bottom: -12px; border-left: 1px solid transparent; }
-.task-split.is-over .task-pins { border-left-color: var(--edge); }
+.task-split .task-scroll { min-width: 0; margin-left: 0; margin-right: 0; }
+.task-pins { flex: none; overflow: hidden; margin-bottom: -12px; }
 .task-split .task-pin-table { width: auto; min-width: 0; }
 .task-pin-table td, .task-pin-table th { padding-left: 8px; }
 /* One band across both halves: the stripe's round ends sit at the table's left and the column's right. */
@@ -3079,3 +3078,14 @@ button.kb-btn { font-family: inherit; }
 .task-split .task-pin-table tr.task-section td { padding: 0; border: 0; background: none; }
 /* The Tasks / Budget / Records pages: both halves share the screen-sized box, and the column's header stays put too. */
 .panel-tasks-page .task-pins, .panel-budget .task-pins, .panel-records .task-pins { max-height: calc(100dvh - var(--header-h, 160px) - 48px); min-height: 280px; }
+
+/* V20-105 (Dan, Nov 12): on the Tasks / Budget / Records pages the up-and-down scroll bar sits on the outside, at the
+   ✓ ⋯ column's right edge, not between the table and the buttons. The table half hides its own up-and-down bar. */
+.panel-tasks-page .task-pins, .panel-budget .task-pins, .panel-records .task-pins { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent-teal) 45%, transparent) transparent; }
+/* The table half's own up-and-down bar is pushed just past a clipping edge (it's --sbw wider than its slot), so only
+   the outside bar shows. Its sideways bar stops at the same edge, as it would at a corner. */
+.task-clip { flex: 1 1 auto; min-width: 0; overflow: hidden; margin-bottom: -12px; }
+.task-clip > .task-scroll { width: calc(100% + var(--sbw, 0px)); margin: 0; }
+@media (hover: hover) {
+  .task-split .task-table .task-row.is-hover td { box-shadow: inset 0 -2px 0 var(--row-hover-line, var(--accent-teal)); }
+}
