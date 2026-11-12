@@ -92,7 +92,7 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 // Nov 11 (V20-061): All and History came out. History split in two: Missed = every run not done
 // (never settled, skipped or cleared), Complete = every done run.
-type TimedView = 'active' | 'tomorrow' | 'scheduled' | 'missed' | 'complete';
+type TimedView = 'active' | 'tomorrow' | 'scheduled' | 'missed' | 'complete' | 'stats';
 
 
 const TIMED_VIEWS: [TimedView, string][] = [
@@ -100,7 +100,8 @@ const TIMED_VIEWS: [TimedView, string][] = [
   ['tomorrow', 'Tomorrow'],
   ['scheduled', 'Scheduled'],
   ['missed', 'Missed'],
-  ['complete', 'Complete']
+  ['complete', 'Complete'],
+  ['stats', 'Stats']
 ];
 
 const EMPTY: Record<TimedView, string> = {
@@ -108,7 +109,8 @@ const EMPTY: Record<TimedView, string> = {
   complete: 'Nothing checked off yet.',
   missed: 'Nothing missed, skipped or cleared.',
   tomorrow: 'Nothing scheduled for tomorrow.',
-  scheduled: 'Nothing switched on and ahead.'
+  scheduled: 'Nothing switched on and ahead.',
+  stats: 'No runs in the last 14 days yet.'
 };
 
 /** Typing a link starts from https://www. so you only add the rest. */
@@ -266,7 +268,8 @@ export function LaunchersPanel(p: Props) {
       .filter((l) => l.active && nextOf(l))
       .sort((a, b) => (nextOf(a) ?? '').localeCompare(nextOf(b) ?? '') || dayOrder(a.atTime) - dayOrder(b.atTime)),
     missed: [],
-    complete: []
+    complete: [],
+    stats: []
   };
   // Missed (Oct 29): past runs never settled, one row per run (a launch can miss several days).
   const missed = missedRuns(p.launches, p.log ?? [], p.today, 7, new Set(p.offDays ?? []));
@@ -404,7 +407,9 @@ export function LaunchersPanel(p: Props) {
     setFill({ fill, n: Date.now() });
     setTimedOpen(true);
   }
-  const countOf = (id: TimedView) => (id === 'complete' ? doneRuns.length : id === 'missed' ? missedRows.length : views[id].length);
+  // V20-071: Stats has no count.
+  const countOf = (id: TimedView): number | undefined =>
+    id === 'stats' ? undefined : id === 'complete' ? doneRuns.length : id === 'missed' ? missedRows.length : views[id].length;
   const list = views[view];
   // Active keeps to the next 3 (Show all for the rest); the other tabs show their whole list.
   const capped = view === 'active' && !showAllTimed;
@@ -701,6 +706,15 @@ export function LaunchersPanel(p: Props) {
             <p className="panel-empty timed-empty">{EMPTY.complete}</p>
           ) : (
             <>
+            <ul className="timed-list">{doneRuns.slice(0, showAllTimed ? undefined : 30).map(runItem)}</ul>
+            </>
+          )
+        ) : view === 'stats' ? (
+          // V20-071 (Nov 12): the summary moved off Complete into its own tab. To be built out.
+          rates.length === 0 ? (
+            <p className="panel-empty timed-empty">{EMPTY.stats}</p>
+          ) : (
+            <>
             {rates.length > 0 && (
               <div className="timed-rates" aria-label="Done rate per launch, last 14 days">
                 <p className="timed-rates-title">Done rate · last 14 days</p>
@@ -716,7 +730,6 @@ export function LaunchersPanel(p: Props) {
                 </ul>
               </div>
             )}
-            <ul className="timed-list">{doneRuns.slice(0, showAllTimed ? undefined : 30).map(runItem)}</ul>
             </>
           )
         ) : list.length === 0 ? (
