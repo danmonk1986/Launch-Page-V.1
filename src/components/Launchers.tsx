@@ -1429,8 +1429,11 @@ function TimedForm({
           per project). Sub-projects show under their parent. Existing ritual links keep working. */}
       <label className="field">
         <span>Project</span>
-        <select value={d.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || null)}>
-          <option value="">No project</option>
+        {/* V20-094 (Dan, Nov 12): every timed launch needs a project (data tracking). */}
+        <select required value={d.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || null)}>
+          <option value="" disabled>
+            Pick a project
+          </option>
           {[...projects]
             .filter((x) => !x.parentId)
             .sort((x, y) => x.sort - y.sort || x.name.localeCompare(y.name))
@@ -1605,7 +1608,7 @@ function TimedForm({
       </fieldset>
 
       {/* V20-088: Save waits until What is picked too (the ⊘ cursor instead of the browser's fill-in bubble). */}
-      <FormActions formId={formId} saveDisabled={!d.title.trim() || !cat} onDelete={launch ? () => onDelete(launch.id) : undefined} deleteLabel={launch?.title} />
+      <FormActions formId={formId} saveDisabled={!d.title.trim() || !cat || !d.projectId} onDelete={launch ? () => onDelete(launch.id) : undefined} deleteLabel={launch?.title} />
     </form>
   );
 }

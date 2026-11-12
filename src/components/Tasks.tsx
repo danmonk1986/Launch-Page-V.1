@@ -883,8 +883,11 @@ function TaskForm({
           <div className="time-grid">
             <label className="field">
               <span>Project</span>
-              <select value={d.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || null)}>
-                <option value="">No project</option>
+              {/* V20-094 (Dan, Nov 12): every task needs a project (data tracking). */}
+              <select required value={d.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || null)}>
+                <option value="" disabled>
+                  Pick a project
+                </option>
                 {tree.map(({ area, children }) => (
                   <optgroup key={area.id} label={area.name}>
                     <option value={area.id}>{area.name}</option>
@@ -1016,7 +1019,7 @@ function TaskForm({
       </div>
       <FormActions
         formId={formId}
-        saveDisabled={!named}
+        saveDisabled={!named || (!isStep && !d.projectId)}
         onDelete={!isNew ? () => onDelete(task.id) : undefined}
         deleteLabel={taskName(task)}
         extra={
@@ -1025,7 +1028,7 @@ function TaskForm({
               type="submit"
               form={formId}
               className="icon-btn tool-btn push-btn"
-              disabled={!named}
+              disabled={!named || !d.projectId}
               aria-label="Push rocket"
               title={named ? 'Push rocket: save, then Add timed launch filled in from this task' : 'Name the task first'}
               onClick={() => {
