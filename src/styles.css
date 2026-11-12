@@ -3054,3 +3054,8 @@ button.kb-btn { font-family: inherit; }
 /* V20-100 (Dan, Nov 12): every task name reads in capitals, like the ones Claude added. Descriptions and steps stay as typed. */
 .task-table td.col-task .task-name { text-transform: uppercase; }
 .task-table td.col-task .task-desc-inline { text-transform: none; }
+
+/* V20-102 (Dan, Nov 12): a sideways scroll bar sits centred in the white space under the table, not tight against
+   the last row. The box takes half the card's bottom padding inside it (12px above the bar) and gives the same back
+   outside (12px below), so cards and pages keep their size. Every box that shows a sideways bar. */
+.task-scroll, .week-scroll, .d26-table-wrap, .kb-table-wrap, .rit-steps { padding-bottom: 12px; margin-bottom: -12px; }
