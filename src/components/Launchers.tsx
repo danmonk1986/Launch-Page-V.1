@@ -1165,7 +1165,17 @@ function TileForm({
 }
 
 /** The starting list for a timed launch's What; anything typed there joins it once saved. */
-const WHAT_CATEGORIES = ['Work Block #1', 'Work Block #2', 'Work Block #3', 'Expansion Work', 'Leisure Work'];
+// V20-072 (Dan, Nov 12): What is a fixed list, each with its default time allotted, so the data stays clean.
+// Later (beta Settings): add, remove and retime these there; these six are the defaults.
+export const WHAT_DEFAULTS: { cat: string; minutes: number }[] = [
+  { cat: 'Work Block', minutes: 90 },
+  { cat: 'Expansion Work', minutes: 60 },
+  { cat: 'Leisure Work', minutes: 60 },
+  { cat: 'Meeting', minutes: 60 },
+  { cat: 'Setup', minutes: 30 },
+  { cat: 'Shop Work', minutes: 90 }
+];
+const hoursLabel = (m: number) => (m % 60 === 0 ? `${m / 60} h` : m < 60 ? `${m} min` : `${(m / 60).toFixed(1)} h`);
 /** "Category - Description" (Nov 2: also " · " and " – ", as some older launches were saved). */
 export function splitTitle(t: string) {
   const m = / (-|·|–|—) /.exec(t);
@@ -1245,7 +1255,6 @@ function TimedForm({
     setDesc(x);
     set('title', joinTitle(c, x));
   };
-  const categories = [...new Set([...WHAT_CATEGORIES, ...titles.map((t) => splitTitle(t).cat).filter(Boolean)])];
   // Oct 24: one list per kind of work: Work Block #1, #2 and #3 share their descriptions.
   const descriptions = [...new Set(titles.map(splitTitle).filter((t) => launchListFor(t.cat) === launchListFor(cat) && t.desc).map((t) => t.desc))].sort((a, b) => a.localeCompare(b));
   const toggleDay = (i: number) =>
@@ -1304,7 +1313,29 @@ function TimedForm({
       )}
       <label className="field">
         <span>What</span>
-        <TitleCombo value={cat} titles={categories} placeholder="Work Block #1" onChange={(v) => setWhat(v, desc)} list="launch:what" />
+        <select
+          required
+          value={cat}
+          onChange={(e) => {
+            const v = e.target.value;
+            setWhat(v, desc);
+            const def = WHAT_DEFAULTS.find((w) => w.cat === v);
+            if (def) set('minutes', def.minutes);
+          }}
+        >
+          <option value="" disabled>
+            Pick what kind of work
+          </option>
+          {WHAT_DEFAULTS.map((w) => (
+            <option key={w.cat} value={w.cat}>
+              {w.cat} · {hoursLabel(w.minutes)}
+            </option>
+          ))}
+          {cat && !WHAT_DEFAULTS.some((w) => w.cat === cat) && (
+            // A launch made before the fixed list keeps its old name until you pick one of the six.
+            <option value={cat}>{cat} (old, pick a new one)</option>
+          )}
+        </select>
       </label>
       <label className="field">
         <span>Description</span>
