@@ -1,4 +1,4 @@
-import { useContext, useEffect, useLayoutEffect, useState, useId, useRef } from 'react';
+import { Fragment, useContext, useEffect, useLayoutEffect, useState, useId, useRef } from 'react';
 import { HiddenPicksContext, launchListFor, pickKey as hiddenKey } from '../lib/hiddenPicks';
 import { FormActions, Sheet } from './Sheet';
 import {
@@ -710,15 +710,27 @@ export function LaunchersPanel(p: Props) {
           let nextMarked = false;
           return pages.map((items, pi) => (
           <ul className="timed-list" key={pi} aria-label={pages.length > 1 ? `Page ${pi + 1} of ${pages.length}` : undefined}>
-            {items.map((l) => {
+            {items.map((l, li) => {
               // Tomorrow shows plain rows: today's check-offs belong to today.
               const ahead = view === 'tomorrow' || view === 'scheduled';
+              // V20-065 (Nov 11): Tomorrow and Scheduled get a date line (11/11/26 then a solid colour-1 line)
+              // above each day's launches.
+              const dayOf = (x: Launch) => (view === 'tomorrow' ? isoDate(tomorrow) : view === 'scheduled' ? nextOf(x) : null);
+              const day = dayOf(l);
+              const showDay = !!day && (li === 0 || dayOf(items[li - 1]) !== day);
               const todays = !ahead && l.active && happensToday(l, p.today);
               const how = ahead ? undefined : stateOf(l);
               const isNext = view === 'active' && todays && (!how || how === 'launched') && !nextMarked;
               if (isNext) nextMarked = true;
               return (
-                <li key={l.id} className={`timed-item${how && how !== 'launched' ? ` is-${how}` : ''}${how === 'launched' ? ' is-launched' : ''}${isNext ? ' is-next' : ''}`}>
+                <Fragment key={l.id}>
+                {showDay && day && (
+                  <li className="timed-day" aria-label={new Date(`${day}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}>
+                    <span className="timed-day-date">{`${day.slice(5, 7)}/${day.slice(8, 10)}/${day.slice(2, 4)}`}</span>
+                    <span className="timed-day-line" aria-hidden="true" />
+                  </li>
+                )}
+                <li className={`timed-item${how && how !== 'launched' ? ` is-${how}` : ''}${how === 'launched' ? ' is-launched' : ''}${isNext ? ' is-next' : ''}`}>
                   <button
                     type="button"
                     className="timed-row"
@@ -822,6 +834,7 @@ export function LaunchersPanel(p: Props) {
                     </div>
                   )}
                 </li>
+                </Fragment>
               );
             })}
           </ul>

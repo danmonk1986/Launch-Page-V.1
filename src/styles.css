@@ -2935,3 +2935,10 @@ button.kb-btn { font-family: inherit; }
 .fold-more-btn.is-active { border-bottom-color: var(--accent-purple); }
 .fold-list { left: auto; right: 0; min-width: 190px; }
 .fold-list [aria-current='true'] { color: var(--accent-teal); }
+
+/* V20-065 (Dan, Nov 11): Tomorrow and Scheduled, a date line above each day: 11/11/26, then a solid
+   colour-1 (purple) line to the edge. */
+.timed-day { display: flex; align-items: center; gap: 12px; list-style: none; margin: 10px 0 2px; padding: 0 2px; }
+.timed-list > .timed-day:first-child { margin-top: 0; }
+.timed-day-date { flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--accent-purple); }
+.timed-day-line { flex: 1 1 auto; height: 0; border-top: 1px solid var(--accent-purple); }
