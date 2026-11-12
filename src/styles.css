@@ -3032,3 +3032,15 @@ button.kb-btn { font-family: inherit; }
 .app[data-tone='light'] :is(input, select, textarea):is(:required, [data-must]):not([type='checkbox']):not([type='radio']):not([type='color']):not([type='file']):not([type='hidden']) {
   border: 2px solid var(--accent-teal);
 }
+
+/* V20-098 (Dan, Nov 12): an open ⋯ menu sits on top of everything in the card and on the page. Each pinned
+   ✓ ⋯ cell is its own layer (z-index 2), so the open one is lifted above the rows under it. */
+.task-table td.col-actions:has(.row-menu-list) { position: relative; z-index: 20; }
+@media (min-width: 601px) {
+  .task-scroll .task-table td.col-actions:has(.row-menu-list) { position: sticky; z-index: 20; }
+}
+.task-table tr:has(.row-menu-list) { position: relative; z-index: 20; }
+
+/* V20-100 (Dan, Nov 12): every task name reads in capitals, like the ones Claude added. Descriptions and steps stay as typed. */
+.task-table td.col-task .task-name { text-transform: uppercase; }
+.task-table td.col-task .task-desc-inline { text-transform: none; }

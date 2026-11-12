@@ -262,12 +262,21 @@ export function groupTasks(list: Task[], today: Date) {
     // A step stays under its task, unless the step alone was deleted (then it shows in Recently deleted).
     const underParent = !!t.parentId && ids.has(t.parentId);
     if (underParent && !(t.deletedAt && !deleted.has(t.parentId!))) continue;
-    // V20-043: an open step due today or earlier brings its task into Due today.
-    out[sectionOf(t, today, t.parentId || isRecurring(t) ? null : stepDue(steps.get(t.id)))].push(t);
+    out[sectionOf(t, today)].push(t);
+  }
+  // V20-099 (Dan, Nov 12): an open step due today or earlier comes out from under its task into Due today
+  // on its own row (its task's name beside it). The task keeps its own date and status (e.g. WIP, Nov 15).
+  const live = new Map(list.filter((t) => !t.deletedAt && !(t.done && t.cleared)).map((t) => [t.id, t]));
+  for (const [pid, kids] of steps) {
+    const parent = live.get(pid);
+    if (!parent || parent.done || parent.parentId) continue;
+    for (const st of kids) if (!st.done && !st.deletedAt && st.endDate && dayDiff(st.endDate, today) <= 0) out.due.push(st);
   }
   // Oct 28: every group reads A-Z (Task, then Description); steps stay in their own order.
   const az = (x: string, y: string) => x.localeCompare(y, undefined, { sensitivity: 'base' });
-  const byName = (a: Task, b: Task) => az(a.task, b.task) || az(a.description, b.description) || a.sort - b.sort;
+  // A step out on its own sorts by its task's name, so it sits where its task would.
+  const nameOf = (t: Task) => (t.parentId ? live.get(t.parentId)?.task ?? t.task : t.task);
+  const byName = (a: Task, b: Task) => az(nameOf(a), nameOf(b)) || az(a.description, b.description) || a.sort - b.sort;
   for (const k of Object.keys(out) as Section[]) out[k].sort(byName);
   return out;
 }

@@ -20,8 +20,6 @@ import {
   repeatOf,
   SECTIONS,
   stepsByParent,
-  stepDue,
-  dueSteps,
   autoStatus,
   type Section,
   type Task
@@ -237,13 +235,22 @@ function RowActions({ t, act, checked }: { t: Task; act: Actions; checked: boole
   );
 }
 
-function TaskRow({ t, step, alt, projects, today, act, stepsDue = null }: { t: Task; step?: boolean; alt?: boolean; projects: Project[]; today: Date; act: Actions; stepsDue?: string | null }) {
+// V20-099: `parent` = a due step out on its own row in Due today, so it shows its task's project and name.
+function TaskRow({ t, step, alt, projects, today, act, parent }: { t: Task; step?: boolean; alt?: boolean; projects: Project[]; today: Date; act: Actions; parent?: Task }) {
+  const stepsDue = null;
   const badge = dueBadge(t, today, stepsDue);
   const checked = isRecurring(t) ? doneToday(t, today) : t.done;
   return (
-    <tr id={`task-${t.id}`} className={`task-row${checked ? ' is-done' : ''}${step ? ' is-step' : ''}${alt ? ' is-alt' : ''}`}>
-      <td className="col-project">{step ? null : <ProjectChip projects={projects} id={t.projectId} />}</td>
+    <tr id={`task-${t.id}`} className={`task-row${checked ? ' is-done' : ''}${step ? ' is-step' : ''}${parent ? ' is-out' : ''}${alt ? ' is-alt' : ''}`}>
+      <td className="col-project">{parent ? <ProjectChip projects={projects} id={parent.projectId} /> : step ? null : <ProjectChip projects={projects} id={t.projectId} />}</td>
       <td className="col-task">
+        {parent && (
+          <span className="task-cell">
+            <button type="button" className="task-name" title={parent.task} onClick={() => act.open(parent)}>
+              {parent.task || parent.description}
+            </button>
+          </span>
+        )}
         {!step && (
           <span className="task-cell">
             <button type="button" className="task-name" title={t.task} onClick={() => act.open(t)}>
@@ -330,6 +337,9 @@ function TaskTable({
   collapsible?: boolean;
 }) {
   const [closed, setClosed] = useState<Record<string, boolean>>({ done: true, monthly: true, annual: true, deleted: true });
+  // V20-099: steps out on their own in Due today, and every task by id (for their task's name).
+  const outIds = new Set(grouped.due.filter((t) => t.parentId).map((t) => t.id));
+  const byId = new Map((Object.values(grouped) as Task[][]).flat().map((t) => [t.id, t]));
   // Nov 1: on a phone each group shows 3 tasks; swipe left for the next 3, or Show all to stack them.
   const mobile = useMobile();
   const [showAll, setShowAll] = useState<Record<string, boolean>>({});
@@ -400,8 +410,8 @@ function TaskTable({
                           <tbody>
                             {pg.map((t, i) => (
                               <Fragment key={t.id}>
-                                <TaskRow t={t} alt={i % 2 === 1} projects={projects} today={today} act={act} stepsDue={isRecurring(t) ? null : stepDue(steps.get(t.id))} />
-                                {(steps.get(t.id) ?? []).map((st) => (
+                                <TaskRow t={t} step={!!t.parentId} parent={t.parentId ? byId.get(t.parentId) : undefined} alt={i % 2 === 1} projects={projects} today={today} act={act} />
+                                {(t.parentId ? [] : steps.get(t.id) ?? []).filter((st) => !outIds.has(st.id)).map((st) => (
                                   <TaskRow key={st.id} t={st} step alt={i % 2 === 1} projects={projects} today={today} act={act} />
                                 ))}
                               </Fragment>
@@ -422,8 +432,8 @@ function TaskTable({
                 !shut &&
                 rows.map((t, i) => (
                   <Fragment key={t.id}>
-                    <TaskRow t={t} alt={i % 2 === 1} projects={projects} today={today} act={act} stepsDue={isRecurring(t) ? null : stepDue(steps.get(t.id))} />
-                    {(steps.get(t.id) ?? []).map((st) => (
+                    <TaskRow t={t} step={!!t.parentId} parent={t.parentId ? byId.get(t.parentId) : undefined} alt={i % 2 === 1} projects={projects} today={today} act={act} />
+                    {(t.parentId ? [] : steps.get(t.id) ?? []).filter((st) => !outIds.has(st.id)).map((st) => (
                       <TaskRow key={st.id} t={st} step alt={i % 2 === 1} projects={projects} today={today} act={act} />
                     ))}
                   </Fragment>
@@ -640,7 +650,7 @@ export function TasksPanel(
         </div>
       </div>
       {/* V20-043: only the steps that are due show here, under their task. */}
-      <TaskTable sections={['due', 'key']} grouped={grouped} steps={dueSteps(p.tasks, p.today)} projects={p.projects} today={p.today} act={act} />
+      <TaskTable sections={['due', 'key']} grouped={grouped} steps={new Map()} projects={p.projects} today={p.today} act={act} />
       {editor.sheet}
     </section>
   );
