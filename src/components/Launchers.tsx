@@ -59,8 +59,6 @@ type Props = {
   onFinish: (l: Launch, how: 'done' | 'skipped', logMin?: number | null) => void;
   /** Opens a timed launch's tabs and apps now, without waiting for its time. */
   onLaunchNow: (l: Launch) => void;
-  /** V12-004: reopens a running launch's tabs and apps (no new run, no reminder). */
-  onReopen?: (l: Launch) => void;
   /** Oct 25: pause / resume a launched run. */
   isPaused?: (l: Launch) => boolean;
   onPause?: (l: Launch) => void;
@@ -823,22 +821,12 @@ export function LaunchersPanel(p: Props) {
                   <button
                     type="button"
                     className="timed-row"
-                    onClick={(e) => {
-                      // V12-004 (Nov 12): on a running launch that opens tabs or apps, tapping its time reopens them.
-                      if (how === 'launched' && opensSomething(l) && p.onReopen && (e.target as HTMLElement).closest('.timed-time')) {
-                        p.onReopen(l);
-                        return;
-                      }
+                    onClick={() => {
                       setTimed(l);
                       setTimedOpen(true);
                     }}
                   >
-                    <span
-                      className={`timed-time${how === 'launched' && opensSomething(l) && p.onReopen ? ' is-reopen' : ''}`}
-                      title={how === 'launched' && opensSomething(l) && p.onReopen ? `Reopen ${describeOpens(l.urls)}` : undefined}
-                    >
-                      {formatMinutes(toMinutes(ahead ? timeFor(l, tomorrow) : timeFor(l, p.today)))}
-                    </span>
+                    <span className="timed-time">{formatMinutes(toMinutes(ahead ? timeFor(l, tomorrow) : timeFor(l, p.today)))}</span>
                     <span className="timed-name">{l.title}</span>
                     <span className="timed-meta">
                       {describeSchedule(l)} · {l.minutes} min

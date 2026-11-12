@@ -2952,7 +2952,3 @@ button.kb-btn { font-family: inherit; }
 .logask-q { flex-basis: 100%; text-align: right; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-teal); }
 .logask-min { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mist); }
 .logask-min input { width: 64px; height: 30px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--edge); background: transparent; color: var(--beige); font: inherit; font-variant-numeric: tabular-nums; }
-
-/* V12-004 (Nov 12): a running launch's time reopens its tabs: a rocket mark and an underline say so. */
-.timed-time.is-reopen { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 4px; }
-.timed-time.is-reopen::after { content: " ↗"; font-size: 0.85em; }
