@@ -3106,3 +3106,17 @@ button.kb-btn { font-family: inherit; }
 
 /* V20-115 (Dan, Nov 12): headline and mantra one line each; they shrink to fit (Header › HeaderWords) instead of stacking. */
 .topbar-words .motto, .topbar-words .mantra { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* V20-116 (Dan, Nov 12): on a computer the header's two rows size on their own. Row 1: logo, headline + mantra, ⚙ and
+   routine picker. Row 2: page tabs, date and time. Before, one grid made the date's width set the whole right column,
+   so the headline got a sliver and shrank to nothing (V20-115). Now it gets all the room up to the ⚙. */
+@media (min-width: 1001px) {
+  .topbar:not(.topbar-slim) { display: flex; flex-wrap: wrap; align-items: center; column-gap: 28px; row-gap: 0; }
+  .topbar:not(.topbar-slim) > .topbar-logo { order: 1; flex: none; }
+  .topbar:not(.topbar-slim) > .topbar-words { order: 2; flex: 1 1 0; min-width: 0; }
+  .topbar:not(.topbar-slim) > .topbar-right { display: contents; }
+  .topbar:not(.topbar-slim) .topbar-controls { order: 3; flex: none; align-self: flex-end; }
+  .topbar:not(.topbar-slim)::after { content: ''; order: 4; flex-basis: 100%; height: 0; }
+  .topbar:not(.topbar-slim) > .tabs { order: 5; flex: 1 1 0; min-width: 0; margin-top: 6px; }
+  .topbar:not(.topbar-slim) .header-clock { order: 6; flex: none; margin: 6px 0 0 auto; }
+}
