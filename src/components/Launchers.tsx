@@ -1220,8 +1220,19 @@ export const WHAT_DEFAULTS: { cat: string; minutes: number }[] = [
   { cat: 'SHOP WORK', minutes: 90 },
   { cat: 'BANKING', minutes: 15 },
   { cat: 'DIGITAL ORGANIZATION', minutes: 45 },
-  { cat: 'PERSONAL', minutes: 30 }
+  { cat: 'PERSONAL', minutes: 30 },
+  { cat: 'TRAINING', minutes: 60 }
 ];
+/** V20-078: an old category name → its What (for new launches filled in from a task, a routine step or a
+ *  past run). Anything else: What is left to pick and the whole name becomes the description. */
+function whatFor(cat: string): string | null {
+  const c = cat.trim().toLowerCase();
+  const exact = WHAT_DEFAULTS.find((w) => w.cat.toLowerCase() === c);
+  if (exact) return exact.cat;
+  if (/^work block\b/.test(c)) return 'WORK BLOCK';
+  if (/^(plan exp|impo|bill pmt)$/.test(c)) return 'BANKING';
+  return null;
+}
 
 /** "Category - Description" (Nov 2: also " · " and " – ", as some older launches were saved). */
 export function splitTitle(t: string) {
@@ -1293,8 +1304,28 @@ function TimedForm({
   const set = <K extends keyof Launch>(k: K, v: Launch[K]) => setD((x) => ({ ...x, [k]: v }));
   // What = a category (Work Block #1…, or any you type, which joins the list once saved) and a
   // description. Saved as one title, "Category - Description", so lists read the same (Oct 20).
-  const [cat, setCat] = useState(() => splitTitle(d.title).cat);
-  const [desc, setDesc] = useState(() => splitTitle(d.title).desc);
+  // V20-078 (Nov 12): a NEW launch that starts filled in (from a task, a routine step, rocket + in Complete)
+  // gets a What from the fixed list, never an old name: a known old name is mapped (Work Block #2 → WORK
+  // BLOCK), anything else goes whole into the description with What left to pick. Editing a launch keeps its
+  // own name (shown as old until you pick).
+  const start = (() => {
+    const t = splitTitle(d.title);
+    if (launch || !d.title.trim()) return t;
+    const w = whatFor(t.cat);
+    return w ? { cat: w, desc: t.desc } : { cat: '', desc: d.title.trim() };
+  })();
+  const [cat, setCat] = useState(start.cat);
+  const [desc, setDesc] = useState(start.desc);
+  useEffect(() => {
+    if (launch || !d.title.trim()) return;
+    const def = WHAT_DEFAULTS.find((w) => w.cat === start.cat);
+    setD((x) => ({
+      ...x,
+      title: joinTitle(start.cat, start.desc),
+      ...(def && fill?.minutes === undefined ? { minutes: def.minutes } : {})
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const setWhat = (c: string, x: string) => {
     // Nov 2: a full "What - Description" picked or pasted into What fills both boxes.
     if (!x && / (-|·|–|—) /.test(c)) ({ cat: c, desc: x } = splitTitle(c));
