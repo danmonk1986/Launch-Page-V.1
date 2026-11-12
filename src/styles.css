@@ -1998,18 +1998,10 @@ select:not([multiple]) {
 .d26-kcal-look { display: inline-flex; align-items: center; white-space: nowrap; text-decoration: none; }
 .d26-kcal-look[aria-disabled='true'] { opacity: 0.5; pointer-events: none; }
 
-/* Tasks filter: one row; what doesn't fit goes under ⌄ */
+/* Pill rows (Records, bank import): one row */
 .pill-row { flex-wrap: nowrap; position: relative; }
 .pill-row > .area-pill { flex: none; white-space: nowrap; }
 .pill-row > .area-pill[hidden] { display: none; }
-.pill-more { position: relative; flex: none; margin-left: auto; }
-.pill-more-btn { min-width: 40px; font-size: 14px; line-height: 1; }
-.pill-menu {
-  position: fixed; z-index: 60; display: grid; gap: 6px; padding: 8px;
-  min-width: 190px; border: 1px solid var(--accent-purple); border-radius: 12px; background: var(--surface-solid);
-  box-shadow: 0 12px 30px rgb(0 0 0 / 0.4);
-}
-.pill-menu .area-pill { text-align: left; white-space: nowrap; }
 
 /* Budget V.1 */
 
@@ -3009,7 +3001,7 @@ button.kb-btn { font-family: inherit; }
 
 /* V20-101 (Dan, Nov 12): every dropdown menu takes the routine picker's look (teal tint, teal edge, teal text)
    instead of white, in both modes. */
-.app .row-menu-list, .app .picker-menu, .app .combo-list, .app .pill-menu,
+.app .row-menu-list, .app .picker-menu, .app .combo-list,
 .app[data-tone='light'] .row-menu-list, .app[data-tone='light'] .picker-menu, .app[data-tone='light'] .combo-list, .app[data-tone='light'] .panel .combo-list {
   background: color-mix(in srgb, var(--accent-teal) 14%, var(--surface-solid));
   border: 1px solid var(--accent-teal);
@@ -3023,7 +3015,7 @@ button.kb-btn { font-family: inherit; }
 
 /* V20-100 (Dan, Nov 12): every task name reads in capitals, like the ones Claude added. Descriptions and steps stay as typed. */
 .task-table td.col-task .task-name { text-transform: uppercase; }
-.task-table td.col-task .task-desc-inline { text-transform: none; }
+.task-table td.col-task .task-desc-inline, .task-table td.col-task .task-desc-dim, .task-table td.col-task .expense-link { text-transform: none; }
 
 /* V20-102 (Dan, Nov 12): a sideways scroll bar sits centred in the white space under the table, not tight against
    the last row. The box takes half the card's bottom padding inside it (12px above the bar) and gives the same back
@@ -3075,3 +3067,7 @@ button.kb-btn { font-family: inherit; }
     scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent-teal) 45%, transparent) transparent;
   }
 }
+
+/* V20-110 (Dan, Nov 12): the Tasks page's groups are tabs like Timed launches, not pills. In the card's column they
+   keep their own height (the 300px basis is for sitting in a row). */
+.panel-tasks-page > .fold-tabs { flex: none; margin: 0 0 14px; }

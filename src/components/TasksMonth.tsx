@@ -1,4 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
+import { useMobile } from '../lib/useMobile';
+import { SplitTable } from './SplitTable';
 import { daysIn, monthKey, paidIn, type Expense } from '../lib/expenses';
 import { repeatOf, repeatsOn, type Task } from '../lib/tasks';
 import type { Project } from '../lib/projects';
@@ -39,21 +41,26 @@ export function TasksMonth(p: {
     if (repeatOf(t).kind === 'none') return t.done ? 'DONE' : 'DUE';
     return '';
   };
+  // V20-109: Month view splits at the ✓ ⋯ like List view (phones keep one table).
+  const mobile = useMobile();
+  const rowClass = (i: number, st: string) => `task-row${i % 2 ? ' is-alt' : ''}${st === 'PAID' || st === 'DONE' ? ' is-paid' : ''}`;
   return (
     <div className="budget-month tasks-month">
       {rows.length === 0 ? (
         <p className="panel-empty">Nothing lands in {monthLabel(p.month)}.</p>
       ) : (
-        <div className="task-scroll">
+        <Split
+          mobile={mobile}
+          left={
           <table className="task-table budget-month-table">
             <thead>
-              <tr>
+              <tr data-row="head">
                 <th className="col-date">Date</th>
                 <th className="col-task">Task</th>
                 <th className="col-project">Project</th>
                 <th className="col-center">Status</th>
                 <th className="col-center">Info</th>
-                <th className="col-actions" aria-label="Done" />
+                {mobile && <th className="col-actions" aria-label="Done" />}
               </tr>
             </thead>
             <tbody>
@@ -61,7 +68,7 @@ export function TasksMonth(p: {
                 const pr = p.projects.find((x) => x.id === t.projectId);
                 const st = statusOf(t);
                 return (
-                  <tr key={t.id} className={`task-row${i % 2 ? ' is-alt' : ''}${st === 'PAID' || st === 'DONE' ? ' is-paid' : ''}`}>
+                  <tr key={t.id} data-row={t.id} className={rowClass(i, st)}>
                     <td className="col-date">{dates.length > 3 ? `${dayLabel(dates[0])} · ×${dates.length}` : dates.map(dayLabel).join(', ')}</td>
                     <td className="col-task">
                       <button type="button" className="task-name" onClick={() => p.onOpen(t)}>
@@ -75,14 +82,35 @@ export function TasksMonth(p: {
                     <td className="col-link col-info col-center">
                       <InfoLink t={t} />
                     </td>
-                    <td className="col-actions">{p.actions(t)}</td>
+                    {mobile && <td className="col-actions">{p.actions(t)}</td>}
                   </tr>
                 );
               })}
             </tbody>
           </table>
-        </div>
+          }
+          right={
+            <table className="task-table task-pin-table">
+              <thead>
+                <tr data-row="head">
+                  <th className="col-actions" aria-label="Done" />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(({ task: t }, i) => (
+                  <tr key={t.id} data-row={t.id} className={rowClass(i, statusOf(t))}>
+                    <td className="col-actions">{p.actions(t)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          }
+        />
       )}
     </div>
   );
+}
+
+function Split({ mobile, left, right }: { mobile: boolean; left: ReactNode; right: ReactNode }) {
+  return mobile ? <div className="task-scroll">{left}</div> : <SplitTable left={left} right={right} />;
 }

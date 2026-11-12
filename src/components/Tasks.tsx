@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { FormActions, Sheet } from './Sheet';
+import { SplitTable } from './SplitTable';
+import { FoldTabs } from './FoldTabs';
 import { chunk, SwipePages } from './SwipePages';
 import { useMobile } from '../lib/useMobile';
 import { TasksMonth } from './TasksMonth';
@@ -383,47 +385,6 @@ function TaskTable({
   collapsible?: boolean;
 }) {
   const [closed, setClosed] = useState<Record<string, boolean>>({ done: true, monthly: true, annual: true, deleted: true });
-  // V20-104 (Dan, Nov 12): on a computer the card splits: the table scrolls sideways in its own box that ends where
-  // the ✓ ⋯ column starts, and the ✓ ⋯ sit in their own column beside it, so nothing floats over the rows.
-  // Each ✓ ⋯ row takes its table row's height, and on the Tasks page both scroll up and down together.
-  const scroller = useRef<HTMLDivElement>(null);
-  const pins = useRef<HTMLDivElement>(null);
-  const sync = () => {
-    const L = scroller.current;
-    const R = pins.current;
-    if (!L || !R) return;
-    const h = new Map<string, number>();
-    L.querySelectorAll<HTMLElement>('tr[data-row]').forEach((tr) => h.set(tr.dataset.row!, tr.getBoundingClientRect().height));
-    R.querySelectorAll<HTMLElement>('tr[data-row]').forEach((tr) => {
-      const v = h.get(tr.dataset.row!);
-      tr.style.height = v ? `${v}px` : '';
-    });
-    // The table's box has a sideways scroll bar under it; the column gets the same room so the two end together.
-    R.style.paddingBottom = `${12 + (L.offsetHeight - L.clientHeight)}px`;
-    follow(L, R);
-  };
-  useLayoutEffect(sync);
-  // V20-105: the up-and-down scroll bar sits on the outside (the ✓ ⋯ column); either half scrolls the other.
-  const follow = (from: HTMLElement | null, to: HTMLElement | null) => {
-    if (from && to && to.scrollTop !== from.scrollTop) to.scrollTop = from.scrollTop;
-  };
-  useEffect(() => {
-    const L = scroller.current;
-    if (!L || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(() => sync());
-    ro.observe(L);
-    if (L.firstElementChild) ro.observe(L.firstElementChild);
-    return () => ro.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  // Hovering a row lights up both halves of it.
-  const hover = (e: { target: EventTarget }) => {
-    const row = (e.target as Element).closest?.('tr[data-row]') as HTMLElement | null;
-    const id = row?.dataset.row ?? null;
-    const box = scroller.current?.closest('.task-split');
-    box?.querySelectorAll('tr.is-hover').forEach((tr) => tr.classList.remove('is-hover'));
-    if (id) box?.querySelectorAll(`tr[data-row="${CSS.escape(id)}"].task-row`).forEach((tr) => tr.classList.add('is-hover'));
-  };
   // V20-099: steps out on their own in Due today, and every task by id (for their task's name).
   const outIds = new Set(grouped.due.filter((t) => t.parentId).map((t) => t.id));
   const byId = new Map((Object.values(grouped) as Task[][]).flat().map((t) => [t.id, t]));
@@ -445,8 +406,7 @@ function TaskTable({
       ...(t.parentId ? [] : steps.get(t.id) ?? []).filter((st) => !outIds.has(st.id)).map((st) => ({ t: st, step: true, parent: undefined, alt: i % 2 === 1 }))
     ]);
   const shown = sections.filter((id) => !(!grouped[id].length && id === 'due') && !(collapsible && !grouped[id].length && id !== 'key'));
-  const table = (
-    <div className="task-scroll" ref={scroller} onScroll={() => follow(scroller.current, pins.current)}>
+  const tableEl = (
       <table className="task-table">
         <thead>
           <tr data-row="head">
@@ -530,13 +490,12 @@ function TaskTable({
           );
         })}
       </table>
-    </div>
   );
-  if (!split) return table;
+  if (!split) return <div className="task-scroll">{tableEl}</div>;
   return (
-    <div className="task-split" onMouseOver={hover} onMouseLeave={hover}>
-      <div className="task-clip">{table}</div>
-      <div className="task-pins" ref={pins} onScroll={() => follow(pins.current, scroller.current)}>
+    <SplitTable
+      left={tableEl}
+      right={
         <table className="task-table task-pin-table">
           <thead>
             <tr data-row="head">
@@ -561,8 +520,8 @@ function TaskTable({
             );
           })}
         </table>
-      </div>
-    </div>
+      }
+    />
   );
 }
 
@@ -910,13 +869,15 @@ export function TasksPage(
       )}
       {layout === 'list' && (
       <>
-      <PillRow
-        pills={[
-          { id: null, label: 'Active', count: outstanding },
-          ...SECTIONS.map((sec) => ({ id: sec.id, label: sec.pill ?? sec.title, count: grouped[sec.id].length, hint: sec.hint }))
+      {/* V20-110 (Dan, Nov 12): no more pills on the Tasks page; the groups are tabs, the same as Timed launches. */}
+      <FoldTabs
+        label="Show"
+        items={[
+          { id: 'all' as const, label: 'Active', count: outstanding },
+          ...SECTIONS.map((sec) => ({ id: sec.id, label: sec.pill ?? sec.title, count: grouped[sec.id].length }))
         ]}
-        value={view}
-        onPick={(id) => setView(id === null || view === id ? null : id)}
+        value={view ?? 'all'}
+        onPick={(id) => setView(id === 'all' ? null : id)}
       />
       <TaskTable
         key={view ?? 'all'}
@@ -1183,96 +1144,3 @@ function TaskForm({
   );
 }
 
-/**
- * One row of filter pills. Pills that don't fit move into a ⌄ menu at the end of the row
- * instead of wrapping to a second line.
- */
-export function PillRow<T extends string | null>({ pills, value, onPick }: { pills: { id: T; label: string; count: number; hint?: string }[]; value: T | null; onPick: (id: T) => void }) {
-  const row = useRef<HTMLDivElement>(null);
-  const widths = useRef<number[]>([]);
-  const [fit, setFit] = useState(pills.length);
-  const [open, setOpen] = useState<{ top: number; right: number } | null>(null);
-  useLayoutEffect(() => {
-    const el = row.current;
-    if (!el) return;
-    const measure = () => {
-      const kids = Array.from(el.querySelectorAll<HTMLElement>(':scope > .area-pill'));
-      kids.forEach((k, i) => {
-        if (k.offsetWidth) widths.current[i] = k.offsetWidth;
-      });
-      const gap = parseFloat(getComputedStyle(el).columnGap) || 4;
-      const avail = el.clientWidth;
-      const w = pills.map((_, i) => widths.current[i] ?? 90);
-      const all = w.reduce((a, x) => a + x + gap, -gap);
-      if (all <= avail) return setFit(pills.length);
-      const more = 44 + gap;
-      let used = 0;
-      let n = 0;
-      while (n < w.length && used + w[n] + (n ? gap : 0) + more <= avail) {
-        used += w[n] + (n ? gap : 0);
-        n += 1;
-      }
-      setFit(Math.max(1, n));
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [pills.length, pills.map((p) => p.count).join()]);
-  useEffect(() => {
-    if (!open) return;
-    const off = (e: MouseEvent) => {
-      if (!row.current?.contains(e.target as Node)) setOpen(null);
-    };
-    const shut = () => setOpen(null);
-    document.addEventListener('mousedown', off);
-    window.addEventListener('scroll', shut, true);
-    window.addEventListener('resize', shut);
-    return () => {
-      document.removeEventListener('mousedown', off);
-      window.removeEventListener('scroll', shut, true);
-      window.removeEventListener('resize', shut);
-    };
-  }, [open]);
-  const hidden = pills.slice(fit);
-  const pill = (p: (typeof pills)[number], i: number, inMenu = false) => (
-    <button
-      key={String(p.id)}
-      type="button"
-      className="area-pill"
-      aria-pressed={value === p.id}
-      title={p.hint}
-      hidden={!inMenu && i >= fit}
-      onClick={() => {
-        onPick(p.id);
-        setOpen(null);
-      }}
-    >
-      {p.label} <span className="pill-count">{p.count}</span>
-    </button>
-  );
-  return (
-    <div className="area-filter pill-row" role="group" aria-label="Show" ref={row}>
-      {pills.map((p, i) => pill(p, i))}
-      {hidden.length > 0 && (
-        <div className="pill-more">
-          <button
-            type="button"
-            className="area-pill pill-more-btn"
-            aria-expanded={!!open}
-            aria-pressed={hidden.some((p) => p.id === value)}
-            aria-label={`${hidden.length} more`}
-            title={`${hidden.length} more`}
-            onClick={(e) => {
-              const r = e.currentTarget.getBoundingClientRect();
-              setOpen((o) => (o ? null : { top: r.bottom + 6, right: window.innerWidth - r.right }));
-            }}
-          >
-            ⌄
-          </button>
-          {open && <div className="pill-menu" style={{ top: open.top, right: open.right }}>{hidden.map((p, i) => pill(p, fit + i, true))}</div>}
-        </div>
-      )}
-    </div>
-  );
-}
