@@ -3121,3 +3121,4 @@ button.kb-btn { font-family: inherit; }
   .topbar:not(.topbar-slim) .header-clock { order: 6; flex: none; margin: 6px 0 0 auto; }
 }
 .field > .field-label:has(select) { display: grid; gap: 6px; }
+.settings-save-state { font-size: 13px; color: var(--accent-teal); min-width: 64px; text-align: right; }

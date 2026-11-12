@@ -56,11 +56,39 @@ type Props = {
 export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onSetPassword, onCheckPassword, onSendReset, scrollMode, onScrollMode, email, projects, data, onSignOut }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState(settings);
-  const [saving, setSaving] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const clickOff = useClickOff(onClose);
 
-  useEffect(() => setDraft(settings), [settings, open]);
+  // V20-119 (Dan, Nov 12): Account Information and Appearance save themselves, like the journal: 0.9 s after the
+  // last change, and straight away when the window closes. No Save button.
+  const dirty = useRef(false);
+  const timer = useRef<number | undefined>(undefined);
+  const latest = useRef(draft);
+  latest.current = draft;
+  const [saveState, setSaveState] = useState<'' | 'typing' | 'saved'>('');
+  const saveRef = useRef(onSave);
+  saveRef.current = onSave;
+  const flush = () => {
+    window.clearTimeout(timer.current);
+    timer.current = undefined;
+    if (!dirty.current) return;
+    dirty.current = false;
+    const d = latest.current;
+    void saveRef.current({ ...d, logoUrl: d.logoUrl?.trim() || null });
+    setSaveState('saved');
+  };
+  // A newer copy from the cloud or another device replaces the form only when nothing is waiting to save.
+  useEffect(() => {
+    if (!dirty.current) setDraft(settings);
+  }, [settings]);
+  useEffect(() => {
+    if (open) {
+      setDraft(settings);
+      setSaveState('');
+    } else flush();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+  useEffect(() => () => flush(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const d = ref.current;
@@ -69,18 +97,26 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
     if (!open && d.open) d.close();
   }, [open]);
 
-  const set = <K extends keyof BrandSettings>(k: K, v: BrandSettings[K]) =>
-    setDraft((d) => ({ ...d, [k]: v }));
+  const queue = (fn: (d: BrandSettings) => BrandSettings) => {
+    setDraft((d) => {
+      const next = fn(d);
+      latest.current = next;
+      return next;
+    });
+    dirty.current = true;
+    setSaveState('typing');
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(flush, 900);
+  };
+  const set = <K extends keyof BrandSettings>(k: K, v: BrandSettings[K]) => queue((d) => ({ ...d, [k]: v }));
   const acct = draft.account;
-  const setAcct = <K extends keyof AccountInfo>(k: K, v: AccountInfo[K]) => setDraft((d) => ({ ...d, account: { ...d.account, [k]: v } }));
+  const setAcct = <K extends keyof AccountInfo>(k: K, v: AccountInfo[K]) => queue((d) => ({ ...d, account: { ...d.account, [k]: v } }));
 
-  async function submit(e: React.FormEvent) {
+  function submit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
-    await onSave({ ...draft, logoUrl: draft.logoUrl?.trim() || null });
-    setSaving(false);
-    onClose();
+    flush();
   }
+
 
   // Account Information and Appearance share one draft and one Save.
   const saves = tab === 'account' || tab === 'appearance';
@@ -92,9 +128,9 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
         <h2 id="settings-title">Settings</h2>
         <div className="sheet-tools">
           {saves && (
-            <button type="submit" form="settings-form" className="icon-btn tool-btn tool-btn-go" disabled={saving} aria-label="Save settings" title="Save">
-              <HeadIcon d={SAVE_ICON} />
-            </button>
+            <span className="journal-state settings-save-state" aria-live="polite">
+              {saveState === 'typing' ? 'Saving…' : saveState === 'saved' ? 'Saved' : ''}
+            </span>
           )}
           <button type="button" className="icon-btn tool-btn" onClick={onClose} aria-label="Close settings" title="Close">
             <HeadIcon d={CLOSE_ICON} />
