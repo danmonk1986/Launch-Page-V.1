@@ -3033,13 +3033,23 @@ button.kb-btn { font-family: inherit; }
   border: 2px solid var(--accent-teal);
 }
 
-/* V20-098 (Dan, Nov 12): an open ⋯ menu sits on top of everything in the card and on the page. Each pinned
-   ✓ ⋯ cell is its own layer (z-index 2), so the open one is lifted above the rows under it. */
-.task-table td.col-actions:has(.row-menu-list) { position: relative; z-index: 20; }
-@media (min-width: 601px) {
-  .task-scroll .task-table td.col-actions:has(.row-menu-list) { position: sticky; z-index: 20; }
+/* V20-098 (Dan, Nov 12): the task ⋯ menu floats over the page, fixed to its button (placed by RowMenu), so no card,
+   sticky header or sideways-scrolling table can cut it off. */
+.row-menu-list.is-floating { position: fixed; right: auto; bottom: auto; z-index: 60; }
+
+/* V20-101 (Dan, Nov 12): every dropdown menu takes the routine picker's look (teal tint, teal edge, teal text)
+   instead of white, in both modes. */
+.app .row-menu-list, .app .picker-menu, .app .combo-list, .app .pill-menu,
+.app[data-tone='light'] .row-menu-list, .app[data-tone='light'] .picker-menu, .app[data-tone='light'] .combo-list, .app[data-tone='light'] .panel .combo-list {
+  background: color-mix(in srgb, var(--accent-teal) 14%, var(--surface-solid));
+  border: 1px solid var(--accent-teal);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
 }
-.task-table tr:has(.row-menu-list) { position: relative; z-index: 20; }
+.app .row-menu-list > button, .app .picker-item { color: var(--accent-teal); }
+.app .row-menu-list > button:hover, .app .row-menu-list > button:focus-visible, .app .picker-item:hover,
+.app .combo-opt.is-hi { background: color-mix(in srgb, var(--accent-teal) 22%, transparent); }
+.app .row-menu-list > button[aria-current='page'], .app .tabs-more-list [aria-current='page'] { background: color-mix(in srgb, var(--accent-teal) 22%, transparent); }
+.app .row-menu-list .menu-danger { color: #e0806f; }
 
 /* V20-100 (Dan, Nov 12): every task name reads in capitals, like the ones Claude added. Descriptions and steps stay as typed. */
 .task-table td.col-task .task-name { text-transform: uppercase; }

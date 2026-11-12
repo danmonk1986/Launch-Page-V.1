@@ -1,6 +1,6 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { FormActions, Sheet } from './Sheet';
-import { useOpensUp } from './Launchers';
 import { chunk, SwipePages } from './SwipePages';
 import { useMobile } from '../lib/useMobile';
 import { TasksMonth } from './TasksMonth';
@@ -112,13 +112,44 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
   const [open, setOpen] = useState(false);
   const [picking, setPicking] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
-  const up = useOpensUp(wrap, open);
+  // V20-098: the menu floats over the page (drawn at the top of the app, fixed to the ⋯ button), so no card,
+  // sticky header or scrolling table can cut it off. It opens below, or above when there isn't room.
+  const list = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const tomorrow = isoOf(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 1, 12));
   const [date, setDate] = useState(t.endDate ?? tomorrow);
   const close = () => {
     setOpen(false);
     setPicking(false);
   };
+  useLayoutEffect(() => {
+    if (!open) {
+      setPos(null);
+      return;
+    }
+    const b = wrap.current?.getBoundingClientRect();
+    const m = list.current;
+    if (b && m) {
+      const h = m.offsetHeight;
+      const w = m.offsetWidth;
+      const below = b.bottom + 6 + h <= window.innerHeight - 8;
+      setPos({ top: below ? b.bottom + 6 : Math.max(8, b.top - 6 - h), left: Math.min(Math.max(8, b.right - w), window.innerWidth - w - 8) });
+    }
+    // Scrolling or resizing closes it (scrolling inside the menu doesn't).
+    const off = (e: Event) => {
+      if (list.current && e.target instanceof Node && list.current.contains(e.target)) return;
+      setOpen(false);
+      setPicking(false);
+    };
+    window.addEventListener('scroll', off, true);
+    window.addEventListener('resize', off);
+    return () => {
+      window.removeEventListener('scroll', off, true);
+      window.removeEventListener('resize', off);
+    };
+  }, [open, picking]);
+  const floatStyle = pos ? { top: pos.top, left: pos.left } : { top: 0, left: 0, visibility: 'hidden' as const };
+  const float = (n: ReactNode) => createPortal(n, document.querySelector('.app') ?? document.body);
   const run = (fn: () => void) => () => {
     fn();
     close();
@@ -128,7 +159,8 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
       ref={wrap}
       className="row-menu"
       onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) close();
+        const to = e.relatedTarget as Node | null;
+        if (!e.currentTarget.contains(to) && !list.current?.contains(to)) close();
       }}
       onKeyDown={(e) => e.key === 'Escape' && close()}
     >
@@ -143,8 +175,8 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
       >
         <Icon d="M5 12h.01M12 12h.01M19 12h.01" size={18} />
       </button>
-      {open && t.deletedAt && (
-        <div className={`row-menu-list${up ? ' is-up' : ''}`} role="menu">
+      {open && t.deletedAt && float(
+        <div ref={list} className="row-menu-list is-floating" role="menu" style={floatStyle}>
           <button type="button" role="menuitem" onClick={run(() => act.restore(t))}>
             Restore
           </button>
@@ -153,8 +185,8 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
           </button>
         </div>
       )}
-      {open && !t.deletedAt && (
-        <div className={`row-menu-list${up ? ' is-up' : ''}`} role="menu">
+      {open && !t.deletedAt && float(
+        <div ref={list} className="row-menu-list is-floating" role="menu" style={floatStyle}>
           <button type="button" role="menuitem" onClick={run(() => act.edit(t))}>
             Edit
           </button>
