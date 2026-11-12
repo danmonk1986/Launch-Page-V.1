@@ -391,7 +391,13 @@ export function LaunchersPanel(p: Props) {
   // colour-1 line), the time it started on the left (or its set time if it was ticked off without starting),
   // then the name and the minutes. No Undo.
   const runItem = (g: (typeof history)[number], i: number, arr: (typeof history)[number][]) => {
-    const spent = g.launchedAt && g.finishedAt ? Math.round((new Date(g.finishedAt).getTime() - new Date(g.launchedAt).getTime()) / 60_000) : null;
+    // V12-003: time spent leaves pauses out (the logged minutes when the clock timed it).
+    const spent =
+      g.timeSource === 'timed' && g.loggedMin != null
+        ? g.loggedMin
+        : g.launchedAt && g.finishedAt
+          ? Math.max(0, Math.round((new Date(g.finishedAt).getTime() - new Date(g.launchedAt).getTime()) / 60_000 - (g.pausedMin ?? 0)))
+          : null;
     const t = runTime(g);
     const showDay = i === 0 || arr[i - 1].day !== g.day;
     return (

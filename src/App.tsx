@@ -88,6 +88,7 @@ import {
   opensSomething,
   describeLog,
   logFor,
+  launchDate,
   timeFor,
   type Launcher
 } from './lib/launchers';
@@ -252,17 +253,29 @@ export default function App() {
       /* ignore */
     }
   }, [paused]);
-  const pausedMin = (l: Launch, at = Date.now()) => {
-    const p = paused[runKey(l, new Date(at))];
-    return p ? p.min + (p.at ? (at - p.at) / 60_000 : 0) : 0;
+  // V12-003 (Nov 12): the pause now lives on the run (synced), so every device sees it and time spent leaves
+  // breaks out. A run with no pause saved on it falls back to this browser's old copy.
+  const runOf = (l: Launch, at: number) => {
+    const day = isoDate(launchDate(l, new Date(at)));
+    return logRef.current.find((g) => g.launchId === l.id && g.day === day);
   };
-  const isPaused = (l: Launch) => !!paused[runKey(l, new Date())]?.at;
+  const pauseOf = (l: Launch, at = Date.now()): { at: number | null; min: number } => {
+    const run = runOf(l, at);
+    if (run && ((run.pausedMin ?? 0) > 0 || run.pausedAt)) return { at: run.pausedAt ? new Date(run.pausedAt).getTime() : null, min: run.pausedMin ?? 0 };
+    return paused[runKey(l, new Date(at))] ?? { at: null, min: 0 };
+  };
+  const pausedMin = (l: Launch, at = Date.now()) => {
+    const p = pauseOf(l, at);
+    return p.min + (p.at ? (at - p.at) / 60_000 : 0);
+  };
+  const isPaused = (l: Launch) => !!pauseOf(l).at;
   function togglePause(l: Launch) {
     const key = runKey(l, new Date());
-    const cur = paused[key] ?? { at: null, min: 0 };
+    const cur = pauseOf(l);
     const t = Date.now();
     const next = cur.at ? { at: null, min: cur.min + (t - cur.at) / 60_000 } : { ...cur, at: t };
     setPaused((m) => ({ ...m, [key]: next }));
+    logLaunch(l, () => ({ pausedMin: next.min, pausedAt: next.at ? new Date(next.at).toISOString() : null }));
     setStatus(next.at ? `${l.title}: paused. The clock stops until you resume.` : `${l.title}: resumed (${Math.round(next.min)} min paused).`);
   }
   // V20-064 (Nov 11): which runs already had Time's up, kept on this device so a refresh doesn't pop it
@@ -1182,7 +1195,7 @@ export default function App() {
     const nowMin = now.getHours() * 60 + now.getMinutes();
     const over = launches.find((l) => {
       const key = runKey(l, now);
-      if (handled[key] !== 'launched' || endAlerted[key] || paused[key]?.at) return false;
+      if (handled[key] !== 'launched' || endAlerted[key] || isPaused(l)) return false;
       const [h, m] = timeFor(l, now).split(':').map(Number);
       // V20-063 (Nov 11): the clock runs from the later of the set time and when it was started, so a run
       // started late (▶ on a missed run, or late from Active) gets its full time instead of being up at once.
@@ -1291,7 +1304,14 @@ export default function App() {
         mins = (run0.planned || l.minutes) + run0.extra;
       }
     }
-    logLaunch(l, () => ({ outcome: how, finishedAt: new Date().toISOString(), ...(how === 'done' ? { loggedMin: mins, timeSource: source } : {}) }));
+    // V12-003: a run checked off while paused closes its pause.
+    const closed = pausedMin(l);
+    logLaunch(l, () => ({
+      outcome: how,
+      finishedAt: new Date().toISOString(),
+      ...(run0.launchedAt ? { pausedMin: closed, pausedAt: null } : {}),
+      ...(how === 'done' ? { loggedMin: mins, timeSource: source } : {})
+    }));
     if (reminder?.id === l.id) setReminder(null);
     if (how === 'skipped') {
       if (l.repeat === 'hourly') return setStatus(`${l.title}: skipped this hour.`);
