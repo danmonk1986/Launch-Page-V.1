@@ -550,7 +550,7 @@ function LogoField({ text, image, onText, onImage }: { text: string; image: stri
               setBusy(true);
               setError('');
               try {
-                onImage(await shrinkImage(f, { maxW: 1200, maxH: 220, type: 'image/png' }));
+                onImage(await shrinkImage(f, { maxW: 1200, maxH: 220, type: 'image/png', trim: true }));
               } catch (err) {
                 setError((err as Error).message);
               }
@@ -567,7 +567,7 @@ function LogoField({ text, image, onText, onImage }: { text: string; image: stri
           )}
         </div>
       </div>
-      <p className="field-hint">600 × 110 px. Type your name or brand and it’s drawn in the L4UNCH P4GE lettering, or upload an image (PNG keeps a see-through background). Leave it empty for the L4UNCH!P4GE logo.</p>
+      <p className="field-hint">600 × 110 px at most: an image is trimmed and fitted inside it. Type your name or brand and it’s drawn in the L4UNCH P4GE lettering, or upload an image (PNG keeps a see-through background). Leave it empty for the L4UNCH!P4GE logo.</p>
       {error && <p className="field-hint image-pick-error">{error}</p>}
     </div>
   );
