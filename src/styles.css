@@ -2885,14 +2885,13 @@ button.kb-btn { font-family: inherit; }
 }
 .app .quick-btn svg, .app .task-quick svg { width: 14px; height: 14px; }
 
-/* V20-056 (Dan, Nov 11): every task row is one line and the same height, task or step, so stripes, the
-   hover band and the ✓ ⋯ buttons never overlap; long names end in … (the full name shows on hover).
-   The row line is 2px. Phones keep their own stacked layout. */
+/* V20-056 (Dan, Nov 11), revised in V20-057: every task and step row has the same padding and at least the
+   same height (46px), with its content centred, so stripes, the hover band and the ✓ ⋯ buttons never overlap.
+   Long names wrap again instead of ending in … (one-line names made the wide Tasks page overflow, and the
+   pinned ✓ ⋯ then sat on top of the Required and Time columns). The row line is 2px. Phones keep their layout. */
 @media (min-width: 601px) {
-  .task-table .task-row td, .task-table .task-row.is-step td { padding-top: 7px; padding-bottom: 7px; height: 46px; box-sizing: border-box; }
-  .task-table .task-row .task-name { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-top: 0; padding-bottom: 0; }
-  .task-table .task-row .step-cell { min-width: 0; max-width: 100%; }
-  .task-table .task-row.is-step td.col-desc { max-width: 320px; }
+  .task-table .task-row td, .task-table .task-row.is-step td { padding-top: 7px; padding-bottom: 7px; height: 46px; box-sizing: border-box; vertical-align: middle; }
+  .task-table .task-row .task-name { padding-top: 0; padding-bottom: 0; line-height: 1.35; }
   .task-table .task-row td.col-date, .task-table .task-row td.col-time, .task-table .task-row td.col-expense { white-space: nowrap; }
 }
 @media (hover: hover) {
