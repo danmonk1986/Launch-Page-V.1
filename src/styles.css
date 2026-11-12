@@ -2952,3 +2952,9 @@ button.kb-btn { font-family: inherit; }
 .logask-q { flex-basis: 100%; text-align: right; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-teal); }
 .logask-min { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mist); }
 .logask-min input { width: 64px; height: 30px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--edge); background: transparent; color: var(--beige); font: inherit; font-variant-numeric: tabular-nums; }
+
+/* V20-081: the calendar's ⌄ matches the Rockets one exactly: 32px, no box, 6px from the title. */
+.panel-head .view-switch:has(.week-toggle) { margin-left: 6px; }
+.app .panel-head .week-toggle { width: 32px; height: 32px; min-height: 32px; min-width: 32px; padding: 0; border: 0; border-radius: 8px; background: none; box-shadow: none; }
+.app .panel-head .week-toggle:hover { background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
+.app .panel-head .week-toggle svg { width: 20px; height: 20px; }
