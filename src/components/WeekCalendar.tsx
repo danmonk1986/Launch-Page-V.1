@@ -40,7 +40,9 @@ type Props = {
   onAddTask?: (e: CalEvent) => void;
 };
 
-const COLORS: EventColor[] = ['teal', 'purple', 'blue'];
+// V20-084: colours 1–4 from Settings (they follow your colour settings in day and night mode).
+const COLORS: EventColor[] = ['purple', 'teal', 'green', 'pink'];
+const COLOR_NAMES: Record<string, string> = { purple: 'Colour 1', teal: 'Colour 2', green: 'Colour 3', pink: 'Colour 4' };
 
 type GState = 'off' | 'reconnect' | 'loading' | 'on';
 
@@ -522,22 +524,26 @@ function EventForm({
       {!google && (
         <fieldset className="field">
           <legend>Colour</legend>
-          {/* V20-083 (Dan, Nov 12): dots only, plus a colour of your own. */}
-          <div className="choice-row event-colors">
+          {/* V20-084 (Dan, Nov 12): five across: colours 1–4 from Settings, then a white (+) for any colour. */}
+          <div className="event-colors" role="radiogroup" aria-label="Colour">
             {COLORS.map((c) => (
-              <label key={c} className="choice event-color" title={c === 'teal' ? 'Teal' : c === 'purple' ? 'Purple' : 'Blue'}>
-                <input type="radio" name="event-color" checked={d.color === c} onChange={() => set('color', c)} aria-label={c} />
+              <label key={c} className={`event-color${d.color === c ? ' is-on' : ''}`} title={COLOR_NAMES[c]}>
+                <input type="radio" className="sr-only" name="event-color" checked={d.color === c} onChange={() => set('color', c)} aria-label={COLOR_NAMES[c]} />
                 <span className={`swatch-dot ev-${c}`} aria-hidden="true" />
               </label>
             ))}
-            <label className="choice event-color event-color-own" title="Choose a colour">
-              <input type="radio" name="event-color" checked={d.color.startsWith('#')} onChange={() => set('color', d.color.startsWith('#') ? d.color : '#ff6ad5')} aria-label="Your own colour" />
+            <label
+              className={`event-color event-color-own${d.color.startsWith('#') ? ' is-on' : ''}`}
+              title="Choose any colour"
+              style={d.color.startsWith('#') ? { background: d.color } : undefined}
+            >
+              <span className="event-color-plus" aria-hidden="true">+</span>
               <input
                 type="color"
                 className="event-color-pick"
-                value={d.color.startsWith('#') ? d.color : '#ff6ad5'}
+                value={d.color.startsWith('#') ? d.color : '#ffffff'}
                 onChange={(e) => set('color', e.target.value as `#${string}`)}
-                aria-label="Choose a colour"
+                aria-label="Choose any colour"
               />
             </label>
           </div>

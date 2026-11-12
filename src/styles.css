@@ -2964,13 +2964,22 @@ button.kb-btn { font-family: inherit; }
 .app .week-arrow:hover { color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
 .app .week-arrow svg { width: 20px; height: 20px; }
 
-/* V20-083 (Nov 12): event colours are dots only, plus one of your own; Add a task too under them. */
-.event-colors { gap: 10px; }
-.event-color { padding: 10px 14px; gap: 10px; }
-.event-color .swatch-dot { width: 18px; height: 18px; }
-.event-color-pick { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
-.event-color-pick::-webkit-color-swatch-wrapper { padding: 0; }
-.event-color-pick::-webkit-color-swatch { border: 0; border-radius: 50%; }
-.event-color-pick::-moz-color-swatch { border: 0; border-radius: 50%; }
+/* V20-084 (Nov 12): event colours, five across: colours 1–4 from Settings, then a white (+) for any colour.
+   The picked one gets a ring. */
+.event-colors { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.event-color { position: relative; width: 44px; height: 44px; border-radius: 50%; display: inline-grid; place-items: center; cursor: pointer; border: 2px solid transparent; }
+.event-color .swatch-dot { width: 36px; height: 36px; border-radius: 50%; }
+.event-color.is-on { border-color: var(--accent-teal); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-teal) 25%, transparent); }
+.event-color:focus-within { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
+.event-color-own { width: 44px; height: 44px; background: #ffffff; border: 2px solid var(--edge-strong, var(--edge)); }
+.event-color-own.is-on { border-color: var(--accent-teal); }
+.event-color-plus { font-size: 24px; line-height: 1; font-weight: 500; color: #4a4560; pointer-events: none; }
+.event-color-pick { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.swatch-dot.ev-green { background: var(--accent-green); }
+.swatch-dot.ev-pink { background: var(--accent-pink); }
+.swatch-dot.ev-purple { background: var(--accent-purple); }
+.swatch-dot.ev-teal { background: var(--accent-teal); }
+.ev-green { background: color-mix(in srgb, var(--accent-green) 30%, transparent); color: var(--beige); }
+.ev-pink { background: color-mix(in srgb, var(--accent-pink) 30%, transparent); color: var(--beige); }
 .event-add-task { display: inline-flex; align-items: center; gap: 10px; margin-top: 4px; width: fit-content; }
 .ev-own { color: var(--beige); }
