@@ -1174,7 +1174,7 @@ export const WHAT_DEFAULTS: { cat: string; minutes: number }[] = [
   { cat: 'MEETING', minutes: 60 },
   { cat: 'SETUP', minutes: 30 },
   { cat: 'SHOP WORK', minutes: 90 },
-  { cat: 'BILL PMT', minutes: 15 },
+  { cat: 'BANKING', minutes: 15 },
   { cat: 'DIGITAL ORGANIZATION', minutes: 45 }
 ];
 
