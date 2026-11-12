@@ -71,6 +71,7 @@ import {
   launchStore,
   launcherStore,
   markHandled,
+  unmarkHandled,
   openTabs,
   readHandled,
   skipToTomorrow,
@@ -1196,6 +1197,7 @@ export default function App() {
     logRef.current = next;
     setLaunchLog(next);
     void launchLogStore.remove(userId, id, next);
+    setHandled(unmarkHandled(`${g.launchId}:${g.day}`));
     setStatus(`${g.title} (${g.day}): undone, it's open again.`);
   }
 

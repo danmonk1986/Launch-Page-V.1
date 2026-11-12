@@ -593,6 +593,18 @@ export function markHandled(l: Launch, day: Date, how: HandledHow = 'done') {
   return all;
 }
 
+/** V20-060: forget how a run was handled (History → Undo), so today's run is open in Active again. */
+export function unmarkHandled(key: string) {
+  const all = readHandled();
+  delete all[key];
+  try {
+    localStorage.setItem(HANDLED_KEY, JSON.stringify(all));
+  } catch {
+    /* ignore */
+  }
+  return all;
+}
+
 /** Skip today: a one-off moves to tomorrow; a repeating launch gets a make-up tomorrow, same time. */
 export function skipToTomorrow(l: Launch, today: Date): Launch {
   // Hourly: skipping one hour just closes that hour.
