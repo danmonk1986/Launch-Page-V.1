@@ -140,12 +140,12 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                   <input type="email" value={acct.backupEmail} autoComplete="email" onChange={(e) => setAcct('backupEmail', e.target.value)} />
                 </label>
                 <label className="field">
-                  <span>Your age</span>
-                  <input inputMode="numeric" value={acct.age} onChange={(e) => setAcct('age', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} />
+                  <span>Birthday</span>
+                  <input type="date" value={acct.birthday} autoComplete="bday" onChange={(e) => setAcct('birthday', e.target.value)} />
                 </label>
                 <label className="field">
-                  <span>Business founded</span>
-                  <input inputMode="numeric" value={acct.businessFounded} placeholder="Year, e.g. 2019" onChange={(e) => setAcct('businessFounded', e.target.value.replace(/[^0-9]/g, '').slice(0, 4))} />
+                  <span>Business founded (if applicable)</span>
+                  <input type="date" value={/^\d{4}-\d{2}-\d{2}$/.test(acct.businessFounded) ? acct.businessFounded : ''} onChange={(e) => setAcct('businessFounded', e.target.value)} />
                 </label>
               </div>
               <label className="field">

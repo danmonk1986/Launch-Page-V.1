@@ -44,7 +44,8 @@ export interface AccountInfo {
   businessName: string;
   role: string;
   backupEmail: string;
-  age: string;
+  /** V20-114: dates as YYYY-MM-DD. */
+  birthday: string;
   businessFounded: string;
   street: string;
   city: string;
@@ -54,7 +55,7 @@ export interface AccountInfo {
 }
 
 export const EMPTY_ACCOUNT: AccountInfo = {
-  alias: '', hideRealName: false, businessName: '', role: '', backupEmail: '', age: '', businessFounded: '',
+  alias: '', hideRealName: false, businessName: '', role: '', backupEmail: '', birthday: '', businessFounded: '',
   street: '', city: '', region: '', postalCode: '', country: ''
 };
 
