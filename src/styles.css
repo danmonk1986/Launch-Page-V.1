@@ -3129,3 +3129,9 @@ button.kb-btn { font-family: inherit; }
 .app .daynight .daynight-btn + .daynight-btn { border-left: 1px solid color-mix(in srgb, var(--accent-teal) 55%, transparent); }
 .app .daynight .daynight-btn[aria-pressed='true'] { background: var(--accent-teal); color: var(--surface-solid); }
 .daynight-btn:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: -3px; }
+
+/* V20-122 (Dan, Nov 12): L4UNCH P4GE Hand, a placeholder font traced from Dan's lettering in the L4UNCH!P4GE and
+   KNOWLEDGE!B4SE wordmarks (one shape per character). 16 characters so far: B C D E G H K L N O P S U W 4 !
+   (lowercase types the same capitals; anything else falls back to the next font). Not used anywhere yet.
+   Rebuild with tools/font/build.py. */
+@font-face { font-family: 'L4UNCH P4GE Hand'; src: url('/fonts/L4UNCHP4GE-Hand.woff') format('woff'); font-display: swap; }
