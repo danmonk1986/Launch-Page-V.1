@@ -1050,6 +1050,9 @@ export function LaunchersPanel(p: Props) {
         wide
       >
         <TimedForm
+          // V20-075 (Nov 12): a new form for each launch. Edit from the pop-up swaps the launch while the
+          // sheet is already open, and the form kept the old draft (a blank Add form showed instead).
+          key={timed ? `edit-${timed.id}` : `add-${fill?.n ?? 'blank'}`}
           launch={timed}
           today={p.today}
           fill={timed ? null : fill?.fill ?? null}
