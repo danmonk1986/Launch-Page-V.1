@@ -287,6 +287,21 @@ export default function App() {
     logLaunch(l, () => ({ pausedMin: next.min, pausedAt: next.at ? new Date(next.at).toISOString() : null }));
     setStatus(next.at ? `${l.title}: paused. The clock stops until you resume.` : `${l.title}: resumed (${Math.round(next.min)} min paused).`);
   }
+  // V20-080 (Nov 12): a pop-up closes itself once its run was handled on another device: Time's up when the
+  // run got more time or was checked off / skipped; the launch reminder once the run was started or settled.
+  const timeUpExtra = useRef(0);
+  useEffect(() => {
+    if (timeUp) {
+      const run = logFor(launchLog, timeUp, new Date());
+      if (run.finishedAt || run.outcome === 'skipped' || run.outcome === 'cleared' || run.extra > timeUpExtra.current) setTimeUp(null);
+    }
+    // Hourly launches have one log line a day, so their reminder isn't closed this way.
+    if (reminder && reminder.repeat !== 'hourly') {
+      const run = launchLog.find((g) => g.launchId === reminder.id && g.day === logFor(launchLog, reminder, new Date()).day);
+      if (run) setReminder(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [launchLog]);
   // V20-064 (Nov 11): which runs already had Time's up, kept on this device so a refresh doesn't pop it
   // again. More time clears the run's mark (so it pops when the added time is up). Kept for 3 days.
   const [endAlerted, setEndAlerted] = useState<Record<string, true>>(() => {
@@ -513,14 +528,35 @@ export default function App() {
         busy = false;
       }
     };
-    const onVisible = () => document.visibilityState === 'visible' && void flushAll();
+    // V20-080 (Nov 12): timed launches and their runs reload when the app comes back into view and every
+    // minute while it's open, so a pause, More time or a check-off on another device shows here without
+    // closing the app.
+    let fetching = false;
+    const refreshLive = async () => {
+      if (fetching || !navigator.onLine || document.visibilityState !== 'visible') return;
+      fetching = true;
+      try {
+        await flushAll();
+        const [ls, lg] = await Promise.all([launchStore.load(userId), launchLogStore.load(userId)]);
+        if (lg.items.length) {
+          logRef.current = lg.items;
+          setLaunchLog(lg.items);
+        }
+        if (ls.items.length) setLaunches(ls.items);
+      } finally {
+        fetching = false;
+      }
+    };
+    const onVisible = () => document.visibilityState === 'visible' && void refreshLive();
     window.addEventListener('online', flushAll);
     document.addEventListener('visibilitychange', onVisible);
     const every = window.setInterval(flushAll, 120_000);
+    const live = window.setInterval(refreshLive, 60_000);
     return () => {
       window.removeEventListener('online', flushAll);
       document.removeEventListener('visibilitychange', onVisible);
       window.clearInterval(every);
+      window.clearInterval(live);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
@@ -1220,6 +1256,7 @@ export default function App() {
     });
     if (!over) return;
     setEndAlerted((m) => ({ ...m, [runKey(over, now)]: true }));
+    timeUpExtra.current = logFor(launchLog, over, now).extra;
     setTimeUp(over);
     if (over.sound !== false) chime('end', over.tone);
   // eslint-disable-next-line react-hooks/exhaustive-deps
