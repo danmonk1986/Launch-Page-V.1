@@ -318,8 +318,17 @@ export function LaunchersPanel(p: Props) {
   // to today (Active), and it starts now.
   async function startMissedNow(l: Launch, day: string) {
     p.onSettleMissed?.(l, day, 'cleared');
-    const today = isoDate(launchDate(l, p.today));
-    const moved = happensToday(l, p.today) ? l : { ...l, movedTo: today, active: true };
+    // A one-time launch starts over: today, at this minute, so its clock runs its full time from now
+    // (V20-063: it kept its old date and time, so Time's up popped at once and added the lost hours).
+    const n = new Date();
+    const nowAt = `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+    const today = isoDate(launchDate({ ...l, atTime: nowAt }, n));
+    const moved =
+      l.repeat === 'once'
+        ? { ...l, onDate: today, atTime: nowAt, movedTo: null, active: true }
+        : happensToday(l, p.today)
+          ? l
+          : { ...l, movedTo: isoDate(launchDate(l, p.today)), active: true };
     if (moved !== l) await p.onSaveLaunch(moved);
     p.onLaunchNow(moved);
   }
