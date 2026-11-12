@@ -2911,3 +2911,27 @@ button.kb-btn { font-family: inherit; }
 .timed-rate-meta { grid-area: meta; font-size: 0.75rem; color: var(--dim); }
 .timed-rate.is-low .timed-rate-bar > span { background: var(--accent-pink); }
 .timed-rate.is-low .timed-rate-pct { color: var(--accent-pink); }
+
+/* V20-061 (Dan, Nov 11): buttons never shrink. The two sizes above hold at every width; a squeezed row
+   can't press them smaller either. */
+.app .panel-head .tool-btn, .app .panel-head .icon-btn:not(.budget-groupby), .app .panel-actions .tool-btn,
+.app .panel-actions .icon-btn:not(.budget-groupby), .app .panel-head .view-toggle, .app .topbar-right .gear-btn {
+  flex: none; min-width: 36px;
+}
+.app .quick-btn, .app .task-quick, .app .timed-quick .quick-btn, .app .task-row .task-quick, .app .task-row .timed-quick .quick-btn {
+  flex: none; min-width: 30px;
+}
+
+/* V20-061: tab rows never stack. What doesn't fit folds into the teal ⌄ at the end of the row. */
+.timed-title-row { flex: 1 1 auto; min-width: 0; }
+.timed-title { flex: none; }
+.fold-tabs { position: relative; flex: 1 1 300px; min-width: 0; flex-wrap: nowrap; align-items: center; }
+.fold-tabs > .timed-tab { flex: none; white-space: nowrap; }
+.fold-ruler { position: absolute; left: 0; top: 0; visibility: hidden; pointer-events: none; display: flex; gap: inherit; white-space: nowrap; height: 0; overflow: hidden; }
+.fold-ruler > .timed-tab { flex: none; }
+.fold-more { flex: none; }
+.fold-more-btn { color: var(--accent-teal); display: inline-flex; align-items: center; padding-inline: 4px; }
+.fold-more-btn:hover { color: var(--accent-teal); }
+.fold-more-btn.is-active { border-bottom-color: var(--accent-purple); }
+.fold-list { left: auto; right: 0; min-width: 190px; }
+.fold-list [aria-current='true'] { color: var(--accent-teal); }
