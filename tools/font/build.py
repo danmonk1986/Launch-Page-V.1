@@ -43,10 +43,88 @@ for name, labels in SRC.items():
             contours.append(pts)
         glyphs[key] = (contours, round((x1 - x0) * scale) + 100)
 
+
+# ---- V0.2 stand-ins: the characters Dan hasn't drawn yet, drawn as thick strokes in the same boxy style
+# (same stroke weight and cap height as his letters, a little wobble). Replaced one by one as he draws them.
+H = 200            # px cap height to draw at (his logo letters are ~200 px)
+STROKE = 25        # px, his stroke weight at that size
+rng = np.random.default_rng(26)
+SK = {  # strokes as point lists, x and y in cap heights (y down from the top)
+  'A': [[(0.02, 1), (0.04, 0.03), (0.6, 0), (0.62, 1)], [(0.04, 0.5), (0.6, 0.5)]],
+  'F': [[(0.05, 1), (0.05, 0.03), (0.56, 0)], [(0.05, 0.48), (0.44, 0.47)]],
+  'I': [[(0.08, 0), (0.09, 1)]],
+  'J': [[(0.52, 0), (0.54, 0.97), (0.05, 1), (0.03, 0.72)]],
+  'M': [[(0.02, 1), (0.03, 0.03), (0.74, 0), (0.76, 1)], [(0.39, 0.02), (0.4, 0.8)]],
+  'Q': [[(0.03, 0.03), (0.6, 0), (0.62, 0.97), (0.04, 1), (0.03, 0.03)], [(0.4, 0.72), (0.74, 1.04)]],
+  'R': [[(0.05, 1), (0.05, 0.03), (0.56, 0), (0.58, 0.5), (0.05, 0.52)], [(0.25, 0.52), (0.62, 1)]],
+  'T': [[(0.0, 0.03), (0.64, 0)], [(0.32, 0.01), (0.33, 1)]],
+  'V': [[(0.0, 0.0), (0.31, 1), (0.62, 0.0)]],
+  'X': [[(0.02, 0.0), (0.62, 1)], [(0.62, 0.0), (0.0, 1)]],
+  'Y': [[(0.0, 0.0), (0.31, 0.5), (0.62, 0.0)], [(0.31, 0.5), (0.32, 1)]],
+  'Z': [[(0.02, 0.03), (0.6, 0), (0.02, 1), (0.63, 0.98)]],
+  '0': [[(0.03, 0.03), (0.56, 0), (0.58, 0.97), (0.04, 1), (0.03, 0.03)]],
+  '1': [[(0.04, 0.16), (0.2, 0.0), (0.21, 1)]],
+  '2': [[(0.02, 0.05), (0.54, 0), (0.55, 0.5), (0.03, 0.54), (0.03, 1), (0.6, 0.98)]],
+  '3': [[(0.02, 0.03), (0.54, 0), (0.56, 0.97), (0.02, 1)], [(0.12, 0.5), (0.55, 0.49)]],
+  '5': [[(0.58, 0.0), (0.03, 0.02), (0.04, 0.5), (0.55, 0.48), (0.57, 0.97), (0.02, 1)]],
+  '6': [[(0.54, 0.0), (0.03, 0.03), (0.04, 1), (0.56, 0.98), (0.55, 0.5), (0.04, 0.52)]],
+  '7': [[(0.0, 0.03), (0.6, 0), (0.26, 1)]],
+  '8': [[(0.03, 0.03), (0.56, 0), (0.58, 0.97), (0.04, 1), (0.03, 0.03)], [(0.04, 0.5), (0.57, 0.49)]],
+  '9': [[(0.56, 0.5), (0.03, 0.52), (0.03, 0.02), (0.55, 0), (0.56, 1), (0.04, 0.99)]],
+  '.': [[(0.04, 0.95), (0.05, 1.0)]],
+  ',': [[(0.07, 0.9), (0.02, 1.12)]],
+  ':': [[(0.04, 0.32), (0.05, 0.37)], [(0.04, 0.95), (0.05, 1.0)]],
+  "'": [[(0.05, 0.0), (0.05, 0.26)]],
+  '-': [[(0.0, 0.52), (0.4, 0.5)]],
+  '?': [[(0.0, 0.08), (0.03, 0.0), (0.5, 0.0), (0.52, 0.44), (0.25, 0.48), (0.26, 0.7)], [(0.26, 0.95), (0.27, 1.0)]],
+  '/': [[(0.48, 0.0), (0.0, 1.0)]],
+  '(': [[(0.26, 0.0), (0.05, 0.25), (0.04, 0.75), (0.26, 1.0)]],
+  ')': [[(0.02, 0.0), (0.23, 0.25), (0.24, 0.75), (0.02, 1.0)]],
+  '&': [[(0.62, 1.0), (0.08, 0.38), (0.12, 0.02), (0.42, 0.0), (0.44, 0.3), (0.03, 0.62), (0.04, 1.0), (0.48, 0.98), (0.62, 0.6)]],
+  '+': [[(0.0, 0.55), (0.5, 0.54)], [(0.25, 0.3), (0.26, 0.8)]],
+  '#': [[(0.15, 0.1), (0.12, 1.0)], [(0.45, 0.1), (0.42, 1.0)], [(0.0, 0.38), (0.6, 0.37)], [(0.0, 0.72), (0.58, 0.71)]],
+  '@': [[(0.42, 0.62), (0.42, 0.32), (0.2, 0.33), (0.2, 0.62), (0.62, 0.63), (0.62, 0.05), (0.02, 0.04), (0.03, 1.0), (0.6, 0.98)]],
+}
+def draw(strokes):
+    pad = 40
+    xs = [x for st in strokes for x, _ in st]
+    w = int(max(xs) * H) + 2 * pad + STROKE
+    m = np.zeros((int(H * 1.2) + 2 * pad, w), np.uint8)
+    for st in strokes:
+        pts = [(int(pad + STROKE / 2 + x * H + rng.uniform(-2.5, 2.5)), int(pad + y * H + rng.uniform(-2.5, 2.5))) for x, y in st]
+        for a_, b_ in zip(pts, pts[1:]):
+            cv2.line(m, a_, b_, 255, int(STROKE + rng.uniform(-2, 3)), cv2.LINE_AA)
+        for q in pts:
+            cv2.circle(m, q, int(STROKE / 2), 255, -1, cv2.LINE_AA)
+    m = (cv2.GaussianBlur(m, (5, 5), 0) > 127).astype(np.uint8) * 255
+    return m, pad
+def trace(mask, scale, base_px):
+    ys, xs = np.nonzero(mask)
+    x0, x1 = xs.min(), xs.max()
+    cs, _ = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+    out = []
+    for c in cs:
+        if cv2.contourArea(c) < 12:
+            continue
+        c = cv2.approxPolyDP(c, 0.9, True)[:, 0, :]
+        out.append([(round((x - x0) * scale) + 50, round((base_px - y) * scale)) for x, y in c])
+    return out, round((x1 - x0) * scale) + 100
+STAND_INS = []
+for ch, strokes in SK.items():
+    if ch in glyphs:
+        continue
+    m, pad = draw(strokes)
+    # Baseline = the bottom of a full-height letter (y = 1), plus half the stroke, like his letters sit.
+    glyphs[ch] = trace(m, CAP / (H + STROKE), pad + H + STROKE / 2)
+    STAND_INS.append(ch)
+
 def area(p):
     return sum(p[i][0] * p[(i + 1) % len(p)][1] - p[(i + 1) % len(p)][0] * p[i][1] for i in range(len(p))) / 2
 
-names = {'!': 'exclam', '4': 'four'}
+import unicodedata
+names = {}
+for k in glyphs:
+    names[k] = k if k.isalpha() else 'uni%04X' % ord(k)
 order = ['.notdef', 'space'] + [names.get(k, k) for k in sorted(glyphs)]
 fb = FontBuilder(1000, isTTF=True)
 fb.setupGlyphOrder(order)
@@ -78,10 +156,10 @@ for k, (contours, adv) in glyphs.items():
 fb.setupGlyf(pen_glyphs)
 fb.setupHorizontalMetrics(metrics)
 fb.setupHorizontalHeader(ascent=900, descent=-200)
-fb.setupNameTable({'familyName': 'L4UNCH P4GE Hand', 'styleName': 'Regular', 'uniqueFontIdentifier': 'L4UNCHP4GEHand-Placeholder-0.1', 'fullName': 'L4UNCH P4GE Hand Regular', 'psName': 'L4UNCHP4GEHand-Regular', 'version': 'Version 0.1 (placeholder: 16 characters)'})
+fb.setupNameTable({'familyName': 'L4UNCH P4GE Hand', 'styleName': 'Regular', 'uniqueFontIdentifier': 'L4UNCHP4GEHand-Placeholder-0.1', 'fullName': 'L4UNCH P4GE Hand Regular', 'psName': 'L4UNCHP4GEHand-Regular', 'version': 'Version 0.2 (16 drawn by Dan, the rest stand-ins)'})
 fb.setupOS2(sTypoAscender=900, sTypoDescender=-200, usWinAscent=950, usWinDescent=250, sCapHeight=CAP, sxHeight=CAP)
 fb.setupPost()
 fb.save('L4UNCHP4GE-Hand.ttf')
 fb.font.flavor = 'woff'
 fb.font.save('L4UNCHP4GE-Hand.woff')
-print('glyphs', sorted(glyphs))
+print('drawn', sorted(set(glyphs) - set(STAND_INS))); print('stand-ins', ''.join(STAND_INS))

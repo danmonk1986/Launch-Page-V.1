@@ -261,6 +261,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
               <label className="field">
                 <span>Logo text</span>
                 <input value={draft.logoText} onChange={(e) => set('logoText', e.target.value)} />
+                <p className="field-hint">No logo uploaded? What you type here becomes your logo, drawn in the L4UNCH P4GE hand lettering. Leave both empty for the L4UNCH!P4GE logo.</p>
               </label>
               <ImagePick
                 label="Logo (optional, replaces the LaunchPage logo)"

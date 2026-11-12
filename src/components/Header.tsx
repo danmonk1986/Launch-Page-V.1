@@ -40,11 +40,12 @@ export function Header({ settings, slim, page, onPage, right }: Props) {
   }
   return (
     <header className="topbar">
-      <img
-        className="topbar-logo"
-        src={settings.logoUrl || '/launchpage-logo.png'}
-        alt={settings.logoUrl ? settings.logoText || 'Logo' : 'LaunchPage'}
-      />
+      {/* V20-123 (Dan, Nov 12): no logo uploaded + Logo text typed = the text becomes the logo, in L4UNCH P4GE Hand. */}
+      {!settings.logoUrl && settings.logoText.trim() ? (
+        <span className="topbar-logo topbar-logo-text">{settings.logoText.trim()}</span>
+      ) : (
+        <img className="topbar-logo" src={settings.logoUrl || '/launchpage-logo.png'} alt={settings.logoUrl ? settings.logoText || 'Logo' : 'LaunchPage'} />
+      )}
       <HeaderWords goal={settings.goal} mantra={settings.mantra} />
       {right && <div className="topbar-right">{right}</div>}
       <TabBar page={page} onPage={onPage} />

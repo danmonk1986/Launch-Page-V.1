@@ -3135,3 +3135,11 @@ button.kb-btn { font-family: inherit; }
    (lowercase types the same capitals; anything else falls back to the next font). Not used anywhere yet.
    Rebuild with tools/font/build.py. */
 @font-face { font-family: 'L4UNCH P4GE Hand'; src: url('/fonts/L4UNCHP4GE-Hand.woff') format('woff'); font-display: swap; }
+/* V20-123: Logo text as the logo (no logo uploaded): the hand lettering, teal with the purple outline, the logo's height. */
+.topbar-logo.topbar-logo-text {
+  height: auto; font-family: 'L4UNCH P4GE Hand', var(--font-display, sans-serif); font-size: 66px; line-height: 0.9; letter-spacing: 2px;
+  color: var(--accent-teal); -webkit-text-stroke: 9px var(--accent-purple); paint-order: stroke fill; white-space: nowrap; padding: 6px 4px 0;
+  text-transform: uppercase; user-select: none;
+}
+@media (max-width: 1000px) { .topbar-logo.topbar-logo-text { font-size: 54px; -webkit-text-stroke-width: 8px; } }
+.app.is-scrolled .topbar .topbar-logo.topbar-logo-text { height: auto; font-size: 38px; -webkit-text-stroke-width: 6px; }
