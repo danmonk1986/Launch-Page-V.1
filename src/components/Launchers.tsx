@@ -1395,61 +1395,64 @@ function TimedForm({
           </div>
         </div>
       )}
-      <label className="field">
-        <span>What</span>
-        <select
-          required
-          value={cat}
-          onChange={(e) => {
-            const v = e.target.value;
-            setWhat(v, desc);
-            const def = WHAT_DEFAULTS.find((w) => w.cat === v);
-            if (def) setD((x) => ({ ...x, minutes: def.minutes, logKind: v === 'PERSONAL' ? null : 'productivity', logAmount: null }));
-          }}
-        >
-          <option value="" disabled>
-            Pick what kind of work
-          </option>
-          {WHAT_DEFAULTS.map((w) => (
-            <option key={w.cat} value={w.cat}>
-              {w.cat}
+      {/* V20-096 (Dan, Nov 12): Project and What side by side at the top, like Project | Task in the task form. */}
+      <div className="time-grid">
+        {/* V20-074 (Dan, Nov 12): Ritual became Project. A launch's time counts toward its project (Stats: hours
+            per project). Sub-projects show under their parent. Existing ritual links keep working. */}
+        <label className="field">
+          <span>Project</span>
+          {/* V20-094 (Dan, Nov 12): every timed launch needs a project (data tracking). */}
+          <select required value={d.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || null)}>
+            <option value="" disabled>
+              Pick a project
             </option>
-          ))}
-          {cat && !WHAT_DEFAULTS.some((w) => w.cat === cat) && (
-            // A launch made before the fixed list keeps its old name until you pick one of the six.
-            <option value={cat}>{cat} (old, pick a new one)</option>
-          )}
-        </select>
-      </label>
+            {[...projects]
+              .filter((x) => !x.parentId)
+              .sort((x, y) => x.sort - y.sort || x.name.localeCompare(y.name))
+              .flatMap((top) => [
+                top,
+                ...projects.filter((c) => c.parentId === top.id).sort((x, y) => x.sort - y.sort || x.name.localeCompare(y.name))
+              ])
+              .map((x) => {
+                const parent = x.parentId ? projects.find((q) => q.id === x.parentId) : null;
+                return (
+                  <option key={x.id} value={x.id}>
+                    {parent ? `${parent.name} › ${x.name}` : x.name}
+                  </option>
+                );
+              })}
+          </select>
+        </label>
+        <label className="field">
+          <span>What</span>
+          <select
+            required
+            value={cat}
+            onChange={(e) => {
+              const v = e.target.value;
+              setWhat(v, desc);
+              const def = WHAT_DEFAULTS.find((w) => w.cat === v);
+              if (def) setD((x) => ({ ...x, minutes: def.minutes, logKind: v === 'PERSONAL' ? null : 'productivity', logAmount: null }));
+            }}
+          >
+            <option value="" disabled>
+              Pick what kind of work
+            </option>
+            {WHAT_DEFAULTS.map((w) => (
+              <option key={w.cat} value={w.cat}>
+                {w.cat}
+              </option>
+            ))}
+            {cat && !WHAT_DEFAULTS.some((w) => w.cat === cat) && (
+              // A launch made before the fixed list keeps its old name until you pick one of the six.
+              <option value={cat}>{cat} (old, pick a new one)</option>
+            )}
+          </select>
+        </label>
+      </div>
       <label className="field">
         <span>Description</span>
         <TitleCombo value={desc} titles={descriptions} required={false} placeholder="Launch Page Construction" onChange={(v) => setWhat(cat, v)} list={launchListFor(cat)} />
-      </label>
-      {/* V20-074 (Dan, Nov 12): Ritual became Project. A launch's time counts toward its project (Stats: hours
-          per project). Sub-projects show under their parent. Existing ritual links keep working. */}
-      <label className="field">
-        <span>Project</span>
-        {/* V20-094 (Dan, Nov 12): every timed launch needs a project (data tracking). */}
-        <select required value={d.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || null)}>
-          <option value="" disabled>
-            Pick a project
-          </option>
-          {[...projects]
-            .filter((x) => !x.parentId)
-            .sort((x, y) => x.sort - y.sort || x.name.localeCompare(y.name))
-            .flatMap((top) => [
-              top,
-              ...projects.filter((c) => c.parentId === top.id).sort((x, y) => x.sort - y.sort || x.name.localeCompare(y.name))
-            ])
-            .map((x) => {
-              const parent = x.parentId ? projects.find((q) => q.id === x.parentId) : null;
-              return (
-                <option key={x.id} value={x.id}>
-                  {parent ? `${parent.name} › ${x.name}` : x.name}
-                </option>
-              );
-            })}
-        </select>
       </label>
 
       <div className="time-grid">
