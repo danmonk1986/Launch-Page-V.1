@@ -2941,4 +2941,4 @@ button.kb-btn { font-family: inherit; }
 .timed-day { display: flex; align-items: center; gap: 12px; list-style: none; margin: 10px 0 2px; padding: 0 2px; }
 .timed-list > .timed-day:first-child { margin-top: 0; }
 .timed-day-date { flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--accent-purple); }
-.timed-day-line { flex: 1 1 auto; height: 0; border-top: 1px solid var(--accent-purple); }
+.timed-day-line { flex: 1 1 auto; height: 0; border-top: 2px solid var(--accent-purple); }
