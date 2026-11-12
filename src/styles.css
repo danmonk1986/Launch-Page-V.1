@@ -1501,7 +1501,7 @@ html.snap-scroll { scroll-snap-type: y mandatory; scroll-padding-top: calc(var(-
 .journal-sub-row .journal-streak { margin-left: 0; text-transform: uppercase; font-weight: 700; }
 
 /* Card by card: what's next sits under NOW; earlier steps follow, dimmed. */
-.app[data-scroll='cards'] .panel-today .now-card { box-shadow: 0 10px 14px -8px var(--surface-solid); margin-bottom: 14px; }
+.app[data-scroll='cards'] .panel-today .now-card { box-shadow: 0 0 18px color-mix(in srgb, var(--accent-teal) 30%, transparent), 0 10px 14px -8px var(--surface-solid); margin-bottom: 14px; }
 .tl-block.is-earlier { opacity: 0.45; }
 .tl-block.is-first-earlier { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--edge-strong); }
 
@@ -1899,7 +1899,7 @@ dialog.crawl::backdrop { background: #000000; }
 
 /* Card by card: a little room above the sticky NOW card so it isn't cut off at the top of the routine. */
 @media (min-width: 1100px) { /* Oct 24: pin the routine only once it sits beside the cards (the columns stack below ~1,000px) */
-  .app[data-scroll='cards'] .panel-today .now-card { top: -12px; box-shadow: 0 -14px 0 0 var(--surface-solid), 0 10px 14px -8px var(--surface-solid); }
+  .app[data-scroll='cards'] .panel-today .now-card { top: -12px; box-shadow: 0 0 18px color-mix(in srgb, var(--accent-teal) 30%, transparent), 0 -14px 0 0 var(--surface-solid), 0 10px 14px -8px var(--surface-solid); }
 }
 .swatches:has(.colour-field) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
 .colour-field { margin: 0; }
@@ -1928,11 +1928,12 @@ dialog.crawl::backdrop { background: #000000; }
    off at its edge, and the list has room at the bottom so the last step clears the card's edge. */
 @media (min-width: 1100px) { /* Oct 24: pin the routine only once it sits beside the cards (the columns stack below ~1,000px) */
   .app[data-scroll='cards'] .panel-today .now-card::after {
-    content: ''; position: absolute; left: -24px; right: -24px; top: calc(100% + 1px); height: 40px; pointer-events: none;
+    /* V20-051: start below the card's 2px teal border (it was drawn over its bottom half). */
+    content: ''; position: absolute; left: -24px; right: -24px; top: calc(100% + 3px); height: 40px; pointer-events: none;
     background: linear-gradient(var(--surface-solid) 55%, transparent);
   }
   .app[data-scroll='cards'] .panel-today .now-card::before {
-    content: ''; position: absolute; left: -24px; right: -24px; bottom: 100%; height: 14px; pointer-events: none; background: var(--surface-solid);
+    content: ''; position: absolute; left: -24px; right: -24px; bottom: calc(100% + 3px); height: 14px; pointer-events: none; background: var(--surface-solid);
   }
   .app[data-scroll='cards'] .home > .panel-today { padding-bottom: 32px; }
   .app[data-scroll='cards'] .panel-today .timeline { padding-top: 6px; }
