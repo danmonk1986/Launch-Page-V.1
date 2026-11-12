@@ -658,7 +658,14 @@ export interface LaunchLog {
   launchedAt: string | null;
   finishedAt: string | null;
   sort: number;
+  /** V20-073 (Nov 12): the minutes counted for this run (null = none), and where they came from. */
+  loggedMin?: number | null;
+  timeSource?: TimeSource | null;
 }
+
+/** timed = ▶ / rocket to ✓ (pauses out) · entered = at the Log the time? prompt · none = Don't log ·
+ *  allotted = checked off without starting the old way (the time allotted). */
+export type TimeSource = 'timed' | 'entered' | 'none' | 'allotted';
 
 type LogRow = {
   id: string;
@@ -671,6 +678,8 @@ type LogRow = {
   launched_at: string | null;
   finished_at: string | null;
   sort: number;
+  logged_min?: number | null;
+  time_source?: TimeSource | null;
 };
 
 export const launchLogStore = makeStore<LaunchLog, LogRow>({
@@ -679,8 +688,8 @@ export const launchLogStore = makeStore<LaunchLog, LogRow>({
   orderBy: 'day',
   script: 'supabase/migrations/0016_launch_once_time_and_log.sql',
   seed: () => [],
-  toRow: (g) => ({ id: g.id, launch_id: g.launchId, day: g.day, title: g.title, planned: g.planned, extra: g.extra, outcome: g.outcome, launched_at: g.launchedAt, finished_at: g.finishedAt, sort: g.sort }),
-  fromRow: (r) => ({ id: r.id, launchId: r.launch_id, day: r.day, title: r.title, planned: r.planned, extra: r.extra, outcome: r.outcome, launchedAt: r.launched_at, finishedAt: r.finished_at, sort: r.sort })
+  toRow: (g) => ({ id: g.id, launch_id: g.launchId, day: g.day, title: g.title, planned: g.planned, extra: g.extra, outcome: g.outcome, launched_at: g.launchedAt, finished_at: g.finishedAt, sort: g.sort, logged_min: g.loggedMin ?? null, time_source: g.timeSource ?? null }),
+  fromRow: (r) => ({ id: r.id, launchId: r.launch_id, day: r.day, title: r.title, planned: r.planned, extra: r.extra, outcome: r.outcome, launchedAt: r.launched_at, finishedAt: r.finished_at, sort: r.sort, loggedMin: r.logged_min ?? null, timeSource: r.time_source ?? null })
 });
 
 /** Today's log row for a launch, made if missing. */

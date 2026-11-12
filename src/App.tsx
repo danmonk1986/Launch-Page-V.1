@@ -80,6 +80,7 @@ import {
   dedupeRoutines,
   type Launch,
   type LaunchLog,
+  type TimeSource,
   launchLogStore,
   runKey,
   setLaunchDayReset,
@@ -1203,8 +1204,10 @@ export default function App() {
    * Oct 29 · Missed tab: settle a past run. Done = checked off without logging time (nothing goes to
    * 26 Days); cleared = taken out of the counts, kept in the log as 'cleared'.
    */
-  function settleMissed(l: Launch, day: string, how: 'done' | 'cleared') {
+  function settleMissed(l: Launch, day: string, how: 'done' | 'cleared', logMin?: number | null) {
     const list = logRef.current;
+    // V20-073: Done from Missed or early from Scheduled asks Log the time?; its answer is kept on the run.
+    const entered = how === 'done' && typeof logMin === 'number' && logMin > 0 ? Math.round(logMin) : null;
     const cur = list.find((g) => g.launchId === l.id && g.day === day);
     const at = new Date(`${day}T${l.atTime || '12:00'}:00`).toISOString();
     const item: LaunchLog = {
@@ -1212,13 +1215,20 @@ export default function App() {
       title: l.title,
       outcome: how,
       launchedAt: null,
-      finishedAt: at
+      finishedAt: at,
+      ...(how === 'done' ? { loggedMin: entered, timeSource: entered ? 'entered' : 'none' } : { loggedMin: null, timeSource: null })
     } as LaunchLog;
     const next = cur ? list.map((g) => (g.id === item.id ? item : g)) : [...list, item];
     logRef.current = next;
     setLaunchLog(next);
     void launchLogStore.save(userId, item, next);
     if (how === 'done' && day === isoDate(new Date())) void completeTasksFor(l);
+    if (entered) {
+      void logFromLaunch(l, { minutes: entered, day, id: item.id }).then((logged) =>
+        setStatus(`${l.title} (${day}): marked done${logged ? `, ${logged} logged` : `, ${entered} min logged`}.`)
+      );
+      return;
+    }
     setStatus(how === 'done' ? `${l.title} (${day}): marked done, no time logged.` : `${l.title} (${day}): cleared, it won't count either way.`);
   }
 
@@ -1256,9 +1266,28 @@ export default function App() {
     return todo.map(taskName);
   }
 
-  async function finishLaunch(l: Launch, how: 'done' | 'skipped') {
+  async function finishLaunch(l: Launch, how: 'done' | 'skipped', logMin?: number | null) {
     setHandled(markHandled(l, new Date(), how));
-    logLaunch(l, () => ({ outcome: how, finishedAt: new Date().toISOString() }));
+    // V20-073 (Nov 12): where a done run's time comes from. Started with ▶ or the rocket: timed (pauses out).
+    // Not started: the Log the time? prompt passes its minutes (entered) or null (Don't log); anything that
+    // checks off without asking keeps the old way (the time allotted).
+    const run0 = logFor(logRef.current, l, new Date());
+    let source: TimeSource | null = null;
+    let mins: number | null = null;
+    if (how === 'done') {
+      if (run0.launchedAt) {
+        source = 'timed';
+        mins = Math.max(0, Math.round((Date.now() - new Date(run0.launchedAt).getTime()) / 60_000 - pausedMin(l)));
+      } else if (logMin === null) source = 'none';
+      else if (typeof logMin === 'number' && logMin > 0) {
+        source = 'entered';
+        mins = Math.round(logMin);
+      } else {
+        source = 'allotted';
+        mins = (run0.planned || l.minutes) + run0.extra;
+      }
+    }
+    logLaunch(l, () => ({ outcome: how, finishedAt: new Date().toISOString(), ...(how === 'done' ? { loggedMin: mins, timeSource: source } : {}) }));
     if (reminder?.id === l.id) setReminder(null);
     if (how === 'skipped') {
       if (l.repeat === 'hourly') return setStatus(`${l.title}: skipped this hour.`);
@@ -1267,7 +1296,7 @@ export default function App() {
       setStatus(`${l.title} moved to tomorrow, same time.`);
     } else {
       const ticked = tickNonNegsFor(l.title);
-      const logged = await logFromLaunch(l);
+      const logged = source === 'none' ? '' : await logFromLaunch(l, source === 'entered' && mins ? { minutes: mins } : undefined);
       const tasksDone = await completeTasksFor(l);
       const task = tasksDone.length ? ` Task done.` : '';
       if (ticked.length && !logged) return setStatus(`${l.title} checked off: ${ticked.join(', ')} ticked.${task}`);
@@ -1282,24 +1311,26 @@ export default function App() {
    * launches that open tabs or apps log Productivity by time spent; the rest log nothing.
    * Returns a short description of what was logged, or '' if nothing.
    */
-  async function logFromLaunch(l: Launch): Promise<string> {
+  async function logFromLaunch(l: Launch, opts?: { minutes?: number; day?: string; id?: string }): Promise<string> {
     const kind = l.logKind ?? (l.urls.length && !l.ritualId ? 'productivity' : null);
     if (!kind) return '';
     // Hourly launches log once an hour, so each gets its own line; others update today's line.
     const run = logFor(logRef.current, l, new Date());
-    const id = l.repeat === 'hourly' ? crypto.randomUUID() : run.id;
-    const base = { id, day: d26Today, at: new Date().toISOString(), note: l.title, mode: d26Mode, sort: 0, qty: 1 };
+    const id = opts?.id ?? (l.repeat === 'hourly' ? crypto.randomUUID() : run.id);
+    const base = { id, day: opts?.day ?? d26Today, at: new Date().toISOString(), note: l.title, mode: d26Mode, sort: 0, qty: 1 };
     if (kind === 'productivity') {
       const allowed = (run.planned || l.minutes) + run.extra;
       // Launched or started: the time from then to Done (less any pause); checked off without starting: the time allotted.
       const spent = run.launchedAt ? (Date.now() - new Date(run.launchedAt).getTime()) / 60_000 - pausedMin(l) : allowed;
-      const blocks = Math.round((Math.min(spent, allowed) / 90) * 4) / 4;
+      // V20-073: minutes entered at the Log the time? prompt count as given.
+      const blocks = opts?.minutes !== undefined ? Math.round((opts.minutes / 90) * 4) / 4 : Math.round((Math.min(spent, allowed) / 90) * 4) / 4;
       if (blocks <= 0) return '';
       await saveLog({ ...base, kind, amount: 1, qty: blocks, unit: 'blocks' });
       return `${blocks} block${blocks === 1 ? '' : 's'} of Productivity`;
     }
     // Activity and Break: started → the minutes actually spent (up to the time allotted + extra).
     const timed = () => {
+      if (opts?.minutes !== undefined) return Math.max(1, Math.round(opts.minutes));
       if (!run.launchedAt) return l.minutes;
       const allowed = (run.planned || l.minutes) + run.extra;
       return Math.max(1, Math.round(Math.min((Date.now() - new Date(run.launchedAt).getTime()) / 60_000 - pausedMin(l), allowed)));

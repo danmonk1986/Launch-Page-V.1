@@ -57,7 +57,8 @@ type Props = {
   onStatus: (msg: string) => void;
   handled: Record<string, HandledHow | true>;
   today: Date;
-  onFinish: (l: Launch, how: 'done' | 'skipped') => void;
+  /** V20-073: logMin = minutes from the Log the time? prompt (null = Don't log); left out = no prompt. */
+  onFinish: (l: Launch, how: 'done' | 'skipped', logMin?: number | null) => void;
   /** Opens a timed launch's tabs and apps now, without waiting for its time. */
   onLaunchNow: (l: Launch) => void;
   /** Oct 25: pause / resume a launched run. */
@@ -68,7 +69,7 @@ type Props = {
   /** Runs of each launch: today's +10 minutes show on the row. */
   log?: LaunchLog[];
   /** Oct 29 · Missed tab: done without logging time, or cleared out of the counts. */
-  onSettleMissed?: (l: Launch, day: string, how: 'done' | 'cleared') => void;
+  onSettleMissed?: (l: Launch, day: string, how: 'done' | 'cleared', logMin?: number | null) => void;
   /** V20-060: take a run out of the log (History → Undo). */
   onUndoRun?: (id: string) => void;
   /** V12-043: off days (a quiet card today; their runs aren't Missed). */
@@ -237,6 +238,43 @@ export function LaunchersPanel(p: Props) {
   const [view, setView] = useState<TimedView>('active');
   // The X on a row asks first: skip just today, or remove the launch for good.
   const [xAsk, setXAsk] = useState<string | null>(null);
+  // V20-073 (Nov 12): checking off a run that never ran on the clock asks Log the time? (minutes, or Don't log).
+  // Launches that log a fixed amount (H2O, Food, Vice) don't ask.
+  const [logAsk, setLogAsk] = useState<{ key: string; minutes: number; onLog: (m: number | null) => void } | null>(null);
+  const asksTime = (l: Launch) => !['h2o', 'food', 'vices'].includes(l.logKind ?? '');
+  const askLog = (key: string, l: Launch, onLog: (m: number | null) => void) => {
+    if (!asksTime(l)) return onLog(undefined as unknown as null);
+    setXAsk(null);
+    setLogAsk({ key, minutes: l.minutes, onLog });
+  };
+  const logAskUi = (key: string) =>
+    logAsk?.key === key && (
+      <div className="timed-quick timed-xask timed-logask" role="group" aria-label="Log the time?">
+        <span className="logask-q">Log the time?</span>
+        <label className="logask-min">
+          <input
+            type="number"
+            min={1}
+            max={480}
+            value={logAsk.minutes}
+            aria-label="Minutes to log"
+            onChange={(e) => setLogAsk((a) => (a ? { ...a, minutes: Math.min(480, Math.max(1, Number(e.target.value) || 1)) } : a))}
+          />
+          <span>min</span>
+        </label>
+        <button type="button" className="btn btn-quiet" onClick={() => { const a = logAsk; setLogAsk(null); a.onLog(a.minutes); }}>
+          Log
+        </button>
+        <button type="button" className="btn btn-quiet" onClick={() => { const a = logAsk; setLogAsk(null); a.onLog(null); }}>
+          Don't log
+        </button>
+        <button type="button" className="quick-btn" aria-label="Cancel" title="Cancel" onClick={() => setLogAsk(null)}>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+      </div>
+    );
   const ordered = orderLaunches(p.launches, p.today, p.handled);
   // The next routine day: 24 hours on from now (the day rolls over at the routine's reset, not midnight).
   const tomorrow = new Date(p.today.getTime() + 86_400_000);
@@ -641,7 +679,7 @@ export function LaunchersPanel(p: Props) {
             {missedRows.length > 0 && (
             <ul className="timed-list">
               {missedRows.slice(0, showAllTimed ? undefined : 30).map(({ launch: l, day, kind, gone }) => (
-                <li key={`${l.id}:${day}`} className="timed-item is-missed">
+                <li key={`${l.id}:${day}`} className={`timed-item is-missed${logAsk?.key === `${l.id}:${day}` ? ' is-logask' : ''}`}>
                   <button
                     type="button"
                     className="timed-row"
@@ -677,7 +715,7 @@ export function LaunchersPanel(p: Props) {
                       className="quick-btn quick-done"
                       aria-label={`${l.title}: done, don't log the time`}
                       title="Done, but don't log the time (nothing goes to 26 Days)"
-                      onClick={() => p.onSettleMissed?.(l, day, 'done')}
+                      onClick={() => askLog(`${l.id}:${day}`, l, (m) => p.onSettleMissed?.(l, day, 'done', m))}
                     >
                       <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M5 12l5 5 9-10" />
@@ -695,6 +733,7 @@ export function LaunchersPanel(p: Props) {
                       </svg>
                     </button>
                   </div>
+                  {logAskUi(`${l.id}:${day}`)}
                 </li>
               ))}
             </ul>
@@ -772,7 +811,7 @@ export function LaunchersPanel(p: Props) {
                     <span className="timed-day-line" aria-hidden="true" />
                   </li>
                 )}
-                <li className={`timed-item${how && how !== 'launched' ? ` is-${how}` : ''}${how === 'launched' ? ' is-launched' : ''}${isNext ? ' is-next' : ''}`}>
+                <li className={`timed-item${how && how !== 'launched' ? ` is-${how}` : ''}${how === 'launched' ? ' is-launched' : ''}${isNext ? ' is-next' : ''}${logAsk && (logAsk.key === `${l.id}:today` || logAsk.key === `${l.id}:${runDay}`) ? ' is-logask' : ''}`}>
                   <button
                     type="button"
                     className="timed-row"
@@ -839,7 +878,7 @@ export function LaunchersPanel(p: Props) {
                         className="quick-btn quick-done"
                         aria-label={`Check off ${l.title} early`}
                         title="Done early: this run is checked off (no time logged)"
-                        onClick={() => p.onSettleMissed?.(l, runDay, 'done')}
+                        onClick={() => askLog(`${l.id}:${runDay}`, l, (m) => p.onSettleMissed?.(l, runDay, 'done', m))}
                       >
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M5 12.5l4.5 4.5L19 7.5" />
@@ -915,7 +954,7 @@ export function LaunchersPanel(p: Props) {
                         className="quick-btn quick-done"
                         aria-label={`Check off ${l.title} for today`}
                         title="Done today"
-                        onClick={() => p.onFinish(l, 'done')}
+                        onClick={() => (how === 'launched' ? p.onFinish(l, 'done') : askLog(`${l.id}:today`, l, (m) => p.onFinish(l, 'done', m)))}
                       >
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M5 12.5l4.5 4.5L19 7.5" />
@@ -934,6 +973,8 @@ export function LaunchersPanel(p: Props) {
                       </button>
                     </div>
                   )}
+                  {logAskUi(`${l.id}:today`)}
+                  {runDay && logAskUi(`${l.id}:${runDay}`)}
                 </li>
                 </Fragment>
               );
