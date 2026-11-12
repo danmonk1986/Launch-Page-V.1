@@ -1423,6 +1423,14 @@ export default function App() {
     return describeLog(l).replace(' · ', ' ');
   }
 
+  /** V12-004 (Nov 12): reopen a running launch's tabs and apps (tap its time). Nothing new is logged. */
+  function reopenLaunch(l: Launch) {
+    const ritual = l.ritualId ? routines.find((r) => r.id === l.ritualId && r.kind === 'ritual') : null;
+    if (ritual) setRitualPop({ ritualId: ritual.id, launch: l });
+    const blocked = l.urls.length ? openTabs(l.urls) : false;
+    setStatus(blocked ? BLOCKED_HELP : `Reopened ${l.title}.`);
+  }
+
   function launchNow(l: Launch) {
     const ritual = l.ritualId ? routines.find((r) => r.id === l.ritualId && r.kind === 'ritual') : null;
     if (ritual) setRitualPop({ ritualId: ritual.id, launch: l });
@@ -1618,6 +1626,7 @@ export default function App() {
                   today={now}
                   onFinish={finishLaunch}
                   onLaunchNow={launchNow}
+                  onReopen={reopenLaunch}
                   isPaused={isPaused}
                   onPause={togglePause}
                   log={launchLog}
