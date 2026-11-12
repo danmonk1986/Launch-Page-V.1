@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
-import { BACKGROUNDS, DESCRIBES, INDUSTRIES, type AccountInfo, type Background, type BrandSettings } from '../lib/settings';
+import { BACKGROUNDS, DESCRIBES, INDUSTRIES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BrandSettings } from '../lib/settings';
 import type { ScrollMode } from '../lib/view';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
@@ -108,6 +108,14 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(flush, 900);
   };
+  // The day / night switch applies and saves at once (no 0.9 s wait).
+  const saveNow = (fn: (d: BrandSettings) => BrandSettings) => {
+    const next = fn(latest.current);
+    latest.current = next;
+    setDraft(next);
+    dirty.current = true;
+    flush();
+  };
   const set = <K extends keyof BrandSettings>(k: K, v: BrandSettings[K]) => queue((d) => ({ ...d, [k]: v }));
   const acct = draft.account;
   const setAcct = <K extends keyof AccountInfo>(k: K, v: AccountInfo[K]) => queue((d) => ({ ...d, account: { ...d.account, [k]: v } }));
@@ -132,6 +140,21 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
               {saveState === 'typing' ? 'Saving…' : saveState === 'saved' ? 'Saved' : ''}
             </span>
           )}
+          {/* V20-120 (Dan, Nov 12): day and night switch (sun | moon), beside where Save was. Each side goes to its own
+              remembered background and saves straight away. */}
+          <div className="daynight" role="group" aria-label="Day or night">
+            <button type="button" className="daynight-btn" aria-pressed={isDay(draft.background)} aria-label="Day mode" title="Day mode" onClick={() => saveNow((d) => flipDayNight(d, true))}>
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+              </svg>
+            </button>
+            <button type="button" className="daynight-btn" aria-pressed={!isDay(draft.background)} aria-label="Night mode" title="Night mode" onClick={() => saveNow((d) => flipDayNight(d, false))}>
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+              </svg>
+            </button>
+          </div>
           <button type="button" className="icon-btn tool-btn" onClick={onClose} aria-label="Close settings" title="Close">
             <HeadIcon d={CLOSE_ICON} />
           </button>
@@ -262,7 +285,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                 <div className="choice-row">
                   {BACKGROUNDS.map((b) => (
                     <label key={b} className="choice">
-                      <input type="radio" name="background" checked={draft.background === b} onChange={() => set('background', b)} />
+                      <input type="radio" name="background" checked={draft.background === b} onChange={() => queue((d) => withBackground(d, b))} />
                       <span>{BG_LABEL[b]}</span>
                     </label>
                   ))}

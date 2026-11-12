@@ -34,6 +34,9 @@ export interface BrandSettings {
   dayBgImage: string | null;
   /** V20-113: Settings › Account Information. */
   account: AccountInfo;
+  /** V20-120: the background each side of the day / night switch goes to. */
+  dayBackground: Background;
+  nightBackground: Background;
 }
 
 /** V20-113 (Dan, Nov 12): who you are and your business. Kept in one column (settings.account). */
@@ -99,8 +102,18 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   dayPink: '#ff6ad5',
   nightBgImage: null,
   dayBgImage: null,
-  account: EMPTY_ACCOUNT
+  account: EMPTY_ACCOUNT,
+  dayBackground: 'damascus',
+  nightBackground: 'synthwave'
 };
+
+/** V20-120: day mode = a light background. */
+export const isDay = (b: Background) => LIGHT_BACKGROUNDS.includes(b);
+/** Picking a background also remembers it for its side of the switch. */
+export const withBackground = (s: BrandSettings, b: Background): BrandSettings =>
+  isDay(b) ? { ...s, background: b, dayBackground: b } : { ...s, background: b, nightBackground: b };
+/** The switch: go to the other side's remembered background. */
+export const flipDayNight = (s: BrandSettings, toDay: boolean): BrandSettings => withBackground(s, toDay ? s.dayBackground : s.nightBackground);
 
 /** Oct 15: the neon pair from the logo became the master palette. Move the old defaults over. */
 function upgradePalette(s: BrandSettings): BrandSettings {
@@ -150,6 +163,8 @@ type Row = {
   night_bg_image?: string | null;
   day_bg_image?: string | null;
   account?: Partial<AccountInfo> | null;
+  day_background?: string | null;
+  night_background?: string | null;
 };
 
 const toRow = (s: BrandSettings): Row => ({
@@ -169,7 +184,9 @@ const toRow = (s: BrandSettings): Row => ({
   day_pink: s.dayPink,
   night_bg_image: s.nightBgImage,
   day_bg_image: s.dayBgImage,
-  account: s.account
+  account: s.account,
+  day_background: s.dayBackground,
+  night_background: s.nightBackground
 });
 
 const fromRow = (r: Row): BrandSettings => ({
@@ -192,8 +209,19 @@ const fromRow = (r: Row): BrandSettings => ({
   // Before 0022 is run the background images live on this device.
   nightBgImage: r.night_bg_image !== undefined ? r.night_bg_image : readLocal().nightBgImage,
   dayBgImage: r.day_bg_image !== undefined ? r.day_bg_image : readLocal().dayBgImage,
-  account: { ...EMPTY_ACCOUNT, ...(r.account ?? {}) }
+  account: { ...EMPTY_ACCOUNT, ...(r.account ?? {}) },
+  ...modeBackgrounds(normalizeBackground(r.background), r.day_background, r.night_background)
 });
+
+/** The remembered background for each mode; the current one fills its own side when nothing is saved yet. */
+function modeBackgrounds(current: Background, day?: string | null, night?: string | null) {
+  const d = day ? normalizeBackground(day) : null;
+  const n = night ? normalizeBackground(night) : null;
+  return {
+    dayBackground: d && LIGHT_BACKGROUNDS.includes(d) ? d : LIGHT_BACKGROUNDS.includes(current) ? current : 'damascus',
+    nightBackground: n && !LIGHT_BACKGROUNDS.includes(n) ? n : !LIGHT_BACKGROUNDS.includes(current) ? current : 'synthwave'
+  } as { dayBackground: Background; nightBackground: Background };
+}
 
 /** Cloud copy wins when signed in; the local copy is the offline fallback. */
 export async function loadSettings(userId: string | null): Promise<BrandSettings> {

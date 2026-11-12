@@ -3122,3 +3122,10 @@ button.kb-btn { font-family: inherit; }
 }
 .field > .field-label:has(select) { display: grid; gap: 6px; }
 .settings-save-state { font-size: 13px; color: var(--accent-teal); min-width: 64px; text-align: right; }
+
+/* V20-120 (Dan, Nov 12): the day and night switch in the Settings header: sun | moon, the on side filled teal. */
+.daynight { display: inline-flex; height: 36px; border: 1px solid var(--accent-teal); border-radius: 8px; overflow: hidden; background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
+.app .daynight .daynight-btn { all: unset; box-sizing: border-box; cursor: pointer; width: 36px; height: 100%; display: grid; place-items: center; color: var(--accent-teal); background: none; border: 0; border-radius: 0; }
+.app .daynight .daynight-btn + .daynight-btn { border-left: 1px solid color-mix(in srgb, var(--accent-teal) 55%, transparent); }
+.app .daynight .daynight-btn[aria-pressed='true'] { background: var(--accent-teal); color: var(--surface-solid); }
+.daynight-btn:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: -3px; }
