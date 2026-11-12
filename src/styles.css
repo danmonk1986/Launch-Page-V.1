@@ -1204,8 +1204,9 @@ input:-webkit-autofill:focus {
 .app[data-tone='light'] .sheet { box-shadow: 0 20px 60px rgb(68 66 66 / 0.25); }
 .app[data-tone='light'] .sheet::backdrop { background: rgb(68 66 66 / 0.35); }
 /* Nov 11 (Dan): day mode cards are beige boxes, like the beta white sheet; what sits inside a card stays white. */
-.app[data-tone='light']:not(.is-kb) { --surface: #f5f5dc; }
-.app[data-tone='light']:not(.is-kb) .panel { --surface-solid: #f5f5dc; }
+/* V20-049 (Nov 11): cards are #f5f5eb, a softer cream than beige. */
+.app[data-tone='light']:not(.is-kb) { --surface: #f5f5eb; }
+.app[data-tone='light']:not(.is-kb) .panel { --surface-solid: #f5f5eb; }
 .app[data-tone='light'] .panel .combo-list { background: #ffffff; }
 .app[data-tone='light'] .tile { background: #ffffff; }
 /* V20-048 (Dan, Nov 11): the next timed launch and the routine's NOW step sit in a teal box with a soft glow, in both modes. */
