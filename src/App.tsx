@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from './lib/supabase';
-import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettings, type BrandSettings } from './lib/settings';
+import { checkPassword, supabase } from './lib/supabase';
+import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettings, shownName, type BrandSettings } from './lib/settings';
 import { downloadLaunchSheet } from './lib/launchSheet';
 import { loadCached } from './lib/gcalCache';
 import { Header, type PageId } from './components/Header';
@@ -1688,7 +1688,7 @@ export default function App() {
           ) : page === 'days26' ? (
             <Days26Page
               now={now}
-              displayName={settings.displayName}
+              displayName={shownName(settings)}
               routine={activeRoutine}
               shift={shift}
               nonnegs={nonnegs}
@@ -1969,6 +1969,15 @@ export default function App() {
                   await supabase!.auth.signOut({ scope: 'local' });
                   return 'This device was signed out. Sign in again, then set your password.';
                 }
+                return error ? error.message : null;
+              }
+            : undefined
+        }
+        onCheckPassword={supabase && session?.user.email ? (pw) => checkPassword(session.user.email!, pw) : undefined}
+        onSendReset={
+          supabase && session?.user.email
+            ? async () => {
+                const { error } = await supabase!.auth.resetPasswordForEmail(session.user.email!, { redirectTo: window.location.origin });
                 return error ? error.message : null;
               }
             : undefined

@@ -27,3 +27,15 @@ export async function selectAll<R>(table: string, orderBy?: string): Promise<{ d
     if (rows.length < PAGE) return { data: out, error: null };
   }
 }
+
+/**
+ * V20-113: is this the account's current password? Checked on a throwaway client that keeps nothing,
+ * so this device's own sign-in isn't touched.
+ */
+export async function checkPassword(email: string, password: string): Promise<boolean> {
+  if (!url || !anonKey) return false;
+  const probe = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'lp-password-check' } });
+  const { error } = await probe.auth.signInWithPassword({ email, password });
+  if (!error) await probe.auth.signOut({ scope: 'local' });
+  return !error;
+}

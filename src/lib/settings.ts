@@ -32,7 +32,34 @@ export interface BrandSettings {
   /** Your own background images (resized JPEG data), one per mode; null = the chosen background. */
   nightBgImage: string | null;
   dayBgImage: string | null;
+  /** V20-113: Settings › Account Information. */
+  account: AccountInfo;
 }
+
+/** V20-113 (Dan, Nov 12): who you are and your business. Kept in one column (settings.account). */
+export interface AccountInfo {
+  alias: string;
+  /** Show the alias wherever your name would show. */
+  hideRealName: boolean;
+  businessName: string;
+  role: string;
+  backupEmail: string;
+  age: string;
+  businessFounded: string;
+  street: string;
+  city: string;
+  region: string;
+  postalCode: string;
+  country: string;
+}
+
+export const EMPTY_ACCOUNT: AccountInfo = {
+  alias: '', hideRealName: false, businessName: '', role: '', backupEmail: '', age: '', businessFounded: '',
+  street: '', city: '', region: '', postalCode: '', country: ''
+};
+
+/** The name to show: the alias when the real name is hidden (and an alias is set). */
+export const shownName = (s: BrandSettings) => (s.account.hideRealName && s.account.alias.trim() ? s.account.alias.trim() : s.displayName);
 
 /** First user's brand. Every field is editable in Settings. */
 export const DEFAULT_SETTINGS: BrandSettings = {
@@ -52,7 +79,8 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   dayGreen: '#98ee92',
   dayPink: '#ff6ad5',
   nightBgImage: null,
-  dayBgImage: null
+  dayBgImage: null,
+  account: EMPTY_ACCOUNT
 };
 
 /** Oct 15: the neon pair from the logo became the master palette. Move the old defaults over. */
@@ -69,7 +97,8 @@ function readLocal(): BrandSettings {
   try {
     const raw = localStorage.getItem(LOCAL_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    const s = upgradePalette({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) });
+    const parsed = JSON.parse(raw);
+    const s = upgradePalette({ ...DEFAULT_SETTINGS, ...parsed, account: { ...EMPTY_ACCOUNT, ...(parsed.account ?? {}) } });
     return { ...s, background: normalizeBackground(s.background) };
   } catch {
     return DEFAULT_SETTINGS;
@@ -101,6 +130,7 @@ type Row = {
   day_pink?: string;
   night_bg_image?: string | null;
   day_bg_image?: string | null;
+  account?: Partial<AccountInfo> | null;
 };
 
 const toRow = (s: BrandSettings): Row => ({
@@ -119,7 +149,8 @@ const toRow = (s: BrandSettings): Row => ({
   day_green: s.dayGreen,
   day_pink: s.dayPink,
   night_bg_image: s.nightBgImage,
-  day_bg_image: s.dayBgImage
+  day_bg_image: s.dayBgImage,
+  account: s.account
 });
 
 const fromRow = (r: Row): BrandSettings => ({
@@ -141,7 +172,8 @@ const fromRow = (r: Row): BrandSettings => ({
   dayPink: r.day_pink ?? readLocal().dayPink,
   // Before 0022 is run the background images live on this device.
   nightBgImage: r.night_bg_image !== undefined ? r.night_bg_image : readLocal().nightBgImage,
-  dayBgImage: r.day_bg_image !== undefined ? r.day_bg_image : readLocal().dayBgImage
+  dayBgImage: r.day_bg_image !== undefined ? r.day_bg_image : readLocal().dayBgImage,
+  account: { ...EMPTY_ACCOUNT, ...(r.account ?? {}) }
 });
 
 /** Cloud copy wins when signed in; the local copy is the offline fallback. */

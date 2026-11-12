@@ -6,7 +6,7 @@
  * trimmed or retired until it can be exported.
  */
 import { buildXlsx, type Cell, type SheetSpec } from './xlsx';
-import type { BrandSettings } from './settings';
+import { shownName, type BrandSettings } from './settings';
 import type { Routine } from './routines';
 import type { Meditation } from './meditations';
 import { describeLog, describeOpens, describeSchedule, type Launch, type LaunchLog, type Launcher } from './launchers';
@@ -244,7 +244,7 @@ export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: 
       { text: brand, style: 'title' },
       { text: d.settings.goal || '', style: 'motto' },
       { text: d.settings.mantra || '', style: 'mantra' },
-      { text: `Exported ${when(exported.toISOString())} · ${d.settings.displayName || ''}`.trim(), style: 'note' }
+      { text: `Exported ${when(exported.toISOString())} · ${shownName(d.settings) || ''}`.trim(), style: 'note' }
     ],
     headers: ['Tab', 'Rows'],
     rows: counts.map((c) => [c.tab, c.rows]),

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
-import { BACKGROUNDS, type Background, type BrandSettings } from '../lib/settings';
+import { BACKGROUNDS, type AccountInfo, type Background, type BrandSettings } from '../lib/settings';
 import type { ScrollMode } from '../lib/view';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
@@ -41,6 +41,10 @@ type Props = {
   onScrollMode: (m: ScrollMode) => void;
   /** Present only when signed in to the cloud. Returns an error message, or null on success. */
   onSetPassword?: (password: string) => Promise<string | null>;
+  /** True when the password is the one this account signs in with. */
+  onCheckPassword?: (password: string) => Promise<boolean>;
+  /** Emails a reset link to the sign-in email. Returns an error message, or null. */
+  onSendReset?: () => Promise<string | null>;
   /** The sign-in email, when signed in. */
   email?: string | null;
   /** The Projects tab (moved here from the Tasks page's folder button). */
@@ -49,12 +53,11 @@ type Props = {
   onSignOut?: () => void;
 };
 
-export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onSetPassword, scrollMode, onScrollMode, email, projects, data, onSignOut }: Props) {
+export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onSetPassword, onCheckPassword, onSendReset, scrollMode, onScrollMode, email, projects, data, onSignOut }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState(settings);
   const [saving, setSaving] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [pwStatus, setPwStatus] = useState('');
+  const [pwOpen, setPwOpen] = useState(false);
   const clickOff = useClickOff(onClose);
 
   useEffect(() => setDraft(settings), [settings, open]);
@@ -68,6 +71,8 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
 
   const set = <K extends keyof BrandSettings>(k: K, v: BrandSettings[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
+  const acct = draft.account;
+  const setAcct = <K extends keyof AccountInfo>(k: K, v: AccountInfo[K]) => setDraft((d) => ({ ...d, account: { ...d.account, [k]: v } }));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,19 +80,6 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
     await onSave({ ...draft, logoUrl: draft.logoUrl?.trim() || null });
     setSaving(false);
     onClose();
-  }
-
-  async function submitPassword(e: React.FormEvent) {
-    e.preventDefault();
-    if (!onSetPassword) return;
-    if (newPassword.length < 8) {
-      setPwStatus('Use at least 8 characters.');
-      return;
-    }
-    setPwStatus('Saving password…');
-    const error = await onSetPassword(newPassword);
-    setPwStatus(error ? `Password not saved: ${error}` : 'Password saved. Use it to sign in on any device.');
-    if (!error) setNewPassword('');
   }
 
   // Account Information and Appearance share one draft and one Save.
@@ -115,16 +107,69 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
         <form id="settings-form" onSubmit={submit} hidden={!saves}>
           {tab === 'account' && (
             <>
-              <label className="field">
-                <span>Your name</span>
-                <input value={draft.displayName} onChange={(e) => set('displayName', e.target.value)} />
-              </label>
-              {email && (
+              {/* V20-113 (Dan, Nov 12): who you are and your business, two to a row. */}
+              <div className="settings-grid">
+                <label className="field">
+                  <span>Name</span>
+                  <input value={draft.displayName} autoComplete="name" onChange={(e) => set('displayName', e.target.value)} />
+                </label>
+                <div className="field">
+                  <label className="field-label" htmlFor="acct-alias">
+                    Alias
+                  </label>
+                  <input id="acct-alias" value={acct.alias} onChange={(e) => setAcct('alias', e.target.value)} />
+                  <label className="check-line">
+                    <input type="checkbox" checked={acct.hideRealName} onChange={(e) => setAcct('hideRealName', e.target.checked)} />
+                    <span>Hide my real name (show the alias instead)</span>
+                  </label>
+                </div>
+                <label className="field">
+                  <span>Business name</span>
+                  <input value={acct.businessName} autoComplete="organization" onChange={(e) => setAcct('businessName', e.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Role</span>
+                  <input value={acct.role} autoComplete="organization-title" placeholder="e.g. Founder" onChange={(e) => setAcct('role', e.target.value)} />
+                </label>
                 <label className="field">
                   <span>Sign-in email</span>
-                  <input value={email} readOnly aria-readonly="true" />
+                  <input value={email ?? 'Not signed in'} readOnly aria-readonly="true" className="is-readonly" />
                 </label>
-              )}
+                <label className="field">
+                  <span>Backup email</span>
+                  <input type="email" value={acct.backupEmail} autoComplete="email" onChange={(e) => setAcct('backupEmail', e.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Your age</span>
+                  <input inputMode="numeric" value={acct.age} onChange={(e) => setAcct('age', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} />
+                </label>
+                <label className="field">
+                  <span>Business founded</span>
+                  <input inputMode="numeric" value={acct.businessFounded} placeholder="Year, e.g. 2019" onChange={(e) => setAcct('businessFounded', e.target.value.replace(/[^0-9]/g, '').slice(0, 4))} />
+                </label>
+              </div>
+              <label className="field">
+                <span>Address</span>
+                <input value={acct.street} autoComplete="street-address" placeholder="Street and number" onChange={(e) => setAcct('street', e.target.value)} />
+              </label>
+              <div className="settings-grid settings-grid-4">
+                <label className="field">
+                  <span>City</span>
+                  <input value={acct.city} autoComplete="address-level2" onChange={(e) => setAcct('city', e.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Province / State</span>
+                  <input value={acct.region} autoComplete="address-level1" onChange={(e) => setAcct('region', e.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Postal code</span>
+                  <input value={acct.postalCode} autoComplete="postal-code" onChange={(e) => setAcct('postalCode', e.target.value.toUpperCase())} />
+                </label>
+                <label className="field">
+                  <span>Country</span>
+                  <input value={acct.country} autoComplete="country-name" onChange={(e) => setAcct('country', e.target.value)} />
+                </label>
+              </div>
             </>
           )}
 
@@ -211,24 +256,17 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
         </form>
 
         {tab === 'account' && onSetPassword && (
-          <form className="account" onSubmit={submitPassword}>
-            <h3 className="account-title">Sign-in password</h3>
-            <label className="field">
-              <span>New password</span>
-              <input type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-            </label>
-            <div className="sheet-actions">
-              <button type="submit" className="btn btn-quiet">
-                Set password
-              </button>
+          <div className="settings-action">
+            <div>
+              <p className="settings-action-title">Password</p>
+              <p className="field-hint">Change the password you sign in with on any device.</p>
             </div>
-            {pwStatus && (
-              <p className="account-status" role="status">
-                {pwStatus}
-              </p>
-            )}
-          </form>
+            <button type="button" className="btn btn-quiet" onClick={() => setPwOpen(true)}>
+              Change password
+            </button>
+          </div>
         )}
+        {onSetPassword && <PasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} email={email ?? null} onSetPassword={onSetPassword} onCheckPassword={onCheckPassword} onSendReset={onSendReset} />}
 
         {tab === 'modules' && <p className="settings-note">Coming next: switch each card on the Launch Page on or off.</p>}
 
@@ -264,6 +302,138 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
           </div>
         )}
       </div>
+    </dialog>
+  );
+}
+
+/**
+ * V20-113 (Dan, Nov 12): Change password in its own pop-out window. Current password (checked first), the new one
+ * twice, rules shown as you type, show / hide, and a reset link for when the current one is forgotten.
+ */
+function PasswordDialog({
+  open,
+  onClose,
+  email,
+  onSetPassword,
+  onCheckPassword,
+  onSendReset
+}: {
+  open: boolean;
+  onClose: () => void;
+  email: string | null;
+  onSetPassword: (password: string) => Promise<string | null>;
+  onCheckPassword?: (password: string) => Promise<boolean>;
+  onSendReset?: () => Promise<string | null>;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [again, setAgain] = useState('');
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const clickOff = useClickOff(onClose);
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (open && !d.open) d.showModal();
+    if (!open && d.open) d.close();
+    if (open) {
+      setCurrent('');
+      setNext('');
+      setAgain('');
+      setShow(false);
+      setStatus(null);
+    }
+  }, [open]);
+  const rules = [
+    { ok: next.length >= 8, text: 'At least 8 characters' },
+    { ok: /[a-z]/.test(next) && /[A-Z]/.test(next), text: 'Upper and lower case letters' },
+    { ok: /[0-9]/.test(next), text: 'A number' },
+    { ok: /[^A-Za-z0-9]/.test(next), text: 'A symbol (! ? # …)' },
+    { ok: !!next && next !== current, text: 'Different from the current password' }
+  ];
+  const matches = !!again && next === again;
+  const ready = !!current && rules.every((r) => r.ok) && matches && !busy;
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ready) return;
+    setBusy(true);
+    setStatus(null);
+    if (onCheckPassword && !(await onCheckPassword(current))) {
+      setBusy(false);
+      setStatus({ ok: false, text: 'That isn’t your current password.' });
+      return;
+    }
+    const error = await onSetPassword(next);
+    setBusy(false);
+    if (error) return setStatus({ ok: false, text: `Password not changed: ${error}` });
+    setStatus({ ok: true, text: 'Password changed. Use the new one to sign in on any device.' });
+    setCurrent('');
+    setNext('');
+    setAgain('');
+  }
+  const kind = show ? 'text' : 'password';
+  return (
+    <dialog ref={ref} className="sheet sheet-password" onClose={onClose} aria-labelledby="pw-title" {...clickOff}>
+      <form onSubmit={submit}>
+        <div className="sheet-head">
+          <h2 id="pw-title">Change password</h2>
+          <div className="sheet-tools">
+            <button type="submit" className="icon-btn tool-btn tool-btn-go" disabled={!ready} aria-label="Save new password" title="Save">
+              <HeadIcon d={SAVE_ICON} />
+            </button>
+            <button type="button" className="icon-btn tool-btn" onClick={onClose} aria-label="Close" title="Close">
+              <HeadIcon d={CLOSE_ICON} />
+            </button>
+          </div>
+        </div>
+        {email && <input type="email" value={email} autoComplete="username" readOnly hidden />}
+        <label className="field">
+          <span>Current password</span>
+          <input type={kind} required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>New password</span>
+          <input type={kind} required autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
+        </label>
+        <ul className="pw-rules" aria-label="Password rules">
+          {rules.map((r) => (
+            <li key={r.text} className={r.ok ? 'is-ok' : undefined}>
+              <span aria-hidden="true">{r.ok ? '✓' : '·'}</span> {r.text}
+            </li>
+          ))}
+        </ul>
+        <label className="field">
+          <span>New password again</span>
+          <input type={kind} required autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} />
+        </label>
+        {again && !matches && <p className="field-hint pw-bad">The two new passwords don’t match.</p>}
+        <label className="check-line">
+          <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} />
+          <span>Show passwords</span>
+        </label>
+        {status && (
+          <p className={`account-status${status.ok ? '' : ' pw-bad'}`} role="status">
+            {status.text}
+          </p>
+        )}
+        {onSendReset && email && (
+          <p className="field-hint">
+            Forgot your current password?{' '}
+            <button
+              type="button"
+              className="link-btn link-btn-inline"
+              onClick={async () => {
+                const err = await onSendReset();
+                setStatus(err ? { ok: false, text: `Reset link not sent: ${err}` } : { ok: true, text: `A reset link is on its way to ${email}.` });
+              }}
+            >
+              Email me a reset link
+            </button>
+          </p>
+        )}
+      </form>
     </dialog>
   );
 }
