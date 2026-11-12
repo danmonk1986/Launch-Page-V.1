@@ -250,16 +250,6 @@ export function LaunchersPanel(p: Props) {
       return {};
     }
   });
-  const clearKey = (l: Launch) => runKey(l, p.today);
-  function clearFromComplete(l: Launch) {
-    const next = { ...cleared, [clearKey(l)]: true as const };
-    setCleared(next);
-    try {
-      localStorage.setItem(CLEARED_KEY, JSON.stringify(next));
-    } catch {
-      /* ignore */
-    }
-  }
   const nextOf = (l: Launch) => nextDate(l, p.today);
   const views: Record<TimedView, Launch[]> = {
     active: ordered.filter((l) => l.active && happensToday(l, p.today) && (!stateOf(l) || stateOf(l) === 'launched')),
@@ -771,21 +761,6 @@ export function LaunchersPanel(p: Props) {
                         aria-label={`Skip or remove ${l.title}`}
                         title="Skip today or remove"
                         onClick={() => setXAsk(l.id)}
-                      >
-                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-                          <path d="M6 6l12 12M18 6L6 18" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
-                  {view === 'complete' && (
-                    <div className="timed-quick">
-                      <button
-                        type="button"
-                        className="quick-btn quick-skip"
-                        aria-label={`Clear ${l.title} from Complete`}
-                        title="Clear from Complete"
-                        onClick={() => clearFromComplete(l)}
                       >
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                           <path d="M6 6l12 12M18 6L6 18" />
