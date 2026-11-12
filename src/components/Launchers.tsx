@@ -1222,7 +1222,8 @@ export const WHAT_DEFAULTS: { cat: string; minutes: number }[] = [
   { cat: 'SETUP', minutes: 30 },
   { cat: 'SHOP WORK', minutes: 90 },
   { cat: 'BANKING', minutes: 15 },
-  { cat: 'DIGITAL ORGANIZATION', minutes: 45 }
+  { cat: 'DIGITAL ORGANIZATION', minutes: 45 },
+  { cat: 'PERSONAL', minutes: 30 }
 ];
 
 /** "Category - Description" (Nov 2: also " · " and " – ", as some older launches were saved). */
@@ -1371,7 +1372,7 @@ function TimedForm({
             const v = e.target.value;
             setWhat(v, desc);
             const def = WHAT_DEFAULTS.find((w) => w.cat === v);
-            if (def) set('minutes', def.minutes);
+            if (def) setD((x) => ({ ...x, minutes: def.minutes, logKind: v === 'PERSONAL' ? null : 'productivity', logAmount: null }));
           }}
         >
           <option value="" disabled>
@@ -1440,63 +1441,9 @@ function TimedForm({
         )}
       </div>
 
-      <div className="time-grid">
-        <label className="field">
-          <span>Logs when checked off</span>
-          <select
-            value={d.logKind ?? ''}
-            onChange={(e) => {
-              const k = (e.target.value || null) as LaunchLogKind | null;
-              setD((x) => ({ ...x, logKind: k, logAmount: k === 'h2o' ? 500 : k === 'vices' ? 1 : k === 'food' ? x.logAmount ?? null : null }));
-            }}
-          >
-            <option value="">{d.urls.length || d.ritualId ? 'Auto: Productivity, time spent' : 'Nothing (a reminder)'}</option>
-            {LOG_KINDS.map((k) => (
-              <option key={k.kind} value={k.kind}>
-                {k.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {d.logKind === 'h2o' && (
-          <label className="field">
-            <span>Size</span>
-            <select value={d.logAmount ?? 500} onChange={(e) => set('logAmount', Number(e.target.value))}>
-              <option value={500}>Glass · 500 ml</option>
-              <option value={750}>Bottle · 750 ml</option>
-            </select>
-          </label>
-        )}
-        {d.logKind === 'food' && (
-          <label className="field">
-            <span>Calories (kcal)</span>
-            <input type="number" min={0} step="any" value={d.logAmount ?? ''} onChange={(e) => set('logAmount', Number(e.target.value) || 0)} />
-          </label>
-        )}
-        {d.logKind === 'vices' && (
-          <label className="field">
-            <span>Weight</span>
-            <select value={d.logAmount ?? 1} onChange={(e) => set('logAmount', Number(e.target.value))}>
-              <option value={0.5}>Light · 0.5</option>
-              <option value={1}>Medium · 1</option>
-              <option value={3}>Heavy · 3</option>
-            </select>
-          </label>
-        )}
-      </div>
-      {d.logKind && (
-        <p className="field-hint timed-log-hint">
-          {d.logKind === 'activity' || d.logKind === 'rest'
-            ? `Logs the time allotted (${d.minutes} min) every time.`
-            : d.logKind === 'productivity'
-              ? d.urls.length || d.ritualId
-                ? 'Logs the time from Launch to Done as work blocks.'
-                : `Logs the time allotted as work blocks (${Math.round((d.minutes / 90) * 4) / 4}).`
-              : 'Logs this amount every time.'}{' '}
-          {'Checking it off (✓) logs it.'}
-        </p>
-      )}
-
+      {/* V20-076 (Dan, Nov 12): Logs when checked off is gone; What says what kind of time it is. Every What
+          logs Productivity except PERSONAL, which logs nothing. Launches already set to H2O, Food, Vice,
+          Activity or Break keep it. */}
       <fieldset className="field">
         <legend>Alarm</legend>
         <div className="choice-row tone-row" role="radiogroup" aria-label="Alarm sound">

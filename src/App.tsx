@@ -1316,6 +1316,8 @@ export default function App() {
    * Returns a short description of what was logged, or '' if nothing.
    */
   async function logFromLaunch(l: Launch, opts?: { minutes?: number; day?: string; id?: string }): Promise<string> {
+    // V20-076: PERSONAL time isn't productivity, so it logs nothing to 26 Days.
+    if (/^PERSONAL\b/.test(l.title)) return '';
     const kind = l.logKind ?? (l.urls.length && !l.ritualId ? 'productivity' : null);
     if (!kind) return '';
     // Hourly launches log once an hour, so each gets its own line; others update today's line.
