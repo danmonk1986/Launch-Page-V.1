@@ -46,11 +46,11 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   accentTeal: '#06f9c2',
   accentGreen: '#98ee92',
   accentPink: '#ff6ad5',
-  // Day mode: the original, softer purple and teal from the brand palette, with a matching green and pink.
-  dayPurple: '#8169af',
-  dayTeal: '#76caba',
-  dayGreen: '#8fbf7f',
-  dayPink: '#c47aa8',
+  // Day mode: the same four colour codes as night mode (V20-048, Dan, Nov 11).
+  dayPurple: '#8869cb',
+  dayTeal: '#06f9c2',
+  dayGreen: '#98ee92',
+  dayPink: '#ff6ad5',
   nightBgImage: null,
   dayBgImage: null
 };

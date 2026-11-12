@@ -593,15 +593,20 @@ export function LaunchersPanel(p: Props) {
               if (el.clientWidth) setPage(Math.round(el.scrollLeft / el.clientWidth));
             }}
           >
-          {pages.map((items, pi) => (
+          {(() => {
+          // V20-048: the first of today's launches still to do gets the teal box, like the routine's NOW card.
+          let nextMarked = false;
+          return pages.map((items, pi) => (
           <ul className="timed-list" key={pi} aria-label={pages.length > 1 ? `Page ${pi + 1} of ${pages.length}` : undefined}>
             {items.map((l) => {
               // Tomorrow shows plain rows: today's check-offs belong to today.
               const ahead = view === 'tomorrow' || view === 'scheduled';
               const todays = !ahead && l.active && happensToday(l, p.today);
               const how = ahead ? undefined : stateOf(l);
+              const isNext = view === 'active' && todays && (!how || how === 'launched') && !nextMarked;
+              if (isNext) nextMarked = true;
               return (
-                <li key={l.id} className={`timed-item${how && how !== 'launched' ? ` is-${how}` : ''}${how === 'launched' ? ' is-launched' : ''}`}>
+                <li key={l.id} className={`timed-item${how && how !== 'launched' ? ` is-${how}` : ''}${how === 'launched' ? ' is-launched' : ''}${isNext ? ' is-next' : ''}`}>
                   <button
                     type="button"
                     className="timed-row"
@@ -723,7 +728,8 @@ export function LaunchersPanel(p: Props) {
               );
             })}
           </ul>
-          ))}
+          ));
+          })()}
           </div>
           {pages.length > 1 && (
             <div className="timed-dots" aria-hidden="true">

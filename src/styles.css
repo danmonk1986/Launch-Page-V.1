@@ -1207,14 +1207,21 @@ input:-webkit-autofill:focus {
 .app[data-tone='light']:not(.is-kb) { --surface: #f5f5dc; }
 .app[data-tone='light']:not(.is-kb) .panel { --surface-solid: #f5f5dc; }
 .app[data-tone='light'] .panel .combo-list { background: #ffffff; }
-.app[data-tone='light'] .tile, .app[data-tone='light'] .timed-row, .app[data-tone='light'] .panel .timed-item { background: #ffffff; }
+.app[data-tone='light'] .tile { background: #ffffff; }
+/* V20-048 (Dan, Nov 11): the next timed launch and the routine's NOW step sit in a teal box with a soft glow, in both modes. */
+.timed-item.is-next { border: 2px solid var(--accent-teal); border-radius: 14px; padding: 2px 8px 2px 0; box-shadow: 0 0 16px color-mix(in srgb, var(--accent-teal) 30%, transparent); }
+.timed-item.is-next .timed-time { color: var(--accent-teal); }
+.now-card { border: 2px solid var(--accent-teal); box-shadow: 0 0 18px color-mix(in srgb, var(--accent-teal) 30%, transparent); }
+/* V20-048: day mode settings match night mode: teal outline, light teal tint, teal icon and text. */
+.app[data-tone='light']:not(.is-kb) .topbar .gear-btn { border-color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); color: var(--accent-teal); }
 .app[data-tone='light'] .status { background: rgb(68 66 66 / 0.08); }
 .app[data-tone='light'] .ev-google { background: #ffffff; box-shadow: 0 1px 3px rgb(68 66 66 / 0.2); }
 .app[data-tone='light'] .task-row.is-alt td { background: rgb(68 66 66 / 0.045); }
 .app[data-tone='light'] .motto { color: #444242; }
-.app[data-tone='light'] .tool-btn-go, .app[data-tone='light'] .tool-btn-go:hover { color: #ffffff; }
-.app[data-tone='light'] .btn:not(.btn-quiet) { color: #ffffff; }
-.app[data-tone='light'] .now-pill { color: #ffffff; }
+/* V20-048: day mode uses the same bright teal as night mode, so text on a teal fill stays dark. */
+.app[data-tone='light'] .tool-btn-go, .app[data-tone='light'] .tool-btn-go:hover { color: #14102b; }
+.app[data-tone='light'] .btn:not(.btn-quiet) { color: #14102b; }
+.app[data-tone='light'] .now-pill { color: #14102b; }
 .app[data-tone='light'] .ev-teal { color: #0d5c4b; }
 .app[data-tone='light'] .ev-purple { color: #ffffff; }
 .app[data-tone='light'] .ev-blue { color: #2c3e8f; }
@@ -1545,7 +1552,7 @@ html.snap-scroll { scroll-snap-type: y mandatory; scroll-padding-top: calc(var(-
 .d26-check:hover { border-color: var(--accent-teal); }
 .d26-check.is-log { border-style: dashed; }
 .d26-item.is-done .d26-check { background: var(--accent-teal); border-color: var(--accent-teal); border-style: solid; }
-.app[data-tone='light'] .d26-item.is-done .d26-check { color: #ffffff; }
+.app[data-tone='light'] .d26-item.is-done .d26-check { color: #14102b; }
 .d26-item-label { font-size: 15px; line-height: 1.3; text-align: left; overflow-wrap: anywhere; }
 .d26-item-label.is-link { background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; font-size: 15px; text-decoration: underline dotted color-mix(in srgb, var(--accent-teal) 60%, transparent); text-underline-offset: 4px; }
 .d26-item-label.is-link:hover { color: var(--accent-teal); }
@@ -1773,7 +1780,7 @@ dialog.crawl::backdrop { background: #000000; }
   .crawl-floor, .crawl-snow { animation: none; }
 }
 .rit-step.is-done .d26-check { background: var(--accent-teal); border-color: var(--accent-teal); color: #120c2a; }
-.app[data-tone='light'] .rit-step.is-done .d26-check { color: #ffffff; }
+.app[data-tone='light'] .rit-step.is-done .d26-check { color: #14102b; }
 .sheet:has(.rit) { width: min(1180px, calc(100vw - 32px)); }
 
 /* Rituals (Oct 17, 3:50 AM): small step tiles wrap four to a row; meditation and check-in take full rows. */

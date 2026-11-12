@@ -1296,15 +1296,15 @@ export default function App() {
     setStatus(synced ? 'Settings saved and synced.' : 'Settings saved on this device.');
   }
 
-  // On the light Damascus theme the neons are deepened a little so they read on white.
   const light = LIGHT_BACKGROUNDS.includes(settings.background);
-  const ink = (c: string, pct: number) => (light ? `color-mix(in srgb, ${c} ${pct}%, #2b2a2a)` : c);
+  // Night mode (dark backgrounds) and day mode (light backgrounds) each have their own four colours.
+  // V20-048 (Dan, Nov 11): day mode uses its colours exactly as picked (no deepening), so the same
+  // codes look the same in both modes.
   const theme = {
-    // Night mode (dark backgrounds) and day mode (light backgrounds) each have their own four colours.
-    '--accent-purple': light ? ink(settings.dayPurple, 92) : settings.accentPurple,
-    '--accent-teal': light ? ink(settings.dayTeal, 72) : settings.accentTeal,
-    '--accent-green': light ? ink(settings.dayGreen, 80) : settings.accentGreen,
-    '--accent-pink': light ? ink(settings.dayPink, 88) : settings.accentPink
+    '--accent-purple': light ? settings.dayPurple : settings.accentPurple,
+    '--accent-teal': light ? settings.dayTeal : settings.accentTeal,
+    '--accent-green': light ? settings.dayGreen : settings.accentGreen,
+    '--accent-pink': light ? settings.dayPink : settings.accentPink
   } as CSSProperties;
 
   // Your own background image for this mode, if you've picked one.
