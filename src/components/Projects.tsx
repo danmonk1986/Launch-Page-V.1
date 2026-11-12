@@ -1,19 +1,18 @@
 import { useState, useId } from 'react';
-import { FormActions, Sheet } from './Sheet';
+import { FormActions } from './Sheet';
 import { projectTree, type Project } from '../lib/projects';
 import type { GoogleCalendar } from '../lib/google';
 
 type Props = {
-  open: boolean;
-  onClose: () => void;
   projects: Project[];
   calendars: GoogleCalendar[];
   onSave: (p: Project) => Promise<void>;
   onDelete: (p: Project) => Promise<void>;
 };
 
-/** Areas and the projects nested under them, each with a colour and a Google calendar. */
-export function ProjectsSheet({ open, onClose, projects, calendars, onSave, onDelete }: Props) {
+/** Areas and the projects nested under them, each with a colour and a Google calendar.
+    V20-111: lives in Settings › Projects (it was its own sheet from the Tasks page's folder button). */
+export function ProjectsManager({ projects, calendars, onSave, onDelete }: Props) {
   const [editing, setEditing] = useState<Project | null>(null);
   const tree = projectTree(projects);
   const calName = (id: string | null) => calendars.find((c) => c.id === id)?.summary ?? (id ? 'Google calendar' : null);
@@ -29,15 +28,8 @@ export function ProjectsSheet({ open, onClose, projects, calendars, onSave, onDe
     });
 
   return (
-    <Sheet
-      open={open}
-      title={editing ? (projects.some((p) => p.id === editing.id) ? `Edit ${editing.name}` : 'Add project') : 'Areas and projects'}
-      onClose={() => {
-        if (editing) setEditing(null);
-        else onClose();
-      }}
-      wide
-    >
+    <div className="projects-manager">
+      <h3 className="account-title">{editing ? (projects.some((p) => p.id === editing.id) ? `Edit ${editing.name}` : 'Add project') : 'Areas and projects'}</h3>
       {editing ? (
         <ProjectForm
           key={editing.id}
@@ -84,7 +76,7 @@ export function ProjectsSheet({ open, onClose, projects, calendars, onSave, onDe
           {!calendars.length && <p className="field-hint">Connect Google Calendar on the Launch Page to link areas to your calendars.</p>}
         </div>
       )}
-    </Sheet>
+    </div>
   );
 }
 

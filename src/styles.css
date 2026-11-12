@@ -1104,8 +1104,8 @@ input:-webkit-autofill:focus {
 .tool-btn-danger.is-armed { background: #ffb4a8; color: #14102b; border-color: #ffb4a8; }
 .tool-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .delete-hint { color: #ffb4a8; margin-top: -6px; }
-.gear-menu-list { left: auto; right: 0; min-width: 200px; }
-.gear-menu { z-index: 40; }
+
+
 
 /* Tabs fold into a teal ⌄ menu when they don't fit */
 .topbar .tabs { grid-area: tabs; margin-left: -10px; position: relative; flex-wrap: nowrap; overflow: visible; min-width: 0; }
@@ -2319,7 +2319,7 @@ select.status-pick:not([multiple]) { padding: 3px 10px !important; min-width: 96
 @media (max-width: 640px) {
   .topbar { grid-template-areas: "logo logo" "words words" "clock gear" "tabs routine"; column-gap: 12px; }
   .topbar .topbar-controls { display: contents; }
-  .topbar .gear-menu { grid-area: gear; justify-self: end; }
+  .topbar .gear-btn { grid-area: gear; justify-self: end; }
   .topbar .picker { grid-area: routine; justify-self: end; min-width: 0; max-width: 100%; }
   .topbar .picker-split { height: 40px; }
   .topbar .picker-main { min-width: 0; padding: 0 12px; font-size: 12px; letter-spacing: 0.08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2346,7 +2346,7 @@ select.status-pick:not([multiple]) { padding: 3px 10px !important; min-width: 96
 @media (max-width: 640px) {
   .topbar { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "logo logo" "words words" "clock clock" "tabs routine"; }
   .topbar .topbar-logo { justify-self: start; max-width: calc(100% - 60px); }
-  .topbar .gear-menu { grid-area: logo; justify-self: end; align-self: center; }
+  .topbar .gear-btn { grid-area: logo; justify-self: end; align-self: center; }
   .topbar .picker { justify-self: stretch; width: 100%; max-width: none; }
   .topbar .picker-split { width: 100%; }
   .topbar .picker-main { flex: 1 1 auto; }
@@ -3071,3 +3071,18 @@ button.kb-btn { font-family: inherit; }
 /* V20-110 (Dan, Nov 12): the Tasks page's groups are tabs like Timed launches, not pills. In the card's column they
    keep their own height (the 300px basis is for sitting in a row). */
 .panel-tasks-page > .fold-tabs { flex: none; margin: 0 0 14px; }
+
+/* V20-111 (Dan, Nov 12): Settings, a wide pop-out window with tabs across the top like Timed launches and Tasks. */
+.sheet-settings { width: min(1100px, calc(100vw - 32px)); min-height: min(640px, calc(100dvh - 48px)); }
+.sheet-settings > .fold-tabs { flex: none; margin: 0 0 18px; }
+.settings-body { max-width: 760px; }
+.settings-note { color: var(--mist); margin: 6px 0 0; }
+.settings-actions { display: grid; gap: 10px; }
+.settings-action { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 1px solid var(--edge); border-radius: 12px; }
+.settings-action-title { margin: 0 0 2px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: 13px; }
+.settings-action .field-hint { margin: 0; }
+.settings-action .btn { flex: none; }
+.projects-manager .account-title { margin-top: 0; }
+@media (max-width: 640px) { .settings-action { flex-direction: column; align-items: stretch; } }
+.btn.btn-danger { background: transparent; border: 1px solid #e0806f; color: #e0806f; }
+.btn.btn-danger:hover { background: rgb(224 128 111 / 0.12); }

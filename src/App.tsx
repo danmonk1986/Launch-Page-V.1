@@ -56,7 +56,7 @@ import { LaunchReminder, MissedLaunches, TimeUpReminder } from './components/Lau
 import { chime, unlockAudioOnFirstGesture } from './lib/alerts';
 import { WeekCalendar } from './components/WeekCalendar';
 import { TasksPage, TasksPanel } from './components/Tasks';
-import { ProjectsSheet } from './components/Projects';
+import { ProjectsManager } from './components/Projects';
 import { matchCalendar, projectStore, type Project } from './lib/projects';
 import { buildJournalImport, byNewest, checkinsOf, journalStore, mergeJournal, newEntry, withCheckins, type JournalEntry } from './lib/journal';
 import { JournalPanel } from './components/Journal';
@@ -107,8 +107,7 @@ import {
   type Routine,
   type Shift
 } from './lib/routines';
-import { SettingsPanel } from './components/SettingsPanel';
-import { GearMenu } from './components/GearMenu';
+import { SettingsPanel, type SettingsTab } from './components/SettingsPanel';
 import { SignIn } from './components/SignIn';
 import { KnowledgeBasePage } from './components/KnowledgeBase';
 
@@ -116,7 +115,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(!supabase);
   const [settings, setSettings] = useState<BrandSettings>(DEFAULT_SETTINGS);
-  const [settingsOpen, setSettingsOpen] = useState<false | 'brand' | 'colours'>(false);
+  const [settingsOpen, setSettingsOpen] = useState<false | SettingsTab>(false);
   const [status, setStatus] = useState('');
   // A page in the address (#tasks, #budget…) opens there: card rockets from a timed launch use it.
   const [page, setPage] = useState<PageId>(() => {
@@ -198,7 +197,6 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   // eslint-disable-next-line react-hooks/refs
   tasksRef.current = tasks;
-  const [projectsOpen, setProjectsOpen] = useState(false);
   const [calVersion, setCalVersion] = useState(0);
   const [storeProblem, setStoreProblem] = useState<string | null>(null);
   const [reminder, setReminder] = useState<Launch | null>(null);
@@ -1506,50 +1504,13 @@ export default function App() {
             e.target.value = '';
           }}
         />
-        <GearMenu
-          items={[
-            { label: 'Brand settings', onClick: () => setSettingsOpen('brand') },
-            { label: 'Colour settings', onClick: () => setSettingsOpen('colours') },
-            { label: 'Import tasks', onClick: () => importInput.current?.click() },
-            // KNOWLEDGE!B4SE: its import lives here so the page itself stays clean.
-            ...(page === 'kb' ? [{ label: 'Import knowledge base', onClick: () => window.dispatchEvent(new Event('kb:import')) }] : []),
-            {
-              label: 'Export my data',
-              onClick: async () => {
-                // V12-042: the Launch Sheet, one tab per card (Google events from this device's cache).
-                const googleEvents = await loadCached(userId).catch(() => [] as CalEvent[]);
-                const counts = downloadLaunchSheet({
-                  settings, routines, meditations, launchers, launches, launchLog, events, googleEvents, tasks, projects, journal,
-                  days: d26Days, nonnegs, logs: d26Logs, quotes, config: d26Config, budget
-                });
-                setStatus(`Launch Sheet exported: ${counts.length + 1} tabs, ${counts.reduce((a, c) => a + c.rows, 0)} rows.`);
-              }
-            },
-            ...(googleConfigured() && wasConnected()
-              ? [
-                  {
-                    label: 'Disconnect Google Calendar',
-                    onClick: () => {
-                      setPage('launch');
-                      setGcalOff((n) => n + 1);
-                    }
-                  }
-                ]
-              : []),
-            ...(supabase && session
-              ? [
-                  {
-                    label: 'Change password',
-                    onClick: () => {
-                      setSettingsOpen('brand');
-                      setTimeout(() => document.querySelector<HTMLInputElement>('.account input[type=password]')?.focus(), 150);
-                    }
-                  },
-                  { label: 'Sign out', danger: true, onClick: () => void signOutClean() }
-                ]
-              : [])
-          ]}
-        />
+        {/* V20-111 (Dan, Nov 12): the ⚙ opens the Settings window straight away (no drop-down). */}
+        <button type="button" className="icon-btn tool-btn gear-btn" aria-label="Settings" title="Settings" onClick={() => setSettingsOpen('account')}>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+          </svg>
+        </button>
     </>
   );
   // KNOWLEDGE!B4SE (Nov 6, Dan): a white page of its own, whatever the theme, with a slim header.
@@ -1714,7 +1675,7 @@ export default function App() {
                   onSaveMany={saveTasks}
                   onAddToCalendar={addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
-              onOpenProjects={() => setProjectsOpen(true)}
+              onOpenProjects={() => setSettingsOpen('projects')}
               onClose={() => {
                 returnTo.current = 'h-tasks';
                 setPage('launch');
@@ -1827,14 +1788,6 @@ export default function App() {
           ) : (
             <ComingSoon page={page} />
           )}
-          <ProjectsSheet
-            open={projectsOpen}
-            onClose={() => setProjectsOpen(false)}
-            projects={projects}
-            calendars={knownCalendars()}
-            onSave={projectOps.save}
-            onDelete={deleteProject}
-          />
         </main>
         <footer className="toolbar">
           <img className="toolbar-logo" src="/launchpage-logo.png" alt="LaunchPage" />
@@ -1951,7 +1904,54 @@ export default function App() {
       />
       <SettingsPanel
         open={!!settingsOpen}
-        section={settingsOpen || 'brand'}
+        tab={settingsOpen || 'account'}
+        onTab={setSettingsOpen}
+        email={session?.user.email ?? null}
+        projects={<ProjectsManager projects={projects} calendars={knownCalendars()} onSave={projectOps.save} onDelete={deleteProject} />}
+        onSignOut={supabase && session ? () => void signOutClean() : undefined}
+        data={[
+          {
+            label: 'Export my data',
+            hint: 'Downloads the Launch Sheet: one .xlsx with a tab for every card.',
+            button: 'Export',
+            onClick: async () => {
+              // V12-042: the Launch Sheet, one tab per card (Google events from this device's cache).
+              const googleEvents = await loadCached(userId).catch(() => [] as CalEvent[]);
+              const counts = downloadLaunchSheet({
+                settings, routines, meditations, launchers, launches, launchLog, events, googleEvents, tasks, projects, journal,
+                days: d26Days, nonnegs, logs: d26Logs, quotes, config: d26Config, budget
+              });
+              setStatus(`Launch Sheet exported: ${counts.length + 1} tabs, ${counts.reduce((a, c) => a + c.rows, 0)} rows.`);
+            }
+          },
+          {
+            label: 'Import tasks',
+            hint: 'Adds tasks from a Launch Sheet export or a tasks CSV. Rows already in your list are skipped.',
+            button: 'Import',
+            onClick: () => {
+              setSettingsOpen(false);
+              importInput.current?.click();
+            }
+          },
+          // KNOWLEDGE!B4SE: its import lives here so the page itself stays clean.
+          ...(page === 'kb'
+            ? [{ label: 'Import knowledge base', hint: 'Adds courses and decks to KNOWLEDGE!B4SE.', button: 'Import', onClick: () => { setSettingsOpen(false); window.dispatchEvent(new Event('kb:import')); } }]
+            : []),
+          ...(googleConfigured() && wasConnected()
+            ? [
+                {
+                  label: 'Disconnect Google Calendar',
+                  hint: 'Stops showing your Google calendars on This Week. Your Launch Page events stay.',
+                  button: 'Disconnect',
+                  onClick: () => {
+                    setSettingsOpen(false);
+                    setPage('launch');
+                    setGcalOff((n) => n + 1);
+                  }
+                }
+              ]
+            : [])
+        ]}
         settings={settings}
         onClose={() => setSettingsOpen(false)}
         onSave={handleSave}

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
 import { BACKGROUNDS, type Background, type BrandSettings } from '../lib/settings';
 import type { ScrollMode } from '../lib/view';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, useClickOff } from './Sheet';
+import { FoldTabs } from './FoldTabs';
 
 const BG_LABEL: Record<Background, string> = {
   synthwave: 'Synthwave',
@@ -13,10 +14,25 @@ const BG_LABEL: Record<Background, string> = {
   white: 'White'
 };
 
+/** V20-111 (Dan, Nov 12): Settings is a wide pop-out window with tabs across the top (like Timed launches and Tasks). */
+export type SettingsTab = 'account' | 'appearance' | 'modules' | 'projects' | 'data' | 'privacy' | 'signout';
+export const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
+  { id: 'account', label: 'Account Information' },
+  { id: 'appearance', label: 'Appearance' },
+  { id: 'modules', label: 'Modules' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'data', label: 'Data Management' },
+  { id: 'privacy', label: 'Privacy Statement' },
+  { id: 'signout', label: 'Sign Out' }
+];
+
+/** One thing you can do in Data Management (export, import, disconnect). */
+export type DataAction = { label: string; hint: string; button: string; onClick: () => void };
+
 type Props = {
   open: boolean;
-  /** Brand settings (name, logo, headline, scrolling, password) or Colour settings (background, night and day colours). */
-  section: 'brand' | 'colours';
+  tab: SettingsTab;
+  onTab: (t: SettingsTab) => void;
   settings: BrandSettings;
   onClose: () => void;
   onSave: (s: BrandSettings) => Promise<void>;
@@ -25,9 +41,15 @@ type Props = {
   onScrollMode: (m: ScrollMode) => void;
   /** Present only when signed in to the cloud. Returns an error message, or null on success. */
   onSetPassword?: (password: string) => Promise<string | null>;
+  /** The sign-in email, when signed in. */
+  email?: string | null;
+  /** The Projects tab (moved here from the Tasks page's folder button). */
+  projects: ReactNode;
+  data: DataAction[];
+  onSignOut?: () => void;
 };
 
-export function SettingsPanel({ open, section, settings, onClose, onSave, onSetPassword, scrollMode, onScrollMode }: Props) {
+export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onSetPassword, scrollMode, onScrollMode, email, projects, data, onSignOut }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState(settings);
   const [saving, setSaving] = useState(false);
@@ -68,142 +90,180 @@ export function SettingsPanel({ open, section, settings, onClose, onSave, onSetP
     if (!error) setNewPassword('');
   }
 
+  // Account Information and Appearance share one draft and one Save.
+  const saves = tab === 'account' || tab === 'appearance';
+  const current = SETTINGS_TABS.find((t) => t.id === tab)!;
+
   return (
-    <dialog ref={ref} className="sheet" onClose={onClose} aria-labelledby="settings-title" {...clickOff}>
-      <form onSubmit={submit}>
-        <div className="sheet-head">
-          <h2 id="settings-title">{section === 'brand' ? 'Brand settings' : 'Colour settings'}</h2>
-          <div className="sheet-tools">
-            <button type="submit" className="icon-btn tool-btn tool-btn-go" disabled={saving} aria-label="Save settings" title="Save">
+    <dialog ref={ref} className="sheet sheet-settings" onClose={onClose} aria-labelledby="settings-title" {...clickOff}>
+      <div className="sheet-head">
+        <h2 id="settings-title">Settings</h2>
+        <div className="sheet-tools">
+          {saves && (
+            <button type="submit" form="settings-form" className="icon-btn tool-btn tool-btn-go" disabled={saving} aria-label="Save settings" title="Save">
               <HeadIcon d={SAVE_ICON} />
             </button>
-            <button type="button" className="icon-btn tool-btn" onClick={onClose} aria-label="Close settings" title="Close">
-              <HeadIcon d={CLOSE_ICON} />
-            </button>
-          </div>
+          )}
+          <button type="button" className="icon-btn tool-btn" onClick={onClose} aria-label="Close settings" title="Close">
+            <HeadIcon d={CLOSE_ICON} />
+          </button>
         </div>
+      </div>
+      <FoldTabs label="Settings" items={SETTINGS_TABS} value={tab} onPick={onTab} />
 
-        {section === 'brand' && (
-          <>
-        <label className="field">
-          <span>Your name</span>
-          <input value={draft.displayName} onChange={(e) => set('displayName', e.target.value)} />
-        </label>
-        <label className="field">
-          <span>Logo text</span>
-          <input value={draft.logoText} onChange={(e) => set('logoText', e.target.value)} />
-        </label>
-        <ImagePick
-          label="Logo (optional, replaces the LaunchPage logo)"
-          hint="Ideal: 600 × 110 px. PNG keeps a see-through background; JPEG works too. Shown 54 px tall."
-          value={draft.logoUrl}
-          wide
-          shrink={{ maxW: 1200, maxH: 220, type: 'image/png' }}
-          onChange={(v) => set('logoUrl', v)}
-        />
-        <label className="field">
-          <span>Headline (top bar)</span>
-          <input value={draft.goal} onChange={(e) => set('goal', e.target.value)} />
-        </label>
-        <label className="field">
-          <span>Mantra</span>
-          <input value={draft.mantra} onChange={(e) => set('mantra', e.target.value)} />
-        </label>
-          </>
-        )}
-
-        {section === 'brand' && (
-        <fieldset className="field">
-          <legend>Scrolling (this device)</legend>
-          <div className="choice-row">
-            <label className="choice">
-              <input type="radio" name="scroll" checked={scrollMode === 'free'} onChange={() => onScrollMode('free')} />
-              <span>Free</span>
-            </label>
-            <label className="choice">
-              <input type="radio" name="scroll" checked={scrollMode === 'cards'} onChange={() => onScrollMode('cards')} />
-              <span>Card by card</span>
-            </label>
-          </div>
-          <p className="field-hint">Card by card: each scroll lands on the next card, and the routine stays fixed beside them, following the time.</p>
-        </fieldset>
-
-        )}
-        {section === 'colours' && (
-          <>
-        <fieldset className="field">
-          <legend>Background</legend>
-          <div className="choice-row">
-            {BACKGROUNDS.map((b) => (
-              <label key={b} className="choice">
-                <input
-                  type="radio"
-                  name="background"
-                  checked={draft.background === b}
-                  onChange={() => set('background', b)}
-                />
-                <span>{BG_LABEL[b]}</span>
+      <div className="settings-body" role="tabpanel" aria-label={current.label}>
+        <form id="settings-form" onSubmit={submit} hidden={!saves}>
+          {tab === 'account' && (
+            <>
+              <label className="field">
+                <span>Your name</span>
+                <input value={draft.displayName} onChange={(e) => set('displayName', e.target.value)} />
               </label>
-            ))}
-          </div>
-        </fieldset>
+              {email && (
+                <label className="field">
+                  <span>Sign-in email</span>
+                  <input value={email} readOnly aria-readonly="true" />
+                </label>
+              )}
+            </>
+          )}
 
-        <fieldset className="field">
-          <legend>Your own background (optional, replaces the one picked above)</legend>
-          <div className="bg-picks">
-            <ImagePick label="Night mode" value={draft.nightBgImage} shrink={{ maxW: 2560, maxH: 1600, type: 'image/jpeg', quality: 0.8 }} onChange={(v) => set('nightBgImage', v)} />
-            <ImagePick label="Day mode" value={draft.dayBgImage} shrink={{ maxW: 2560, maxH: 1600, type: 'image/jpeg', quality: 0.8 }} onChange={(v) => set('dayBgImage', v)} />
-          </div>
-          <p className="field-hint">Ideal: 2560 × 1440 px JPEG (16:9). Night mode shows on Synthwave, Starry night and Navy; Day mode on Damascus, Snowy day and White.</p>
-        </fieldset>
+          {tab === 'appearance' && (
+            <>
+              <label className="field">
+                <span>Logo text</span>
+                <input value={draft.logoText} onChange={(e) => set('logoText', e.target.value)} />
+              </label>
+              <ImagePick
+                label="Logo (optional, replaces the LaunchPage logo)"
+                hint="Ideal: 600 × 110 px. PNG keeps a see-through background; JPEG works too. Shown 54 px tall."
+                value={draft.logoUrl}
+                wide
+                shrink={{ maxW: 1200, maxH: 220, type: 'image/png' }}
+                onChange={(v) => set('logoUrl', v)}
+              />
+              <label className="field">
+                <span>Headline (top bar)</span>
+                <input value={draft.goal} onChange={(e) => set('goal', e.target.value)} />
+              </label>
+              <label className="field">
+                <span>Mantra</span>
+                <input value={draft.mantra} onChange={(e) => set('mantra', e.target.value)} />
+              </label>
 
-        <fieldset className="field">
-          <legend>Night mode colours · Synthwave, Starry night, Navy</legend>
-          <div className="swatches">
-            <ColourField label="Purple" value={draft.accentPurple} onChange={(v) => set('accentPurple', v)} />
-            <ColourField label="Teal" value={draft.accentTeal} onChange={(v) => set('accentTeal', v)} />
-            <ColourField label="Green" value={draft.accentGreen} onChange={(v) => set('accentGreen', v)} />
-            <ColourField label="Pink" value={draft.accentPink} onChange={(v) => set('accentPink', v)} />
-          </div>
-        </fieldset>
-        <fieldset className="field">
-          <legend>Day mode colours · Damascus, Snowy day, White</legend>
-          <div className="swatches">
-            <ColourField label="Purple" value={draft.dayPurple} onChange={(v) => set('dayPurple', v)} />
-            <ColourField label="Teal" value={draft.dayTeal} onChange={(v) => set('dayTeal', v)} />
-            <ColourField label="Green" value={draft.dayGreen} onChange={(v) => set('dayGreen', v)} />
-            <ColourField label="Pink" value={draft.dayPink} onChange={(v) => set('dayPink', v)} />
-          </div>
-          <p className="field-hint">Purple and Teal run the app; all four are rocket colours. Tap a swatch to pick (the dropper picks from the screen), or paste a hex code.</p>
-        </fieldset>
-          </>
-        )}
-      </form>
+              <fieldset className="field">
+                <legend>Scrolling (this device)</legend>
+                <div className="choice-row">
+                  <label className="choice">
+                    <input type="radio" name="scroll" checked={scrollMode === 'free'} onChange={() => onScrollMode('free')} />
+                    <span>Free</span>
+                  </label>
+                  <label className="choice">
+                    <input type="radio" name="scroll" checked={scrollMode === 'cards'} onChange={() => onScrollMode('cards')} />
+                    <span>Card by card</span>
+                  </label>
+                </div>
+                <p className="field-hint">Card by card: each scroll lands on the next card, and the routine stays fixed beside them, following the time.</p>
+              </fieldset>
 
-      {section === 'brand' && onSetPassword && (
-        <form className="account" onSubmit={submitPassword}>
-          <h3 className="account-title">Sign-in password</h3>
-          <label className="field">
-            <span>New password</span>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-          </label>
-          <div className="sheet-actions">
-            <button type="submit" className="btn btn-quiet">
-              Set password
-            </button>
-          </div>
-          {pwStatus && (
-            <p className="account-status" role="status">
-              {pwStatus}
-            </p>
+              <fieldset className="field">
+                <legend>Background</legend>
+                <div className="choice-row">
+                  {BACKGROUNDS.map((b) => (
+                    <label key={b} className="choice">
+                      <input type="radio" name="background" checked={draft.background === b} onChange={() => set('background', b)} />
+                      <span>{BG_LABEL[b]}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <fieldset className="field">
+                <legend>Your own background (optional, replaces the one picked above)</legend>
+                <div className="bg-picks">
+                  <ImagePick label="Night mode" value={draft.nightBgImage} shrink={{ maxW: 2560, maxH: 1600, type: 'image/jpeg', quality: 0.8 }} onChange={(v) => set('nightBgImage', v)} />
+                  <ImagePick label="Day mode" value={draft.dayBgImage} shrink={{ maxW: 2560, maxH: 1600, type: 'image/jpeg', quality: 0.8 }} onChange={(v) => set('dayBgImage', v)} />
+                </div>
+                <p className="field-hint">Ideal: 2560 × 1440 px JPEG (16:9). Night mode shows on Synthwave, Starry night and Navy; Day mode on Damascus, Snowy day and White.</p>
+              </fieldset>
+
+              <fieldset className="field">
+                <legend>Night mode colours · Synthwave, Starry night, Navy</legend>
+                <div className="swatches">
+                  <ColourField label="Purple" value={draft.accentPurple} onChange={(v) => set('accentPurple', v)} />
+                  <ColourField label="Teal" value={draft.accentTeal} onChange={(v) => set('accentTeal', v)} />
+                  <ColourField label="Green" value={draft.accentGreen} onChange={(v) => set('accentGreen', v)} />
+                  <ColourField label="Pink" value={draft.accentPink} onChange={(v) => set('accentPink', v)} />
+                </div>
+              </fieldset>
+              <fieldset className="field">
+                <legend>Day mode colours · Damascus, Snowy day, White</legend>
+                <div className="swatches">
+                  <ColourField label="Purple" value={draft.dayPurple} onChange={(v) => set('dayPurple', v)} />
+                  <ColourField label="Teal" value={draft.dayTeal} onChange={(v) => set('dayTeal', v)} />
+                  <ColourField label="Green" value={draft.dayGreen} onChange={(v) => set('dayGreen', v)} />
+                  <ColourField label="Pink" value={draft.dayPink} onChange={(v) => set('dayPink', v)} />
+                </div>
+                <p className="field-hint">Purple and Teal run the app; all four are rocket colours. Tap a swatch to pick (the dropper picks from the screen), or paste a hex code.</p>
+              </fieldset>
+            </>
           )}
         </form>
-      )}
+
+        {tab === 'account' && onSetPassword && (
+          <form className="account" onSubmit={submitPassword}>
+            <h3 className="account-title">Sign-in password</h3>
+            <label className="field">
+              <span>New password</span>
+              <input type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </label>
+            <div className="sheet-actions">
+              <button type="submit" className="btn btn-quiet">
+                Set password
+              </button>
+            </div>
+            {pwStatus && (
+              <p className="account-status" role="status">
+                {pwStatus}
+              </p>
+            )}
+          </form>
+        )}
+
+        {tab === 'modules' && <p className="settings-note">Coming next: switch each card on the Launch Page on or off.</p>}
+
+        {tab === 'projects' && projects}
+
+        {tab === 'data' && (
+          <div className="settings-actions">
+            {data.map((a) => (
+              <div key={a.label} className="settings-action">
+                <div>
+                  <p className="settings-action-title">{a.label}</p>
+                  <p className="field-hint">{a.hint}</p>
+                </div>
+                <button type="button" className="btn btn-quiet" onClick={a.onClick}>
+                  {a.button}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === 'privacy' && <p className="settings-note">Coming next: the privacy statement, drafted for Dan to review.</p>}
+
+        {tab === 'signout' && (
+          <div className="settings-action">
+            <div>
+              <p className="settings-action-title">Sign out</p>
+              <p className="field-hint">{email ? `Signed in as ${email}. ` : ''}Signing out clears this device's copy; everything stays saved in your account.</p>
+            </div>
+            <button type="button" className="btn btn-danger" onClick={onSignOut} disabled={!onSignOut}>
+              Sign out
+            </button>
+          </div>
+        )}
+      </div>
     </dialog>
   );
 }
