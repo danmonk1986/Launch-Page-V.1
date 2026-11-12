@@ -1171,7 +1171,16 @@ export default function App() {
       const key = runKey(l, now);
       if (handled[key] !== 'launched' || endAlerted[key] || paused[key]?.at) return false;
       const [h, m] = timeFor(l, now).split(':').map(Number);
-      const end = h * 60 + m + l.minutes + extraToday(l) + Math.round(pausedMin(l, now.getTime()));
+      // V20-063 (Nov 11): the clock runs from the later of the set time and when it was started, so a run
+      // started late (▶ on a missed run, or late from Active) gets its full time instead of being up at once.
+      let start = h * 60 + m;
+      const at = logFor(launchLog, l, now).launchedAt;
+      if (at) {
+        const t = new Date(at);
+        const atMin = t.getHours() * 60 + t.getMinutes();
+        if (isoDate(t) === isoDate(now) && atMin > start) start = atMin;
+      }
+      const end = start + l.minutes + extraToday(l) + Math.round(pausedMin(l, now.getTime()));
       return nowMin >= end;
     });
     if (!over) return;
