@@ -560,8 +560,8 @@ function useTaskEditor(p: EditorProps) {
       setEditing(t);
       setOpen(true);
     },
-    add: () => {
-      setEditing(newTask(p.tasks.length));
+    add: (fill?: Partial<Task>) => {
+      setEditing({ ...newTask(p.tasks.length), ...fill });
       setOpen(true);
     },
     addStep: (picked: Task) => {
@@ -601,8 +601,22 @@ function useActions(p: PageProps, editor: ReturnType<typeof useTaskEditor>, open
 }
 
 /** Launch Page: just Due today and the 3 key tasks. */
-export function TasksPanel(p: PageProps & { onOpenAll: () => void; onOpenTask: (t: Task) => void }) {
+export function TasksPanel(
+  p: PageProps & {
+    onOpenAll: () => void;
+    onOpenTask: (t: Task) => void;
+    /** V20-083: opens Add task filled in (from a new calendar event's Add a task too). */
+    addPreset?: { fill: Partial<Task>; n: number } | null;
+    onAddPresetUsed?: () => void;
+  }
+) {
   const editor = useTaskEditor(p);
+  useEffect(() => {
+    if (!p.addPreset) return;
+    editor.add(p.addPreset.fill);
+    p.onAddPresetUsed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.addPreset?.n]);
   const act = useActions(p, editor, p.onOpenTask);
   const grouped = groupTasks(p.tasks, p.today);
   return (

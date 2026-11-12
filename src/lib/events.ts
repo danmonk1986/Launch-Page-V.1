@@ -1,7 +1,8 @@
 import { makeStore } from './store';
 import { isoDate } from './launchers';
 
-export type EventColor = 'teal' | 'purple' | 'blue';
+/** V20-083: one of the three, or any colour you choose as #rrggbb. */
+export type EventColor = 'teal' | 'purple' | 'blue' | `#${string}`;
 
 export interface CalEvent {
   id: string;

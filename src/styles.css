@@ -2963,3 +2963,14 @@ button.kb-btn { font-family: inherit; }
 .app .week-arrow { width: 32px; height: 32px; min-height: 32px; min-width: 32px; padding: 0; border: 0; border-radius: 8px; background: none; display: inline-flex; align-items: center; justify-content: center; color: var(--accent-teal); font-size: 0; }
 .app .week-arrow:hover { color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
 .app .week-arrow svg { width: 20px; height: 20px; }
+
+/* V20-083 (Nov 12): event colours are dots only, plus one of your own; Add a task too under them. */
+.event-colors { gap: 10px; }
+.event-color { padding: 10px 14px; gap: 10px; }
+.event-color .swatch-dot { width: 18px; height: 18px; }
+.event-color-pick { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+.event-color-pick::-webkit-color-swatch-wrapper { padding: 0; }
+.event-color-pick::-webkit-color-swatch { border: 0; border-radius: 50%; }
+.event-color-pick::-moz-color-swatch { border: 0; border-radius: 50%; }
+.event-add-task { display: inline-flex; align-items: center; gap: 10px; margin-top: 4px; width: fit-content; }
+.ev-own { color: var(--beige); }

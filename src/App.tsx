@@ -170,6 +170,8 @@ export default function App() {
   const tasksRef = useRef<Task[]>([]);
   const [gcalOff, setGcalOff] = useState(0);
   const [focusTask, setFocusTask] = useState<string | null>(null);
+  // V20-083: a new calendar event with Add a task too opens Add task filled in.
+  const [taskPreset, setTaskPreset] = useState<{ fill: Partial<Task>; n: number } | null>(null);
   const [scrollMode, setScrollMode] = useState<ScrollMode>(readScrollMode);
   // Card by card: the page snaps to each card; the header's height keeps cards clear of it.
   useEffect(() => {
@@ -1654,10 +1656,13 @@ export default function App() {
                     setFocusTask(id);
                     setPage('tasks');
                   }}
+                  onAddTask={(e) => setTaskPreset({ fill: { task: e.title, startDate: e.startDate, endDate: e.endDate }, n: Date.now() })}
                 />
               }
               tasks={
                 <TasksPanel
+                  addPreset={taskPreset}
+                  onAddPresetUsed={() => setTaskPreset(null)}
                   tasks={tasks}
                   onPushToBudget={pushToBudget}
                   projects={projects}

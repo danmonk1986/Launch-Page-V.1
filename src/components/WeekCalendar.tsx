@@ -36,6 +36,8 @@ type Props = {
   /** An event that is a task (added from Tasks): its task's id, so tapping it opens Tasks there. */
   taskFor?: (e: CalEvent) => string | null;
   onOpenTask?: (taskId: string) => void;
+  /** V20-083: Add a task too → opens Add task filled in from the event. */
+  onAddTask?: (e: CalEvent) => void;
 };
 
 const COLORS: EventColor[] = ['teal', 'purple', 'blue'];
@@ -43,7 +45,7 @@ const COLORS: EventColor[] = ['teal', 'purple', 'blue'];
 type GState = 'off' | 'reconnect' | 'loading' | 'on';
 
 /** Sunday to Saturday. Multi-day events span their days; click a day to add, an event to edit. */
-export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, events, projects = [], onCalendars, onSave, onDelete, onStatus, taskFor, onOpenTask }: Props) {
+export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, events, projects = [], onCalendars, onSave, onDelete, onStatus, taskFor, onOpenTask, onAddTask }: Props) {
   const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<CalEvent | null>(null);
   const [newDate, setNewDate] = useState<string | null>(null);
@@ -358,8 +360,10 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
             <button
               key={event.id}
               type="button"
-              className={`week-event ev-${event.google ? 'google' : event.color}${'theme' in rest ? ' ev-theme' : ''}`}
+              className={`week-event ev-${event.google ? 'google' : event.color.startsWith('#') ? 'own' : event.color}${'theme' in rest ? ' ev-theme' : ''}`}
               style={{
+                // V20-083: an event in a colour of your own.
+                ...(!event.google && event.color.startsWith('#') ? { background: `color-mix(in srgb, ${event.color} 30%, transparent)`, borderLeft: `5px solid ${event.color}` } : {}),
                 gridColumn: `${f} / ${t + 1}`,
                 gridRow: lane + 2,
                 ...(event.google
@@ -391,6 +395,7 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
           event={editing}
           date={newDate ?? today}
           googleOn={g === 'on' || g === 'reconnect'}
+          onAddTask={onAddTask}
           onCancel={() => setOpen(false)}
           onSave={async (e, toGoogle) => {
             try {
@@ -444,11 +449,13 @@ function EventForm({
   date,
   googleOn,
   onSave,
-  onDelete
+  onDelete,
+  onAddTask
 }: {
   event: CalEvent | null;
   date: string;
   googleOn: boolean;
+  onAddTask?: (e: CalEvent) => void;
   onCancel?: () => void;
   onSave: (e: CalEvent, toGoogle: boolean) => Promise<void>;
   onDelete: (e: CalEvent) => Promise<void>;
@@ -456,7 +463,10 @@ function EventForm({
   const [d, setD] = useState<CalEvent>(
     () => event ?? { id: crypto.randomUUID(), title: '', startDate: date, endDate: date, color: 'teal', sort: 0 }
   );
-  const [toGoogle, setToGoogle] = useState(googleOn);
+  // V20-083: new events always save to the Launch Page (Google picks them up in its sync).
+  const toGoogle = false;
+  void googleOn;
+  const [addTask, setAddTask] = useState(false);
   const set = <K extends keyof CalEvent>(k: K, v: CalEvent[K]) => setD((x) => ({ ...x, [k]: v }));
   const isGoogle = !!d.google;
   const readOnly = !!d.google?.readOnly;
@@ -471,6 +481,7 @@ function EventForm({
         if (!d.title.trim()) return;
         const endDate = d.endDate < d.startDate ? d.startDate : d.endDate;
         await onSave({ ...d, title: d.title.trim(), endDate }, !event && toGoogle);
+        if (!event && addTask) onAddTask?.({ ...d, title: d.title.trim(), endDate });
       }}
     >
       <label className="field">
@@ -508,34 +519,35 @@ function EventForm({
           </label>
         </div>
       )}
-      {!event && googleOn && (
+      {!google && (
         <fieldset className="field">
-          <legend>Save to</legend>
-          <div className="choice-row">
-            <label className="choice">
-              <input type="radio" name="event-dest" checked={!toGoogle} onChange={() => setToGoogle(false)} />
-              <span>LaunchPage</span>
-            </label>
-            <label className="choice">
-              <input type="radio" name="event-dest" checked={toGoogle} onChange={() => setToGoogle(true)} />
-              <span>Google Calendar</span>
+          <legend>Colour</legend>
+          {/* V20-083 (Dan, Nov 12): dots only, plus a colour of your own. */}
+          <div className="choice-row event-colors">
+            {COLORS.map((c) => (
+              <label key={c} className="choice event-color" title={c === 'teal' ? 'Teal' : c === 'purple' ? 'Purple' : 'Blue'}>
+                <input type="radio" name="event-color" checked={d.color === c} onChange={() => set('color', c)} aria-label={c} />
+                <span className={`swatch-dot ev-${c}`} aria-hidden="true" />
+              </label>
+            ))}
+            <label className="choice event-color event-color-own" title="Choose a colour">
+              <input type="radio" name="event-color" checked={d.color.startsWith('#')} onChange={() => set('color', d.color.startsWith('#') ? d.color : '#ff6ad5')} aria-label="Your own colour" />
+              <input
+                type="color"
+                className="event-color-pick"
+                value={d.color.startsWith('#') ? d.color : '#ff6ad5'}
+                onChange={(e) => set('color', e.target.value as `#${string}`)}
+                aria-label="Choose a colour"
+              />
             </label>
           </div>
         </fieldset>
       )}
-      {!google && (
-        <fieldset className="field">
-          <legend>Colour</legend>
-          <div className="choice-row">
-            {COLORS.map((c) => (
-              <label key={c} className="choice">
-                <input type="radio" name="event-color" checked={d.color === c} onChange={() => set('color', c)} />
-                <span className={`swatch-dot ev-${c}`} aria-hidden="true" />
-                <span>{c === 'teal' ? 'Teal' : c === 'purple' ? 'Purple' : 'Blue'}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
+      {!event && onAddTask && (
+        <label className="choice event-add-task">
+          <input type="checkbox" checked={addTask} onChange={(e) => setAddTask(e.target.checked)} />
+          <span>Add a task too</span>
+        </label>
       )}
       {isGoogle && d.google?.link && (
         <p className="field-hint">
