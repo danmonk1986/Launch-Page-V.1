@@ -278,13 +278,15 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
         {!mobile && (
           <button
             type="button"
-            className="icon-btn tool-btn view-toggle"
+            // V20-081 (Dan, Nov 12): the calendar's view button is the same ⌄ as Rockets: down = this week,
+            // tap for 28 days (it flips up), tap again for the week.
+            className={`rockets-toggle week-toggle${view === '28' ? ' is-open' : ''}`}
             aria-label={view === '28' ? '28 days: tap for Week view' : 'Week view: tap for 28 days'}
             title={view === '28' ? '28 days: tap for Week view' : 'Week view: tap for 28 days'}
-            aria-pressed={view === '28'}
+            aria-expanded={view === '28'}
             onClick={toggleView}
           >
-            <Icon d={view === '28' ? GRID_ICON : WEEK_ICON} />
+            <Icon d="M6 9l6 6 6-6" />
           </button>
         )}
         </div>
@@ -428,8 +430,6 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
   );
 }
 
-const WEEK_ICON = 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16M9 3v4M15 3v4';
-const GRID_ICON = 'M4 4h16v16H4zM4 8h16M4 12h16M4 16h16M9.3 8v12M14.7 8v12';
 
 function Icon({ d }: { d: string }) {
   return (
