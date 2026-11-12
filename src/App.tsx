@@ -254,7 +254,24 @@ export default function App() {
     setPaused((m) => ({ ...m, [key]: next }));
     setStatus(next.at ? `${l.title}: paused. The clock stops until you resume.` : `${l.title}: resumed (${Math.round(next.min)} min paused).`);
   }
-  const [endAlerted, setEndAlerted] = useState<Record<string, true>>({});
+  // V20-064 (Nov 11): which runs already had Time's up, kept on this device so a refresh doesn't pop it
+  // again. More time clears the run's mark (so it pops when the added time is up). Kept for 3 days.
+  const [endAlerted, setEndAlerted] = useState<Record<string, true>>(() => {
+    try {
+      const all = JSON.parse(localStorage.getItem('launchpage.launches.endalerted.v1') ?? '{}') as Record<string, true>;
+      const since = isoDate(new Date(Date.now() - 3 * 86_400_000));
+      return Object.fromEntries(Object.entries(all).filter(([k]) => (k.split(':')[1] ?? '').slice(0, 10) >= since)) as Record<string, true>;
+    } catch {
+      return {};
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('launchpage.launches.endalerted.v1', JSON.stringify(endAlerted));
+    } catch {
+      /* ignore */
+    }
+  }, [endAlerted]);
 
   useEffect(() => unlockAudioOnFirstGesture(), []);
   const now = useNow(30_000);
