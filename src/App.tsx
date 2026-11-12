@@ -49,7 +49,6 @@ import {
   type NonNeg,
   type Quote
 } from './lib/days26';
-import { readScrollMode, writeScrollMode, type ScrollMode } from './lib/view';
 import { TodayPanel, useNow } from './components/TodayPanel';
 import { BLOCKED_HELP, LaunchersPanel, nameFromUrl, rocketOptions, type TimedPreset } from './components/Launchers';
 import { LaunchReminder, MissedLaunches, TimeUpReminder } from './components/LaunchReminder';
@@ -182,17 +181,19 @@ export default function App() {
   const [focusTask, setFocusTask] = useState<string | null>(null);
   // V20-083: a new calendar event with Add a task too opens Add task filled in.
   const [taskPreset, setTaskPreset] = useState<{ fill: Partial<Task>; n: number } | null>(null);
-  const [scrollMode, setScrollMode] = useState<ScrollMode>(readScrollMode);
+  // V20-126 (Dan, Nov 12): card by card is the only way the page scrolls (the Free / Card by card setting is gone).
+  // The routine following the time beside the cards comes back as a switch in Settings › Modules.
+  const scrollMode = 'cards' as const;
   // Card by card: the page snaps to each card; the header's height keeps cards clear of it.
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle('snap-scroll', scrollMode === 'cards');
+    root.classList.add('snap-scroll');
     const bar = document.querySelector<HTMLElement>('.topbar');
     if (!bar) return;
     const ro = new ResizeObserver(() => root.style.setProperty('--header-h', `${bar.offsetHeight}px`));
     ro.observe(bar);
     return () => ro.disconnect();
-  }, [scrollMode, authReady, session]);
+  }, [authReady, session]);
   const importInput = useRef<HTMLInputElement>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   // eslint-disable-next-line react-hooks/refs
@@ -1658,7 +1659,7 @@ export default function App() {
               journal={<JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={
                 <TodayPanel
-                  follow={scrollMode === 'cards'}
+                  follow
                   routine={activeRoutine}
                   shift={shift}
                   onEdit={() => setEditor({ open: true, routine: activeRoutine })}
@@ -1956,11 +1957,6 @@ export default function App() {
         settings={settings}
         onClose={() => setSettingsOpen(false)}
         onSave={handleSave}
-        scrollMode={scrollMode}
-        onScrollMode={(m) => {
-          setScrollMode(m);
-          writeScrollMode(m);
-        }}
         onSetPassword={
           supabase && session
             ? async (password) => {
