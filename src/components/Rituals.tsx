@@ -249,8 +249,8 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
                 <SaveOnBlur
                   className="rit-text"
                   value={checkinText(checkin)}
-                  placeholder={`Journal ✓ check in #${checkin}: now or later`}
-                  label={`Journal check in ${checkin}`}
+                  placeholder={`Personal Alchemy ✓ check in #${checkin}: now or later`}
+                  label={`Personal Alchemy check in ${checkin}`}
                   onSave={(v) => {
                     onCheckin(checkin, v);
                     if (v.trim() && !ok) onTick(i, true);
@@ -724,7 +724,7 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
                 <select value={r.type ?? 'step'} onChange={(e) => set(i, { type: e.target.value as StepType, checkin: e.target.value === 'checkin' ? r.checkin ?? 1 : undefined })} aria-label="Kind of step">
                   <option value="step">Step</option>
                   <option value="meditation">Meditation</option>
-                  <option value="checkin">Journal check-in</option>
+                  <option value="checkin">Personal Alchemy check-in</option>
                   <option value="list">List</option>
                   <option value="text">Text</option>
                 </select>
@@ -789,7 +789,7 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
               {r.type === 'checkin' && (
                 <div className="rit-edit-sub">
                   <label className="rit-edit-num">
-                    Journal check in #
+                    Personal Alchemy check in #
                     <input type="number" min={1} step={1} value={r.checkin ?? 1} onChange={(e) => set(i, { checkin: Number(e.target.value) || 1 })} />
                   </label>
                   <LogSelect value={r.log ?? 'none'} onChange={(log) => set(i, { log, logSet: true })} label={`Step ${i + 1} logs to`} />

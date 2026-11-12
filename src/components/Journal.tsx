@@ -75,11 +75,12 @@ export function JournalPanel({ entries, today, day, onSave, onDelete, onImport, 
       <div className="panel-head">
         <h2 id="h-journal" className="panel-title">
           {onOpen ? (
-            <button type="button" className="title-btn" onClick={onOpen} title="Open the whole journal">
-              Journal
+            <button type="button" className="title-btn" onClick={onOpen} title="Open the whole of Personal Alchemy">
+              Personal Alchemy
             </button>
           ) : (
-            'Journal'
+            // V20-089 (Dan, Nov 12): the journal is called Personal Alchemy.
+            'Personal Alchemy'
           )}
         </h2>
         <div className="panel-actions">

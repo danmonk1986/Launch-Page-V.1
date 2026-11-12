@@ -498,7 +498,7 @@ export const APP_LINKS: { name: string; url: string }[] = [
  */
 export const CARD_LINKS: { name: string; url: string; page: string }[] = [
   { name: 'Launch Page', url: 'launchpage:launch', page: 'launch' },
-  { name: 'Journal', url: 'launchpage:journal', page: 'journal' },
+  { name: 'Personal Alchemy', url: 'launchpage:journal', page: 'journal' },
   { name: 'Tasks', url: 'launchpage:tasks', page: 'tasks' },
   { name: '26 Days', url: 'launchpage:days26', page: 'days26' },
   { name: 'Budget', url: 'launchpage:budget', page: 'budget' },
