@@ -292,7 +292,7 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
         </div>
         <div className="panel-actions week-tools">
           <button type="button" className="week-arrow" aria-label={mobile ? 'Previous 3 days' : 'Previous week'} title={mobile ? 'Previous 3 days' : 'Previous week'} onClick={() => setOffset((o) => o - 1)}>
-            {"<"}
+            <Icon d="M15 6l-6 6 6 6" />
           </button>
           {googleConfigured() && (
             <button
@@ -324,7 +324,7 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
             <Icon d="M12 5v14M5 12h14" />
           </button>
           <button type="button" className="week-arrow" aria-label={mobile ? 'Next 3 days' : 'Next week'} title={mobile ? 'Next 3 days' : 'Next week'} onClick={() => setOffset((o) => o + 1)}>
-            {">"}
+            <Icon d="M9 6l6 6-6 6" />
           </button>
         </div>
       </div>

@@ -2958,3 +2958,8 @@ button.kb-btn { font-family: inherit; }
 .app .panel-head .week-toggle { width: 32px; height: 32px; min-height: 32px; min-width: 32px; padding: 0; border: 0; border-radius: 8px; background: none; box-shadow: none; }
 .app .panel-head .week-toggle:hover { background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
 .app .panel-head .week-toggle svg { width: 20px; height: 20px; }
+
+/* V20-082 (Dan, Nov 12): the calendar's < > are the same teal chevron as the ⌄ (32px, 20px icon, no box). */
+.app .week-arrow { width: 32px; height: 32px; min-height: 32px; min-width: 32px; padding: 0; border: 0; border-radius: 8px; background: none; display: inline-flex; align-items: center; justify-content: center; color: var(--accent-teal); font-size: 0; }
+.app .week-arrow:hover { color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
+.app .week-arrow svg { width: 20px; height: 20px; }
