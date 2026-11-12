@@ -131,6 +131,11 @@ export default function App() {
   }, [page]);
   // Phones fold the headline out of the fixed header once the page scrolls.
   const [scrolled, setScrolled] = useState(false);
+  // V20-095 (Dan, Nov 12): every page opens at its top, so the Launch Page always comes back at Rockets /
+  // Timed launches (it kept the old scroll, e.g. down at Personal Alchemy after a trip to Budget).
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [page]);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
     onScroll();
