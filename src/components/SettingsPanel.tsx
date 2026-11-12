@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
-import { BACKGROUNDS, type AccountInfo, type Background, type BrandSettings } from '../lib/settings';
+import { BACKGROUNDS, DESCRIBES, INDUSTRIES, type AccountInfo, type Background, type BrandSettings } from '../lib/settings';
 import type { ScrollMode } from '../lib/view';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
@@ -131,6 +131,9 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                   <span>Role</span>
                   <input value={acct.role} autoComplete="organization-title" placeholder="e.g. Founder" onChange={(e) => setAcct('role', e.target.value)} />
                 </label>
+                {/* V20-117: two drop-downs for data collection, each with Other (then a box to type it). */}
+                <PickOther label="Industry" options={INDUSTRIES} value={acct.industry} other={acct.industryOther} onValue={(v) => setAcct('industry', v)} onOther={(v) => setAcct('industryOther', v)} />
+                <PickOther label="What best describes you" options={DESCRIBES} value={acct.describes} other={acct.describesOther} onValue={(v) => setAcct('describes', v)} onOther={(v) => setAcct('describesOther', v)} />
                 <label className="field">
                   <span>Sign-in email</span>
                   <input value={email ?? 'Not signed in'} readOnly aria-readonly="true" className="is-readonly" />
@@ -435,6 +438,26 @@ function PasswordDialog({
         )}
       </form>
     </dialog>
+  );
+}
+
+/** V20-117: a drop-down whose last option, Other, opens a box to type your own. */
+function PickOther({ label, options, value, other, onValue, onOther }: { label: string; options: string[]; value: string; other: string; onValue: (v: string) => void; onOther: (v: string) => void }) {
+  return (
+    <div className="field">
+      <label className="field-label">
+        {label}
+        <select value={value} onChange={(e) => onValue(e.target.value)}>
+          <option value="">Pick one</option>
+          {options.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      </label>
+      {value === 'Other' && <input aria-label={`${label}: other`} placeholder="Type yours" value={other} autoFocus onChange={(e) => onOther(e.target.value)} />}
+    </div>
   );
 }
 

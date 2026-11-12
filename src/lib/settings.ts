@@ -43,6 +43,12 @@ export interface AccountInfo {
   hideRealName: boolean;
   businessName: string;
   role: string;
+  /** V20-117: picked from INDUSTRIES; 'Other' uses industryOther. */
+  industry: string;
+  industryOther: string;
+  /** V20-117: picked from DESCRIBES; 'Other' uses describesOther. */
+  describes: string;
+  describesOther: string;
   backupEmail: string;
   /** V20-114: dates as YYYY-MM-DD. */
   birthday: string;
@@ -55,9 +61,19 @@ export interface AccountInfo {
 }
 
 export const EMPTY_ACCOUNT: AccountInfo = {
-  alias: '', hideRealName: false, businessName: '', role: '', backupEmail: '', birthday: '', businessFounded: '',
+  alias: '', hideRealName: false, businessName: '', role: '', industry: '', industryOther: '', describes: '', describesOther: '', backupEmail: '', birthday: '', businessFounded: '',
   street: '', city: '', region: '', postalCode: '', country: ''
 };
+
+/** V20-117 (Dan, Nov 12): data collection, each a drop-down with Other. */
+export const INDUSTRIES = [
+  'Design & creative', 'Software & tech', 'Marketing & media', 'Consulting & coaching', 'Energy & resources', 'Trades & construction',
+  'Retail & e-commerce', 'Hospitality & events', 'Health & wellness', 'Education', 'Finance & accounting', 'Real estate', 'Other'
+];
+export const DESCRIBES = [
+  'Company of one', 'Freelancer', 'Startup founder', 'Digital nomad', 'Small business owner', 'Side project (with a day job)',
+  'Creator', 'Student', 'Other'
+];
 
 /** The name to show: the alias when the real name is hidden (and an alias is set). */
 export const shownName = (s: BrandSettings) => (s.account.hideRealName && s.account.alias.trim() ? s.account.alias.trim() : s.displayName);
