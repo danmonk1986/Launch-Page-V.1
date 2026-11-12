@@ -400,10 +400,6 @@ function TaskTable({
     });
     // The table's box has a sideways scroll bar under it; the column gets the same room so the two end together.
     R.style.paddingBottom = `${12 + (L.offsetHeight - L.clientHeight)}px`;
-    // V20-105: how wide the table half's own up-and-down bar is, so it can be tucked out of sight.
-    const sbw = Math.max(0, L.offsetWidth - L.clientWidth);
-    const clip = L.parentElement;
-    if (clip?.classList.contains('task-clip') && clip.style.getPropertyValue('--sbw') !== `${sbw}px`) clip.style.setProperty('--sbw', `${sbw}px`);
     follow(L, R);
   };
   useLayoutEffect(sync);

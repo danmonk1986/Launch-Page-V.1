@@ -3082,10 +3082,11 @@ button.kb-btn { font-family: inherit; }
 /* V20-105 (Dan, Nov 12): on the Tasks / Budget / Records pages the up-and-down scroll bar sits on the outside, at the
    ✓ ⋯ column's right edge, not between the table and the buttons. The table half hides its own up-and-down bar. */
 .panel-tasks-page .task-pins, .panel-budget .task-pins, .panel-records .task-pins { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent-teal) 45%, transparent) transparent; }
-/* The table half's own up-and-down bar is pushed just past a clipping edge (it's --sbw wider than its slot), so only
-   the outside bar shows. Its sideways bar stops at the same edge, as it would at a corner. */
+/* The table half's own up-and-down bar is pushed past a clipping edge: the box is 24px wider than its slot (with 24px of
+   empty room at its end), so its bar, classic or the Mac's overlay kind, is never seen; only the outside bar shows.
+   V20-106: a fixed 24px, because the Mac's overlay bars take no room and couldn't be measured. */
 .task-clip { flex: 1 1 auto; min-width: 0; overflow: hidden; margin-bottom: -12px; }
-.task-clip > .task-scroll { width: calc(100% + var(--sbw, 0px)); margin: 0; }
+.task-clip > .task-scroll { width: calc(100% + 24px); padding-right: 24px; box-sizing: border-box; margin: 0; }
 @media (hover: hover) {
   .task-split .task-table .task-row.is-hover td { box-shadow: inset 0 -2px 0 var(--row-hover-line, var(--accent-teal)); }
 }
