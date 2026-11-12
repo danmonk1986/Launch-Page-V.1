@@ -3060,20 +3060,22 @@ button.kb-btn { font-family: inherit; }
    outside (12px below), so cards and pages keep their size. Every box that shows a sideways bar. */
 .task-scroll, .week-scroll, .d26-table-wrap, .kb-table-wrap, .rit-steps { padding-bottom: 12px; margin-bottom: -12px; }
 
-/* V20-103 (Dan, Nov 12): the pinned ✓ ⋯ column looked like dark blocks stuck on the card (solid, broken at every
-   group heading, a different shade from the see-through card). Now: it's clear like the rest of the card until the
-   table actually runs under it; then it's one unbroken frosted strip (the card's colour, blurred, so text slides
-   under it unseen) with a soft edge, no row stripes. Thin scroll bars in the card's teal. */
-@media (min-width: 601px) {
-  .task-scroll .task-table tbody td.col-actions,
-  .task-scroll .task-table .task-row.is-alt td.col-actions, .task-scroll .task-table .task-row:hover td.col-actions { background: transparent; }
-  .task-scroll.is-over .task-table tbody td.col-actions,
-  .task-scroll.is-over .task-table .task-row.is-alt td.col-actions, .task-scroll.is-over .task-table .task-row:hover td.col-actions {
-    background: color-mix(in srgb, var(--pin, rgb(18 13 40)) 86%, transparent);
-    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-    box-shadow: -10px 0 12px -12px rgb(0 0 0 / 0.5);
-  }
-  .task-scroll .task-table .sec-pin { position: sticky; right: 0; z-index: 2; padding: 0; }
-}
-@media (max-width: 600px) { .task-table .sec-pin { display: none; } }
+
 .task-scroll, .week-scroll, .d26-table-wrap, .kb-table-wrap { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent-teal) 45%, transparent) transparent; }
+
+/* V20-104 (Dan, Nov 12): on a computer the Tasks card splits where the ✓ ⋯ start, like the Now box in the routine:
+   the table scrolls sideways in its own box that ends there (rows are cut off cleanly at its edge), and the ✓ ⋯ sit
+   in their own column beside it with nothing behind them. A thin line marks the split only when the table runs past it. */
+.task-split { display: flex; align-items: flex-start; margin: 0 -8px; }
+.task-split > .task-scroll { flex: 1 1 auto; min-width: 0; margin-left: 0; margin-right: 0; }
+.task-pins { flex: none; overflow: hidden; margin-bottom: -12px; border-left: 1px solid transparent; }
+.task-split.is-over .task-pins { border-left-color: var(--edge); }
+.task-split .task-pin-table { width: auto; min-width: 0; }
+.task-pin-table td, .task-pin-table th { padding-left: 8px; }
+/* One band across both halves: the stripe's round ends sit at the table's left and the column's right. */
+.task-split .task-scroll .task-row.is-alt td:last-child { border-radius: 0; }
+.task-split .task-pins .task-row.is-alt td { border-radius: 0 8px 8px 0; }
+.task-split .task-row.is-hover td { background: var(--row-hover); }
+.task-split .task-pin-table tr.task-section td { padding: 0; border: 0; background: none; }
+/* The Tasks / Budget / Records pages: both halves share the screen-sized box, and the column's header stays put too. */
+.panel-tasks-page .task-pins, .panel-budget .task-pins, .panel-records .task-pins { max-height: calc(100dvh - var(--header-h, 160px) - 48px); min-height: 280px; }

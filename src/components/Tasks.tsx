@@ -268,12 +268,12 @@ function RowActions({ t, act, checked }: { t: Task; act: Actions; checked: boole
 }
 
 // V20-099: `parent` = a due step out on its own row in Due today, so it shows its task's project and name.
-function TaskRow({ t, step, alt, projects, today, act, parent }: { t: Task; step?: boolean; alt?: boolean; projects: Project[]; today: Date; act: Actions; parent?: Task }) {
+function TaskRow({ t, step, alt, projects, today, act, parent, bare }: { t: Task; step?: boolean; alt?: boolean; projects: Project[]; today: Date; act: Actions; parent?: Task; /** V20-104: no ✓ ⋯ cell (they sit in the split-off column). */ bare?: boolean }) {
   const stepsDue = null;
   const badge = dueBadge(t, today, stepsDue);
   const checked = isRecurring(t) ? doneToday(t, today) : t.done;
   return (
-    <tr id={`task-${t.id}`} className={`task-row${checked ? ' is-done' : ''}${step ? ' is-step' : ''}${parent ? ' is-out' : ''}${alt ? ' is-alt' : ''}`}>
+    <tr id={`task-${t.id}`} data-row={t.id} className={`task-row${checked ? ' is-done' : ''}${step ? ' is-step' : ''}${parent ? ' is-out' : ''}${alt ? ' is-alt' : ''}`}>
       <td className="col-project">{parent ? <ProjectChip projects={projects} id={parent.projectId} /> : step ? null : <ProjectChip projects={projects} id={t.projectId} />}</td>
       <td className="col-task">
         {parent && (
@@ -342,6 +342,20 @@ function TaskRow({ t, step, alt, projects, today, act, parent }: { t: Task; step
       <td className="col-date col-center">{isRecurring(t) ? '' : shortDate(t.endDate)}</td>
       <td className="col-time col-center">{t.atTime ? formatMinutes(toMinutes(t.atTime)) : ''}</td>
       <td className="col-expense col-center">{t.expense}</td>
+      {!bare && (
+        <td className="col-actions">
+          <RowActions t={t} act={act} checked={checked} />
+        </td>
+      )}
+    </tr>
+  );
+}
+
+/** V20-104: a row's ✓ ⋯ in the split-off column, lined up with its row in the table. */
+function PinRow({ t, step, alt, today, act }: { t: Task; step?: boolean; alt?: boolean; today: Date; act: Actions }) {
+  const checked = isRecurring(t) ? doneToday(t, today) : t.done;
+  return (
+    <tr data-row={t.id} className={`task-row${checked ? ' is-done' : ''}${step ? ' is-step' : ''}${alt ? ' is-alt' : ''}`}>
       <td className="col-actions">
         <RowActions t={t} act={act} checked={checked} />
       </td>
@@ -369,19 +383,46 @@ function TaskTable({
   collapsible?: boolean;
 }) {
   const [closed, setClosed] = useState<Record<string, boolean>>({ done: true, monthly: true, annual: true, deleted: true });
-  // V20-103: the ✓ ⋯ column only turns solid when the table really runs under it (the box scrolls sideways).
+  // V20-104 (Dan, Nov 12): on a computer the card splits: the table scrolls sideways in its own box that ends where
+  // the ✓ ⋯ column starts, and the ✓ ⋯ sit in their own column beside it, so nothing floats over the rows.
+  // Each ✓ ⋯ row takes its table row's height, and on the Tasks page both scroll up and down together.
   const scroller = useRef<HTMLDivElement>(null);
+  const pins = useRef<HTMLDivElement>(null);
   const [over, setOver] = useState(false);
+  const sync = () => {
+    const L = scroller.current;
+    const R = pins.current;
+    if (!L) return;
+    setOver(L.scrollWidth > L.clientWidth + 1);
+    if (!R) return;
+    const h = new Map<string, number>();
+    L.querySelectorAll<HTMLElement>('tr[data-row]').forEach((tr) => h.set(tr.dataset.row!, tr.getBoundingClientRect().height));
+    R.querySelectorAll<HTMLElement>('tr[data-row]').forEach((tr) => {
+      const v = h.get(tr.dataset.row!);
+      tr.style.height = v ? `${v}px` : '';
+    });
+    // The table's box has a sideways scroll bar under it; the column gets the same room so the two end together.
+    R.style.paddingBottom = `${12 + (L.offsetHeight - L.clientHeight)}px`;
+    R.scrollTop = L.scrollTop;
+  };
+  useLayoutEffect(sync);
   useEffect(() => {
-    const el = scroller.current;
-    if (!el || typeof ResizeObserver === 'undefined') return;
-    const check = () => setOver(el.scrollWidth > el.clientWidth + 1);
-    const ro = new ResizeObserver(check);
-    ro.observe(el);
-    if (el.firstElementChild) ro.observe(el.firstElementChild);
-    check();
+    const L = scroller.current;
+    if (!L || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => sync());
+    ro.observe(L);
+    if (L.firstElementChild) ro.observe(L.firstElementChild);
     return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Hovering a row lights up both halves of it.
+  const hover = (e: { target: EventTarget }) => {
+    const row = (e.target as Element).closest?.('tr[data-row]') as HTMLElement | null;
+    const id = row?.dataset.row ?? null;
+    const box = scroller.current?.parentElement;
+    box?.querySelectorAll('tr.is-hover').forEach((tr) => tr.classList.remove('is-hover'));
+    if (id) box?.querySelectorAll(`tr[data-row="${CSS.escape(id)}"].task-row`).forEach((tr) => tr.classList.add('is-hover'));
+  };
   // V20-099: steps out on their own in Due today, and every task by id (for their task's name).
   const outIds = new Set(grouped.due.filter((t) => t.parentId).map((t) => t.id));
   const byId = new Map((Object.values(grouped) as Task[][]).flat().map((t) => [t.id, t]));
@@ -395,11 +436,19 @@ function TaskTable({
     if (sec && closed[sec]) setClosed((c) => ({ ...c, [sec]: false }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusId]);
-  return (
-    <div className={`task-scroll${over ? ' is-over' : ''}`} ref={scroller}>
+  const split = !mobile;
+  // Every row a group shows, in order: each task, then its steps.
+  const entries = (rows: Task[]) =>
+    rows.flatMap((t, i) => [
+      { t, step: !!t.parentId, parent: t.parentId ? byId.get(t.parentId) : undefined, alt: i % 2 === 1 },
+      ...(t.parentId ? [] : steps.get(t.id) ?? []).filter((st) => !outIds.has(st.id)).map((st) => ({ t: st, step: true, parent: undefined, alt: i % 2 === 1 }))
+    ]);
+  const shown = sections.filter((id) => !(!grouped[id].length && id === 'due') && !(collapsible && !grouped[id].length && id !== 'key'));
+  const table = (
+    <div className={`task-scroll${over ? ' is-over' : ''}`} ref={scroller} onScroll={() => pins.current && scroller.current && (pins.current.scrollTop = scroller.current.scrollTop)}>
       <table className="task-table">
         <thead>
-          <tr>
+          <tr data-row="head">
             <th className="col-project">Project</th>
             <th className="col-task">Task</th>
             <th className="col-desc">Description</th>
@@ -409,7 +458,7 @@ function TaskTable({
             <th className="col-center">Required</th>
             <th className="col-time col-center">Time</th>
             <th className="col-expense col-center">Expense</th>
-            <th className="col-actions" aria-label="Done or more" />
+            {!split && <th className="col-actions" aria-label="Done or more" />}
           </tr>
         </thead>
         {sections.map((id) => {
@@ -421,8 +470,8 @@ function TaskTable({
           if (collapsible && !rows.length && id !== 'key') return null;
           return (
             <tbody key={id}>
-              <tr className="task-section">
-                <th colSpan={9} scope="rowgroup">
+              <tr className="task-section" data-row={`sec-${id}`}>
+                <th colSpan={split ? 9 : 10} scope="rowgroup">
                   {collapsible ? (
                     <button type="button" className="section-btn" aria-expanded={!shut} onClick={() => setClosed((c) => ({ ...c, [id]: !c[id] }))}>
                       <span className="section-caret" aria-hidden="true">
@@ -436,15 +485,12 @@ function TaskTable({
                     </>
                   )}
                 </th>
-                {/* V20-103: the pinned ✓ ⋯ column runs unbroken past group headings. */}
-                <td className="col-actions sec-pin" aria-hidden="true" />
               </tr>
               {!shut && rows.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="task-empty">
+                <tr data-row={`empty-${id}`}>
+                  <td colSpan={split ? 9 : 10} className="task-empty">
                     {id === 'key' ? 'Set a task to THREE to make it one of your 3 key tasks.' : 'Nothing here.'}
                   </td>
-                  <td className="col-actions sec-pin" aria-hidden="true" />
                 </tr>
               )}
               {!shut && mobile && rows.length > 3 ? (
@@ -477,20 +523,50 @@ function TaskTable({
                   </td>
                 </tr>
               ) : (
-                !shut &&
-                rows.map((t, i) => (
-                  <Fragment key={t.id}>
-                    <TaskRow t={t} step={!!t.parentId} parent={t.parentId ? byId.get(t.parentId) : undefined} alt={i % 2 === 1} projects={projects} today={today} act={act} />
-                    {(t.parentId ? [] : steps.get(t.id) ?? []).filter((st) => !outIds.has(st.id)).map((st) => (
-                      <TaskRow key={st.id} t={st} step alt={i % 2 === 1} projects={projects} today={today} act={act} />
-                    ))}
-                  </Fragment>
-                ))
+                !shut && entries(rows).map((e) => <TaskRow key={e.t.id} t={e.t} step={e.step} parent={e.parent} alt={e.alt} projects={projects} today={today} act={act} bare={split} />)
               )}
             </tbody>
           );
         })}
       </table>
+    </div>
+  );
+  if (!split) return table;
+  return (
+    <div className={`task-split${over ? ' is-over' : ''}`} onMouseOver={hover} onMouseLeave={hover}>
+      {table}
+      <div
+        className="task-pins"
+        ref={pins}
+        onWheel={(e) => {
+          if (scroller.current) scroller.current.scrollTop += e.deltaY;
+        }}
+      >
+        <table className="task-table task-pin-table">
+          <thead>
+            <tr data-row="head">
+              <th className="col-actions" aria-label="Done or more" />
+            </tr>
+          </thead>
+          {shown.map((id) => {
+            const rows = grouped[id];
+            const shut = collapsible && closed[id];
+            return (
+              <tbody key={id}>
+                <tr className="task-section" data-row={`sec-${id}`}>
+                  <td />
+                </tr>
+                {!shut && rows.length === 0 && (
+                  <tr data-row={`empty-${id}`}>
+                    <td />
+                  </tr>
+                )}
+                {!shut && entries(rows).map((e) => <PinRow key={e.t.id} t={e.t} step={e.step} alt={e.alt} today={today} act={act} />)}
+              </tbody>
+            );
+          })}
+        </table>
+      </div>
     </div>
   );
 }
