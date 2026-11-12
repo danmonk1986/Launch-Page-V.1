@@ -628,7 +628,7 @@ export function TasksPanel(
           </button>
         </h2>
         <div className="panel-actions">
-          <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={editor.add}>
+          <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={() => editor.add()}>
             <Icon d={PLUS} />
           </button>
         </div>
@@ -748,7 +748,7 @@ export function TasksPage(
         <ViewToggle month={layout === 'month'} listName="List" onToggle={() => setLayout(layout === 'month' ? 'list' : 'month')} nav={{ month, onMonth: setMonth }} />
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder="Search tasks" />
-          <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={editor.add}>
+          <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={() => editor.add()}>
             <Icon d={PLUS} />
           </button>
           <button type="button" className="icon-btn tool-btn" aria-label="Projects" title="Areas and projects" onClick={p.onOpenProjects}>
