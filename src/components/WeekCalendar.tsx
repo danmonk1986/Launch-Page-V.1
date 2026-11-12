@@ -558,7 +558,9 @@ function EventForm({
           <button
             type="button"
             className="btn event-push-task"
-            title="Save the event and open Add task with its name and dates"
+            // V20-088: like Save, it waits for a name (the ⊘ cursor, no 'Please fill out this field').
+            disabled={!d.title.trim()}
+            title={d.title.trim() ? 'Save the event and open Add task with its name and dates' : 'Name the event first'}
             onClick={(e) => {
               pushTask.current = true;
               e.currentTarget.form?.requestSubmit();

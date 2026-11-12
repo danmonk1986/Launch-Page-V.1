@@ -3015,3 +3015,6 @@ button.kb-btn { font-family: inherit; }
 .app[data-tone='light']:not(.is-kb) :is(.tool-btn:not(.tool-btn-go):not(.tool-btn-danger):not(.gear-btn), .quick-btn:not(.quick-done):not(.quick-launch):not(.quick-pause), .btn-quiet):hover {
   border-color: var(--accent-purple); background: color-mix(in srgb, var(--accent-teal) 14%, transparent);
 }
+/* V20-088: every disabled button shows the ⊘ cursor. */
+.app button:disabled { cursor: not-allowed; }
+.app:not(.is-kb) .event-push-row .btn.event-push-task:disabled, .app[data-tone='light']:not(.is-kb) .event-push-row .btn.event-push-task:disabled { color: color-mix(in srgb, var(--accent-purple) 45%, var(--accent-teal)); }

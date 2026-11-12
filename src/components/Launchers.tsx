@@ -1604,7 +1604,8 @@ function TimedForm({
         <p className="field-hint">Apps: the first time, your browser asks to open the app. Tick “Always allow” and it opens straight away after that.</p>
       </fieldset>
 
-      <FormActions formId={formId} saveDisabled={!d.title.trim()} onDelete={launch ? () => onDelete(launch.id) : undefined} deleteLabel={launch?.title} />
+      {/* V20-088: Save waits until What is picked too (the ⊘ cursor instead of the browser's fill-in bubble). */}
+      <FormActions formId={formId} saveDisabled={!d.title.trim() || !cat} onDelete={launch ? () => onDelete(launch.id) : undefined} deleteLabel={launch?.title} />
     </form>
   );
 }
