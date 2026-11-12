@@ -463,7 +463,7 @@ function EventForm({
   onDelete: (e: CalEvent) => Promise<void>;
 }) {
   const [d, setD] = useState<CalEvent>(
-    () => event ?? { id: crypto.randomUUID(), title: '', startDate: date, endDate: date, color: 'teal', sort: 0 }
+    () => event ?? { id: crypto.randomUUID(), title: '', startDate: date, endDate: '', color: 'teal', sort: 0 }
   );
   // V20-083: new events always save to the Launch Page (Google picks them up in its sync).
   const toGoogle = false;
@@ -482,7 +482,7 @@ function EventForm({
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.title.trim()) return;
-        const endDate = d.endDate < d.startDate ? d.startDate : d.endDate;
+        const endDate = !d.endDate || d.endDate < d.startDate ? d.startDate : d.endDate;
         await onSave({ ...d, title: d.title.trim(), endDate }, !event && toGoogle);
         if (pushTask.current) {
           pushTask.current = false;
@@ -515,13 +515,15 @@ function EventForm({
               value={d.startDate}
               onChange={(e) => {
                 const v = e.target.value;
-                setD((x) => ({ ...x, startDate: v, endDate: x.endDate < v ? v : x.endDate }));
+                setD((x) => ({ ...x, startDate: v, endDate: x.endDate && x.endDate < v ? v : x.endDate }));
               }}
             />
           </label>
           <label className="field">
             <span>Ends</span>
-            <input type="date" required min={d.startDate} value={d.endDate} onChange={(e) => set('endDate', e.target.value)} />
+            {/* V20-093 (Dan, Nov 12): Ends is optional; empty = a one-day event on its start date. */}
+            <input type="date" min={d.startDate} value={d.endDate} onChange={(e) => set('endDate', e.target.value)} aria-describedby={`${formId}-ends`} />
+            <small id={`${formId}-ends`} className="field-hint">Leave empty for one day.</small>
           </label>
         </div>
       )}
