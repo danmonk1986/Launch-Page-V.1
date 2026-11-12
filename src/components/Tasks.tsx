@@ -623,11 +623,16 @@ export function TasksPanel(
   return (
     <section className="panel panel-tasks" aria-labelledby="h-tasks">
       <div className="panel-head">
-        <h2 id="h-tasks" className="panel-title">
-          <button type="button" className="title-btn" onClick={p.onOpenAll} title="Open the Tasks page">
+        {/* V20-097 (Dan, Nov 12): one control, the classic chevron. V opens the full Tasks view (the page today;
+            in the beta it may be a pop-out window), and ^ on the page brings you back to this card. */}
+        <div className="rockets-title">
+          <h2 id="h-tasks" className="panel-title">
             Tasks
+          </h2>
+          <button type="button" className="rockets-toggle" aria-label="Open the full Tasks view" title="Open the full Tasks view" onClick={p.onOpenAll}>
+            <Icon d="M6 9l6 6 6-6" />
           </button>
-        </h2>
+        </div>
         <div className="panel-actions">
           <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={() => editor.add()}>
             <Icon d={PLUS} />
@@ -743,9 +748,14 @@ export function TasksPage(
   return (
     <section className="panel panel-tasks-page" aria-labelledby="h-tasks-page">
       <div className="panel-head">
-        <h2 id="h-tasks-page" className="panel-title">
-          Tasks
-        </h2>
+        <div className="rockets-title">
+          <h2 id="h-tasks-page" className="panel-title">
+            Tasks
+          </h2>
+          <button type="button" className="rockets-toggle is-open" aria-label="Back to the Tasks card" title="Back to the Tasks card" onClick={p.onClose}>
+            <Icon d="M6 9l6 6 6-6" />
+          </button>
+        </div>
         <ViewToggle month={layout === 'month'} listName="List" onToggle={() => setLayout(layout === 'month' ? 'list' : 'month')} nav={{ month, onMonth: setMonth }} />
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder="Search tasks" />
@@ -754,9 +764,6 @@ export function TasksPage(
           </button>
           <button type="button" className="icon-btn tool-btn" aria-label="Projects" title="Areas and projects" onClick={p.onOpenProjects}>
             <Icon d={FOLDER} />
-          </button>
-          <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
-            <Icon d={CLOSE} />
           </button>
         </div>
       </div>

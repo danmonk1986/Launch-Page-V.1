@@ -133,8 +133,14 @@ export default function App() {
   const [scrolled, setScrolled] = useState(false);
   // V20-095 (Dan, Nov 12): every page opens at its top, so the Launch Page always comes back at Rockets /
   // Timed launches (it kept the old scroll, e.g. down at Personal Alchemy after a trip to Budget).
+  // V20-097: the Tasks page's ^ goes back to the Tasks card itself, not the top.
+  const returnTo = useRef<string | null>(null);
   useEffect(() => {
-    window.scrollTo({ top: 0 });
+    const id = returnTo.current;
+    returnTo.current = null;
+    const el = id ? document.getElementById(id)?.closest('section') : null;
+    if (el) el.scrollIntoView({ block: 'start' });
+    else window.scrollTo({ top: 0 });
   }, [page]);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -1709,7 +1715,10 @@ export default function App() {
                   onAddToCalendar={addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
               onOpenProjects={() => setProjectsOpen(true)}
-              onClose={() => setPage('launch')}
+              onClose={() => {
+                returnTo.current = 'h-tasks';
+                setPage('launch');
+              }}
               focusId={focusTask}
               expenses={expenses}
             />
