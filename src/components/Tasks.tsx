@@ -369,6 +369,19 @@ function TaskTable({
   collapsible?: boolean;
 }) {
   const [closed, setClosed] = useState<Record<string, boolean>>({ done: true, monthly: true, annual: true, deleted: true });
+  // V20-103: the ✓ ⋯ column only turns solid when the table really runs under it (the box scrolls sideways).
+  const scroller = useRef<HTMLDivElement>(null);
+  const [over, setOver] = useState(false);
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const check = () => setOver(el.scrollWidth > el.clientWidth + 1);
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    check();
+    return () => ro.disconnect();
+  }, []);
   // V20-099: steps out on their own in Due today, and every task by id (for their task's name).
   const outIds = new Set(grouped.due.filter((t) => t.parentId).map((t) => t.id));
   const byId = new Map((Object.values(grouped) as Task[][]).flat().map((t) => [t.id, t]));
@@ -383,7 +396,7 @@ function TaskTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusId]);
   return (
-    <div className="task-scroll">
+    <div className={`task-scroll${over ? ' is-over' : ''}`} ref={scroller}>
       <table className="task-table">
         <thead>
           <tr>
@@ -409,7 +422,7 @@ function TaskTable({
           return (
             <tbody key={id}>
               <tr className="task-section">
-                <th colSpan={10} scope="rowgroup">
+                <th colSpan={9} scope="rowgroup">
                   {collapsible ? (
                     <button type="button" className="section-btn" aria-expanded={!shut} onClick={() => setClosed((c) => ({ ...c, [id]: !c[id] }))}>
                       <span className="section-caret" aria-hidden="true">
@@ -423,12 +436,15 @@ function TaskTable({
                     </>
                   )}
                 </th>
+                {/* V20-103: the pinned ✓ ⋯ column runs unbroken past group headings. */}
+                <td className="col-actions sec-pin" aria-hidden="true" />
               </tr>
               {!shut && rows.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="task-empty">
+                  <td colSpan={9} className="task-empty">
                     {id === 'key' ? 'Set a task to THREE to make it one of your 3 key tasks.' : 'Nothing here.'}
                   </td>
+                  <td className="col-actions sec-pin" aria-hidden="true" />
                 </tr>
               )}
               {!shut && mobile && rows.length > 3 ? (
