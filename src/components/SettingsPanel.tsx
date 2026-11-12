@@ -258,18 +258,13 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
 
           {tab === 'appearance' && (
             <>
-              <label className="field">
-                <span>Logo text</span>
-                <input value={draft.logoText} onChange={(e) => set('logoText', e.target.value)} />
-                <p className="field-hint">No logo uploaded? What you type here becomes your logo, drawn in the L4UNCH P4GE hand lettering. Leave both empty for the L4UNCH!P4GE logo.</p>
-              </label>
-              <ImagePick
-                label="Logo (optional, replaces the LaunchPage logo)"
-                hint="Ideal: 600 × 110 px. PNG keeps a see-through background; JPEG works too. Shown 54 px tall."
-                value={draft.logoUrl}
-                wide
-                shrink={{ maxW: 1200, maxH: 220, type: 'image/png' }}
-                onChange={(v) => set('logoUrl', v)}
+              {/* V20-124 (Dan's sketch, Nov 12): one logo box, 600 × 110. Type in it and your words show in the L4UNCH P4GE
+                  lettering; Choose image beside it uploads a file into the same box instead. */}
+              <LogoField
+                text={draft.logoText}
+                image={draft.logoUrl}
+                onText={(v) => set('logoText', v)}
+                onImage={(v) => set('logoUrl', v)}
               />
               <label className="field">
                 <span>Headline (top bar)</span>
@@ -538,6 +533,60 @@ function PickOther({ label, options, value, other, onValue, onOther }: { label: 
         </select>
       </label>
       {value === 'Other' && <input aria-label={`${label}: other`} placeholder="Type yours" value={other} autoFocus onChange={(e) => onOther(e.target.value)} />}
+    </div>
+  );
+}
+
+/** V20-124: the logo box. Typed text previews in the hand lettering; an uploaded image fills the box instead. */
+function LogoField({ text, image, onText, onImage }: { text: string; image: string | null; onText: (v: string) => void; onImage: (v: string | null) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  return (
+    <div className="field logo-field">
+      <label className="field-label" htmlFor="logo-text">
+        Logo
+      </label>
+      <div className="logo-row">
+        <div className={`logo-box${image ? ' has-image' : ''}`}>
+          {image ? (
+            <img src={image} alt="Your logo" />
+          ) : (
+            <input id="logo-text" className="logo-type" value={text} placeholder="Type your logo" maxLength={24} spellCheck={false} onChange={(e) => onText(e.target.value)} />
+          )}
+        </div>
+        <div className="logo-tools">
+          <input
+            ref={input}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic"
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              setBusy(true);
+              setError('');
+              try {
+                onImage(await shrinkImage(f, { maxW: 1200, maxH: 220, type: 'image/png' }));
+              } catch (err) {
+                setError((err as Error).message);
+              }
+              setBusy(false);
+            }}
+          />
+          <button type="button" className="btn btn-quiet image-pick-btn" disabled={busy} onClick={() => input.current?.click()}>
+            {busy ? 'Reading…' : image ? 'Change image' : 'Choose image'}
+          </button>
+          {image && (
+            <button type="button" className="btn btn-quiet image-pick-btn" onClick={() => onImage(null)}>
+              Use text
+            </button>
+          )}
+        </div>
+      </div>
+      <p className="field-hint">600 × 110 px. Type your name or brand and it’s drawn in the L4UNCH P4GE lettering, or upload an image (PNG keeps a see-through background). Leave it empty for the L4UNCH!P4GE logo.</p>
+      {error && <p className="field-hint image-pick-error">{error}</p>}
     </div>
   );
 }
