@@ -2986,3 +2986,5 @@ button.kb-btn { font-family: inherit; }
 .app .event-push-task { background: var(--accent-teal); border: 1px solid var(--accent-teal); color: var(--accent-purple); min-height: 44px; padding: 0 28px; }
 .app .event-push-task:hover { filter: brightness(1.08); color: var(--accent-purple); }
 .ev-own { color: var(--beige); }
+/* V20-085: colour 1 text in both modes (the day-mode dark text on teal buttons was winning). */
+.app .event-push-row .btn.event-push-task, .app[data-tone='light'] .event-push-row .btn.event-push-task { color: var(--accent-purple); }
