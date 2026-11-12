@@ -1203,7 +1203,11 @@ input:-webkit-autofill:focus {
 .app[data-tone='light'] .picker-menu { background: #ffffff; box-shadow: 0 12px 32px rgb(68 66 66 / 0.18); }
 .app[data-tone='light'] .sheet { box-shadow: 0 20px 60px rgb(68 66 66 / 0.25); }
 .app[data-tone='light'] .sheet::backdrop { background: rgb(68 66 66 / 0.35); }
-.app[data-tone='light'] .tile, .app[data-tone='light'] .timed-row { background: rgb(68 66 66 / 0.04); }
+/* Nov 11 (Dan): day mode cards are beige boxes, like the beta white sheet; what sits inside a card stays white. */
+.app[data-tone='light']:not(.is-kb) { --surface: #f5f5dc; }
+.app[data-tone='light']:not(.is-kb) .panel { --surface-solid: #f5f5dc; }
+.app[data-tone='light'] .panel .combo-list { background: #ffffff; }
+.app[data-tone='light'] .tile, .app[data-tone='light'] .timed-row, .app[data-tone='light'] .panel .timed-item { background: #ffffff; }
 .app[data-tone='light'] .status { background: rgb(68 66 66 / 0.08); }
 .app[data-tone='light'] .ev-google { background: #ffffff; box-shadow: 0 1px 3px rgb(68 66 66 / 0.2); }
 .app[data-tone='light'] .task-row.is-alt td { background: rgb(68 66 66 / 0.045); }
@@ -2256,6 +2260,8 @@ select.status-pick:focus-visible { outline: 2px solid var(--accent-teal); outlin
 select.status-pick option { background: var(--surface-solid); color: var(--text, inherit); }
 /* Oct 28: the Status pick fits THREE / ON DECK / PENDING with its arrow */
 select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-width: 96px; background-position: right 8px center !important; background-size: 12px !important; }
+/* Nov 11 (Dan): every status pill in a table is the Status pick's size, so DUE on a budget line or a step lines up with DUE on a task. */
+.task-table span.status { display: inline-block; box-sizing: border-box; min-width: 96px; padding: 3px 10px; text-align: center; }
 
 /* V12-040 · the row you're on: a teal line under the whole row, like the line under the header (every table: Tasks, Budget, Records, and new ones). */
 @media (hover: hover) {
