@@ -3103,3 +3103,6 @@ button.kb-btn { font-family: inherit; }
 .pw-rules li span { display: inline-block; width: 14px; }
 .pw-bad { color: #e0806f; }
 .settings-grid > .field { align-content: start; }
+
+/* V20-115 (Dan, Nov 12): headline and mantra one line each; they shrink to fit (Header › HeaderWords) instead of stacking. */
+.topbar-words .motto, .topbar-words .mantra { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }

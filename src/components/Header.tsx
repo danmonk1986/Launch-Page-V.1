@@ -45,13 +45,44 @@ export function Header({ settings, slim, page, onPage, right }: Props) {
         src={settings.logoUrl || '/launchpage-logo.png'}
         alt={settings.logoUrl ? settings.logoText || 'Logo' : 'LaunchPage'}
       />
-      <div className="topbar-words">
-        <p className="motto">{settings.goal}</p>
-        <p className="mantra">{settings.mantra}</p>
-      </div>
+      <HeaderWords goal={settings.goal} mantra={settings.mantra} />
       {right && <div className="topbar-right">{right}</div>}
       <TabBar page={page} onPage={onPage} />
     </header>
+  );
+}
+
+/**
+ * V20-115 (Dan, Nov 12): the headline and mantra stay on one line each and shrink to fit the room beside the logo,
+ * instead of stacking onto two lines. Each starts at its full size and steps down until it fits (11px at the least,
+ * then it ends in …).
+ */
+function HeaderWords({ goal, mantra }: { goal: string; mantra: string }) {
+  const box = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const fit = () => {
+      el.querySelectorAll<HTMLElement>('p').forEach((p) => {
+        p.style.fontSize = '';
+        let size = parseFloat(getComputedStyle(p).fontSize);
+        while (p.scrollWidth > p.clientWidth + 1 && size > 11) {
+          size -= 1;
+          p.style.fontSize = `${size}px`;
+        }
+      });
+    };
+    fit();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [goal, mantra]);
+  return (
+    <div className="topbar-words" ref={box}>
+      <p className="motto">{goal}</p>
+      <p className="mantra">{mantra}</p>
+    </div>
   );
 }
 
