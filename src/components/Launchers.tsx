@@ -272,7 +272,6 @@ export function LaunchersPanel(p: Props) {
     .sort((a, b) => (b.finishedAt ?? b.launchedAt ?? b.day).localeCompare(a.finishedAt ?? a.launchedAt ?? a.day));
   const isDone = (g: (typeof history)[number]) => g.outcome === 'done' || g.outcome === 'launched';
   const doneRuns = history.filter(isDone);
-  const notDoneRuns = history.filter((g) => !isDone(g));
   // V20-002: done rate per launch over the last 14 days (the Launch gate: 60% done). Runs are grouped by the
   // launch's name before its first ' - ' (Work Block #2 - … counts as Work Block #2); cleared runs count neither way.
   const rates = (() => {
@@ -298,6 +297,15 @@ export function LaunchersPanel(p: Props) {
       .map((g) => ({ ...g, pct: Math.round((g.done / g.total) * 100) }))
       .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
   })();
+  // V20-062 (Nov 11): ▶ on a missed run. The missed day is taken out of the counts, the launch moves
+  // to today (Active), and it starts now.
+  async function startMissedNow(l: Launch, day: string) {
+    p.onSettleMissed?.(l, day, 'cleared');
+    const today = isoDate(launchDate(l, p.today));
+    const moved = happensToday(l, p.today) ? l : { ...l, movedTo: today, active: true };
+    if (moved !== l) await p.onSaveLaunch(moved);
+    p.onLaunchNow(moved);
+  }
   // V20-061: one finished run (Missed and Complete lists), with Undo.
   const runItem = (g: (typeof history)[number]) => {
                 const spent = g.launchedAt && g.finishedAt ? Math.round((new Date(g.finishedAt).getTime() - new Date(g.launchedAt).getTime()) / 60_000) : null;
@@ -344,7 +352,7 @@ export function LaunchersPanel(p: Props) {
                   </li>
                 );
   };
-  const countOf = (id: TimedView) => (id === 'complete' ? doneRuns.length : id === 'missed' ? missed.length + notDoneRuns.length : views[id].length);
+  const countOf = (id: TimedView) => (id === 'complete' ? doneRuns.length : id === 'missed' ? missed.length : views[id].length);
   const list = views[view];
   // Active keeps to the next 3 (Show all for the rest); the other tabs show their whole list.
   const capped = view === 'active' && !showAllTimed;
@@ -569,7 +577,7 @@ export function LaunchersPanel(p: Props) {
           <p className="d26-offday-note">Off day · technology break. Timed launches stay quiet today: no reminders, nothing counts as missed.</p>
         )}
         {view === 'missed' ? (
-          missed.length === 0 && notDoneRuns.length === 0 ? (
+          missed.length === 0 ? (
             <p className="panel-empty timed-empty">{EMPTY.missed}</p>
           ) : (
             <>
@@ -577,14 +585,33 @@ export function LaunchersPanel(p: Props) {
             <ul className="timed-list">
               {missed.map(({ launch: l, day }) => (
                 <li key={`${l.id}:${day}`} className="timed-item is-missed">
-                  <div className="timed-row">
+                  <button
+                    type="button"
+                    className="timed-row"
+                    title="Edit this launch"
+                    onClick={() => {
+                      setTimed(l);
+                      setTimedOpen(true);
+                    }}
+                  >
                     <span className="timed-time">{new Date(`${day}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}</span>
                     <span className="timed-name">{l.title}</span>
                     <span className="timed-meta">
                       {formatMinutes(toMinutes(l.atTime))} · {l.minutes} min · missed
                     </span>
-                  </div>
+                  </button>
                   <div className="timed-quick">
+                    <button
+                      type="button"
+                      className="quick-btn quick-launch"
+                      aria-label={`Start ${l.title} now`}
+                      title="Start now: it moves to today and the clock starts"
+                      onClick={() => void startMissedNow(l, day)}
+                    >
+                      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M7 4v16l13-8z" />
+                      </svg>
+                    </button>
                     <button
                       type="button"
                       className="quick-btn quick-done"
@@ -599,8 +626,8 @@ export function LaunchersPanel(p: Props) {
                     <button
                       type="button"
                       className="quick-btn quick-skip"
-                      aria-label={`Clear ${l.title}`}
-                      title="Clear: take this run out of the counts (it stays in History as cleared)"
+                      aria-label={`Remove ${l.title} from Missed`}
+                      title="Remove from Missed: this run won't count either way"
                       onClick={() => p.onSettleMissed?.(l, day, 'cleared')}
                     >
                       <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
@@ -611,9 +638,6 @@ export function LaunchersPanel(p: Props) {
                 </li>
               ))}
             </ul>
-            )}
-            {notDoneRuns.length > 0 && (
-              <ul className="timed-list">{notDoneRuns.slice(0, showAllTimed ? undefined : 30).map(runItem)}</ul>
             )}
             </>
           )
@@ -787,14 +811,14 @@ export function LaunchersPanel(p: Props) {
           )}
           </>
         )}
-        {((view === 'active' && list.length > 3) || (view === 'complete' && doneRuns.length > 30) || (view === 'missed' && notDoneRuns.length > 30)) && (
+        {((view === 'active' && list.length > 3) || (view === 'complete' && doneRuns.length > 30) ) && (
           <button
             type="button"
             className="timed-more"
             aria-expanded={showAllTimed}
             onClick={() => setShowAllTimed((v) => !v)}
           >
-            {view === 'complete' || view === 'missed' ? (showAllTimed ? 'Show the latest 30' : `Show all ${view === 'complete' ? doneRuns.length : notDoneRuns.length}`) : showAllTimed ? 'Show 3' : `Show all ${list.length}`}
+            {view === 'complete' ? (showAllTimed ? 'Show the latest 30' : `Show all ${doneRuns.length}`) : showAllTimed ? 'Show 3' : `Show all ${list.length}`}
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className={showAllTimed ? 'is-open' : ''}>
               <path d="M6 9l6 6 6-6" />
             </svg>
