@@ -1210,7 +1210,7 @@ input:-webkit-autofill:focus {
 /* Nov 11 (Dan): day mode cards are beige boxes, like the beta white sheet; what sits inside a card stays white. */
 /* V20-049 (Nov 11): cards are #f5f5eb, a softer cream than beige. */
 .app[data-tone='light']:not(.is-kb) { --surface: #f5f5eb; }
-.app[data-tone='light']:not(.is-kb) .panel { --surface-solid: #f5f5eb; }
+.app[data-tone='light']:not(.is-kb) .panel { --surface-solid: #f5f5eb; --pin: #f5f5eb; }
 .app[data-tone='light'] .panel .combo-list { background: #ffffff; }
 /* V20-053 (Dan, Nov 11): a card inside a card in day mode is a soft grey tint; rocket tiles now match the
    26 Days sections and ritual steps. */
@@ -2308,11 +2308,12 @@ select.status-pick:not([multiple]) { padding: 3px 10px !important; min-width: 96
 @media (min-width: 601px) {
   .task-scroll .task-table td.col-actions,
   .task-scroll .task-table th.col-actions { position: sticky; right: 0; z-index: 2; }
-  /* V20-055: the pinned ✓ ⋯ cell has no solid block of its own (it showed as a darker patch in Synthwave);
-     it takes the row's stripe and hover colour like every other cell, so the band runs behind the buttons. */
-  .task-scroll .task-table td.col-actions { background: transparent; }
-  .task-scroll .task-table .task-row.is-alt td.col-actions { background: var(--row-alt); }
-  .task-scroll .task-table .task-row:hover td.col-actions { background: var(--row-hover); }
+  /* V20-058: the pinned ✓ ⋯ cell is solid again, so a narrow card that scrolls sideways never shows text under the
+     buttons. Its colour is the card's own (--pin: the Synthwave card's night, or the day card colour) with the row's
+     stripe or hover laid over it, so the band still runs behind the buttons with no patch. */
+  .task-scroll .task-table td.col-actions, .task-scroll .task-table th.col-actions { background: var(--pin, rgb(18 13 40)); }
+  .task-scroll .task-table .task-row.is-alt td.col-actions { background: linear-gradient(var(--row-alt), var(--row-alt)), var(--pin, rgb(18 13 40)); }
+  .task-scroll .task-table .task-row:hover td.col-actions { background: linear-gradient(var(--row-hover), var(--row-hover)), var(--pin, rgb(18 13 40)); }
   .task-scroll .task-table thead th.col-actions { z-index: 4; }
   .task-table .task-row:not(.is-step) td.col-desc { max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
