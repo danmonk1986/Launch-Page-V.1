@@ -2999,8 +2999,12 @@ button.kb-btn { font-family: inherit; }
 .app[data-tone='light']:not(.is-kb) :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .btn:not(.btn-quiet), .event-push-task) {
   background: var(--accent-teal); border-color: var(--accent-teal);
 }
+/* Disabled (e.g. Save before there's a name): the same teal fill, only the icon / text fades, so one teal per page. */
 .app:not(.is-kb) :is(.tool-btn-go, .btn:not(.btn-quiet)):disabled,
-.app[data-tone='light']:not(.is-kb) :is(.tool-btn-go, .btn:not(.btn-quiet)):disabled { opacity: 0.45; filter: none; }
+.app[data-tone='light']:not(.is-kb) :is(.tool-btn-go, .btn:not(.btn-quiet)):disabled { opacity: 1; filter: none; color: #14102b; cursor: not-allowed; }
+.app:not(.is-kb) :is(.tool-btn-go, .btn:not(.btn-quiet)):disabled > * { opacity: 0.4; }
+/* V20-087 (Dan, Nov 12): the bigger buttons (card headers, forms, sheet headers) draw a slightly heavier icon line. */
+.app:not(.is-kb) :is(.tool-btn, .icon-btn) svg { stroke-width: 2.4; }
 .app:not(.is-kb) :is(.quick-done, .quick-pause:not(.is-paused)),
 .app[data-tone='light']:not(.is-kb) :is(.quick-done, .quick-pause:not(.is-paused)) { border: 1px solid var(--accent-teal); color: var(--accent-teal); }
 .app:not(.is-kb) :is(.tool-btn:not(.tool-btn-go):not(.tool-btn-danger):not(.gear-btn):not([aria-pressed='true']), .quick-btn:not(.quick-done):not(.quick-launch):not(.quick-pause), .btn-quiet),
