@@ -1183,8 +1183,9 @@ input:-webkit-autofill:focus {
   --deep: #f4f4f4;
   --surface: rgb(255 255 255 / 0.88);
   --surface-solid: #ffffff;
-  --edge: rgb(68 66 66 / 0.16);
-  --edge-strong: rgb(68 66 66 / 0.3);
+  /* V20-052: outlines and row lines are purple in both modes. */
+  --edge: rgb(136 105 203 / 0.4);
+  --edge-strong: rgb(136 105 203 / 0.6);
   --beige: #444242;
   --mist: #5d5b5b;
   --dim: #858282;
@@ -1208,7 +1209,7 @@ input:-webkit-autofill:focus {
 .app[data-tone='light']:not(.is-kb) { --surface: #f5f5eb; }
 .app[data-tone='light']:not(.is-kb) .panel { --surface-solid: #f5f5eb; }
 .app[data-tone='light'] .panel .combo-list { background: #ffffff; }
-.app[data-tone='light'] .tile { background: #ffffff; }
+/* V20-052: a card inside a card (rocket tiles, 26 Days sections, ritual steps) looks the same in both modes. */
 /* V20-048 (Dan, Nov 11): the next timed launch and the routine's NOW step sit in a teal box with a soft glow, in both modes. */
 .timed-item.is-next { border: 2px solid var(--accent-teal); border-radius: 14px; padding: 2px 8px 2px 0; box-shadow: 0 0 16px color-mix(in srgb, var(--accent-teal) 30%, transparent); }
 .timed-item.is-next .timed-time { color: var(--accent-teal); }
@@ -1655,7 +1656,6 @@ html.snap-scroll { scroll-snap-type: y mandatory; scroll-padding-top: calc(var(-
 .d26-table tr.is-sub th, .d26-table tr.is-sub td { color: var(--dim); font-weight: 400; font-size: 13px; }
 .d26-table td.is-best { color: var(--accent-teal); font-weight: 700; }
 .d26-takeaway { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: rgb(255 255 255 / 0.04); font-size: 14px; color: var(--mist); }
-.app[data-tone='light'] .d26-takeaway, .app[data-tone='light'] .d26-sec, .app[data-tone='light'] .d26-tile, .app[data-tone='light'] .d26-stat { background: rgb(68 66 66 / 0.04); }
 .d26-today { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; margin-top: 16px; padding: 14px 16px; border: 1px solid var(--edge); border-radius: 14px; font-size: 14px; color: var(--mist); }
 .d26-today b { color: var(--beige); }
 .d26-today-title { font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--beige); }
@@ -1709,7 +1709,6 @@ html.snap-scroll { scroll-snap-type: y mandatory; scroll-padding-top: calc(var(-
 }
 .rit-done { justify-self: stretch; }
 .app[data-tone='light'] .rit-text { background: #ffffff; color: #444242; }
-.app[data-tone='light'] .rit-step { background: rgb(68 66 66 / 0.04); }
 
 .rit-edit-list { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 10px; }
 .rit-edit-row { display: grid; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--edge); }
@@ -1988,9 +1987,7 @@ select:not([multiple]) {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2306f9c2' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
   background-repeat: no-repeat !important; background-position: right 16px center !important; background-size: 16px !important;
 }
-.app[data-tone='light'] select:not([multiple]) {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233f8f80' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
-}
+/* V20-052: day mode dropdowns use the same teal arrow as night mode (the dark green one was left over). */
 .combo-caret { right: 10px; }
 .combo-opt.combo-opt-plain { display: block; text-align: left; font-weight: 500; }
 
@@ -2269,7 +2266,8 @@ select.status-pick { appearance: none; -webkit-appearance: none; border: 0; curs
 select.status-pick:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
 select.status-pick option { background: var(--surface-solid); color: var(--text, inherit); }
 /* Oct 28: the Status pick fits THREE / ON DECK / PENDING with its arrow */
-select.status-pick:not([multiple]) { padding: 3px 26px 3px 10px !important; min-width: 96px; background-position: right 8px center !important; background-size: 12px !important; }
+/* V20-052 (Dan, Nov 11): no arrow, so every DUE / THREE chip looks the same; tapping one still opens the menu. */
+select.status-pick:not([multiple]) { padding: 3px 10px !important; min-width: 96px; background-image: none !important; }
 /* Nov 11 (Dan): every status pill in a table is the Status pick's size, so DUE on a budget line or a step lines up with DUE on a task. */
 .task-table span.status { display: inline-block; box-sizing: border-box; min-width: 96px; padding: 3px 10px; text-align: center; }
 
@@ -2859,3 +2857,16 @@ button.kb-btn { font-family: inherit; }
   .kb-viewer-count { display: none; }
   .kb-viewer-notes { padding: 12px 16px 16px; }
 }
+
+/* V20-052 (Dan, Nov 11): two button sizes, the same everywhere and in both modes.
+   Top = the action row at the top of a card (and the header gear); inside = buttons in a card's rows. */
+.app .panel-head .tool-btn, .app .panel-head .icon-btn:not(.budget-groupby), .app .panel-actions .tool-btn,
+.app .panel-actions .icon-btn:not(.budget-groupby), .app .panel-head .view-toggle, .app .topbar-right .gear-btn {
+  width: 36px; height: 36px; min-height: 36px; border-radius: 8px;
+}
+.app .panel-head .tool-btn svg, .app .panel-head .icon-btn svg, .app .panel-actions .tool-btn svg,
+.app .panel-actions .icon-btn svg, .app .panel-head .view-toggle svg, .app .topbar-right .gear-btn svg { width: 16px; height: 16px; }
+.app .quick-btn, .app .task-quick, .app .timed-quick .quick-btn, .app .task-row .task-quick, .app .task-row .timed-quick .quick-btn {
+  width: 30px; height: 30px; min-height: 30px; border-radius: 8px;
+}
+.app .quick-btn svg, .app .task-quick svg { width: 14px; height: 14px; }
