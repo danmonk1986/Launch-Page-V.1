@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
 import type { Session } from '@supabase/supabase-js';
 import { checkPassword, supabase } from './lib/supabase';
-import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettings, shownName, type BrandSettings } from './lib/settings';
+import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettings, shownName, syncLinkedEmail, type BrandSettings } from './lib/settings';
 import { downloadLaunchSheet } from './lib/launchSheet';
 import { loadCached } from './lib/gcalCache';
 import { Header, type PageId } from './components/Header';
@@ -1457,7 +1457,8 @@ export default function App() {
   async function handleSave(next: BrandSettings) {
     setSettings(next);
     const { synced } = await saveSettings(userId, next);
-    setStatus(synced ? 'Settings saved and synced.' : 'Settings saved on this device.');
+    const linkErr = await syncLinkedEmail(userId, next.account);
+    setStatus(linkErr ?? (synced ? 'Settings saved and synced.' : 'Settings saved on this device.'));
   }
 
   const light = LIGHT_BACKGROUNDS.includes(settings.background);

@@ -50,6 +50,8 @@ export interface AccountInfo {
   describes: string;
   describesOther: string;
   backupEmail: string;
+  /** V20-118: the backup email signs in to this account too (and counts for anything email-related later). */
+  linkEmails: boolean;
   /** V20-114: dates as YYYY-MM-DD. */
   birthday: string;
   businessFounded: string;
@@ -61,7 +63,7 @@ export interface AccountInfo {
 }
 
 export const EMPTY_ACCOUNT: AccountInfo = {
-  alias: '', hideRealName: false, businessName: '', role: '', industry: '', industryOther: '', describes: '', describesOther: '', backupEmail: '', birthday: '', businessFounded: '',
+  alias: '', hideRealName: false, businessName: '', role: '', industry: '', industryOther: '', describes: '', describesOther: '', backupEmail: '', linkEmails: false, birthday: '', businessFounded: '',
   street: '', city: '', region: '', postalCode: '', country: ''
 };
 
@@ -225,4 +227,28 @@ export async function saveSettings(
   // when a save failed are gone now that every setup script is run).
   const { error } = await supabase.from('settings').upsert({ user_id: userId, ...toRow(s) });
   return { synced: !error };
+}
+
+/**
+ * V20-118: keep the account's linked email (public.account_emails) in step with Account Information.
+ * Ticked with a backup email = that email signs in to this account; unticked = no linked email.
+ * Returns an error to show, or null.
+ */
+export async function syncLinkedEmail(userId: string | null, a: AccountInfo): Promise<string | null> {
+  if (!supabase || !userId) return null;
+  const want = a.linkEmails ? a.backupEmail.trim().toLowerCase() : '';
+  const { data, error } = await supabase.from('account_emails').select('email').eq('user_id', userId);
+  if (error) return `Linked email not saved: ${error.message}`;
+  const have = (data ?? []).map((r: { email: string }) => r.email);
+  const drop = have.filter((e) => e !== want);
+  if (drop.length) {
+    const { error: del } = await supabase.from('account_emails').delete().eq('user_id', userId).in('email', drop);
+    if (del) return `Linked email not saved: ${del.message}`;
+  }
+  if (want && !have.includes(want)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(want)) return 'Linked email not saved: the backup email doesn’t look right.';
+    const { error: add } = await supabase.from('account_emails').insert({ email: want, user_id: userId });
+    if (add) return /duplicate|already/i.test(add.message) ? `Linked email not saved: ${/sign-in email/.test(add.message) ? 'that is already your sign-in email.' : 'that email is already used by another account.'}` : `Linked email not saved: ${add.message}`;
+  }
+  return null;
 }

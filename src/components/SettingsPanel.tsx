@@ -138,10 +138,17 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                   <span>Sign-in email</span>
                   <input value={email ?? 'Not signed in'} readOnly aria-readonly="true" className="is-readonly" />
                 </label>
-                <label className="field">
-                  <span>Backup email</span>
-                  <input type="email" value={acct.backupEmail} autoComplete="email" onChange={(e) => setAcct('backupEmail', e.target.value)} />
-                </label>
+                <div className="field">
+                  <label className="field-label" htmlFor="acct-backup">
+                    Backup email
+                  </label>
+                  <input id="acct-backup" type="email" value={acct.backupEmail} autoComplete="email" onChange={(e) => setAcct('backupEmail', e.target.value)} />
+                  {/* V20-118 (Dan, Nov 12): both emails sign in (and count for anything email-related later). */}
+                  <label className="check-line">
+                    <input type="checkbox" checked={acct.linkEmails} disabled={!acct.backupEmail.trim()} onChange={(e) => setAcct('linkEmails', e.target.checked)} />
+                    <span>Sync both emails (sign in with either)</span>
+                  </label>
+                </div>
                 <label className="field">
                   <span>Birthday</span>
                   <input type="date" value={acct.birthday} autoComplete="bday" onChange={(e) => setAcct('birthday', e.target.value)} />
