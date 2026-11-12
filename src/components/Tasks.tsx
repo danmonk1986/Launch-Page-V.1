@@ -842,7 +842,6 @@ function TaskForm({
   const [d, setD] = useState<Task>(task);
   const pushRocket = useRef(false);
   const [steps, setSteps] = useState<string[]>([]);
-  const [push, setPush] = useState(false);
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setD((x) => ({ ...x, [k]: v }));
   const [rep, setRep] = useState(() => repeatOf(task));
   const recurring = rep.kind !== 'none';
@@ -866,8 +865,8 @@ function TaskForm({
         const repeatRule = writeRepeat(rep);
         // Status is automatic now; only THREE (a key task) is kept.
         const status = d.status === 'THREE' ? 'THREE' : 'PENDING';
-        const out = { ...d, task: d.task.trim(), description: d.description.trim(), notes: d.notes.trim(), endDate: recurring ? null : endDate, repeatRule, status };
-        await onSave(out, steps, push && !linked);
+        const out = { ...d, task: d.task.trim(), description: d.description.trim(), notes: d.notes.trim(), expense: (d.expense ?? '').trim(), endDate: recurring ? null : endDate, repeatRule, status };
+        await onSave(out, steps, !isStep && !linked && !!out.expense.trim());
         if (pushRocket.current) {
           pushRocket.current = false;
           onPushRocket?.(out);
@@ -993,19 +992,27 @@ function TaskForm({
       <div className="notes-row">
         <label className="field">
           <span>Notes</span>
-          <input value={d.notes} onChange={(e) => set('notes', e.target.value)} placeholder={isStep ? '' : 'e.g. 1140 USD'} />
+          <input value={d.notes} onChange={(e) => set('notes', e.target.value)} placeholder={isStep ? '' : 'Anything to remember'} />
         </label>
-        {!isStep &&
-          (linked ? (
-            <span className="choice push-pick is-on" title="Linked to a budget line">
-              <span className="expense-link">$$$</span> In Budget
-            </span>
-          ) : (
-            <label className="choice push-pick" title="Adds a budget line for this, with the amount written in Notes (e.g. 1140 USD)">
-              <input type="checkbox" checked={push} onChange={(e) => setPush(e.target.checked)} />
-              <span>Push to Budget</span>
-            </label>
-          ))}
+        {/* V20-091 (Dan, Nov 12): the money has its own field. Fill in Budget expense and saving puts it in Budget
+            (it replaces the Push to Budget box and amounts typed into Notes). The task list can be sorted by it. */}
+        {!isStep && (
+          <label className="field budget-expense">
+            <span>{linked ? 'Budget expense · in Budget' : 'Budget expense'}</span>
+            <input
+              value={d.expense}
+              onChange={(e) => set('expense', e.target.value)}
+              placeholder="e.g. 1140 USD"
+              inputMode="decimal"
+              aria-describedby={linked ? undefined : `${formId}-exp`}
+            />
+            {!linked && (
+              <small id={`${formId}-exp`} className="field-hint">
+                Filled in = it goes to Budget when you save.
+              </small>
+            )}
+          </label>
+        )}
       </div>
       <FormActions
         formId={formId}
