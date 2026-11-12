@@ -254,6 +254,9 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
 
           {tab === 'appearance' && (
             <>
+              {/* V20-128 (Dan, Nov 12): Appearance is in sections; the first is BRAND (logo, headline, mantra). Same look as
+                  the TIMED LAUNCHES heading: colour 2, its font and size. */}
+              <h3 className="timed-title settings-section">Brand</h3>
               {/* V20-124 (Dan's sketch, Nov 12): one logo box, 600 × 110. Type in it and your words show in the L4UNCH P4GE
                   lettering; Choose image beside it uploads a file into the same box instead. */}
               <LogoField
