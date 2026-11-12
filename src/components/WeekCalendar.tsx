@@ -468,7 +468,8 @@ function EventForm({
   // V20-083: new events always save to the Launch Page (Google picks them up in its sync).
   const toGoogle = false;
   void googleOn;
-  const [addTask, setAddTask] = useState(false);
+  // V20-085: PUSH TASK saves the event, then opens Add task filled in from it.
+  const pushTask = useRef(false);
   const set = <K extends keyof CalEvent>(k: K, v: CalEvent[K]) => setD((x) => ({ ...x, [k]: v }));
   const isGoogle = !!d.google;
   const readOnly = !!d.google?.readOnly;
@@ -483,7 +484,10 @@ function EventForm({
         if (!d.title.trim()) return;
         const endDate = d.endDate < d.startDate ? d.startDate : d.endDate;
         await onSave({ ...d, title: d.title.trim(), endDate }, !event && toGoogle);
-        if (!event && addTask) onAddTask?.({ ...d, title: d.title.trim(), endDate });
+        if (pushTask.current) {
+          pushTask.current = false;
+          onAddTask?.({ ...d, title: d.title.trim(), endDate });
+        }
       }}
     >
       <label className="field">
@@ -549,11 +553,20 @@ function EventForm({
           </div>
         </fieldset>
       )}
-      {!event && onAddTask && (
-        <label className="choice event-add-task">
-          <input type="checkbox" checked={addTask} onChange={(e) => setAddTask(e.target.checked)} />
-          <span>Add a task too</span>
-        </label>
+      {onAddTask && !readOnly && (
+        <div className="event-push-row">
+          <button
+            type="button"
+            className="btn event-push-task"
+            title="Save the event and open Add task with its name and dates"
+            onClick={(e) => {
+              pushTask.current = true;
+              e.currentTarget.form?.requestSubmit();
+            }}
+          >
+            Push task
+          </button>
+        </div>
       )}
       {isGoogle && d.google?.link && (
         <p className="field-hint">

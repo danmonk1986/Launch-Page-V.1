@@ -2981,5 +2981,8 @@ button.kb-btn { font-family: inherit; }
 .swatch-dot.ev-teal { background: var(--accent-teal); }
 .ev-green { background: color-mix(in srgb, var(--accent-green) 30%, transparent); color: var(--beige); }
 .ev-pink { background: color-mix(in srgb, var(--accent-pink) 30%, transparent); color: var(--beige); }
-.event-add-task { display: inline-flex; align-items: center; gap: 10px; margin-top: 4px; width: fit-content; }
+/* V20-085 (Dan, Nov 12): PUSH TASK, centred at the bottom, the same teal as Save. */
+.event-push-row { display: flex; justify-content: center; margin-top: 8px; }
+.app .event-push-task { background: var(--accent-teal); border: 1px solid var(--accent-teal); color: #14102b; min-height: 44px; padding: 0 28px; }
+.app .event-push-task:hover { filter: brightness(1.08); color: #14102b; }
 .ev-own { color: var(--beige); }
