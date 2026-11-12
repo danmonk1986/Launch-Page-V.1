@@ -2988,3 +2988,29 @@ button.kb-btn { font-family: inherit; }
 .ev-own { color: var(--beige); }
 /* V20-085: colour 1 text in both modes (the day-mode dark text on teal buttons was winning). */
 .app .event-push-row .btn.event-push-task, .app[data-tone='light'] .event-push-row .btn.event-push-task { color: var(--accent-purple); }
+
+/* V20-086 (Dan, Nov 12): every button uses colour 1 and colour 2 only, in both modes (this layer sits on top).
+   Filled (Save, ▶, LAUNCH, DONE, PUSH TASK): colour 2 fill, colour 1 text / icon; disabled fades, same colours.
+   Teal outline (✓ check off, ⏸ pause): colour 2 edge and icon.
+   Everything else (⋯, ✕, +, Skip, Snooze, Back…): colour 1 edge and icon; a light colour 2 tint on hover.
+   Delete stays red; the header gear keeps its teal (V20-050); KNOWLEDGE!B4SE keeps its own look. */
+.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .btn:not(.btn-quiet), .event-push-task),
+.app[data-tone='light']:not(.is-kb) :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .btn:not(.btn-quiet), .event-push-task) {
+  background: var(--accent-teal); border-color: var(--accent-teal); color: var(--accent-purple);
+}
+.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .btn:not(.btn-quiet), .event-push-task):hover,
+.app[data-tone='light']:not(.is-kb) :is(.tool-btn-go, .quick-launch, .btn:not(.btn-quiet), .event-push-task):hover {
+  color: var(--accent-purple); filter: brightness(1.08);
+}
+.app:not(.is-kb) :is(.tool-btn-go, .btn:not(.btn-quiet)):disabled,
+.app[data-tone='light']:not(.is-kb) :is(.tool-btn-go, .btn:not(.btn-quiet)):disabled { color: var(--accent-purple); opacity: 0.45; filter: none; }
+.app:not(.is-kb) :is(.quick-done, .quick-pause:not(.is-paused)),
+.app[data-tone='light']:not(.is-kb) :is(.quick-done, .quick-pause:not(.is-paused)) { border: 1px solid var(--accent-teal); color: var(--accent-teal); }
+.app:not(.is-kb) :is(.tool-btn:not(.tool-btn-go):not(.tool-btn-danger):not(.gear-btn):not([aria-pressed='true']), .quick-btn:not(.quick-done):not(.quick-launch):not(.quick-pause), .btn-quiet),
+.app[data-tone='light']:not(.is-kb) :is(.tool-btn:not(.tool-btn-go):not(.tool-btn-danger):not(.gear-btn):not([aria-pressed='true']), .quick-btn:not(.quick-done):not(.quick-launch):not(.quick-pause), .btn-quiet) {
+  border-color: var(--accent-purple); color: var(--accent-purple);
+}
+.app:not(.is-kb) :is(.tool-btn:not(.tool-btn-go):not(.tool-btn-danger):not(.gear-btn), .quick-btn:not(.quick-done):not(.quick-launch):not(.quick-pause), .btn-quiet):hover,
+.app[data-tone='light']:not(.is-kb) :is(.tool-btn:not(.tool-btn-go):not(.tool-btn-danger):not(.gear-btn), .quick-btn:not(.quick-done):not(.quick-launch):not(.quick-pause), .btn-quiet):hover {
+  border-color: var(--accent-purple); color: var(--accent-purple); background: color-mix(in srgb, var(--accent-teal) 14%, transparent);
+}
