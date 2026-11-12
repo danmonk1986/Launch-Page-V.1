@@ -27,8 +27,6 @@ import {
   opensSomething,
   runsOnClock,
   describeLog,
-  LOG_KINDS,
-  type LaunchLogKind,
   dayOrder,
   missedRuns,
   MONTH_WEEK,
@@ -1060,7 +1058,6 @@ export function LaunchersPanel(p: Props) {
           onAddRocket={async (url) => {
             await p.onSaveLauncher({ id: crypto.randomUUID(), name: nameFromUrl(url), note: '', url, color: 'teal', routineIds: p.routineId ? [p.routineId] : null, sort: p.launchers.length });
           }}
-          rituals={p.rituals ?? []}
           projects={p.projects ?? []}
           titles={[...new Set(p.launches.map((l) => l.title.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
           nextSort={p.launches.length}
@@ -1245,7 +1242,6 @@ function TimedForm({
   today,
   fill,
   launchers,
-  rituals,
   projects,
   titles,
   nextSort,
@@ -1259,7 +1255,6 @@ function TimedForm({
   launchers: Launcher[];
   /** Add new rocket: saves a pasted link as a rocket tile. */
   onAddRocket: (url: string) => Promise<void>;
-  rituals: { id: string; name: string }[];
   projects: { id: string; name: string; parentId: string | null; sort: number }[];
   /** Names already used, so the same task keeps the same name. */
   titles: string[];
