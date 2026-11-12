@@ -1168,15 +1168,15 @@ function TileForm({
 // V20-072 (Dan, Nov 12): What is a fixed list, each with its default time allotted, so the data stays clean.
 // Later (beta Settings): add, remove and retime these there; these six are the defaults.
 export const WHAT_DEFAULTS: { cat: string; minutes: number }[] = [
-  { cat: 'Work Block', minutes: 90 },
-  { cat: 'Expansion Work', minutes: 60 },
-  { cat: 'Leisure Work', minutes: 60 },
-  { cat: 'Meeting', minutes: 60 },
-  { cat: 'Setup', minutes: 30 },
-  { cat: 'Shop Work', minutes: 90 },
-  { cat: 'Bill PMT', minutes: 15 }
+  { cat: 'WORK BLOCK', minutes: 90 },
+  { cat: 'EXPANSION WORK', minutes: 60 },
+  { cat: 'LEISURE WORK', minutes: 60 },
+  { cat: 'MEETING', minutes: 60 },
+  { cat: 'SETUP', minutes: 30 },
+  { cat: 'SHOP WORK', minutes: 90 },
+  { cat: 'BILL PMT', minutes: 15 }
 ];
-const hoursLabel = (m: number) => (m % 60 === 0 ? `${m / 60} h` : m < 60 ? `${m} min` : `${(m / 60).toFixed(1)} h`);
+
 /** "Category - Description" (Nov 2: also " · " and " – ", as some older launches were saved). */
 export function splitTitle(t: string) {
   const m = / (-|·|–|—) /.exec(t);
@@ -1329,7 +1329,7 @@ function TimedForm({
           </option>
           {WHAT_DEFAULTS.map((w) => (
             <option key={w.cat} value={w.cat}>
-              {w.cat} · {hoursLabel(w.minutes)}
+              {w.cat}
             </option>
           ))}
           {cat && !WHAT_DEFAULTS.some((w) => w.cat === cat) && (
