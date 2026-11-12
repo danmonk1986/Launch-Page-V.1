@@ -1994,7 +1994,7 @@ dialog.crawl::backdrop { background: #000000; }
 select:not([multiple]) {
   -webkit-appearance: none; appearance: none;
   padding-right: 42px !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2306f9c2' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-image: var(--select-caret, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2306f9c2' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")) !important;
   background-repeat: no-repeat !important; background-position: right 16px center !important; background-size: 16px !important;
 }
 /* V20-052: day mode dropdowns use the same teal arrow as night mode (the dark green one was left over). */

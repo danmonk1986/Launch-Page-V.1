@@ -1300,11 +1300,16 @@ export default function App() {
   // Night mode (dark backgrounds) and day mode (light backgrounds) each have their own four colours.
   // V20-048 (Dan, Nov 11): day mode uses its colours exactly as picked (no deepening), so the same
   // codes look the same in both modes.
+  const teal = light ? settings.dayTeal : settings.accentTeal;
   const theme = {
     '--accent-purple': light ? settings.dayPurple : settings.accentPurple,
-    '--accent-teal': light ? settings.dayTeal : settings.accentTeal,
+    '--accent-teal': teal,
     '--accent-green': light ? settings.dayGreen : settings.accentGreen,
-    '--accent-pink': light ? settings.dayPink : settings.accentPink
+    '--accent-pink': light ? settings.dayPink : settings.accentPink,
+    // V20-059: the dropdown arrow is drawn in the picked teal (a picture can't read a CSS colour by itself).
+    '--select-caret': `url("data:image/svg+xml,${encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='${teal}' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>`
+    )}")`
   } as CSSProperties;
 
   // Your own background image for this mode, if you've picked one.
