@@ -81,6 +81,8 @@ type Props = {
   onEditOpened?: () => void;
   /** Rituals a timed launch can open (26 Days). */
   rituals?: { id: string; name: string }[];
+  /** V20-074: projects a timed launch can count toward. */
+  projects?: { id: string; name: string; parentId: string | null; sort: number }[];
 };
 
 /** What fits on one line of a fixed-width tile. */
@@ -1056,6 +1058,7 @@ export function LaunchersPanel(p: Props) {
             await p.onSaveLauncher({ id: crypto.randomUUID(), name: nameFromUrl(url), note: '', url, color: 'teal', routineIds: p.routineId ? [p.routineId] : null, sort: p.launchers.length });
           }}
           rituals={p.rituals ?? []}
+          projects={p.projects ?? []}
           titles={[...new Set(p.launches.map((l) => l.title.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
           nextSort={p.launches.length}
           onCancel={() => setTimedOpen(false)}
@@ -1239,6 +1242,7 @@ function TimedForm({
   fill,
   launchers,
   rituals,
+  projects,
   titles,
   nextSort,
   onSave,
@@ -1252,6 +1256,7 @@ function TimedForm({
   /** Add new rocket: saves a pasted link as a rocket tile. */
   onAddRocket: (url: string) => Promise<void>;
   rituals: { id: string; name: string }[];
+  projects: { id: string; name: string; parentId: string | null; sort: number }[];
   /** Names already used, so the same task keeps the same name. */
   titles: string[];
   nextSort: number;
@@ -1384,25 +1389,29 @@ function TimedForm({
         <span>Description</span>
         <TitleCombo value={desc} titles={descriptions} required={false} placeholder="Launch Page Construction" onChange={(v) => setWhat(cat, v)} list={launchListFor(cat)} />
       </label>
-      {rituals.length > 0 && (
-        <label className="field">
-          <span>Ritual · LAUNCH opens it to work through</span>
-          <select
-            value={d.ritualId ?? ''}
-            onChange={(e) => {
-              const id = e.target.value || null;
-              setD((x) => ({ ...x, ritualId: id, title: x.title.trim() ? x.title : rituals.find((r) => r.id === id)?.name ?? '' }));
-            }}
-          >
-            <option value="">None</option>
-            {rituals.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
+      {/* V20-074 (Dan, Nov 12): Ritual became Project. A launch's time counts toward its project (Stats: hours
+          per project). Sub-projects show under their parent. Existing ritual links keep working. */}
+      <label className="field">
+        <span>Project</span>
+        <select value={d.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || null)}>
+          <option value="">No project</option>
+          {[...projects]
+            .filter((x) => !x.parentId)
+            .sort((x, y) => x.sort - y.sort || x.name.localeCompare(y.name))
+            .flatMap((top) => [
+              top,
+              ...projects.filter((c) => c.parentId === top.id).sort((x, y) => x.sort - y.sort || x.name.localeCompare(y.name))
+            ])
+            .map((x) => {
+              const parent = x.parentId ? projects.find((q) => q.id === x.parentId) : null;
+              return (
+                <option key={x.id} value={x.id}>
+                  {parent ? `${parent.name} › ${x.name}` : x.name}
+                </option>
+              );
+            })}
+        </select>
+      </label>
 
       <div className="time-grid">
         <label className="field">

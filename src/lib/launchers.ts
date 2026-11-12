@@ -50,6 +50,8 @@ export interface Launch {
   onceTime?: { date: string; atTime: string } | null;
   /** LAUNCH opens this ritual to work through (26 Days). */
   ritualId?: string | null;
+  /** V20-074 (Nov 12): the project this launch's time counts toward (copied onto each run at check-off). */
+  projectId?: string | null;
   /**
    * What it logs when checked off. Unset: launches that open something log Productivity
    * by time spent; launches with nothing to open log nothing.
@@ -286,6 +288,7 @@ type LaunchRow = {
   tone?: string;
   once_time?: { date: string; atTime: string } | null;
   ritual_id?: string | null;
+  project_id?: string | null;
   log_kind?: string | null;
   log_amount?: number | null;
   until_time?: string | null;
@@ -328,6 +331,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     once_time: l.onceTime ?? null,
     // Oct 30 (V20-008): every column is always sent, so clearing a field clears it in the cloud too.
     ritual_id: l.ritualId ?? null,
+    project_id: l.projectId ?? null,
     log_kind: l.logKind ?? null,
     log_amount: l.logAmount ?? null,
     until_time: l.untilTime ?? null,
@@ -353,6 +357,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     tone: isTone(r.tone) ? r.tone : 'marimba',
     onceTime: r.once_time ?? null,
     ...(r.ritual_id !== undefined ? { ritualId: r.ritual_id } : {}),
+    ...(r.project_id !== undefined ? { projectId: r.project_id } : {}),
     ...(r.log_kind !== undefined ? { logKind: (r.log_kind as LaunchLogKind | null) ?? null, logAmount: r.log_amount == null ? null : Number(r.log_amount) } : {}),
     ...(r.until_time !== undefined ? { untilTime: r.until_time } : {}),
     ...(r.more_dates !== undefined ? { moreDates: r.more_dates ?? [] } : {}),
@@ -661,6 +666,8 @@ export interface LaunchLog {
   /** V20-073 (Nov 12): the minutes counted for this run (null = none), and where they came from. */
   loggedMin?: number | null;
   timeSource?: TimeSource | null;
+  /** V20-074: the launch's project when this run was checked off. */
+  projectId?: string | null;
 }
 
 /** timed = ▶ / rocket to ✓ (pauses out) · entered = at the Log the time? prompt · none = Don't log ·
@@ -680,6 +687,7 @@ type LogRow = {
   sort: number;
   logged_min?: number | null;
   time_source?: TimeSource | null;
+  project_id?: string | null;
 };
 
 export const launchLogStore = makeStore<LaunchLog, LogRow>({
@@ -688,8 +696,8 @@ export const launchLogStore = makeStore<LaunchLog, LogRow>({
   orderBy: 'day',
   script: 'supabase/migrations/0016_launch_once_time_and_log.sql',
   seed: () => [],
-  toRow: (g) => ({ id: g.id, launch_id: g.launchId, day: g.day, title: g.title, planned: g.planned, extra: g.extra, outcome: g.outcome, launched_at: g.launchedAt, finished_at: g.finishedAt, sort: g.sort, logged_min: g.loggedMin ?? null, time_source: g.timeSource ?? null }),
-  fromRow: (r) => ({ id: r.id, launchId: r.launch_id, day: r.day, title: r.title, planned: r.planned, extra: r.extra, outcome: r.outcome, launchedAt: r.launched_at, finishedAt: r.finished_at, sort: r.sort, loggedMin: r.logged_min ?? null, timeSource: r.time_source ?? null })
+  toRow: (g) => ({ id: g.id, launch_id: g.launchId, day: g.day, title: g.title, planned: g.planned, extra: g.extra, outcome: g.outcome, launched_at: g.launchedAt, finished_at: g.finishedAt, sort: g.sort, logged_min: g.loggedMin ?? null, time_source: g.timeSource ?? null, project_id: g.projectId ?? null }),
+  fromRow: (r) => ({ id: r.id, launchId: r.launch_id, day: r.day, title: r.title, planned: r.planned, extra: r.extra, outcome: r.outcome, launchedAt: r.launched_at, finishedAt: r.finished_at, sort: r.sort, loggedMin: r.logged_min ?? null, timeSource: r.time_source ?? null, projectId: r.project_id ?? null })
 });
 
 /** Today's log row for a launch, made if missing. */

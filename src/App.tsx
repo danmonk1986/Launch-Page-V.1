@@ -214,7 +214,8 @@ export default function App() {
   function logLaunch(l: Launch, patch: (g: LaunchLog) => Partial<LaunchLog>) {
     const list = logRef.current;
     const cur = logFor(list, l, new Date());
-    const item = { ...cur, ...patch(cur), title: l.title };
+    // V20-074: each run carries the launch's project as it was when the run happened.
+    const item = { ...cur, ...patch(cur), title: l.title, projectId: l.projectId ?? null };
     const next = list.some((g) => g.id === item.id) ? list.map((g) => (g.id === item.id ? item : g)) : [...list, item];
     logRef.current = next;
     setLaunchLog(next);
@@ -1102,7 +1103,9 @@ export default function App() {
         weekdays: weekly ? rep.days : [],
         monthDay: monthly ? Number(rep.rule) : null,
         onDate: monthly || weekly ? null : (rep.kind !== 'none' ? nextRepeat(rep, new Date()) : null) ?? t.endDate ?? t.startDate ?? isoDate(firstBlock),
-        urls: t.link ? [t.link] : []
+        urls: t.link ? [t.link] : [],
+        // V20-074: a launch made from a task takes the task's project.
+        projectId: t.projectId ?? null
       },
       n: Date.now(),
       onSaved: (l) => {
@@ -1213,6 +1216,7 @@ export default function App() {
     const item: LaunchLog = {
       ...(cur ?? { id: crypto.randomUUID(), launchId: l.id, day, planned: l.minutes, extra: 0, sort: 0, launchedAt: null }),
       title: l.title,
+      projectId: l.projectId ?? null,
       outcome: how,
       launchedAt: null,
       finishedAt: at,
@@ -1531,6 +1535,7 @@ export default function App() {
               launchers={
                 <LaunchersPanel
                   rituals={routines.filter((r) => r.kind === 'ritual').map((r) => ({ id: r.id, name: r.name }))}
+                  projects={projects}
                   routineName={activeRoutine ? routineLabel(activeRoutine, shift) : null}
                   launchers={launchersFor(launchers, activeRoutine?.id ?? null)}
                   routineId={activeRoutine?.id ?? null}
