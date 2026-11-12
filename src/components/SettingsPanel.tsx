@@ -140,20 +140,6 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
               {saveState === 'typing' ? 'Saving…' : saveState === 'saved' ? 'Saved' : ''}
             </span>
           )}
-          {/* V20-121 (Dan, Nov 12): Save stays too. Everything already saves itself; Save saves now and closes the window. */}
-          <button
-            type="button"
-            className="icon-btn tool-btn tool-btn-go"
-            aria-label="Save and close"
-            title="Save"
-            onClick={() => {
-              dirty.current = true;
-              flush();
-              onClose();
-            }}
-          >
-            <HeadIcon d={SAVE_ICON} />
-          </button>
           {/* V20-120 (Dan, Nov 12): day and night switch (sun | moon), beside where Save was. Each side goes to its own
               remembered background and saves straight away. */}
           <div className="daynight" role="group" aria-label="Day or night">
@@ -169,6 +155,20 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
               </svg>
             </button>
           </div>
+          {/* V20-121 (Dan, Nov 12): order is switch, Save, × (cancel). Save stays too. Everything already saves itself; Save saves now and closes the window. */}
+          <button
+            type="button"
+            className="icon-btn tool-btn tool-btn-go"
+            aria-label="Save and close"
+            title="Save"
+            onClick={() => {
+              dirty.current = true;
+              flush();
+              onClose();
+            }}
+          >
+            <HeadIcon d={SAVE_ICON} />
+          </button>
           <button type="button" className="icon-btn tool-btn" onClick={onClose} aria-label="Close settings" title="Close">
             <HeadIcon d={CLOSE_ICON} />
           </button>
