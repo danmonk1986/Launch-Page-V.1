@@ -1214,7 +1214,8 @@ input:-webkit-autofill:focus {
 .timed-item.is-next .timed-time { color: var(--accent-teal); }
 .now-card { border: 2px solid var(--accent-teal); box-shadow: 0 0 18px color-mix(in srgb, var(--accent-teal) 30%, transparent); }
 /* V20-048: day mode settings match night mode: teal outline, light teal tint, teal icon and text. */
-.app[data-tone='light']:not(.is-kb) .topbar .gear-btn { border-color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); color: var(--accent-teal); }
+/* V20-050: same in night mode, so the gear matches the routine picker everywhere. */
+.app:not(.is-kb) .topbar .gear-btn { border-color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); color: var(--accent-teal); }
 .app[data-tone='light'] .status { background: rgb(68 66 66 / 0.08); }
 .app[data-tone='light'] .ev-google { background: #ffffff; box-shadow: 0 1px 3px rgb(68 66 66 / 0.2); }
 .app[data-tone='light'] .task-row.is-alt td { background: rgb(68 66 66 / 0.045); }
