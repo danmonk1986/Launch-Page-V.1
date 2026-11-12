@@ -563,7 +563,7 @@ function QuoteForm({ quote, isNew, onSave, onDelete }: { quote: Quote; isNew: bo
     >
       <label className="field">
         <span>Quote</span>
-        <textarea value={d.text} rows={4} autoFocus onChange={(e) => setD({ ...d, text: e.target.value })} placeholder="Something that keeps you going" />
+        <textarea data-must="" value={d.text} rows={4} autoFocus onChange={(e) => setD({ ...d, text: e.target.value })} placeholder="Something that keeps you going" />
       </label>
       <label className="field">
         <span>Who said it</span>

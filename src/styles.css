@@ -3023,3 +3023,12 @@ button.kb-btn { font-family: inherit; }
 .notes-row:has(.budget-expense) { grid-template-columns: minmax(0, 1fr) minmax(180px, 260px); align-items: start; }
 @media (max-width: 600px) { .notes-row:has(.budget-expense) { grid-template-columns: 1fr; } }
 .notes-row .budget-expense .field-hint { margin-top: 4px; }
+
+/* V20-092 (Dan, Nov 12): mandatory fields in a form wear the thicker colour 2 box (2px, like the NOW card), in both
+   modes, so a form shows at a glance what must be filled in (handy going form to form with Push task / Push rocket). */
+/* All forms (Dan): pop-ups, pages, Settings, sign-in. */
+:is(input, select, textarea):is(:required, [data-must]):not([type='checkbox']):not([type='radio']):not([type='color']):not([type='file']):not([type='hidden']),
+.app :is(input, select, textarea):is(:required, [data-must]):not([type='checkbox']):not([type='radio']):not([type='color']):not([type='file']):not([type='hidden']),
+.app[data-tone='light'] :is(input, select, textarea):is(:required, [data-must]):not([type='checkbox']):not([type='radio']):not([type='color']):not([type='file']):not([type='hidden']) {
+  border: 2px solid var(--accent-teal);
+}

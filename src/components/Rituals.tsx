@@ -315,7 +315,7 @@ export function RitualRunner({ ritual, isTicked, onTick, onSaveRitual, checkinTe
             </label>
             <label className="field">
               <span>Meditation</span>
-              <textarea rows={14} value={medEdit.script} placeholder="Type or paste the words that play up the screen" onChange={(e) => setMedEdit({ ...medEdit, script: e.target.value })} />
+              <textarea rows={14} data-must="" value={medEdit.script} placeholder="Type or paste the words that play up the screen" onChange={(e) => setMedEdit({ ...medEdit, script: e.target.value })} />
             </label>
             <FormActions formId="med-edit" saveDisabled={!medEdit.script.trim()} />
           </form>
@@ -689,7 +689,7 @@ export function RitualForm({ ritual, isNew, onSave, onDelete, rockets = [], onAd
     >
       <label className="field">
         <span>Name</span>
-        <input value={name} autoFocus={isNew} onChange={(e) => setName(e.target.value)} placeholder="Rise to Shine" />
+        <input data-must="" value={name} autoFocus={isNew} onChange={(e) => setName(e.target.value)} placeholder="Rise to Shine" />
       </label>
       <label className="field">
         <span>Starts at (optional)</span>

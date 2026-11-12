@@ -899,7 +899,7 @@ function TaskForm({
             </label>
             <label className="field">
               <span>Task</span>
-              <input list="task-kinds" autoComplete="off" value={d.task} onChange={(e) => set('task', e.target.value)} placeholder="Appointment, EOM BILL…" />
+              <input list="task-kinds" autoComplete="off" data-must="" value={d.task} onChange={(e) => set('task', e.target.value)} placeholder="Appointment, EOM BILL…" />
               <datalist id="task-kinds">
                 {picks.kinds.map((x) => (
                   <option key={x} value={x} />
