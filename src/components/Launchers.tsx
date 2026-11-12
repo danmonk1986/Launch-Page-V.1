@@ -1173,7 +1173,8 @@ export const WHAT_DEFAULTS: { cat: string; minutes: number }[] = [
   { cat: 'Leisure Work', minutes: 60 },
   { cat: 'Meeting', minutes: 60 },
   { cat: 'Setup', minutes: 30 },
-  { cat: 'Shop Work', minutes: 90 }
+  { cat: 'Shop Work', minutes: 90 },
+  { cat: 'Bill PMT', minutes: 15 }
 ];
 const hoursLabel = (m: number) => (m % 60 === 0 ? `${m / 60} h` : m < 60 ? `${m} min` : `${(m / 60).toFixed(1)} h`);
 /** "Category - Description" (Nov 2: also " · " and " – ", as some older launches were saved). */
