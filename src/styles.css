@@ -1215,7 +1215,12 @@ input:-webkit-autofill:focus {
 .app[data-tone='light'] .d26-takeaway, .app[data-tone='light'] .d26-sec, .app[data-tone='light'] .d26-tile, .app[data-tone='light'] .d26-stat { background: rgb(68 66 66 / 0.04); }
 .app[data-tone='light'] .rit-step { background: rgb(68 66 66 / 0.04); }
 /* V20-048 (Dan, Nov 11): the next timed launch and the routine's NOW step sit in a teal box with a soft glow, in both modes. */
-.timed-item.is-next { border: 2px solid var(--accent-teal); border-radius: 14px; padding: 2px 8px 2px 0; box-shadow: 0 0 16px color-mix(in srgb, var(--accent-teal) 30%, transparent); }
+/* V20-054: every row has the same (invisible) frame, so the boxed one's text and buttons line up with the rest;
+   a launched row tints the whole frame, buttons included. */
+.timed-item { border: 2px solid transparent; border-radius: 14px; padding: 2px 8px 2px 0; }
+.timed-item.is-launched { background: color-mix(in srgb, var(--accent-teal) 10%, transparent); }
+.timed-item.is-launched .timed-row { background: transparent; }
+.timed-item.is-next { border-color: var(--accent-teal); box-shadow: 0 0 16px color-mix(in srgb, var(--accent-teal) 30%, transparent); }
 .timed-item.is-next .timed-time { color: var(--accent-teal); }
 .now-card { border: 2px solid var(--accent-teal); box-shadow: 0 0 18px color-mix(in srgb, var(--accent-teal) 30%, transparent); }
 /* V20-048: day mode settings match night mode: teal outline, light teal tint, teal icon and text. */
