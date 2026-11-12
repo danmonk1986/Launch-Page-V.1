@@ -18,15 +18,16 @@ export function TodayPanel({ routine, shift, onEdit, follow }: Props) {
   const blocks = routine ? toBlocks(routine, shift) : [];
   const current = nowBlockIndex(blocks, now);
   const nowBlock = current >= 0 ? blocks[current] : null;
-  const panel = useRef<HTMLElement>(null);
+  // V20-108: card by card, the list scrolls in its own box under the Now box.
+  const list = useRef<HTMLOListElement>(null);
   // Card by card: NOW stays on top and the list starts at what's next; earlier steps follow, dimmed.
   const order = follow && current >= 0 ? [...blocks.keys()].filter((i) => i > current).concat([...blocks.keys()].filter((i) => i < current)) : [...blocks.keys()];
   useEffect(() => {
-    if (follow) panel.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    if (follow) list.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [follow, current, routine?.id, shift]);
 
   return (
-    <section ref={panel} className="panel panel-today" aria-label="Today's routine">
+    <section className="panel panel-today" aria-label="Today's routine">
       {blocks.length === 0 ? (
         <div className="today-empty">
           <p className="panel-empty">No steps yet. Add them and they show here as today's timeline.</p>
@@ -47,7 +48,7 @@ export function TodayPanel({ routine, shift, onEdit, follow }: Props) {
             </div>
           </div>
         )}
-        <ol className="timeline">
+        <ol ref={list} className="timeline">
           {order.map((i, n) => {
             const b = blocks[i];
             const earlier = follow && current >= 0 && i < current;

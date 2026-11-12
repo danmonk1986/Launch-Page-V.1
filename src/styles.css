@@ -1478,11 +1478,9 @@ html.snap-scroll { scroll-snap-type: y mandatory; scroll-padding-top: calc(var(-
     top: calc(var(--header-h, 160px) + 22px);
     align-self: flex-start;
     max-height: calc(100dvh - var(--header-h, 160px) - 44px);
-    overflow-y: auto;
-    scrollbar-width: thin;
   }
-  .app[data-scroll='cards'] .panel-today .now-card { position: sticky; top: -24px; z-index: 2; background: var(--surface-solid); }
 }
+
 
 /* ---------- Journal: top row, mood, full page (Oct 17, 1 AM) ---------- */
 .journal-top-row { display: flex; align-items: center; gap: 12px; }
@@ -1514,7 +1512,6 @@ html.snap-scroll { scroll-snap-type: y mandatory; scroll-padding-top: calc(var(-
 .journal-sub-row .journal-streak { margin-left: 0; text-transform: uppercase; font-weight: 700; }
 
 /* Card by card: what's next sits under NOW; earlier steps follow, dimmed. */
-.app[data-scroll='cards'] .panel-today .now-card { box-shadow: 0 0 18px color-mix(in srgb, var(--accent-teal) 30%, transparent), 0 10px 14px -8px var(--surface-solid); margin-bottom: 14px; }
 .tl-block.is-earlier { opacity: 0.45; }
 .tl-block.is-first-earlier { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--edge-strong); }
 
@@ -1908,10 +1905,6 @@ dialog.crawl::backdrop { background: #000000; }
 .colour-hex { width: 100%; min-width: 0; height: 38px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--edge-strong); background: rgb(15 11 34 / 0.85); color: var(--beige); font-family: var(--font-mono); font-size: 13px; text-transform: lowercase; }
 .app[data-tone='light'] .colour-hex { background: #ffffff; color: #444242; }
 
-/* Card by card: a little room above the sticky NOW card so it isn't cut off at the top of the routine. */
-@media (min-width: 1100px) { /* Oct 24: pin the routine only once it sits beside the cards (the columns stack below ~1,000px) */
-  .app[data-scroll='cards'] .panel-today .now-card { top: -12px; box-shadow: 0 0 18px color-mix(in srgb, var(--accent-teal) 30%, transparent), 0 -14px 0 0 var(--surface-solid), 0 10px 14px -8px var(--surface-solid); }
-}
 .swatches:has(.colour-field) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
 .colour-field { margin: 0; }
 .swatch.colour-field .colour-hex { width: 100%; height: 38px; padding: 0 10px; border-color: var(--edge-strong); }
@@ -1934,21 +1927,6 @@ dialog.crawl::backdrop { background: #000000; }
 .bg-picks .image-pick { margin: 0; }
 .app[data-tone='light'] .image-pick-preview { background: #f4f4f4; }
 @media (max-width: 520px) { .bg-picks { grid-template-columns: minmax(0, 1fr); } }
-
-/* Card by card (Oct 17, 11:35 PM): items scrolling up fade out under the NOW card instead of being sliced
-   off at its edge, and the list has room at the bottom so the last step clears the card's edge. */
-@media (min-width: 1100px) { /* Oct 24: pin the routine only once it sits beside the cards (the columns stack below ~1,000px) */
-  .app[data-scroll='cards'] .panel-today .now-card::after {
-    /* V20-051: start below the card's 2px teal border (it was drawn over its bottom half). */
-    content: ''; position: absolute; left: -24px; right: -24px; top: calc(100% + 3px); height: 40px; pointer-events: none;
-    background: linear-gradient(var(--surface-solid) 55%, transparent);
-  }
-  .app[data-scroll='cards'] .panel-today .now-card::before {
-    content: ''; position: absolute; left: -24px; right: -24px; bottom: calc(100% + 3px); height: 14px; pointer-events: none; background: var(--surface-solid);
-  }
-  .app[data-scroll='cards'] .home > .panel-today { padding-bottom: 32px; }
-  .app[data-scroll='cards'] .panel-today .timeline { padding-top: 6px; }
-}
 
 /* Rockets (Oct 17, 11:45 PM): ⌄ beside the title shows/hides the tiles; hidden by default. */
 .rockets-title { display: flex; align-items: center; gap: 6px; }
@@ -1987,10 +1965,6 @@ dialog.crawl::backdrop { background: #000000; }
   width: calc(34px * 5 + 4px * 4 + 18px);
 }
 .mood-row { display: flex; gap: 6px; flex-wrap: wrap; max-width: calc(34px * 5 + 6px * 4); }
-/* Card by card: the routine card is solid so the fade band under NOW blends into it instead of showing as a strip. */
-@media (min-width: 1100px) { /* Oct 24: pin the routine only once it sits beside the cards (the columns stack below ~1,000px) */
-  .app[data-scroll='cards'] .home > .panel-today { background: var(--surface-solid); }
-}
 
 /* Dropdowns (Oct 18): our own ⌄ with room from the right edge, on every select. */
 select:not([multiple]) {
@@ -2016,10 +1990,6 @@ select:not([multiple]) {
   text-align: center;
   color: var(--beige);
   white-space: pre-line;
-}
-@media (min-width: 1100px) { /* Oct 24: pin the routine only once it sits beside the cards (the columns stack below ~1,000px) */
-  .app[data-scroll='cards'] .panel-today .now-card { top: 0; }
-  .app[data-scroll='cards'] .panel-today .now-card::before { display: none; }
 }
 
 /* Food log: calories + Estimate side by side */
@@ -3068,7 +3038,8 @@ button.kb-btn { font-family: inherit; }
    in their own column beside it with nothing behind them. V20-105: no line at the split. */
 .task-split { display: flex; align-items: flex-start; margin: 0 -8px; }
 .task-split .task-scroll { min-width: 0; margin-left: 0; margin-right: 0; }
-.task-pins { flex: none; overflow: hidden; margin-bottom: -12px; }
+.task-pins { flex: none; overflow: hidden; margin-bottom: -12px; padding-right: 8px; margin-right: -8px; }
+/* V20-107 (Dan, Nov 12): the outside up-and-down bar sits centred in the space between the ⋯ and the card edge (8px either side), not against the buttons. */
 .task-split .task-pin-table { width: auto; min-width: 0; }
 .task-pin-table td, .task-pin-table th { padding-left: 8px; }
 /* One band across both halves: the stripe's round ends sit at the table's left and the column's right. */
@@ -3089,4 +3060,18 @@ button.kb-btn { font-family: inherit; }
 .task-clip > .task-scroll { width: calc(100% + 24px); padding-right: 24px; box-sizing: border-box; margin: 0; }
 @media (hover: hover) {
   .task-split .task-table .task-row.is-hover td { box-shadow: inset 0 -2px 0 var(--row-hover-line, var(--accent-teal)); }
+}
+
+/* V20-108 (Dan, Nov 12): the routine card splits like Tasks (V20-104). Card by card, once the routine sits beside the
+   cards: the Now box stays put at the top, and the list under it scrolls in its own box, cut off cleanly at the Now
+   box's edge and the card's bottom. Nothing floats, no fades, and the card is see-through like the others. The
+   up-and-down bar sits centred in the space between the list and the card's right edge (as in V20-107). */
+@media (min-width: 1100px) {
+  .app[data-scroll='cards'] .home > .panel-today { display: flex; flex-direction: column; overflow: hidden; }
+  .app[data-scroll='cards'] .panel-today .now-card { flex: none; margin-bottom: 14px; }
+  .app[data-scroll='cards'] .panel-today .timeline {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    margin-right: -16px; padding-right: 16px; margin-bottom: -12px; padding-bottom: 12px;
+    scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent-teal) 45%, transparent) transparent;
+  }
 }
