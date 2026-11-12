@@ -283,6 +283,31 @@ export function LaunchersPanel(p: Props) {
   const history = (p.log ?? [])
     .filter((g) => g.outcome !== 'launched' || g.finishedAt)
     .sort((a, b) => (b.finishedAt ?? b.launchedAt ?? b.day).localeCompare(a.finishedAt ?? a.launchedAt ?? a.day));
+  // V20-002: done rate per launch over the last 14 days (the Launch gate: 60% done). Runs are grouped by the
+  // launch's name before its first ' - ' (Work Block #2 - … counts as Work Block #2); cleared runs count neither way.
+  const rates = (() => {
+    const since = isoDate(new Date(p.today.getFullYear(), p.today.getMonth(), p.today.getDate() - 13, 12));
+    const todayIso = isoDate(p.today);
+    const nameOf = (t: string) => t.split(/ [-·–—] /)[0].trim() || t;
+    const groups = new Map<string, { name: string; done: number; skipped: number; missed: number }>();
+    const add = (t: string, k: 'done' | 'skipped' | 'missed') => {
+      const name = nameOf(t);
+      const g = groups.get(name) ?? { name, done: 0, skipped: 0, missed: 0 };
+      g[k] += 1;
+      groups.set(name, g);
+    };
+    for (const g of p.log ?? []) {
+      if (g.day < since || g.day > todayIso) continue;
+      if (g.outcome === 'done' || (g.outcome === 'launched' && g.finishedAt)) add(g.title, 'done');
+      else if (g.outcome === 'skipped') add(g.title, 'skipped');
+    }
+    for (const m of missedRuns(p.launches, p.log ?? [], p.today, 14, new Set(p.offDays ?? []))) if (m.day >= since) add(m.launch.title, 'missed');
+    return [...groups.values()]
+      .map((g) => ({ ...g, total: g.done + g.skipped + g.missed }))
+      .filter((g) => g.total > 0)
+      .map((g) => ({ ...g, pct: Math.round((g.done / g.total) * 100) }))
+      .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+  })();
   const countOf = (id: TimedView) => (id === 'history' ? history.length : id === 'missed' ? missed.length : views[id].length);
   const list = views[view];
   // Active keeps to the next 3 (Show all for the rest); the other tabs show their whole list.
@@ -562,6 +587,22 @@ export function LaunchersPanel(p: Props) {
           history.length === 0 ? (
             <p className="panel-empty timed-empty">{EMPTY.history}</p>
           ) : (
+            <>
+            {rates.length > 0 && (
+              <div className="timed-rates" aria-label="Done rate per launch, last 14 days">
+                <p className="timed-rates-title">Done rate · last 14 days</p>
+                <ul>
+                  {rates.map((r) => (
+                    <li key={r.name} className={`timed-rate${r.pct < 60 ? ' is-low' : ''}`}>
+                      <span className="timed-rate-name">{r.name}</span>
+                      <span className="timed-rate-bar" aria-hidden="true"><span style={{ width: `${r.pct}%` }} /></span>
+                      <span className="timed-rate-pct">{r.pct}%</span>
+                      <span className="timed-rate-meta">{r.done} done · {r.skipped} skipped · {r.missed} missed</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <ul className="timed-list">
               {history.slice(0, showAllTimed ? undefined : 30).map((g) => {
                 const spent = g.launchedAt && g.finishedAt ? Math.round((new Date(g.finishedAt).getTime() - new Date(g.launchedAt).getTime()) / 60_000) : null;
@@ -580,6 +621,7 @@ export function LaunchersPanel(p: Props) {
                 );
               })}
             </ul>
+            </>
           )
         ) : list.length === 0 ? (
           <p className="panel-empty timed-empty">{p.launches.length === 0 ? 'At a set time, a reminder pops up and one tap opens every tab you need.' : EMPTY[view]}</p>

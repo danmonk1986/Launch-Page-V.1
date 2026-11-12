@@ -2898,3 +2898,16 @@ button.kb-btn { font-family: inherit; }
 @media (hover: hover) {
   .task-table .task-row:hover td { box-shadow: inset 0 -2px 0 var(--row-hover-line, var(--accent-teal)); }
 }
+
+/* V20-002: done rate per launch, last 14 days (top of Timed Launches History). Gate: 60% done. */
+.timed-rates { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--accent-purple) 8%, transparent); }
+.timed-rates-title { margin: 0 0 6px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mist); }
+.timed-rates ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.timed-rate { display: grid; grid-template-columns: minmax(0, 1fr) 90px 42px; grid-template-areas: 'name bar pct' 'meta meta meta'; align-items: center; column-gap: 10px; }
+.timed-rate-name { grid-area: name; color: var(--beige); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timed-rate-bar { grid-area: bar; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--mist) 22%, transparent); overflow: hidden; }
+.timed-rate-bar > span { display: block; height: 100%; background: var(--accent-teal); border-radius: 3px; }
+.timed-rate-pct { grid-area: pct; text-align: right; font-weight: 700; color: var(--accent-teal); font-variant-numeric: tabular-nums; }
+.timed-rate-meta { grid-area: meta; font-size: 0.75rem; color: var(--dim); }
+.timed-rate.is-low .timed-rate-bar > span { background: var(--accent-pink); }
+.timed-rate.is-low .timed-rate-pct { color: var(--accent-pink); }
