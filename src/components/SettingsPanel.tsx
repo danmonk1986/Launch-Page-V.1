@@ -787,8 +787,8 @@ const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }
   {
     title: 'Business',
     items: [
-      ['invoice', 'Invoice', ''],
-      ['records', 'Records', 'Expenses and invoices.'],
+      ['invoice', 'Invoice', 'Invoices, in Records.'],
+      ['records', 'Records', 'Bookkeeping activity.'],
       ['crm', 'CRM', ''],
       ['marketing', 'Marketing', ''],
       ['planner', 'Project Planner', '']

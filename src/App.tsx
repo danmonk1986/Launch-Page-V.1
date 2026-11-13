@@ -472,7 +472,7 @@ export default function App() {
   const shownRoutines = routinesOnly(routines);
   const activeRoutine = shownRoutines.find((r) => r.id === activeId) ?? shownRoutines[0] ?? null;
   // V20-158: pages switched off in Settings › Modules leave the menu (and send you to the Launch Page).
-  const hiddenPages = ([['days26', settings.modules.days26], ['budget', settings.modules.budget], ['invoices', settings.modules.records]] as const)
+  const hiddenPages = ([['days26', settings.modules.days26], ['budget', settings.modules.budget], ['invoices', settings.modules.records || settings.modules.invoice]] as const)
     .filter(([, on]) => !on)
     .map(([id]) => id) as PageId[];
   const hiddenPagesKey = hiddenPages.join(',');
@@ -1749,6 +1749,8 @@ export default function App() {
             />
           ) : page === 'invoices' ? (
             <RecordsPage
+              showInvoices={settings.modules.invoice}
+              showBooks={settings.modules.records}
               expenses={expenses}
               lines={budget}
               onSaveExpense={editExpense}

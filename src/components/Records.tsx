@@ -1,4 +1,4 @@
-import { useState, type ComponentProps } from 'react';
+import { useEffect, useState, type ComponentProps } from 'react';
 import { Icon, SearchToggle } from './Tasks';
 import { ExpensesView, MonthNav, thisMonth } from './Expenses';
 import { InvoicesPage } from './Invoices';
@@ -35,6 +35,9 @@ export function RecordsPage(
     onImport: (r: ImportResult) => Promise<void>;
     onSaveBankLine: (l: BankLine) => Promise<void>;
     projects: Project[];
+    /** V20-161 (Dan, Nov 13): Settings › Modules. Invoice = the Invoices view; Records = Expenses, Income and Draws. */
+    showInvoices?: boolean;
+    showBooks?: boolean;
   }
 ) {
   const [view, setViewState] = useState<View>(() => {
@@ -67,9 +70,15 @@ export function RecordsPage(
     { id: 'draws', label: 'Draws', hint: 'Business withdrawals and e-transfers to you' },
     { id: 'invoices', label: 'Invoices', hint: 'STARDVST invoices' }
   ];
+  const shownViews = VIEWS.filter((v) => (v.id === 'invoices' ? p.showInvoices !== false : p.showBooks !== false));
+  const firstShown = shownViews.some((v) => v.id === view) ? null : shownViews[0]?.id ?? null;
+  useEffect(() => {
+    if (firstShown) setView(firstShown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstShown]);
   const views = (
     <div className="area-filter pill-row records-views" role="group" aria-label="Records">
-      {VIEWS.map((v) => (
+      {shownViews.map((v) => (
         <button key={v.id} type="button" className="area-pill" aria-pressed={view === v.id} title={v.hint} onClick={() => setView(v.id)}>
           {v.label}
         </button>
@@ -77,7 +86,7 @@ export function RecordsPage(
     </div>
   );
 
-  if (view === 'invoices') return <InvoicesPage {...p} title="Records" below={views} />;
+  if (view === 'invoices' && p.showInvoices !== false) return <InvoicesPage {...p} title="Records" below={views} />;
 
   return (
     <section className="panel panel-budget panel-records" aria-labelledby="h-records">

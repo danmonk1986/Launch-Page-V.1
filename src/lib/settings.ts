@@ -77,7 +77,7 @@ export const DEFAULT_MODULES: Modules = {
   invoice: false, records: false, crm: false, marketing: false, planner: false
 };
 /** Not built yet: shown greyed out with Coming soon. */
-export const MODULE_SOON: (keyof Modules)[] = ['goals', 'milestones', 'trips', 'invoice', 'crm', 'marketing', 'planner'];
+export const MODULE_SOON: (keyof Modules)[] = ['goals', 'milestones', 'trips', 'crm', 'marketing', 'planner'];
 
 export interface Surface { header: string; headerSolid: number; card: string; cardSolid: number }
 export interface Surfaces { day: Surface; night: Surface }
