@@ -501,6 +501,18 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
             </button>
           </div>
         )}
+        {/* V20-170 (Dan, Nov 13): Delete account, greyed out until it's built. */}
+        {tab === 'signout' && (
+          <div className="settings-action is-disabled" aria-disabled="true">
+            <div>
+              <p className="settings-action-title">Delete account</p>
+              <p className="field-hint">Coming soon. Removes your account and everything in it, for good.</p>
+            </div>
+            <button type="button" className="btn btn-danger" disabled>
+              Delete account
+            </button>
+          </div>
+        )}
       </div>
     </dialog>
   );
