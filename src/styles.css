@@ -1211,8 +1211,8 @@ input:-webkit-autofill:focus {
 /* V20-049 (Nov 11): cards are #f5f5eb, a softer cream than beige. */
 /* V20-066 (Nov 11): day cards are see-through like night (0.82), so Damascus peeks through a little.
    The pinned column and anything that must stay solid keep --surface-solid / --pin. */
-.app[data-tone='light']:not(.is-kb) { --surface: rgb(245 245 235 / 0.82); }
-.app[data-tone='light']:not(.is-kb) .panel { --surface-solid: #f5f5eb; --pin: #f5f5eb; }
+.app[data-tone='light']:not(.is-kb) { --surface: var(--card-surface, rgb(245 245 235 / 0.82)); }
+.app[data-tone='light']:not(.is-kb) .panel { --surface-solid: var(--card-solid, #f5f5eb); --pin: var(--card-solid, #f5f5eb); }
 .app[data-tone='light'] .panel .combo-list { background: #ffffff; }
 /* V20-053 (Dan, Nov 11): a card inside a card in day mode is a soft grey tint; rocket tiles now match the
    26 Days sections and ritual steps. */
@@ -3207,6 +3207,13 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .colour-swatch input[type='color'] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .colour-name small { color: var(--dim); font-size: 11px; margin-left: 4px; }
 .colour-tile .colour-hex { width: 100%; height: 30px; font-size: 12px; box-sizing: border-box; }
+/* V20-146 (Dan, Nov 12): CARDS + HEADER. Header and card colours per mode, and how solid each is. */
+.app:not(.is-kb) { --surface: var(--card-surface, rgb(18 13 40 / 0.82)); }
+.app:not(.is-kb) .panel { --pin: var(--card-solid, rgb(18 13 40)); }
+.app:not(.is-kb) .topbar, .app[data-tone='light']:not(.is-kb) .topbar { background: var(--header-bg, rgb(15 11 34 / 0.86)); }
+.solid-swatch { background: repeating-conic-gradient(rgb(128 128 128 / 0.25) 0 25%, transparent 0 50%) 0 0 / 12px 12px; cursor: default; }
+.solid-swatch > span { position: absolute; inset: 0; }
+.solid-range { width: 100%; height: 30px; accent-color: var(--accent-teal); margin: 0; }
 
 /* V20-137 (Dan, Nov 12): Starry night is a real starry sky (stars, a soft purple milky band, a pink glow low down;
    no grid). Synthwave gets the same stars in its sky, above the horizon. */

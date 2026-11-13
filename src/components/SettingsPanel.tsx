@@ -313,6 +313,26 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                 );
               })}
               <p className="field-hint">Neutral is the text colour. Colour 1 and Colour 2 run the app; Colour 1, Colour 2 and the two accents are the rocket colours. Tap a swatch to pick (the dropper picks from the screen), or paste a hex code.</p>
+              {/* V20-146 (Dan, Nov 12): CARDS + HEADER, each mode's header and card colour and how solid each is. */}
+              <h3 className="timed-title settings-section">Cards + header</h3>
+              {(['day', 'night'] as const).map((mode) => {
+                const sf = draft.surfaces[mode];
+                const put = (patch: Partial<typeof sf>) => set('surfaces', { ...draft.surfaces, [mode]: { ...sf, ...patch } });
+                return (
+                  <div key={mode} className="field bg-row">
+                    <div className="bg-row-head">
+                      <span className="field-label">{mode === 'day' ? 'Day (light)' : 'Night (dark)'}</span>
+                    </div>
+                    <div className="bg-tiles">
+                      <ColourTile label="Header" value={sf.header} onChange={(v) => put({ header: v })} />
+                      <SolidTile label="Header solid" colour={sf.header} value={sf.headerSolid} onChange={(v) => put({ headerSolid: v })} />
+                      <ColourTile label="Cards" value={sf.card} onChange={(v) => put({ card: v })} />
+                      <SolidTile label="Cards solid" colour={sf.card} value={sf.cardSolid} onChange={(v) => put({ cardSolid: v })} />
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="field-hint">Solid is how much of the colour shows: 100% is solid, lower lets the background through.</p>
             </>
           )}
         </form>
@@ -685,6 +705,21 @@ function BgRow({ mode, current, colour, palette, slots, onPick, onColour, onImag
 }
 
 /** V20-130: one colour as a tile: a swatch shaped like the background tiles (tap to pick), its name, and the hex code. */
+/** V20-146: how solid a colour is (100 = solid, lower lets the background show through). */
+function SolidTile({ label, colour, value, onChange }: { label: string; colour: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="bg-tile colour-tile">
+      <span className="bg-screen colour-swatch solid-swatch">
+        <span style={{ background: `color-mix(in srgb, ${colour} ${value}%, transparent)` }} />
+      </span>
+      <span className="bg-name colour-name">
+        {label} <small>{value}%</small>
+      </span>
+      <input className="solid-range" type="range" min={0} max={100} step={1} value={value} onChange={(e) => onChange(Number(e.target.value))} aria-label={`${label} (percent)`} />
+    </div>
+  );
+}
+
 function ColourTile({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [hex, setHex] = useState(value);
   useEffect(() => setHex(value), [value]);

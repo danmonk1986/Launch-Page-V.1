@@ -1470,6 +1470,7 @@ export default function App() {
   // V20-048 (Dan, Nov 11): day mode uses its colours exactly as picked (no deepening), so the same
   // codes look the same in both modes.
   const teal = light ? settings.dayTeal : settings.accentTeal;
+  const surf = settings.surfaces[light ? 'day' : 'night'];
   const theme = {
     '--accent-purple': light ? settings.dayPurple : settings.accentPurple,
     '--accent-teal': teal,
@@ -1477,6 +1478,10 @@ export default function App() {
     '--accent-pink': light ? settings.dayPink : settings.accentPink,
     // V20-144: Neutral (main colour 1) is the mode's text colour.
     '--beige': light ? settings.dayNeutral : settings.nightNeutral,
+    // V20-146: CARDS + HEADER, the mode's header and card colours at their see-through level.
+    '--header-bg': `color-mix(in srgb, ${surf.header} ${surf.headerSolid}%, transparent)`,
+    '--card-surface': `color-mix(in srgb, ${surf.card} ${surf.cardSolid}%, transparent)`,
+    '--card-solid': surf.card,
     // V20-059: the dropdown arrow is drawn in the picked teal (a picture can't read a CSS colour by itself).
     '--select-caret': `url("data:image/svg+xml,${encodeURIComponent(
       `<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='${teal}' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>`

@@ -56,7 +56,16 @@ export interface BrandSettings {
   /** V20-144 (Dan, Nov 12): Neutral, main colour 1: the text colour of each mode (grey by day, beige by night). */
   dayNeutral: string;
   nightNeutral: string;
+  /** V20-146 (Dan, Nov 12): CARDS + HEADER, each mode's header and card colour and how solid each is (0–100). */
+  surfaces: Surfaces;
 }
+
+export interface Surface { header: string; headerSolid: number; card: string; cardSolid: number }
+export interface Surfaces { day: Surface; night: Surface }
+export const DEFAULT_SURFACES: Surfaces = {
+  day: { header: '#ffffff', headerSolid: 88, card: '#f5f5eb', cardSolid: 82 },
+  night: { header: '#0f0b22', headerSolid: 86, card: '#120d28', cardSolid: 82 }
+};
 
 /** V20-113 (Dan, Nov 12): who you are and your business. Kept in one column (settings.account). */
 export interface AccountInfo {
@@ -128,7 +137,8 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   nightColour: '#0b0820',
   dayColour: '#f5f5dc',
   dayNeutral: '#444242',
-  nightNeutral: '#f5f5dc'
+  nightNeutral: '#f5f5dc',
+  surfaces: DEFAULT_SURFACES
 };
 
 /** V20-120: day mode = a light background. */
@@ -200,6 +210,7 @@ type Row = {
   night_colour?: string | null;
   day_neutral?: string | null;
   night_neutral?: string | null;
+  surfaces?: Partial<Record<'day' | 'night', Partial<Surface>>> | null;
   day_colour?: string | null;
 };
 
@@ -226,7 +237,8 @@ const toRow = (s: BrandSettings): Row => ({
   night_colour: s.nightColour,
   day_colour: s.dayColour,
   day_neutral: s.dayNeutral,
-  night_neutral: s.nightNeutral
+  night_neutral: s.nightNeutral,
+  surfaces: s.surfaces
 });
 
 const fromRow = (r: Row): BrandSettings => ({
@@ -254,7 +266,11 @@ const fromRow = (r: Row): BrandSettings => ({
   nightColour: r.night_colour || (r.background === 'navy' || r.background === 'plain' ? '#0b0820' : DEFAULT_SETTINGS.nightColour),
   dayColour: r.day_colour || (r.background === 'white' ? '#ffffff' : DEFAULT_SETTINGS.dayColour),
   dayNeutral: r.day_neutral || DEFAULT_SETTINGS.dayNeutral,
-  nightNeutral: r.night_neutral || DEFAULT_SETTINGS.nightNeutral
+  nightNeutral: r.night_neutral || DEFAULT_SETTINGS.nightNeutral,
+  surfaces: {
+    day: { ...DEFAULT_SURFACES.day, ...(r.surfaces?.day ?? {}) },
+    night: { ...DEFAULT_SURFACES.night, ...(r.surfaces?.night ?? {}) }
+  }
 });
 
 /** The remembered background for each mode; the current one fills its own side when nothing is saved yet. */
