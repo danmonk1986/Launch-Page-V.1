@@ -3074,9 +3074,9 @@ button.kb-btn { font-family: inherit; }
 .panel-tasks-page > .fold-tabs { flex: none; margin: 0 0 14px; }
 
 /* V20-111 (Dan, Nov 12): Settings, a wide pop-out window with tabs across the top like Timed launches and Tasks. */
-.sheet-settings { width: min(806px, calc(100vw - 32px)); /* V20-142: fits the 760px body, no empty right side */ min-height: min(640px, calc(100dvh - 48px)); }
+.sheet-settings { width: min(960px, calc(100vw - 32px)); /* V20-168: wide enough for every tab (was 806px, V20-142) */ min-height: min(640px, calc(100dvh - 48px)); }
 .sheet-settings > .fold-tabs { flex: none; margin: 0 0 18px; }
-.settings-body { max-width: 760px; }
+.settings-body { max-width: none; } /* V20-168: the body fills the window, so there's no empty strip */
 .settings-note { color: var(--mist); margin: 6px 0 0; }
 .settings-actions { display: grid; gap: 10px; }
 .settings-action { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 1px solid var(--edge); border-radius: 12px; }
