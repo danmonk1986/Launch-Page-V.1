@@ -294,25 +294,24 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                 />
               ))}
 
-              <fieldset className="field">
-                <legend>Night mode colours</legend>
-                <div className="swatches">
-                  <ColourField label="Purple" value={draft.accentPurple} onChange={(v) => set('accentPurple', v)} />
-                  <ColourField label="Teal" value={draft.accentTeal} onChange={(v) => set('accentTeal', v)} />
-                  <ColourField label="Green" value={draft.accentGreen} onChange={(v) => set('accentGreen', v)} />
-                  <ColourField label="Pink" value={draft.accentPink} onChange={(v) => set('accentPink', v)} />
-                </div>
-              </fieldset>
-              <fieldset className="field">
-                <legend>Day mode colours</legend>
-                <div className="swatches">
-                  <ColourField label="Purple" value={draft.dayPurple} onChange={(v) => set('dayPurple', v)} />
-                  <ColourField label="Teal" value={draft.dayTeal} onChange={(v) => set('dayTeal', v)} />
-                  <ColourField label="Green" value={draft.dayGreen} onChange={(v) => set('dayGreen', v)} />
-                  <ColourField label="Pink" value={draft.dayPink} onChange={(v) => set('dayPink', v)} />
-                </div>
-                <p className="field-hint">Purple and Teal run the app; all four are rocket colours. Tap a swatch to pick (the dropper picks from the screen), or paste a hex code.</p>
-              </fieldset>
+              {/* V20-130 (Dan, Nov 12): COLOURS, laid out like BACKGROUND: Day (light) and Night (dark), one tile per colour. */}
+              <h3 className="timed-title settings-section">Colours</h3>
+              {(['day', 'night'] as const).map((mode) => {
+                const keys = (mode === 'day' ? ['dayPurple', 'dayTeal', 'dayGreen', 'dayPink'] : ['accentPurple', 'accentTeal', 'accentGreen', 'accentPink']) as (keyof BrandSettings)[];
+                return (
+                  <div key={mode} className="field bg-row">
+                    <div className="bg-row-head">
+                      <span className="field-label">{mode === 'day' ? 'Day (light)' : 'Night (dark)'}</span>
+                    </div>
+                    <div className="bg-tiles">
+                      {keys.map((k, i) => (
+                        <ColourTile key={k} label={['Purple', 'Teal', 'Green', 'Pink'][i]} note={i < 2 ? `Colour ${i + 1}` : 'Rockets'} value={draft[k] as string} onChange={(v) => set(k, v as never)} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="field-hint">Purple (colour 1) and Teal (colour 2) run the app; all four are rocket colours. Tap a swatch to pick (the dropper picks from the screen), or paste a hex code.</p>
             </>
           )}
         </form>
@@ -684,8 +683,8 @@ function BgRow({ mode, current, colour, palette, slots, onPick, onColour, onImag
   );
 }
 
-/** One colour: the picker (gradient + dropper) and a box to paste a hex code. */
-function ColourField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+/** V20-130: one colour as a tile: a swatch shaped like the background tiles (tap to pick), its name, and the hex code. */
+function ColourTile({ label, note, value, onChange }: { label: string; note: string; value: string; onChange: (v: string) => void }) {
   const [hex, setHex] = useState(value);
   useEffect(() => setHex(value), [value]);
   const commit = (raw: string) => {
@@ -695,25 +694,28 @@ function ColourField({ label, value, onChange }: { label: string; value: string;
     else setHex(value);
   };
   return (
-    <div className="field swatch colour-field">
-      <span>{label}</span>
-      <div className="colour-row">
+    <div className="bg-tile colour-tile">
+      <label className="bg-screen colour-swatch" style={{ background: value }} title={`Pick ${label}`}>
         <input type="color" value={value} onChange={(e) => onChange(e.target.value)} aria-label={`${label} colour`} />
-        <input
-          className="colour-hex"
-          value={hex}
-          spellCheck={false}
-          maxLength={7}
-          onChange={(e) => {
-            setHex(e.target.value);
-            if (/^#?[0-9a-f]{6}$/i.test(e.target.value.trim())) commit(e.target.value);
-          }}
-          onBlur={(e) => commit(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), commit((e.target as HTMLInputElement).value))}
-          aria-label={`${label} hex code`}
-        />
-      </div>
+      </label>
+      <span className="bg-name colour-name">
+        {label} <small>{note}</small>
+      </span>
+      <input
+        className="colour-hex"
+        value={hex}
+        spellCheck={false}
+        maxLength={7}
+        onChange={(e) => {
+          setHex(e.target.value);
+          if (/^#?[0-9a-f]{6}$/i.test(e.target.value.trim())) commit(e.target.value);
+        }}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), commit((e.target as HTMLInputElement).value))}
+        aria-label={`${label} hex code`}
+      />
     </div>
   );
 }
+
 
