@@ -574,7 +574,7 @@ function LogoField({ text, image, onText, onImage }: { text: string; image: stri
 }
 
 /** V20-129: the preview picture for a built-in tile. */
-const tilePreview = (id: string) => (['planets', 'vats', 'corridor', 'starship'].includes(id) ? `/backgrounds/${id}.svg` : `/backgrounds/previews/${id}.jpg`);
+const tilePreview = (id: string) => (id === 'night' ? '/backgrounds/starry.svg' : ['planets', 'vats', 'corridor', 'starship'].includes(id) ? `/backgrounds/${id}.svg` : `/backgrounds/previews/${id}.jpg`);
 
 /**
  * V20-129: one mode's five tiles. Each shows a little screen with its name and a tick underneath. Add image asks which

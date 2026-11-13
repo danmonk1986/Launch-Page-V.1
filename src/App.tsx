@@ -1537,6 +1537,7 @@ export default function App() {
       data-scroll={scrollMode}
     >
       <div className="sky" aria-hidden="true">
+        <div className="sky-stars" />
         <div className="sky-lines" />
         <div className="sky-horizon" />
         <div className="sky-floor" />

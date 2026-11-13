@@ -3204,3 +3204,10 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .colour-swatch input[type='color'] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .colour-name small { color: var(--dim); font-size: 11px; margin-left: 4px; }
 .colour-tile .colour-hex { width: 100%; height: 30px; font-size: 12px; box-sizing: border-box; }
+
+/* V20-137 (Dan, Nov 12): Starry night is a real starry sky (stars, a soft purple milky band, a pink glow low down;
+   no grid). Synthwave gets the same stars in its sky, above the horizon. */
+.sky-stars { display: none; }
+.app[data-bg='synthwave'] .sky > .sky-stars { display: block; position: absolute; inset: 0 0 36% 0; background: url('/backgrounds/stars.svg') center top / cover no-repeat; opacity: 0.9; }
+.app[data-bg='night'] .sky { background: #0a0620 url('/backgrounds/starry.svg') center / cover no-repeat fixed; }
+.app[data-bg='night'] .sky > * { display: none; }
