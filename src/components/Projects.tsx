@@ -1,5 +1,7 @@
-import { useState, useId } from 'react';
-import { FormActions } from './Sheet';
+import { useEffect, useState } from 'react';
+
+/** V20-166: the Settings header's Save submits this form when a project is open. */
+export const PROJECT_FORM_ID = 'settings-project-form';
 import { kindOf, projectTree, type Project, type ProjectKind, type ProjectStatus } from '../lib/projects';
 import type { GoogleCalendar } from '../lib/google';
 
@@ -38,20 +40,23 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete }: Props
     const isNew = !projects.some((p) => p.id === editing.id);
     return (
       <div className="projects-manager">
-        <h3 className="timed-title settings-section">{isNew ? 'Add project' : `Edit ${editing.name}`}</h3>
+        <div className="settings-section-head">
+          <h3 className="timed-title settings-section">{isNew ? 'Add project' : `Edit ${editing.name}`}</h3>
+          <span className="project-head-actions">
+            {!isNew && <DeleteLink name={editing.name} onDelete={async () => { await onDelete(editing); setEditing(null); }} />}
+            <button type="button" className="restore-btn" onClick={() => setEditing(null)}>
+              Back
+            </button>
+          </span>
+        </div>
         <ProjectForm
           key={editing.id}
           project={editing}
           isNew={isNew}
           projects={projects}
           calendars={calendars}
-          onCancel={() => setEditing(null)}
           onSave={async (p) => {
             await onSave(p);
-            setEditing(null);
-          }}
-          onDelete={async (p) => {
-            await onDelete(p);
             setEditing(null);
           }}
         />
@@ -111,32 +116,41 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete }: Props
   );
 }
 
+/** Delete asks once ("Sure? Delete") like Restore default. */
+function DeleteLink({ name, onDelete }: { name: string; onDelete: () => void }) {
+  const [ask, setAsk] = useState(false);
+  useEffect(() => {
+    if (!ask) return;
+    const t = setTimeout(() => setAsk(false), 3000);
+    return () => clearTimeout(t);
+  }, [ask]);
+  return (
+    <button type="button" className="restore-btn is-asking-delete" aria-label={`Delete ${name}`} onClick={() => (ask ? onDelete() : setAsk(true))}>
+      {ask ? 'Sure? Delete' : 'Delete'}
+    </button>
+  );
+}
+
 function ProjectForm({
   project,
-  isNew,
   projects,
   calendars,
-  onCancel,
-  onSave,
-  onDelete
+  onSave
 }: {
   project: Project;
   isNew: boolean;
   projects: Project[];
   calendars: GoogleCalendar[];
-  onCancel: () => void;
   onSave: (p: Project) => Promise<void>;
-  onDelete: (p: Project) => Promise<void>;
 }) {
   const [d, setD] = useState<Project>(project);
   const set = <K extends keyof Project>(k: K, v: Project[K]) => setD((x) => ({ ...x, [k]: v }));
   const hasChildren = projects.some((p) => p.parentId === project.id);
   const areas = projects.filter((p) => !p.parentId && p.id !== project.id && p.status !== 'archived');
   const parent = d.parentId ? projects.find((p) => p.id === d.parentId) : null;
-  const formId = useId();
   return (
     <form
-      id={formId}
+      id={PROJECT_FORM_ID}
       className="project-form"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -152,7 +166,16 @@ function ProjectForm({
         </label>
         <label className="field">
           <span className="field-label">Parent</span>
-          <select value={d.parentId ?? ''} disabled={hasChildren} onChange={(e) => set('parentId', e.target.value || null)}>
+          <select
+            value={d.parentId ?? ''}
+            disabled={hasChildren}
+            onChange={(e) => {
+              // V20-166: a project takes its parent's colour when you pick the parent.
+              const pid = e.target.value || null;
+              const par = pid ? projects.find((p) => p.id === pid) : null;
+              setD((x) => ({ ...x, parentId: pid, ...(par ? { color: par.color } : {}) }));
+            }}
+          >
             <option value="">None (it's an area)</option>
             {areas.map((a) => (
               <option key={a.id} value={a.id}>
@@ -220,12 +243,6 @@ function ProjectForm({
       </div>
       {d.parentId && <p className="field-hint">A project under an area takes its area's type.</p>}
       {d.status === 'archived' && <p className="field-hint">Archived: it leaves the project pickers, and its tasks, launches and time stay in your history.</p>}
-      <div className="project-form-actions">
-        <button type="button" className="btn btn-quiet" onClick={onCancel}>
-          Back
-        </button>
-        <FormActions formId={formId} saveDisabled={!d.name.trim()} onDelete={!isNew ? () => onDelete(project) : undefined} deleteLabel={project.name} />
-      </div>
     </form>
   );
 }

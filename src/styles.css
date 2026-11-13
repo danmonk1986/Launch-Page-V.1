@@ -3269,3 +3269,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .project-colour code { font-family: var(--font-mono); font-size: 13px; color: var(--mist); }
 .project-form-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
 .project-form-actions .sheet-actions { margin: 0; }
+/* V20-166: project card actions sit on its heading line (Delete, Back); the Settings header Save saves it. */
+.project-head-actions { display: inline-flex; gap: 18px; align-items: baseline; }
+.app .restore-btn.is-asking-delete { color: var(--accent-pink); }

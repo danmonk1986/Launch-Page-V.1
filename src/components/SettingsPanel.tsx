@@ -3,6 +3,7 @@ import { shrinkImage } from '../lib/images';
 import { BG_NAME, DEFAULT_MODULES, MODULE_SOON, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
+import { PROJECT_FORM_ID } from './Projects';
 
 
 /** V20-111 (Dan, Nov 12): Settings is a wide pop-out window with tabs across the top (like Timed launches and Tasks). */
@@ -153,6 +154,13 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
             aria-label="Save and close"
             title="Save"
             onClick={() => {
+              // V20-166 (Dan, Nov 13): with a project open in Settings › Projects, Save saves the project (and goes
+              // back to the list) instead of closing.
+              const projectForm = document.getElementById(PROJECT_FORM_ID) as HTMLFormElement | null;
+              if (projectForm) {
+                projectForm.requestSubmit();
+                return;
+              }
               dirty.current = true;
               flush();
               onClose();
