@@ -3215,6 +3215,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .solid-swatch > span { position: absolute; inset: 0; }
 .settings-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 8px; }
 .settings-section-head .settings-section { margin: 0; }
+/* V20-153: room between a section's hint text and the next heading. */
+.field-hint + .settings-section-head { margin-top: 28px; }
 .app .restore-btn { all: unset; cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-teal); padding: 4px 2px; }
 .app .restore-btn:hover, .app .restore-btn:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
 .app .restore-btn.is-asking { color: var(--accent-pink); font-weight: 700; }

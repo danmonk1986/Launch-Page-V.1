@@ -63,7 +63,7 @@ export interface BrandSettings {
 export interface Surface { header: string; headerSolid: number; card: string; cardSolid: number }
 export interface Surfaces { day: Surface; night: Surface }
 export const DEFAULT_SURFACES: Surfaces = {
-  day: { header: '#ffffff', headerSolid: 88, card: '#f5f5eb', cardSolid: 82 },
+  day: { header: '#ffffff', headerSolid: 86, card: '#f5f5eb', cardSolid: 82 },
   night: { header: '#0f0b22', headerSolid: 86, card: '#120d28', cardSolid: 82 }
 };
 
@@ -119,22 +119,23 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   // V20-150 (Dan, Nov 12): the brand default is the L4UNCH!P4GE logo (no logo set), Undeniable in 2026, search. create. evolve.
   goal: 'Undeniable in 2026',
   mantra: 'search. create. evolve.',
-  // V20-143 (Dan, Nov 12): the default backgrounds are the colour tiles, darker beige by day and navy by night.
-  background: 'night-colour',
+  // V20-151 (Dan, Nov 12): default backgrounds Damascus (day) and Synthwave (night); the colour tiles default to darker
+  // beige and navy (V20-143).
+  background: 'synthwave',
   accentPurple: '#8869cb',
   accentTeal: '#06f9c2',
   accentGreen: '#98ee92',
-  accentPink: '#ff6ad5',
-  // Day mode: the same four colour codes as night mode (V20-048, Dan, Nov 11).
+  accentPink: '#ff6300',
+  // V20-152 (Dan, Nov 12): main colour defaults. Day mode: the same four colour codes as night mode (V20-048, Dan, Nov 11).
   dayPurple: '#8869cb',
-  dayTeal: '#06f9c2',
+  dayTeal: '#0daeaa',
   dayGreen: '#98ee92',
-  dayPink: '#ff6ad5',
+  dayPink: '#ff6300',
   nightBgImage: null,
   dayBgImage: null,
   account: EMPTY_ACCOUNT,
-  dayBackground: 'day-colour',
-  nightBackground: 'night-colour',
+  dayBackground: 'damascus',
+  nightBackground: 'synthwave',
   nightColour: '#0b0820',
   dayColour: '#f5f5dc',
   dayNeutral: '#444242',
@@ -279,8 +280,8 @@ function modeBackgrounds(current: Background, day?: string | null, night?: strin
   const d = day ? normalizeBackground(day) : null;
   const n = night ? normalizeBackground(night) : null;
   return {
-    dayBackground: d && LIGHT_BACKGROUNDS.includes(d) ? d : LIGHT_BACKGROUNDS.includes(current) ? current : 'day-colour',
-    nightBackground: n && !LIGHT_BACKGROUNDS.includes(n) ? n : !LIGHT_BACKGROUNDS.includes(current) ? current : 'night-colour'
+    dayBackground: d && LIGHT_BACKGROUNDS.includes(d) ? d : LIGHT_BACKGROUNDS.includes(current) ? current : 'damascus',
+    nightBackground: n && !LIGHT_BACKGROUNDS.includes(n) ? n : !LIGHT_BACKGROUNDS.includes(current) ? current : 'synthwave'
   } as { dayBackground: Background; nightBackground: Background };
 }
 
