@@ -53,6 +53,9 @@ export interface BrandSettings {
   /** V20-129: the colour tile of each mode. */
   nightColour: string;
   dayColour: string;
+  /** V20-144 (Dan, Nov 12): Neutral, main colour 1: the text colour of each mode (grey by day, beige by night). */
+  dayNeutral: string;
+  nightNeutral: string;
 }
 
 /** V20-113 (Dan, Nov 12): who you are and your business. Kept in one column (settings.account). */
@@ -106,7 +109,8 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   logoUrl: null,
   goal: "You can do anything. You just can't do everything.",
   mantra: 'search. create. evolve.',
-  background: 'synthwave',
+  // V20-143 (Dan, Nov 12): the default backgrounds are the colour tiles, darker beige by day and navy by night.
+  background: 'night-colour',
   accentPurple: '#8869cb',
   accentTeal: '#06f9c2',
   accentGreen: '#98ee92',
@@ -119,10 +123,12 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   nightBgImage: null,
   dayBgImage: null,
   account: EMPTY_ACCOUNT,
-  dayBackground: 'damascus',
-  nightBackground: 'synthwave',
+  dayBackground: 'day-colour',
+  nightBackground: 'night-colour',
   nightColour: '#0b0820',
-  dayColour: '#f5f5eb'
+  dayColour: '#f5f5dc',
+  dayNeutral: '#444242',
+  nightNeutral: '#f5f5dc'
 };
 
 /** V20-120: day mode = a light background. */
@@ -192,6 +198,8 @@ type Row = {
   day_background?: string | null;
   night_background?: string | null;
   night_colour?: string | null;
+  day_neutral?: string | null;
+  night_neutral?: string | null;
   day_colour?: string | null;
 };
 
@@ -216,7 +224,9 @@ const toRow = (s: BrandSettings): Row => ({
   day_background: s.dayBackground,
   night_background: s.nightBackground,
   night_colour: s.nightColour,
-  day_colour: s.dayColour
+  day_colour: s.dayColour,
+  day_neutral: s.dayNeutral,
+  night_neutral: s.nightNeutral
 });
 
 const fromRow = (r: Row): BrandSettings => ({
@@ -242,7 +252,9 @@ const fromRow = (r: Row): BrandSettings => ({
   account: { ...EMPTY_ACCOUNT, ...(r.account ?? {}) },
   ...modeBackgrounds(normalizeBackground(r.background), r.day_background, r.night_background),
   nightColour: r.night_colour || (r.background === 'navy' || r.background === 'plain' ? '#0b0820' : DEFAULT_SETTINGS.nightColour),
-  dayColour: r.day_colour || (r.background === 'white' ? '#ffffff' : DEFAULT_SETTINGS.dayColour)
+  dayColour: r.day_colour || (r.background === 'white' ? '#ffffff' : DEFAULT_SETTINGS.dayColour),
+  dayNeutral: r.day_neutral || DEFAULT_SETTINGS.dayNeutral,
+  nightNeutral: r.night_neutral || DEFAULT_SETTINGS.nightNeutral
 });
 
 /** The remembered background for each mode; the current one fills its own side when nothing is saved yet. */
@@ -250,8 +262,8 @@ function modeBackgrounds(current: Background, day?: string | null, night?: strin
   const d = day ? normalizeBackground(day) : null;
   const n = night ? normalizeBackground(night) : null;
   return {
-    dayBackground: d && LIGHT_BACKGROUNDS.includes(d) ? d : LIGHT_BACKGROUNDS.includes(current) ? current : 'damascus',
-    nightBackground: n && !LIGHT_BACKGROUNDS.includes(n) ? n : !LIGHT_BACKGROUNDS.includes(current) ? current : 'synthwave'
+    dayBackground: d && LIGHT_BACKGROUNDS.includes(d) ? d : LIGHT_BACKGROUNDS.includes(current) ? current : 'day-colour',
+    nightBackground: n && !LIGHT_BACKGROUNDS.includes(n) ? n : !LIGHT_BACKGROUNDS.includes(current) ? current : 'night-colour'
   } as { dayBackground: Background; nightBackground: Background };
 }
 

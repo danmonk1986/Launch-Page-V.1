@@ -280,7 +280,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                   mode={mode}
                   current={mode === 'day' ? draft.dayBackground : draft.nightBackground}
                   colour={mode === 'day' ? draft.dayColour : draft.nightColour}
-                  palette={mode === 'day' ? [draft.dayPurple, draft.dayTeal, draft.dayGreen, draft.dayPink, '#f5f5eb', '#ffffff'] : [draft.accentPurple, draft.accentTeal, draft.accentGreen, draft.accentPink, '#0b0820', '#1a1338']}
+                  palette={mode === 'day' ? [draft.dayPurple, draft.dayTeal, draft.dayGreen, draft.dayPink, '#f5f5dc', '#ffffff'] : [draft.accentPurple, draft.accentTeal, draft.accentGreen, draft.accentPink, '#0b0820', '#1a1338']}
                   slots={bgSlots[mode]}
                   onPick={(bg) => saveNow((d) => withBackground(d, bg))}
                   onColour={(hex) => saveNow((d) => withBackground(mode === 'day' ? { ...d, dayColour: hex } : { ...d, nightColour: hex }, `${mode}-colour`))}
@@ -294,10 +294,11 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                 />
               ))}
 
-              {/* V20-130 (Dan, Nov 12): COLOURS, laid out like BACKGROUND: Day (light) and Night (dark), one tile per colour. */}
-              <h3 className="timed-title settings-section">Colours</h3>
+              {/* V20-130 (Dan, Nov 12): COLOURS, laid out like BACKGROUND: Day (light) and Night (dark), one tile per colour.
+                  V20-144: MAIN COLOURS, Neutral first (the text colour), then Colour 1, Colour 2, Accent 1, Accent 2. */}
+              <h3 className="timed-title settings-section">Main colours</h3>
               {(['day', 'night'] as const).map((mode) => {
-                const keys = (mode === 'day' ? ['dayPurple', 'dayTeal', 'dayGreen', 'dayPink'] : ['accentPurple', 'accentTeal', 'accentGreen', 'accentPink']) as (keyof BrandSettings)[];
+                const keys = (mode === 'day' ? ['dayNeutral', 'dayPurple', 'dayTeal', 'dayGreen', 'dayPink'] : ['nightNeutral', 'accentPurple', 'accentTeal', 'accentGreen', 'accentPink']) as (keyof BrandSettings)[];
                 return (
                   <div key={mode} className="field bg-row">
                     <div className="bg-row-head">
@@ -305,13 +306,13 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                     </div>
                     <div className="bg-tiles">
                       {keys.map((k, i) => (
-                        <ColourTile key={k} label={['Purple', 'Teal', 'Green', 'Pink'][i]} note={i < 2 ? `Colour ${i + 1}` : 'Rockets'} value={draft[k] as string} onChange={(v) => set(k, v as never)} />
+                        <ColourTile key={k} label={['Neutral', 'Colour 1', 'Colour 2', 'Accent 1', 'Accent 2'][i]} value={draft[k] as string} onChange={(v) => set(k, v as never)} />
                       ))}
                     </div>
                   </div>
                 );
               })}
-              <p className="field-hint">Purple (colour 1) and Teal (colour 2) run the app; all four are rocket colours. Tap a swatch to pick (the dropper picks from the screen), or paste a hex code.</p>
+              <p className="field-hint">Neutral is the text colour. Colour 1 and Colour 2 run the app; Colour 1, Colour 2 and the two accents are the rocket colours. Tap a swatch to pick (the dropper picks from the screen), or paste a hex code.</p>
             </>
           )}
         </form>
@@ -684,7 +685,7 @@ function BgRow({ mode, current, colour, palette, slots, onPick, onColour, onImag
 }
 
 /** V20-130: one colour as a tile: a swatch shaped like the background tiles (tap to pick), its name, and the hex code. */
-function ColourTile({ label, note, value, onChange }: { label: string; note: string; value: string; onChange: (v: string) => void }) {
+function ColourTile({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [hex, setHex] = useState(value);
   useEffect(() => setHex(value), [value]);
   const commit = (raw: string) => {
@@ -699,7 +700,7 @@ function ColourTile({ label, note, value, onChange }: { label: string; note: str
         <input type="color" value={value} onChange={(e) => onChange(e.target.value)} aria-label={`${label} colour`} />
       </label>
       <span className="bg-name colour-name">
-        {label} <small>{note}</small>
+        {label}
       </span>
       <input
         className="colour-hex"

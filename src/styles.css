@@ -3202,6 +3202,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 @media (max-width: 640px) { .bg-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 /* V20-130: colour tiles, the same shape as the background tiles. */
 .colour-swatch { display: block; }
+/* V20-145 (Dan, Nov 12): colour swatches a quarter the height of the background tiles. */
+.app .bg-tile .bg-screen.colour-swatch { aspect-ratio: 64 / 10; }
 .colour-swatch input[type='color'] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .colour-name small { color: var(--dim); font-size: 11px; margin-left: 4px; }
 .colour-tile .colour-hex { width: 100%; height: 30px; font-size: 12px; box-sizing: border-box; }
