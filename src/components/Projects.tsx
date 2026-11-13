@@ -29,7 +29,7 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete }: Props
 
   return (
     <div className="projects-manager">
-      <h3 className="account-title">{editing ? (projects.some((p) => p.id === editing.id) ? `Edit ${editing.name}` : 'Add project') : 'Areas and projects'}</h3>
+      <h3 className="account-title timed-title settings-section">{editing ? (projects.some((p) => p.id === editing.id) ? `Edit ${editing.name}` : 'Add project') : 'Areas and projects'}</h3>
       {editing ? (
         <ProjectForm
           key={editing.id}
