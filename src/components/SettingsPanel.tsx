@@ -275,12 +275,14 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                   mode's background. V20-141: each row ticks its own saved pick; only the sun / moon switch changes what shows. */}
               <SectionHead
                 title="Background"
-                onRestore={() =>
+                onRestore={() => {
+                  // V20-155 (Dan, Nov 12): restore also takes your images out, so every tile comes back.
+                  (['day', 'night'] as const).forEach((m) => bgSlots[m].forEach((img, slot) => img && onBgImage(m, slot, null)));
                   saveNow((d) => {
                     const back = { ...d, dayBackground: D.dayBackground, nightBackground: D.nightBackground, dayColour: D.dayColour, nightColour: D.nightColour };
                     return { ...back, background: isDay(d.background) ? D.dayBackground : D.nightBackground };
-                  })
-                }
+                  });
+                }}
               />
               {(['day', 'night'] as const).map((mode) => (
                 <BgRow
