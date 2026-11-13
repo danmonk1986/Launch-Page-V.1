@@ -14,7 +14,7 @@ export type Background = (typeof BACKGROUNDS)[number];
 export const LIGHT_BACKGROUNDS: readonly Background[] = BACKGROUNDS.filter((b) => (DAY_TILES as readonly string[]).includes(b) || b.startsWith('day-'));
 export const BG_NAME: Record<string, string> = {
   synthwave: 'Synthwave', night: 'Starry night', planets: 'Planets', vats: 'The Lab',
-  damascus: 'Damascus', snow: 'Snowy day', corridor: '2001', starship: 'Starship'
+  damascus: 'Damascus', snow: 'Snowy day', corridor: '2001', starship: 'Geometry'
 };
 
 /** Old names: Plain → Navy (Oct 16) → the night colour; White → the day colour; anything unknown → Synthwave. */
