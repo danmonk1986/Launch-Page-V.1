@@ -5,7 +5,8 @@ import { supabase } from './supabase';
  * your own image: '<mode>-img-<slot>') and a colour ('<mode>-colour'). Navy and White became the colour tiles.
  */
 export const NIGHT_TILES = ['synthwave', 'night', 'planets', 'vats'] as const;
-export const DAY_TILES = ['damascus', 'snow', 'corridor', 'starship'] as const;
+// V20-138 (Dan, Nov 12): day and night line up as pairs: Damascus · Synthwave, Snowy day · Starry night, Blue sky · Planets, 2001 · The Lab.
+export const DAY_TILES = ['damascus', 'snow', 'starship', 'corridor'] as const;
 export const BACKGROUNDS = [
   ...NIGHT_TILES, 'night-colour', 'night-img-0', 'night-img-1', 'night-img-2', 'night-img-3',
   ...DAY_TILES, 'day-colour', 'day-img-0', 'day-img-1', 'day-img-2', 'day-img-3'
