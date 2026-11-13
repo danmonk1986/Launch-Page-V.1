@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
-import { BG_NAME, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
+import { BG_NAME, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
 
@@ -251,7 +251,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
             <>
               {/* V20-128 (Dan, Nov 12): Appearance is in sections; the first is BRAND (logo, headline, mantra). Same look as
                   the TIMED LAUNCHES heading: colour 2, its font and size. */}
-              <h3 className="timed-title settings-section">Brand</h3>
+              <SectionHead title="Brand" onRestore={() => saveNow((d) => ({ ...d, logoText: '', logoUrl: null, goal: D.goal, mantra: D.mantra }))} />
               {/* V20-124 (Dan's sketch, Nov 12): one logo box, 600 × 110. Type in it and your words show in the L4UNCH P4GE
                   lettering; Choose image beside it uploads a file into the same box instead. */}
               <LogoField
@@ -273,7 +273,15 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
               {/* V20-129 (Dan, Nov 12): BACKGROUND, a row of five tiles for day and for night. Four backgrounds (any can be
                   swapped for your own image; deleting it brings the default back) and a colour. Picking one makes it that
                   mode's background. V20-141: each row ticks its own saved pick; only the sun / moon switch changes what shows. */}
-              <h3 className="timed-title settings-section">Background</h3>
+              <SectionHead
+                title="Background"
+                onRestore={() =>
+                  saveNow((d) => {
+                    const back = { ...d, dayBackground: D.dayBackground, nightBackground: D.nightBackground, dayColour: D.dayColour, nightColour: D.nightColour };
+                    return { ...back, background: isDay(d.background) ? D.dayBackground : D.nightBackground };
+                  })
+                }
+              />
               {(['day', 'night'] as const).map((mode) => (
                 <BgRow
                   key={mode}
@@ -296,7 +304,16 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
 
               {/* V20-130 (Dan, Nov 12): COLOURS, laid out like BACKGROUND: Day (light) and Night (dark), one tile per colour.
                   V20-144: MAIN COLOURS, Neutral first (the text colour), then Colour 1, Colour 2, Accent 1, Accent 2. */}
-              <h3 className="timed-title settings-section">Main colours</h3>
+              <SectionHead
+                title="Main colours"
+                onRestore={() =>
+                  saveNow((d) => ({
+                    ...d,
+                    dayNeutral: D.dayNeutral, dayPurple: D.dayPurple, dayTeal: D.dayTeal, dayGreen: D.dayGreen, dayPink: D.dayPink,
+                    nightNeutral: D.nightNeutral, accentPurple: D.accentPurple, accentTeal: D.accentTeal, accentGreen: D.accentGreen, accentPink: D.accentPink
+                  }))
+                }
+              />
               {(['day', 'night'] as const).map((mode) => {
                 const keys = (mode === 'day' ? ['dayNeutral', 'dayPurple', 'dayTeal', 'dayGreen', 'dayPink'] : ['nightNeutral', 'accentPurple', 'accentTeal', 'accentGreen', 'accentPink']) as (keyof BrandSettings)[];
                 return (
@@ -314,7 +331,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
               })}
               <p className="field-hint">Neutral is the text colour. Colour 1 and Colour 2 run the app; Colour 1, Colour 2 and the two accents are the rocket colours. Tap a swatch to pick (the dropper picks from the screen), or paste a hex code.</p>
               {/* V20-146 (Dan, Nov 12): CARDS + HEADER, each mode's header and card colour and how solid each is. */}
-              <h3 className="timed-title settings-section">Cards + header</h3>
+              <SectionHead title="Cards + header" onRestore={() => saveNow((d) => ({ ...d, surfaces: DEFAULT_SURFACES }))} />
               {(['day', 'night'] as const).map((mode) => {
                 const sf = draft.surfaces[mode];
                 const put = (patch: Partial<typeof sf>) => set('surfaces', { ...draft.surfaces, [mode]: { ...sf, ...patch } });
@@ -325,14 +342,14 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                     </div>
                     <div className="bg-tiles">
                       <ColourTile label="Header" value={sf.header} onChange={(v) => put({ header: v })} />
-                      <SolidTile label="Header solid" colour={sf.header} value={sf.headerSolid} onChange={(v) => put({ headerSolid: v })} />
+                      <SolidTile label="Adjust transparency" colour={sf.header} value={sf.headerSolid} onChange={(v) => put({ headerSolid: v })} />
                       <ColourTile label="Cards" value={sf.card} onChange={(v) => put({ card: v })} />
-                      <SolidTile label="Cards solid" colour={sf.card} value={sf.cardSolid} onChange={(v) => put({ cardSolid: v })} />
+                      <SolidTile label="Adjust transparency" colour={sf.card} value={sf.cardSolid} onChange={(v) => put({ cardSolid: v })} />
                     </div>
                   </div>
                 );
               })}
-              <p className="field-hint">Solid is how much of the colour shows: 100% is solid, lower lets the background through.</p>
+              <p className="field-hint">Transparency is how much of the background shows through: 0% is solid colour.</p>
             </>
           )}
         </form>
@@ -705,6 +722,24 @@ function BgRow({ mode, current, colour, palette, slots, onPick, onColour, onImag
 }
 
 /** V20-130: one colour as a tile: a swatch shaped like the background tiles (tap to pick), its name, and the hex code. */
+/** V20-149 (Dan, Nov 12): Restore default on each Appearance section. Asks once ("Sure?") before it resets. */
+function SectionHead({ title, onRestore }: { title: string; onRestore: () => void }) {
+  const [ask, setAsk] = useState(false);
+  useEffect(() => {
+    if (!ask) return;
+    const t = setTimeout(() => setAsk(false), 3000);
+    return () => clearTimeout(t);
+  }, [ask]);
+  return (
+    <div className="settings-section-head">
+      <h3 className="timed-title settings-section">{title}</h3>
+      <button type="button" className={`restore-btn${ask ? ' is-asking' : ''}`} onClick={() => (ask ? (setAsk(false), onRestore()) : setAsk(true))}>
+        {ask ? 'Sure? Restore' : 'Restore default'}
+      </button>
+    </div>
+  );
+}
+
 /** V20-146: how solid a colour is (100 = solid, lower lets the background show through). */
 function SolidTile({ label, colour, value, onChange }: { label: string; colour: string; value: number; onChange: (v: number) => void }) {
   return (
@@ -712,10 +747,11 @@ function SolidTile({ label, colour, value, onChange }: { label: string; colour: 
       <span className="bg-screen colour-swatch solid-swatch">
         <span style={{ background: `color-mix(in srgb, ${colour} ${value}%, transparent)` }} />
       </span>
-      <span className="bg-name colour-name">
-        {label} <small>{value}%</small>
+      <span className="bg-name colour-name solid-name">{label}</span>
+      <span className="solid-row">
+        <input className="solid-range" type="range" min={0} max={100} step={1} value={100 - value} onChange={(e) => onChange(100 - Number(e.target.value))} aria-label={`${label} (percent)`} />
+        <small>{100 - value}%</small>
       </span>
-      <input className="solid-range" type="range" min={0} max={100} step={1} value={value} onChange={(e) => onChange(Number(e.target.value))} aria-label={`${label} (percent)`} />
     </div>
   );
 }

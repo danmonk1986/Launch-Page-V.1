@@ -116,7 +116,8 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   displayName: 'Dan',
   logoText: 'Dan Monk',
   logoUrl: null,
-  goal: "You can do anything. You just can't do everything.",
+  // V20-150 (Dan, Nov 12): the brand default is the L4UNCH!P4GE logo (no logo set), Undeniable in 2026, search. create. evolve.
+  goal: 'Undeniable in 2026',
   mantra: 'search. create. evolve.',
   // V20-143 (Dan, Nov 12): the default backgrounds are the colour tiles, darker beige by day and navy by night.
   background: 'night-colour',
