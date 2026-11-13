@@ -1,14 +1,26 @@
 import { supabase } from './supabase';
 
-/** In order: three dark, then three light. */
-export const BACKGROUNDS = ['synthwave', 'night', 'navy', 'damascus', 'snow', 'white'] as const;
+/**
+ * V20-129 (Dan, Nov 12): five tiles per mode in Appearance › Background. Four backgrounds (any one can be swapped for
+ * your own image: '<mode>-img-<slot>') and a colour ('<mode>-colour'). Navy and White became the colour tiles.
+ */
+export const NIGHT_TILES = ['synthwave', 'night', 'planets', 'vats'] as const;
+export const DAY_TILES = ['damascus', 'snow', 'corridor', 'starship'] as const;
+export const BACKGROUNDS = [
+  ...NIGHT_TILES, 'night-colour', 'night-img-0', 'night-img-1', 'night-img-2', 'night-img-3',
+  ...DAY_TILES, 'day-colour', 'day-img-0', 'day-img-1', 'day-img-2', 'day-img-3'
+] as const;
 export type Background = (typeof BACKGROUNDS)[number];
-export const LIGHT_BACKGROUNDS: readonly Background[] = ['damascus', 'snow', 'white'];
-/** The backgrounds Supabase accepted before 0012_backgrounds.sql. */
+export const LIGHT_BACKGROUNDS: readonly Background[] = BACKGROUNDS.filter((b) => (DAY_TILES as readonly string[]).includes(b) || b.startsWith('day-'));
+export const BG_NAME: Record<string, string> = {
+  synthwave: 'Synthwave', night: 'Starry night', planets: 'Planets', vats: 'The Lab',
+  damascus: 'Damascus', snow: 'Snowy day', corridor: 'Corridor', starship: 'Starship'
+};
 
-/** Plain was retired for Navy (Oct 16); anything unknown falls back to Synthwave. */
+/** Old names: Plain → Navy (Oct 16) → the night colour; White → the day colour; anything unknown → Synthwave. */
 function normalizeBackground(b: string): Background {
-  if (b === 'plain') return 'navy';
+  if (b === 'plain' || b === 'navy') return 'night-colour';
+  if (b === 'white') return 'day-colour';
   return (BACKGROUNDS as readonly string[]).includes(b) ? (b as Background) : 'synthwave';
 }
 
@@ -37,6 +49,9 @@ export interface BrandSettings {
   /** V20-120: the background each side of the day / night switch goes to. */
   dayBackground: Background;
   nightBackground: Background;
+  /** V20-129: the colour tile of each mode. */
+  nightColour: string;
+  dayColour: string;
 }
 
 /** V20-113 (Dan, Nov 12): who you are and your business. Kept in one column (settings.account). */
@@ -104,7 +119,9 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   dayBgImage: null,
   account: EMPTY_ACCOUNT,
   dayBackground: 'damascus',
-  nightBackground: 'synthwave'
+  nightBackground: 'synthwave',
+  nightColour: '#0b0820',
+  dayColour: '#f5f5eb'
 };
 
 /** V20-120: day mode = a light background. */
@@ -131,7 +148,8 @@ function readLocal(): BrandSettings {
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw);
     const s = upgradePalette({ ...DEFAULT_SETTINGS, ...parsed, account: { ...EMPTY_ACCOUNT, ...(parsed.account ?? {}) } });
-    return { ...s, background: normalizeBackground(s.background) };
+    const bg = normalizeBackground(s.background);
+    return { ...s, background: bg, ...modeBackgrounds(bg, s.dayBackground, s.nightBackground) };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -165,6 +183,8 @@ type Row = {
   account?: Partial<AccountInfo> | null;
   day_background?: string | null;
   night_background?: string | null;
+  night_colour?: string | null;
+  day_colour?: string | null;
 };
 
 const toRow = (s: BrandSettings): Row => ({
@@ -186,7 +206,9 @@ const toRow = (s: BrandSettings): Row => ({
   day_bg_image: s.dayBgImage,
   account: s.account,
   day_background: s.dayBackground,
-  night_background: s.nightBackground
+  night_background: s.nightBackground,
+  night_colour: s.nightColour,
+  day_colour: s.dayColour
 });
 
 const fromRow = (r: Row): BrandSettings => ({
@@ -210,7 +232,9 @@ const fromRow = (r: Row): BrandSettings => ({
   nightBgImage: r.night_bg_image !== undefined ? r.night_bg_image : readLocal().nightBgImage,
   dayBgImage: r.day_bg_image !== undefined ? r.day_bg_image : readLocal().dayBgImage,
   account: { ...EMPTY_ACCOUNT, ...(r.account ?? {}) },
-  ...modeBackgrounds(normalizeBackground(r.background), r.day_background, r.night_background)
+  ...modeBackgrounds(normalizeBackground(r.background), r.day_background, r.night_background),
+  nightColour: r.night_colour || (r.background === 'navy' || r.background === 'plain' ? '#0b0820' : DEFAULT_SETTINGS.nightColour),
+  dayColour: r.day_colour || (r.background === 'white' ? '#ffffff' : DEFAULT_SETTINGS.dayColour)
 });
 
 /** The remembered background for each mode; the current one fills its own side when nothing is saved yet. */
@@ -279,4 +303,37 @@ export async function syncLinkedEmail(userId: string | null, a: AccountInfo): Pr
     if (add) return /duplicate|already/i.test(add.message) ? `Linked email not saved: ${/sign-in email/.test(add.message) ? 'that is already your sign-in email.' : 'that email is already used by another account.'}` : `Linked email not saved: ${add.message}`;
   }
   return null;
+}
+
+// ---------- V20-129: your own background images (one per tile slot, kept apart from the settings row) ----------
+export type BgMode = 'day' | 'night';
+export type BgSlots = Record<BgMode, (string | null)[]>;
+export const EMPTY_SLOTS: BgSlots = { day: [null, null, null, null], night: [null, null, null, null] };
+
+export async function loadBgImages(userId: string | null): Promise<BgSlots> {
+  const out: BgSlots = { day: [null, null, null, null], night: [null, null, null, null] };
+  if (!supabase || !userId) return out;
+  const { data } = await supabase.from('background_images').select('mode, slot, image').eq('user_id', userId);
+  for (const r of (data ?? []) as { mode: BgMode; slot: number; image: string }[]) if (out[r.mode]) out[r.mode][r.slot] = r.image;
+  return out;
+}
+
+/** Puts an image in a tile slot, or (null) takes it out so the default comes back. */
+export async function saveBgImage(userId: string | null, mode: BgMode, slot: number, image: string | null): Promise<boolean> {
+  if (!supabase || !userId) return false;
+  const q = supabase.from('background_images');
+  const { error } = image
+    ? await q.upsert({ user_id: userId, mode, slot, image, updated_at: new Date().toISOString() })
+    : await q.delete().eq('user_id', userId).eq('mode', mode).eq('slot', slot);
+  return !error;
+}
+
+/** What a background id draws: a built-in tile, a colour, or an image (falls back to its slot's default). */
+export function resolveBackground(b: Background, slots: BgSlots): { tile: string; image: string | null } {
+  const m = /^(day|night)-img-(\d)$/.exec(b);
+  if (!m) return { tile: b, image: null };
+  const mode = m[1] as BgMode;
+  const slot = Number(m[2]);
+  const image = slots[mode][slot];
+  return { tile: (mode === 'day' ? DAY_TILES : NIGHT_TILES)[slot], image };
 }

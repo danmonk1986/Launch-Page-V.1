@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
 import type { Session } from '@supabase/supabase-js';
 import { checkPassword, supabase } from './lib/supabase';
-import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettings, shownName, syncLinkedEmail, type BrandSettings } from './lib/settings';
+import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettings, shownName, syncLinkedEmail, loadBgImages, saveBgImage, resolveBackground, EMPTY_SLOTS, type BgSlots, type BrandSettings } from './lib/settings';
 import { downloadLaunchSheet } from './lib/launchSheet';
 import { loadCached } from './lib/gcalCache';
 import { Header, type PageId } from './components/Header';
@@ -115,6 +115,8 @@ export default function App() {
   const [authReady, setAuthReady] = useState(!supabase);
   const [settings, setSettings] = useState<BrandSettings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState<false | SettingsTab>(false);
+  // V20-129: your own background images, one per tile slot.
+  const [bgSlots, setBgSlots] = useState<BgSlots>(EMPTY_SLOTS);
   const [status, setStatus] = useState('');
   // A page in the address (#tasks, #budget…) opens there: card rockets from a timed launch use it.
   const [page, setPage] = useState<PageId>(() => {
@@ -364,6 +366,7 @@ export default function App() {
 
   useEffect(() => {
     loadSettings(userId).then(setSettings);
+    loadBgImages(userId).then(setBgSlots);
   }, [userId]);
 
   useEffect(() => {
@@ -1478,10 +1481,12 @@ export default function App() {
     )}")`
   } as CSSProperties;
 
-  // Your own background image for this mode, if you've picked one.
-  const bgImage = light ? settings.dayBgImage : settings.nightBgImage;
+  // V20-129: the background shown: a tile, a colour, or your own image in a tile's slot (its default if it's gone).
+  const shown = resolveBackground(settings.background, bgSlots);
+  const bgImage = shown.image;
   if (bgImage) (theme as Record<string, string>)['--bg-image'] = `url("${bgImage}")`;
-  if (!authReady) return <div className="app" style={theme} data-bg={settings.background} data-tone={light ? 'light' : 'dark'} />;
+  (theme as Record<string, string>)['--bg-colour'] = light ? settings.dayColour : settings.nightColour;
+  if (!authReady) return <div className="app" style={theme} data-bg={shown.tile} data-tone={light ? 'light' : 'dark'} />;
   if (supabase && !session) {
     return (
       <div className="app app-light" style={theme}>
@@ -1527,7 +1532,7 @@ export default function App() {
     <div
       className={`${scrolled ? 'app is-scrolled' : 'app'}${bgImage && !kb ? ' has-bg-image' : ''}${kb ? ' is-kb' : ''}`}
       style={shellStyle}
-      data-bg={settings.background}
+      data-bg={shown.tile}
       data-tone={light || kb ? 'light' : 'dark'}
       data-scroll={scrollMode}
     >
@@ -1906,6 +1911,12 @@ export default function App() {
       />
       <SettingsPanel
         open={!!settingsOpen}
+        bgSlots={bgSlots}
+        onBgImage={async (mode, slot, image) => {
+          setBgSlots((b) => ({ ...b, [mode]: b[mode].map((x, i) => (i === slot ? image : x)) }));
+          const ok = await saveBgImage(userId, mode, slot, image);
+          setStatus(ok ? (image ? 'Background image saved.' : 'Background image removed; the default is back.') : 'Background image kept on this device only.');
+        }}
         tab={settingsOpen || 'account'}
         onTab={setSettingsOpen}
         email={session?.user.email ?? null}

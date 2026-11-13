@@ -1,17 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
-import { BACKGROUNDS, DESCRIBES, INDUSTRIES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BrandSettings } from '../lib/settings';
+import { BG_NAME, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
 
-const BG_LABEL: Record<Background, string> = {
-  synthwave: 'Synthwave',
-  night: 'Starry night',
-  navy: 'Navy',
-  damascus: 'Damascus',
-  snow: 'Snowy day',
-  white: 'White'
-};
 
 /** V20-111 (Dan, Nov 12): Settings is a wide pop-out window with tabs across the top (like Timed launches and Tasks). */
 export type SettingsTab = 'account' | 'appearance' | 'modules' | 'projects' | 'data' | 'privacy' | 'signout';
@@ -43,13 +35,16 @@ type Props = {
   onSendReset?: () => Promise<string | null>;
   /** The sign-in email, when signed in. */
   email?: string | null;
+  /** V20-129: your own background images in the tile slots, and how to change one. */
+  bgSlots: BgSlots;
+  onBgImage: (mode: BgMode, slot: number, image: string | null) => void;
   /** The Projects tab (moved here from the Tasks page's folder button). */
   projects: ReactNode;
   data: DataAction[];
   onSignOut?: () => void;
 };
 
-export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onSetPassword, onCheckPassword, onSendReset, email, projects, data, onSignOut }: Props) {
+export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onSetPassword, onCheckPassword, onSendReset, email, projects, data, onSignOut, bgSlots, onBgImage }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState(settings);
   const [pwOpen, setPwOpen] = useState(false);
@@ -275,29 +270,32 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
               </label>
 
 
-              <fieldset className="field">
-                <legend>Background</legend>
-                <div className="choice-row">
-                  {BACKGROUNDS.map((b) => (
-                    <label key={b} className="choice">
-                      <input type="radio" name="background" checked={draft.background === b} onChange={() => queue((d) => withBackground(d, b))} />
-                      <span>{BG_LABEL[b]}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+              {/* V20-129 (Dan, Nov 12): BACKGROUND, a row of five tiles for day and for night. Four backgrounds (any can be
+                  swapped for your own image; deleting it brings the default back) and a colour. Picking one makes it that
+                  mode's background (the sun / moon switch goes to it) and shows it now. */}
+              <h3 className="timed-title settings-section">Background</h3>
+              {(['day', 'night'] as const).map((mode) => (
+                <BgRow
+                  key={mode}
+                  mode={mode}
+                  current={draft.background}
+                  colour={mode === 'day' ? draft.dayColour : draft.nightColour}
+                  palette={mode === 'day' ? [draft.dayPurple, draft.dayTeal, draft.dayGreen, draft.dayPink, '#f5f5eb', '#ffffff'] : [draft.accentPurple, draft.accentTeal, draft.accentGreen, draft.accentPink, '#0b0820', '#1a1338']}
+                  slots={bgSlots[mode]}
+                  onPick={(bg) => saveNow((d) => withBackground(d, bg))}
+                  onColour={(hex) => saveNow((d) => withBackground(mode === 'day' ? { ...d, dayColour: hex } : { ...d, nightColour: hex }, `${mode}-colour`))}
+                  onImage={(slot, image) => {
+                    onBgImage(mode, slot, image);
+                    const imgId = `${mode}-img-${slot}` as Background;
+                    if (image) saveNow((d) => withBackground(d, imgId));
+                    else if (latest.current.background === imgId || latest.current[mode === 'day' ? 'dayBackground' : 'nightBackground'] === imgId)
+                      saveNow((d) => withBackground(d, (mode === 'day' ? DAY_TILES : NIGHT_TILES)[slot]));
+                  }}
+                />
+              ))}
 
               <fieldset className="field">
-                <legend>Your own background (optional, replaces the one picked above)</legend>
-                <div className="bg-picks">
-                  <ImagePick label="Night mode" value={draft.nightBgImage} shrink={{ maxW: 2560, maxH: 1600, type: 'image/jpeg', quality: 0.8 }} onChange={(v) => set('nightBgImage', v)} />
-                  <ImagePick label="Day mode" value={draft.dayBgImage} shrink={{ maxW: 2560, maxH: 1600, type: 'image/jpeg', quality: 0.8 }} onChange={(v) => set('dayBgImage', v)} />
-                </div>
-                <p className="field-hint">Ideal: 2560 × 1440 px JPEG (16:9). Night mode shows on Synthwave, Starry night and Navy; Day mode on Damascus, Snowy day and White.</p>
-              </fieldset>
-
-              <fieldset className="field">
-                <legend>Night mode colours · Synthwave, Starry night, Navy</legend>
+                <legend>Night mode colours</legend>
                 <div className="swatches">
                   <ColourField label="Purple" value={draft.accentPurple} onChange={(v) => set('accentPurple', v)} />
                   <ColourField label="Teal" value={draft.accentTeal} onChange={(v) => set('accentTeal', v)} />
@@ -306,7 +304,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                 </div>
               </fieldset>
               <fieldset className="field">
-                <legend>Day mode colours · Damascus, Snowy day, White</legend>
+                <legend>Day mode colours</legend>
                 <div className="swatches">
                   <ColourField label="Purple" value={draft.dayPurple} onChange={(v) => set('dayPurple', v)} />
                   <ColourField label="Teal" value={draft.dayTeal} onChange={(v) => set('dayTeal', v)} />
@@ -576,6 +574,116 @@ function LogoField({ text, image, onText, onImage }: { text: string; image: stri
   );
 }
 
+/** V20-129: the preview picture for a built-in tile. */
+const tilePreview = (id: string) => (['planets', 'vats', 'corridor', 'starship'].includes(id) ? `/backgrounds/${id}.svg` : `/backgrounds/previews/${id}.jpg`);
+
+/**
+ * V20-129: one mode's five tiles. Each shows a little screen with its name and a tick underneath. Add image asks which
+ * of the four to replace, so the row stays at five; × on your image brings that tile's default back.
+ */
+function BgRow({ mode, current, colour, palette, slots, onPick, onColour, onImage }: {
+  mode: BgMode;
+  current: Background;
+  colour: string;
+  palette: string[];
+  slots: (string | null)[];
+  onPick: (b: Background) => void;
+  onColour: (hex: string) => void;
+  onImage: (slot: number, image: string | null) => void;
+}) {
+  const tiles = mode === 'day' ? DAY_TILES : NIGHT_TILES;
+  const file = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const colourId = `${mode}-colour` as Background;
+  return (
+    <div className="field bg-row">
+      <div className="bg-row-head">
+        <span className="field-label">{mode === 'day' ? 'Day (light)' : 'Night (dark)'}</span>
+        <input
+          ref={file}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic"
+          hidden
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (!f) return;
+            setBusy(true);
+            setError('');
+            try {
+              setPending(await shrinkImage(f, { maxW: 2560, maxH: 1600, type: 'image/jpeg', quality: 0.8 }));
+            } catch (err) {
+              setError((err as Error).message);
+            }
+            setBusy(false);
+          }}
+        />
+        {pending ? (
+          <span className="bg-replace-ask">
+            Tap the tile your image replaces
+            <button type="button" className="link-btn link-btn-inline" onClick={() => setPending(null)}>
+              Cancel
+            </button>
+          </span>
+        ) : (
+          <button type="button" className="btn btn-quiet bg-add" disabled={busy} onClick={() => file.current?.click()}>
+            {busy ? 'Reading…' : 'Add image'}
+          </button>
+        )}
+      </div>
+      <div className={`bg-tiles${pending ? ' is-replacing' : ''}`}>
+        {tiles.map((t, slot) => {
+          const img = slots[slot];
+          const id = (img ? `${mode}-img-${slot}` : t) as Background;
+          const on = current === id;
+          const pick = () => {
+            if (pending) {
+              onImage(slot, pending);
+              setPending(null);
+            } else onPick(id);
+          };
+          return (
+            <div key={t} className={`bg-tile${on ? ' is-on' : ''}`}>
+              <button type="button" className="bg-screen" onClick={pick} aria-label={pending ? `Replace ${img ? 'your image' : BG_NAME[t]}` : `Use ${img ? 'your image' : BG_NAME[t]}`}>
+                <img src={img ?? tilePreview(t)} alt="" loading="lazy" />
+                {pending && <span className="bg-replace">Replace</span>}
+              </button>
+              {img && !pending && (
+                <button type="button" className="bg-remove" aria-label={`Remove your image (${BG_NAME[t]} comes back)`} title={`Remove (${BG_NAME[t]} comes back)`} onClick={() => onImage(slot, null)}>
+                  ×
+                </button>
+              )}
+              <label className="bg-name">
+                <input type="radio" name={`bg-${mode}`} checked={on} onChange={pick} />
+                <span>{img ? 'Your image' : BG_NAME[t]}</span>
+              </label>
+            </div>
+          );
+        })}
+        <div className={`bg-tile${current === colourId ? ' is-on' : ''}`}>
+          <button type="button" className="bg-screen bg-colour" style={{ background: colour }} onClick={() => !pending && onPick(colourId)} aria-label="Use a colour" disabled={!!pending} />
+          <div className="bg-dots" role="group" aria-label="Colour">
+            {palette.map((c) => (
+              <button key={c} type="button" className={`bg-dot${c.toLowerCase() === colour.toLowerCase() ? ' is-on' : ''}`} style={{ background: c }} aria-label={`Colour ${c}`} onClick={() => onColour(c)} />
+            ))}
+            <label className="bg-dot bg-dot-pick" title="Any colour">
+              +
+              <input type="color" value={colour} onChange={(e) => onColour(e.target.value)} aria-label="Pick any colour" />
+            </label>
+          </div>
+          <label className="bg-name">
+            <input type="radio" name={`bg-${mode}`} checked={current === colourId} onChange={() => onPick(colourId)} />
+            <span>Colour</span>
+          </label>
+        </div>
+      </div>
+      {error && <p className="field-hint image-pick-error">{error}</p>}
+    </div>
+  );
+}
+
 /** One colour: the picker (gradient + dropper) and a box to paste a hex code. */
 function ColourField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [hex, setHex] = useState(value);
@@ -609,60 +717,3 @@ function ColourField({ label, value, onChange }: { label: string; value: string;
   );
 }
 
-/** Pick an image from the computer: shrunk in the browser, previewed, and removable. */
-function ImagePick({
-  label,
-  hint,
-  value,
-  wide,
-  shrink,
-  onChange
-}: {
-  label: string;
-  hint?: string;
-  value: string | null;
-  wide?: boolean;
-  shrink: { maxW: number; maxH: number; type: 'image/jpeg' | 'image/png'; quality?: number };
-  onChange: (v: string | null) => void;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  return (
-    <div className={`field image-pick${wide ? ' is-wide' : ''}`}>
-      <span>{label}</span>
-      <div className="image-pick-row">
-        <div className={`image-pick-preview${value ? '' : ' is-empty'}`}>{value ? <img src={value} alt="" /> : 'None'}</div>
-        <input
-          ref={input}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/heic"
-          hidden
-          onChange={async (e) => {
-            const f = e.target.files?.[0];
-            e.target.value = '';
-            if (!f) return;
-            setBusy(true);
-            setError('');
-            try {
-              onChange(await shrinkImage(f, shrink));
-            } catch (err) {
-              setError((err as Error).message);
-            }
-            setBusy(false);
-          }}
-        />
-        <button type="button" className="btn btn-quiet image-pick-btn" disabled={busy} onClick={() => input.current?.click()}>
-          {busy ? 'Reading…' : value ? 'Change' : 'Choose image'}
-        </button>
-        {value && (
-          <button type="button" className="btn btn-quiet image-pick-btn" onClick={() => onChange(null)}>
-            Remove
-          </button>
-        )}
-      </div>
-      {hint && <p className="field-hint">{hint}</p>}
-      {error && <p className="field-hint image-pick-error">{error}</p>}
-    </div>
-  );
-}

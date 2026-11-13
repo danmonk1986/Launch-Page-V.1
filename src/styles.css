@@ -3164,3 +3164,38 @@ button.kb-btn { font-family: inherit; }
 img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-position: left center; }
 .logo-box.has-image { display: flex; align-items: center; justify-content: flex-start; }
 .settings-section { margin: 0 0 8px; }
+
+/* V20-129 (Dan, Nov 12): the new tiles. Planets and The Lab (night), Corridor and Starship (day) are drawn images;
+   the colour tile is a plain colour of your choosing (Navy and White became it). */
+.app[data-bg='planets'] .sky, .app[data-bg='vats'] .sky, .app[data-bg='corridor'] .sky, .app[data-bg='starship'] .sky { background-position: center; background-size: cover; background-repeat: no-repeat; background-attachment: fixed; }
+.app[data-bg='planets'] .sky { background-image: url('/backgrounds/planets.svg'); background-color: #0b0820; }
+.app[data-bg='vats'] .sky { background-image: url('/backgrounds/vats.svg'); background-color: #0a0b1f; }
+.app[data-bg='corridor'] .sky { background-image: url('/backgrounds/corridor.svg'); background-color: #f2f4f7; }
+.app[data-bg='starship'] .sky { background-image: url('/backgrounds/starship.svg'); background-color: #f2f4f7; }
+.app[data-bg='planets'] .sky > *, .app[data-bg='vats'] .sky > *, .app[data-bg='corridor'] .sky > *, .app[data-bg='starship'] .sky > * { display: none; }
+.app[data-bg='night-colour'] .sky, .app[data-bg='day-colour'] .sky { background: var(--bg-colour); }
+.app[data-bg='night-colour'] .sky > *, .app[data-bg='day-colour'] .sky > * { display: none; }
+
+/* V20-129 (Dan, Nov 12): Background tiles: five little screens per mode, name and tick underneath. */
+.bg-row { margin-bottom: 18px; }
+.bg-row-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.bg-add { min-height: 32px; padding: 0 12px; font-size: 12px; }
+.bg-replace-ask { font-size: 13px; color: var(--accent-teal); display: inline-flex; gap: 10px; align-items: center; }
+.bg-tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.bg-tile { position: relative; display: grid; gap: 6px; justify-items: start; min-width: 0; }
+.app .bg-tile .bg-screen { all: unset; box-sizing: border-box; cursor: pointer; position: relative; width: 100%; aspect-ratio: 16 / 10; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--edge-strong); background: #0f0b22; box-shadow: 0 6px 14px rgb(0 0 0 / 0.25); }
+.bg-tile .bg-screen img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.app .bg-tile.is-on .bg-screen { border: 2px solid var(--accent-teal); box-shadow: 0 0 0 1px var(--accent-teal), 0 6px 14px rgb(0 0 0 / 0.25); }
+.bg-tiles.is-replacing .bg-tile:not(:last-child) .bg-screen { outline: 2px dashed var(--accent-teal); outline-offset: 2px; }
+.bg-replace { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(6 249 194 / 0.25); color: #fff; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; font-size: 12px; }
+.app .bg-tile .bg-remove { all: unset; cursor: pointer; position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: rgb(0 0 0 / 0.6); color: #fff; font-size: 15px; line-height: 1; }
+.bg-name { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mist); cursor: pointer; }
+.bg-name input { accent-color: var(--accent-teal); margin: 0; }
+.bg-tile.is-on .bg-name { color: var(--accent-teal); }
+.bg-dots { position: absolute; left: 6px; right: 6px; top: calc((100% - 30px) * 0.62); display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; pointer-events: none; }
+.app .bg-dots .bg-dot { all: unset; pointer-events: auto; cursor: pointer; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid rgb(255 255 255 / 0.7); box-sizing: border-box; position: relative; }
+.app .bg-dots .bg-dot.is-on { outline: 2px solid var(--accent-teal); outline-offset: 1px; }
+.app .bg-dots .bg-dot-pick { background: #fff; color: #333; font-size: 11px; line-height: 11px; text-align: center; font-weight: 700; }
+.bg-dot-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+@media (max-width: 640px) { .bg-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
