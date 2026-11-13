@@ -80,7 +80,7 @@ type Props = {
   /** Rituals a timed launch can open (26 Days). */
   rituals?: { id: string; name: string }[];
   /** V20-074: projects a timed launch can count toward. */
-  projects?: { id: string; name: string; parentId: string | null; sort: number }[];
+  projects?: { id: string; name: string; parentId: string | null; sort: number; status?: string; shortName?: string }[];
 };
 
 /** What fits on one line of a fixed-width tile. */
@@ -1272,7 +1272,7 @@ function TimedForm({
   launchers: Launcher[];
   /** Add new rocket: saves a pasted link as a rocket tile. */
   onAddRocket: (url: string) => Promise<void>;
-  projects: { id: string; name: string; parentId: string | null; sort: number }[];
+  projects: { id: string; name: string; parentId: string | null; sort: number; status?: string; shortName?: string }[];
   /** Names already used, so the same task keeps the same name. */
   titles: string[];
   nextSort: number;
@@ -1406,18 +1406,19 @@ function TimedForm({
             <option value="" disabled>
               Pick a project
             </option>
-            {[...projects]
+            {projects
+              .filter((x) => x.status !== 'archived' || x.id === d.projectId)
               .filter((x) => !x.parentId)
               .sort((x, y) => x.sort - y.sort || x.name.localeCompare(y.name))
               .flatMap((top) => [
                 top,
-                ...projects.filter((c) => c.parentId === top.id).sort((x, y) => x.sort - y.sort || x.name.localeCompare(y.name))
+                ...projects.filter((c) => c.parentId === top.id && (c.status !== 'archived' || c.id === d.projectId)).sort((x, y) => x.sort - y.sort || x.name.localeCompare(y.name))
               ])
               .map((x) => {
                 const parent = x.parentId ? projects.find((q) => q.id === x.parentId) : null;
                 return (
                   <option key={x.id} value={x.id}>
-                    {parent ? `${parent.name} › ${x.name}` : x.name}
+                    {x.shortName?.trim() || (parent ? `${parent.name} › ${x.name}` : x.name)}
                   </option>
                 );
               })}

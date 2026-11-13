@@ -10,7 +10,7 @@ import { MonthNav, thisMonth } from './Expenses';
 import type { Expense } from '../lib/expenses';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { normalizeUrl } from '../lib/launchers';
-import { projectLabel, projectTree, type Project } from '../lib/projects';
+import { pickLabel as projectPick, pickable, projectLabel, projectTree, shortOf, type Project } from '../lib/projects';
 import {
   doneToday,
   dueBadge,
@@ -85,7 +85,7 @@ function ProjectChip({ projects, id }: { projects: Project[]; id: string | null 
   if (!p) return <span className="chip chip-empty">—</span>;
   return (
     <span className="chip" style={{ ['--chip' as string]: p.color }} title={projectLabel(projects, id)}>
-      {p.name.replace(/^STARDVST\s+/i, '')}
+      {shortOf(p)}
     </span>
   );
 }
@@ -942,7 +942,7 @@ function TaskForm({
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setD((x) => ({ ...x, [k]: v }));
   const [rep, setRep] = useState(() => repeatOf(task));
   const recurring = rep.kind !== 'none';
-  const tree = projectTree(projects);
+  const tree = projectTree(pickable(projects, task.projectId));
   const formId = useId();
   const linked = !!task.budgetLineId;
   const named = isStep ? !!d.task.trim() : !!(d.task.trim() || d.description.trim());
@@ -987,10 +987,10 @@ function TaskForm({
                 </option>
                 {tree.map(({ area, children }) => (
                   <optgroup key={area.id} label={area.name}>
-                    <option value={area.id}>{area.name}</option>
+                    <option value={area.id}>{projectPick(projects, area)}</option>
                     {children.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {area.name} › {c.name}
+                        {projectPick(projects, c)}
                       </option>
                     ))}
                   </optgroup>

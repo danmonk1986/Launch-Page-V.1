@@ -3257,3 +3257,15 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app .module-switch:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
 .app .module-switch:disabled { cursor: not-allowed; }
 .settings-section-gap { margin-top: 28px; }
+
+/* V20-165 (Dan, Nov 13): Settings › Projects in the Settings style. */
+.project-section .settings-section-head { align-items: center; }
+.app .project-plus { width: 36px; height: 36px; font-size: 20px; line-height: 1; }
+.project-badge { margin-left: 10px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-purple); border: 1px solid var(--accent-purple); border-radius: 999px; padding: 1px 8px; vertical-align: middle; font-weight: 600; }
+.project-archived { margin-top: 8px; opacity: 0.6; }
+.project-form { display: grid; gap: 4px; }
+.project-colour { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.project-colour input[type='color'] { width: 56px; height: 40px; padding: 2px; border-radius: 8px; border: 1px solid var(--edge-strong); background: none; cursor: pointer; }
+.project-colour code { font-family: var(--font-mono); font-size: 13px; color: var(--mist); }
+.project-form-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.project-form-actions .sheet-actions { margin: 0; }

@@ -3,7 +3,7 @@ import { useMobile } from '../lib/useMobile';
 import { SplitTable } from './SplitTable';
 import { daysIn, monthKey, paidIn, type Expense } from '../lib/expenses';
 import { repeatOf, repeatsOn, type Task } from '../lib/tasks';
-import type { Project } from '../lib/projects';
+import { shortOf, type Project } from '../lib/projects';
 import { dayLabel, monthLabel } from './Expenses';
 import { InfoLink } from './Tasks';
 
@@ -77,7 +77,7 @@ export function TasksMonth(p: {
                         {t.budgetLineId && <span className="expense-link" aria-label="linked to a budget line"> $$$</span>}
                       </button>
                     </td>
-                    <td className="col-project">{pr ? <span className="chip" style={{ ['--chip' as string]: pr.color }}>{pr.name.replace(/^STARDVST\s+/i, '')}</span> : <span className="chip chip-empty">—</span>}</td>
+                    <td className="col-project">{pr ? <span className="chip" style={{ ['--chip' as string]: pr.color }}>{shortOf(pr)}</span> : <span className="chip chip-empty">—</span>}</td>
                     <td className="col-center">{st && <span className={`status${st === 'PAID' || st === 'DONE' ? ' status-three' : ''}`}>{st}</span>}</td>
                     <td className="col-link col-info col-center">
                       <InfoLink t={t} />
