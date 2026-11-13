@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 
 /** V20-166: the Settings header's Save submits this form when a project is open. */
 export const PROJECT_FORM_ID = 'settings-project-form';
+
+/** V20-167 (Dan, Nov 13): while a project is open, the Settings header becomes the card's: its title, Delete, Save
+ *  and × (back to the list). The tabs and the day / night switch step aside. */
+export type ProjectHead = { title: string; onBack: () => void; onDelete?: () => void } | null;
+export const ProjectHeadContext = createContext<(h: ProjectHead) => void>(() => {});
 import { kindOf, projectTree, type Project, type ProjectKind, type ProjectStatus } from '../lib/projects';
 import type { GoogleCalendar } from '../lib/google';
 
@@ -36,19 +41,31 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete }: Props
   const startNew = (kind: ProjectKind) =>
     setEditing({ id: crypto.randomUUID(), name: '', color: '#06F9C2', parentId: null, calendarId: null, sort: projects.length, kind, status: 'active', description: '', shortName: '', link: '' });
 
+  const setHead = useContext(ProjectHeadContext);
+  const editingIsNew = !!editing && !projects.some((p) => p.id === editing.id);
+  useEffect(() => {
+    if (!editing) {
+      setHead(null);
+      return;
+    }
+    setHead({
+      title: editingIsNew ? 'Add project' : `Edit ${editing.name}`,
+      onBack: () => setEditing(null),
+      onDelete: editingIsNew
+        ? undefined
+        : async () => {
+            await onDelete(editing);
+            setEditing(null);
+          }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing?.id, editingIsNew]);
+  useEffect(() => () => setHead(null), [setHead]);
+
   if (editing) {
-    const isNew = !projects.some((p) => p.id === editing.id);
+    const isNew = editingIsNew;
     return (
       <div className="projects-manager">
-        <div className="settings-section-head">
-          <h3 className="timed-title settings-section">{isNew ? 'Add project' : `Edit ${editing.name}`}</h3>
-          <span className="project-head-actions">
-            {!isNew && <DeleteLink name={editing.name} onDelete={async () => { await onDelete(editing); setEditing(null); }} />}
-            <button type="button" className="restore-btn" onClick={() => setEditing(null)}>
-              Back
-            </button>
-          </span>
-        </div>
         <ProjectForm
           key={editing.id}
           project={editing}
@@ -113,21 +130,6 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete }: Props
       )}
       {!calendars.length && <p className="field-hint">Connect Google Calendar on the Launch Page to link projects to your calendars.</p>}
     </div>
-  );
-}
-
-/** Delete asks once ("Sure? Delete") like Restore default. */
-function DeleteLink({ name, onDelete }: { name: string; onDelete: () => void }) {
-  const [ask, setAsk] = useState(false);
-  useEffect(() => {
-    if (!ask) return;
-    const t = setTimeout(() => setAsk(false), 3000);
-    return () => clearTimeout(t);
-  }, [ask]);
-  return (
-    <button type="button" className="restore-btn is-asking-delete" aria-label={`Delete ${name}`} onClick={() => (ask ? onDelete() : setAsk(true))}>
-      {ask ? 'Sure? Delete' : 'Delete'}
-    </button>
   );
 }
 

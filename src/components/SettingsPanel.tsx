@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
 import { BG_NAME, DEFAULT_MODULES, MODULE_SOON, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
-import { CLOSE_ICON, HeadIcon, SAVE_ICON, useClickOff } from './Sheet';
+import { CLOSE_ICON, HeadIcon, SAVE_ICON, TRASH_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
-import { PROJECT_FORM_ID } from './Projects';
+import { PROJECT_FORM_ID, ProjectHeadContext, type ProjectHead } from './Projects';
 
 
 /** V20-111 (Dan, Nov 12): Settings is a wide pop-out window with tabs across the top (like Timed launches and Tasks). */
@@ -118,14 +118,42 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
   }
 
 
+  // V20-167: a project open in Settings › Projects takes over the header.
+  const [projectHead, setProjectHead] = useState<ProjectHead>(null);
+  const [askDelete, setAskDelete] = useState(false);
+  useEffect(() => setAskDelete(false), [projectHead]);
+  useEffect(() => {
+    if (tab !== 'projects') setProjectHead(null);
+  }, [tab]);
   // Account Information and Appearance share one draft and one Save.
-  const saves = tab === 'account' || tab === 'appearance' || tab === 'modules';
+  const saves = !projectHead && (tab === 'account' || tab === 'appearance' || tab === 'modules');
   const current = SETTINGS_TABS.find((t) => t.id === tab)!;
 
   return (
     <dialog ref={ref} className="sheet sheet-settings" onClose={onClose} aria-labelledby="settings-title" {...clickOff}>
       <div className="sheet-head">
-        <h2 id="settings-title">Settings</h2>
+        <h2 id="settings-title">{projectHead ? projectHead.title : 'Settings'}</h2>
+        {projectHead ? (
+          <div className="sheet-tools">
+            {projectHead.onDelete && (
+              <button
+                type="button"
+                className={`icon-btn tool-btn tool-btn-danger${askDelete ? ' is-asking' : ''}`}
+                aria-label={askDelete ? 'Tap again to delete' : 'Delete project'}
+                title={askDelete ? 'Tap again to delete' : 'Delete'}
+                onClick={() => (askDelete ? projectHead.onDelete?.() : setAskDelete(true))}
+              >
+                {askDelete ? <span className="ask-delete">Sure?</span> : <HeadIcon d={TRASH_ICON} />}
+              </button>
+            )}
+            <button type="button" className="icon-btn tool-btn tool-btn-go" aria-label="Save project" title="Save" onClick={() => (document.getElementById(PROJECT_FORM_ID) as HTMLFormElement | null)?.requestSubmit()}>
+              <HeadIcon d={SAVE_ICON} />
+            </button>
+            <button type="button" className="icon-btn tool-btn" onClick={projectHead.onBack} aria-label="Back to projects" title="Back">
+              <HeadIcon d={CLOSE_ICON} />
+            </button>
+          </div>
+        ) : (
         <div className="sheet-tools">
           {saves && (
             <span className="journal-state settings-save-state" aria-live="polite">
@@ -172,8 +200,9 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
             <HeadIcon d={CLOSE_ICON} />
           </button>
         </div>
+        )}
       </div>
-      <FoldTabs label="Settings" items={SETTINGS_TABS} value={tab} onPick={onTab} />
+      {!projectHead && <FoldTabs label="Settings" items={SETTINGS_TABS} value={tab} onPick={onTab} />}
 
       <div className="settings-body" role="tabpanel" aria-label={current.label}>
         <form id="settings-form" onSubmit={submit} hidden={!saves}>
@@ -409,7 +438,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
         {onSetPassword && <PasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} email={email ?? null} onSetPassword={onSetPassword} onCheckPassword={onCheckPassword} onSendReset={onSendReset} />}
 
 
-        {tab === 'projects' && projects}
+        {tab === 'projects' && <ProjectHeadContext.Provider value={setProjectHead}>{projects}</ProjectHeadContext.Provider>}
 
         {tab === 'data' && (
           <div className="settings-actions">

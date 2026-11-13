@@ -3272,3 +3272,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-166: project card actions sit on its heading line (Delete, Back); the Settings header Save saves it. */
 .project-head-actions { display: inline-flex; gap: 18px; align-items: baseline; }
 .app .restore-btn.is-asking-delete { color: var(--accent-pink); }
+.app .tool-btn.is-asking { width: auto; padding: 0 10px; }
+.ask-delete { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
