@@ -1486,7 +1486,7 @@ export default function App() {
   const bgImage = shown.image;
   if (bgImage) (theme as Record<string, string>)['--bg-image'] = `url("${bgImage}")`;
   (theme as Record<string, string>)['--bg-colour'] = light ? settings.dayColour : settings.nightColour;
-  if (!authReady) return <div className="app" style={theme} data-bg={shown.tile} data-tone={light ? 'light' : 'dark'} />;
+  if (!authReady) return <div className="app" style={theme} data-bg={bgImage ? 'image' : shown.tile} data-tone={light ? 'light' : 'dark'} />;
   if (supabase && !session) {
     return (
       <div className="app app-light" style={theme}>
@@ -1532,7 +1532,7 @@ export default function App() {
     <div
       className={`${scrolled ? 'app is-scrolled' : 'app'}${bgImage && !kb ? ' has-bg-image' : ''}${kb ? ' is-kb' : ''}`}
       style={shellStyle}
-      data-bg={shown.tile}
+      data-bg={bgImage ? 'image' : shown.tile}
       data-tone={light || kb ? 'light' : 'dark'}
       data-scroll={scrollMode}
     >

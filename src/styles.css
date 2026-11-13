@@ -1910,7 +1910,8 @@ dialog.crawl::backdrop { background: #000000; }
 .swatch.colour-field .colour-hex { width: 100%; height: 38px; padding: 0 10px; border-color: var(--edge-strong); }
 
 /* Your own background image (Colour settings): covers the sky; the built-in art is hidden; a light veil keeps cards readable. */
-.app.has-bg-image .sky { background: var(--bg-image) center / cover no-repeat fixed; }
+/* V20-140: your image wins over the tile it replaced (that tile's own picture used to cover it). */
+.app.has-bg-image .sky, .app[data-bg='image'] .sky { background: var(--bg-image) center / cover no-repeat fixed; }
 .app.has-bg-image .sky > * { display: none; }
 .app.has-bg-image .sky::after { content: ''; position: absolute; inset: 0; background: rgb(12 9 28 / 0.28); }
 .app.has-bg-image[data-tone='light'] .sky::after { background: rgb(255 255 255 / 0.22); }
