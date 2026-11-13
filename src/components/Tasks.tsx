@@ -9,7 +9,7 @@ import { TasksMonth } from './TasksMonth';
 import { MonthNav, thisMonth } from './Expenses';
 import type { Expense } from '../lib/expenses';
 import { formatMinutes, toMinutes } from '../lib/routines';
-import { normalizeUrl } from '../lib/launchers';
+import { normalizeUrl } from '../lib/rockets';
 import { pickLabel as projectPick, pickable, projectLabel, projectTree, shortOf, type Project } from '../lib/projects';
 import {
   doneToday,

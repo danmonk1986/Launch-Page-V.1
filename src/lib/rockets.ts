@@ -4,7 +4,7 @@ import { toMinutes } from './routines';
 
 export type TileColor = 'teal' | 'purple' | 'green' | 'pink';
 
-export interface Launcher {
+export interface Rocket {
   id: string;
   name: string;
   note: string;
@@ -157,7 +157,7 @@ export function nextDate(l: Launch, from: Date): string | null {
 const LAUNCH_SHEET = 'https://docs.google.com/spreadsheets/d/1rH_8_qYR592YNtbU0oEeByxpmkLm6R4bgVltUr8KABw/edit';
 
 /** The eight tiles from the LAUNCH PAGE tab of the Launch Sheet. */
-export interface LauncherPreset {
+export interface RocketPreset {
   name: string;
   note: string;
   url: string;
@@ -165,7 +165,7 @@ export interface LauncherPreset {
 }
 
 /** The eight tiles from the LAUNCH PAGE tab of the Launch Sheet, offered under + Add launch. */
-export const LAUNCHER_PRESETS: LauncherPreset[] = [
+export const ROCKET_PRESETS: RocketPreset[] = [
   { name: 'Gmail', note: 'Email', url: 'https://mail.google.com', color: 'teal' },
   { name: 'Gemini', note: 'AI research', url: 'https://gemini.google.com', color: 'purple' },
   { name: 'Calendar', note: 'Schedule', url: 'https://calendar.google.com', color: 'teal' },
@@ -176,16 +176,16 @@ export const LAUNCHER_PRESETS: LauncherPreset[] = [
   { name: 'SoundCloud', note: 'Music', url: 'https://soundcloud.com', color: 'green' }
 ];
 
-export function seedLaunchers(): Launcher[] {
-  return LAUNCHER_PRESETS.map((p, i) => ({ id: crypto.randomUUID(), ...p, routineIds: null, sort: i }));
+export function seedRockets(): Rocket[] {
+  return ROCKET_PRESETS.map((p, i) => ({ id: crypto.randomUUID(), ...p, routineIds: null, sort: i }));
 }
 
 /** The tiles that belong to one routine. Each routine keeps its own set. */
-export const launchersFor = (list: Launcher[], routineId: string | null) =>
+export const rocketsFor = (list: Rocket[], routineId: string | null) =>
   routineId ? list.filter((l) => l.routineIds?.includes(routineId)).sort((a, b) => a.sort - b.sort) : [];
 
 /** Tiles shared by every routine (the old model) become one separate copy per routine. */
-export function splitShared(list: Launcher[], routineIds: string[]) {
+export function splitShared(list: Rocket[], routineIds: string[]) {
   const shared = list.filter((l) => !l.routineIds || l.routineIds.length === 0);
   if (!shared.length || !routineIds.length) return null;
   const copies = routineIds.flatMap((rid) =>
@@ -201,7 +201,7 @@ export function splitShared(list: Launcher[], routineIds: string[]) {
  */
 export function dedupeRoutines<R extends { id: string; name: string; kind: string }>(
   routines: R[],
-  launchers: Launcher[],
+  rockets: Rocket[],
   activeId: string | null
 ) {
   const groups = new Map<string, R[]>();
@@ -210,19 +210,19 @@ export function dedupeRoutines<R extends { id: string; name: string; kind: strin
     groups.set(key, [...(groups.get(key) ?? []), r]);
   }
   const dropRoutines: R[] = [];
-  const moved: Launcher[] = [];
+  const moved: Rocket[] = [];
   const dropTiles: string[] = [];
   for (const group of groups.values()) {
     if (group.length < 2) continue;
-    const count = (r: R) => launchers.filter((l) => l.routineIds?.includes(r.id)).length;
+    const count = (r: R) => rockets.filter((l) => l.routineIds?.includes(r.id)).length;
     const keep = group.find((r) => r.id === activeId) ?? [...group].sort((a, b) => count(b) - count(a))[0];
-    const kept = launchers.filter((l) => l.routineIds?.includes(keep.id));
+    const kept = rockets.filter((l) => l.routineIds?.includes(keep.id));
     const names = new Set(kept.map((l) => l.name.trim().toLowerCase()));
     let sort = kept.reduce((m, l) => Math.max(m, l.sort + 1), 0);
     for (const r of group) {
       if (r.id === keep.id) continue;
       dropRoutines.push(r);
-      for (const l of launchers.filter((x) => x.routineIds?.includes(r.id)).sort((a, b) => a.sort - b.sort)) {
+      for (const l of rockets.filter((x) => x.routineIds?.includes(r.id)).sort((a, b) => a.sort - b.sort)) {
         const n = l.name.trim().toLowerCase();
         if (names.has(n)) dropTiles.push(l.id);
         else {
@@ -234,8 +234,8 @@ export function dedupeRoutines<R extends { id: string; name: string; kind: strin
   }
   if (!dropRoutines.length) return null;
   const movedIds = new Map(moved.map((l) => [l.id, l]));
-  const next = launchers.filter((l) => !dropTiles.includes(l.id)).map((l) => movedIds.get(l.id) ?? l);
-  return { routines: routines.filter((r) => !dropRoutines.includes(r)), dropRoutines, moved, dropTiles, launchers: next };
+  const next = rockets.filter((l) => !dropTiles.includes(l.id)).map((l) => movedIds.get(l.id) ?? l);
+  return { routines: routines.filter((r) => !dropRoutines.includes(r)), dropRoutines, moved, dropTiles, rockets: next };
 }
 
 export function seedLaunches(): Launch[] {
@@ -259,7 +259,7 @@ export function seedLaunches(): Launch[] {
   ];
 }
 
-type LauncherRow = {
+type RocketRow = {
   id: string;
   name: string;
   note: string;
@@ -296,12 +296,13 @@ type LaunchRow = {
   sort: number;
 };
 
-export const launcherStore = makeStore<Launcher, LauncherRow>({
-  table: 'launchers',
+export const rocketStore = makeStore<Rocket, RocketRow>({
+  table: 'rockets',
+  // V12-008: the table is rockets now; this device key keeps its old name so its copy and waiting changes carry over.
   localKey: 'launchpage.launchers.v1',
   orderBy: 'sort',
-  script: 'supabase/migrations/0003_launchers_events.sql',
-  seed: seedLaunchers,
+  script: 'supabase/migrations/0056_rename_launchers_to_rockets.sql',
+  seed: seedRockets,
   toRow: (l) => ({ id: l.id, name: l.name, note: l.note, url: l.url, color: l.color, routine_ids: l.routineIds, sort: l.sort, hidden: !!l.hidden }),
   fromRow: (r) => ({ id: r.id, name: r.name, note: r.note, url: r.url, color: r.color, routineIds: r.routine_ids, sort: r.sort, hidden: !!r.hidden })
 });
@@ -310,7 +311,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
   table: 'launches',
   localKey: 'launchpage.launches.v1',
   orderBy: 'sort',
-  script: 'supabase/migrations/0003_launchers_events.sql',
+  script: 'supabase/migrations/0056_rename_launchers_to_rockets.sql',
   seed: seedLaunches,
   toRow: (l) => ({
     id: l.id,

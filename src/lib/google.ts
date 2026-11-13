@@ -4,7 +4,7 @@
  * The token is kept in memory and this tab's session storage, never in Supabase.
  */
 import { addDays, type CalEvent } from './events';
-import { isoDate } from './launchers';
+import { isoDate } from './rockets';
 
 export const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) || '';
 export const googleConfigured = () => !!GOOGLE_CLIENT_ID;

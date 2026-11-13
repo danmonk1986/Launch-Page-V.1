@@ -34,7 +34,7 @@ export interface BrandSettings {
   background: Background;
   accentPurple: string;
   accentTeal: string;
-  /** Launcher colours 3 and 4. Purple and Teal are 1 and 2 and also colour the whole app. */
+  /** Rocket colours 3 and 4. Purple and Teal are 1 and 2 and also colour the whole app. */
   accentGreen: string;
   accentPink: string;
   /** Day mode (the light backgrounds): its own four colours. The four above are night mode. */

@@ -769,7 +769,7 @@ input:-webkit-autofill:focus {
   font: inherit;
 }
 
-/* Launcher toolbar: icon buttons */
+/* Rocket toolbar: icon buttons */
 .tool-btn { display: inline-flex; align-items: center; justify-content: center; color: var(--beige); border-color: var(--edge-strong); }
 .tool-btn:hover { border-color: var(--accent-teal); color: var(--accent-teal); }
 .tool-btn[aria-pressed='true'] { border-color: var(--accent-teal); color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
@@ -780,9 +780,9 @@ input:-webkit-autofill:focus {
 
 .field-hint { margin: 8px 0 0; font-size: 13px; color: var(--dim); }
 
-/* Smaller launcher toolbar (about 0.65 of the 44px buttons) */
+/* Smaller rocket toolbar (about 0.65 of the 44px buttons) */
 
-.panel-launchers .panel-actions:has(.tool-btn) { gap: 6px; }
+.panel-rockets .panel-actions:has(.tool-btn) { gap: 6px; }
 
 /* Timed launch tabs: plain text, a line under the open one */
 
@@ -799,8 +799,8 @@ input:-webkit-autofill:focus {
 .timed-tab[aria-selected='true'] { background: transparent; border-bottom-color: var(--accent-teal); color: var(--accent-teal); }
 
 /* Toolbar: one step up from 30px, same everywhere (touch included) */
-.panel-launchers .tool-btn { width: 36px; height: 36px; border-radius: 8px; }
-.panel-launchers .tool-btn svg { width: 16px; height: 16px; }
+.panel-rockets .tool-btn { width: 36px; height: 36px; border-radius: 8px; }
+.panel-rockets .tool-btn svg { width: 16px; height: 16px; }
 
 /* Timed tabs: smaller text, purple for the open one */
 .timed-tab { font-size: 11px; min-height: 30px; gap: 6px; }
@@ -823,7 +823,7 @@ input:-webkit-autofill:focus {
 
 .event-when { margin: 0 0 14px; font-size: 14px; }
 
-/* Week panel: icon tools like the launcher toolbar */
+/* Week panel: icon tools like the rocket toolbar */
 .panel-week .tool-btn { width: 36px; height: 36px; border-radius: 8px; }
 .panel-week .week-tools { gap: 6px; }
 
@@ -855,7 +855,7 @@ input:-webkit-autofill:focus {
 
 .title-btn { all: unset; cursor: pointer; }
 .title-btn:hover { color: var(--accent-teal); }
-.panel-week .panel-head, .panel-launchers .panel-head { align-items: center; }
+.panel-week .panel-head, .panel-rockets .panel-head { align-items: center; }
 
 /* Week header: tighter to the days, plain teal arrows, purple = tap to connect */
 .panel-week .panel-head { margin-bottom: 4px; }
@@ -1022,7 +1022,7 @@ input:-webkit-autofill:focus {
   .topbar-right .picker-main { font-size: 12px; letter-spacing: 0.08em; padding: 0 10px; }
 }
 
-/* Launcher tiles: fixed size; the row count changes instead of the tiles stretching */
+/* Rocket tiles: fixed size; the row count changes instead of the tiles stretching */
 .tiles { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, 196px); justify-content: start; }
 .tile { height: 62px; min-height: 0; }
 .tile-name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1117,12 +1117,12 @@ input:-webkit-autofill:focus {
 .tabs-more-list [aria-current='page'] { color: var(--accent-teal); }
 
 /* One size for every icon button; one gap from each card's header to its first item */
-.tool-btn, .panel-launchers .tool-btn, .panel-week .tool-btn, .topbar-right .gear-btn, .sheet-tools .tool-btn,
+.tool-btn, .panel-rockets .tool-btn, .panel-week .tool-btn, .topbar-right .gear-btn, .sheet-tools .tool-btn,
 .quick-btn, .task-quick, .timed-quick .quick-btn { width: 36px; height: 36px; border-radius: 8px; }
 .tool-btn svg, .quick-btn svg { width: 16px; height: 16px; }
 .topbar-right .picker-split { height: 36px; border-radius: 8px; }
 .topbar-right .picker-caret { width: 36px; }
-.panel-head, .panel-week .panel-head, .panel-launchers .panel-head { margin-bottom: 14px; min-height: 36px; align-items: center; }
+.panel-head, .panel-week .panel-head, .panel-rockets .panel-head { margin-bottom: 14px; min-height: 36px; align-items: center; }
 .panel-head .panel-title { margin: 0; line-height: 36px; }
 .tabs-more-list { left: auto; right: 0; }
 
@@ -1939,12 +1939,12 @@ dialog.crawl::backdrop { background: #000000; }
 .rockets-toggle.is-open svg { transform: rotate(180deg); }
 .rockets-toggle:hover { background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
 @media (prefers-reduced-motion: reduce) { .rockets-toggle svg { transition: none; } }
-.panel-launchers.tiles-hidden .timed { margin-top: 0; padding-top: 0; border-top: 0; }
-.panel-launchers .tiles[hidden] { display: none; }
+.panel-rockets.tiles-hidden .timed { margin-top: 0; padding-top: 0; border-top: 0; }
+.panel-rockets .tiles[hidden] { display: none; }
 
 /* Week: the month's theme (AUDACITY…) is one bar across the bottom row (Oct 17). */
 .week-event.ev-theme { justify-content: center; text-align: center; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; }
-.panel-launchers > .panel-head > .panel-actions[hidden] { display: none; }
+.panel-rockets > .panel-head > .panel-actions[hidden] { display: none; }
 
 /* Tasks on the Launch Page (Oct 18): project, description, task, status, required and the buttons. The Tasks page shows every column. */
 .panel-tasks .task-table .col-info, .panel-tasks .task-table .col-start, .panel-tasks .task-table .col-time, .panel-tasks .task-table .col-expense { display: none; }

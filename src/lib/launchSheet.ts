@@ -9,7 +9,7 @@ import { buildXlsx, type Cell, type SheetSpec } from './xlsx';
 import { shownName, type BrandSettings } from './settings';
 import type { Routine } from './routines';
 import type { Meditation } from './meditations';
-import { describeLog, describeOpens, describeSchedule, type Launch, type LaunchLog, type Launcher } from './launchers';
+import { describeLog, describeOpens, describeSchedule, type Launch, type LaunchLog, type Rocket } from './rockets';
 import type { CalEvent } from './events';
 import type { Task } from './tasks';
 import type { Project } from './projects';
@@ -22,7 +22,7 @@ export interface ExportData {
   settings: BrandSettings;
   routines: Routine[];
   meditations: Meditation[];
-  launchers: Launcher[];
+  rockets: Rocket[];
   launches: Launch[];
   launchLog: LaunchLog[];
   events: CalEvent[];
@@ -89,7 +89,7 @@ export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: 
   add(
     'ROCKETS',
     ['Name', 'Note', 'Link', 'Colour', 'Routines', 'Hidden'],
-    [...d.launchers].sort((a, b) => a.sort - b.sort).map((l) => [l.name, l.note, l.url, l.color, l.routineIds ? l.routineIds.map(routineName).join(', ') : 'Every routine', yes(l.hidden)])
+    [...d.rockets].sort((a, b) => a.sort - b.sort).map((l) => [l.name, l.note, l.url, l.color, l.routineIds ? l.routineIds.map(routineName).join(', ') : 'Every routine', yes(l.hidden)])
   );
 
   add(

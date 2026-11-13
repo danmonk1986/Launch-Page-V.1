@@ -1,6 +1,6 @@
 import { readRepeat, repeatOn } from './repeat';
 import { makeStore } from './store';
-import { isoDate } from './launchers';
+import { isoDate } from './rockets';
 
 /** Statuses from the Launch Sheet. DUE and OVERDUE are worked out from the date, not picked. */
 /** MTH RCR / ANN RCR retired Oct 20: Repeat says how a task recurs (lib/repeat.ts). */

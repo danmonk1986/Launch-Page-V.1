@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Sheet } from './Sheet';
-import { TitleCombo, joinTitle, splitTitle } from './Launchers';
+import { TitleCombo, joinTitle, splitTitle } from './Rockets';
 import { launchListFor } from '../lib/hiddenPicks';
 import { formatMinutes, toMinutes } from '../lib/routines';
-import { describeLog, describeOpens, opensSomething, runsOnClock, timeFor, type Launch } from '../lib/launchers';
+import { describeLog, describeOpens, opensSomething, runsOnClock, timeFor, type Launch } from '../lib/rockets';
 
 type Props = {
   launch: Launch | null;

@@ -50,7 +50,7 @@ import {
   type Quote
 } from './lib/days26';
 import { TodayPanel, useNow } from './components/TodayPanel';
-import { BLOCKED_HELP, LaunchersPanel, nameFromUrl, rocketOptions, type TimedPreset } from './components/Launchers';
+import { BLOCKED_HELP, RocketsPanel, nameFromUrl, rocketOptions, type TimedPreset } from './components/Rockets';
 import { LaunchReminder, MissedLaunches, TimeUpReminder } from './components/LaunchReminder';
 import { chime, unlockAudioOnFirstGesture } from './lib/alerts';
 import { WeekCalendar } from './components/WeekCalendar';
@@ -68,13 +68,13 @@ import {
   isMissed,
   isoDate,
   launchStore,
-  launcherStore,
+  rocketStore,
   markHandled,
   unmarkHandled,
   openTabs,
   readHandled,
   skipToTomorrow,
-  launchersFor,
+  rocketsFor,
   splitShared,
   dedupeRoutines,
   type Launch,
@@ -90,8 +90,8 @@ import {
   logFor,
   launchDate,
   timeFor,
-  type Launcher
-} from './lib/launchers';
+  type Rocket
+} from './lib/rockets';
 import { eventStore, type CalEvent } from './lib/events';
 import type { Store } from './lib/store';
 import {
@@ -154,7 +154,7 @@ export default function App() {
   const [shift, setShift] = useState<Shift>('nights');
   const [routineProblem, setRoutineProblem] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ open: boolean; routine: Routine | null }>({ open: false, routine: null });
-  const [launchers, setLaunchers] = useState<Launcher[]>([]);
+  const [rockets, setRockets] = useState<Rocket[]>([]);
   const [launches, setLaunches] = useState<Launch[]>([]);
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -381,23 +381,23 @@ export default function App() {
       let list = loaded.routines;
       const active = await loadActive(userId);
       if (!live) return;
-      const [l1, l2, l3] = await Promise.all([launcherStore.load(userId), launchStore.load(userId), eventStore.load(userId)]);
+      const [l1, l2, l3] = await Promise.all([rocketStore.load(userId), launchStore.load(userId), eventStore.load(userId)]);
       if (!live) return;
       let tiles = l1.items;
       // One tile set per routine: copy any shared tiles into each routine, then drop the shared ones.
       const split = splitShared(tiles, list.map((r) => r.id));
       if (split) {
         tiles = split.next;
-        for (const c of split.copies) await launcherStore.save(userId, c, tiles);
-        for (const sh of split.shared) await launcherStore.remove(userId, sh.id, tiles);
+        for (const c of split.copies) await rocketStore.save(userId, c, tiles);
+        for (const sh of split.shared) await rocketStore.remove(userId, sh.id, tiles);
       }
       // Routines saved twice: keep one of each, moving any tiles it lacks onto it.
       const dupes = dedupeRoutines(list, tiles, active.id);
       if (dupes) {
         list = dupes.routines;
-        tiles = dupes.launchers;
-        for (const l of dupes.moved) await launcherStore.save(userId, l, tiles);
-        for (const id of dupes.dropTiles) await launcherStore.remove(userId, id, tiles);
+        tiles = dupes.rockets;
+        for (const l of dupes.moved) await rocketStore.save(userId, l, tiles);
+        for (const id of dupes.dropTiles) await rocketStore.remove(userId, id, tiles);
         for (const r of dupes.dropRoutines) await deleteRoutine(userId, r.id, list);
       }
       if (!live) return;
@@ -405,7 +405,7 @@ export default function App() {
       setRoutineProblem(loaded.problem);
       setActiveId(list.some((r) => r.id === active.id) ? active.id : list[0]?.id ?? null);
       setShift(active.shift);
-      setLaunchers(tiles);
+      setRockets(tiles);
       setLaunches(l2.items);
       setEvents(l3.items);
       const [p1, t1, j1, g1] = await Promise.all([projectStore.load(userId), taskStore.load(userId), journalStore.load(userId), launchLogStore.load(userId)]);
@@ -513,7 +513,7 @@ export default function App() {
         });
         setStatus(item ? 'Changed on another device, so the newer version is showing. Make your change again if it still needs it.' : 'That was deleted on another device.');
       };
-    launcherStore.onNewer(swap(setLaunchers));
+    rocketStore.onNewer(swap(setRockets));
     launchStore.onNewer(swap(setLaunches));
     eventStore.onNewer(swap(setEvents));
     projectStore.onNewer(swap(setProjects));
@@ -543,7 +543,7 @@ export default function App() {
   // connection is back, or when the app comes back into view, not only on the next reload.
   useEffect(() => {
     if (!userId) return;
-    const stores = [launcherStore, launchStore, eventStore, projectStore, taskStore, nonNegStore, quoteStore, budgetStore, invoiceStore, customerStore, profileStore, bankAccountStore, bankLineStore, commonStore, drawStore, meditationStore, hiddenPickStore, expenseStore, dayStore, logStore, journalStore, launchLogStore, configStore] as Store<{ id: string }>[];
+    const stores = [rocketStore, launchStore, eventStore, projectStore, taskStore, nonNegStore, quoteStore, budgetStore, invoiceStore, customerStore, profileStore, bankAccountStore, bankLineStore, commonStore, drawStore, meditationStore, hiddenPickStore, expenseStore, dayStore, logStore, journalStore, launchLogStore, configStore] as Store<{ id: string }>[];
     let busy = false;
     const flushAll = async () => {
       if (busy || !navigator.onLine) return;
@@ -620,7 +620,7 @@ export default function App() {
       }
     };
   }
-  const launcherOps = ops(launcherStore, launchers, setLaunchers, (l) => l.name);
+  const rocketOps = ops(rocketStore, rockets, setRockets, (l) => l.name);
   const launchOps = ops(launchStore, launches, setLaunches, (l) => l.title);
   // Oct 25: a launch saved with a new time drops its snooze, so it pops up at the new time
   // (Snooze → Edit snoozes 10 minutes, which hid an edit to 3 minutes from now).
@@ -1603,17 +1603,17 @@ export default function App() {
         <main aria-label={page === 'launch' ? 'Launch Page' : 'Page'}>
           {page === 'launch' ? (
             <LaunchPageHome
-              launchers={!settings.modules.rockets ? null : 
-                <LaunchersPanel
+              rockets={!settings.modules.rockets ? null : 
+                <RocketsPanel
                   rituals={routines.filter((r) => r.kind === 'ritual').map((r) => ({ id: r.id, name: r.name }))}
                   projects={projects}
                   routineName={activeRoutine ? routineLabel(activeRoutine, shift) : null}
-                  launchers={launchersFor(launchers, activeRoutine?.id ?? null)}
+                  rockets={rocketsFor(rockets, activeRoutine?.id ?? null)}
                   routineId={activeRoutine?.id ?? null}
                   launches={launches}
-                  onSaveLauncher={launcherOps.save}
-                  onSaveLaunchers={launcherOps.saveMany}
-                  onDeleteLauncher={launcherOps.remove}
+                  onSaveRocket={rocketOps.save}
+                  onSaveRockets={rocketOps.saveMany}
+                  onDeleteRocket={rocketOps.remove}
                   onSaveLaunch={saveLaunchEdit}
                   onDeleteLaunch={launchOps.remove}
                   onStatus={setStatus}
@@ -1737,9 +1737,9 @@ export default function App() {
               onSaveConfig={saveD26Config}
               onSaveRitual={saveRitual}
               onDeleteRitual={handleDeleteRoutine}
-              rockets={rocketOptions(launchers)}
+              rockets={rocketOptions(rockets)}
               onAddRocket={async (url) => {
-                await launcherOps.save({ id: crypto.randomUUID(), name: nameFromUrl(url), note: '', url, color: 'teal', routineIds: activeRoutine ? [activeRoutine.id] : null, sort: launchers.length });
+                await rocketOps.save({ id: crypto.randomUUID(), name: nameFromUrl(url), note: '', url, color: 'teal', routineIds: activeRoutine ? [activeRoutine.id] : null, sort: rockets.length });
               }}
               onTick={tickToday}
               onTickDay={tickDay}
@@ -1955,7 +1955,7 @@ export default function App() {
               // V12-042: the Launch Sheet, one tab per card (Google events from this device's cache).
               const googleEvents = await loadCached(userId).catch(() => [] as CalEvent[]);
               const counts = downloadLaunchSheet({
-                settings, routines, meditations, launchers, launches, launchLog, events, googleEvents, tasks, projects, journal,
+                settings, routines, meditations, rockets, launches, launchLog, events, googleEvents, tasks, projects, journal,
                 days: d26Days, nonnegs, logs: d26Logs, quotes, config: d26Config, budget
               });
               setStatus(`Launch Sheet exported: ${counts.length + 1} tabs, ${counts.reduce((a, c) => a + c.rows, 0)} rows.`);

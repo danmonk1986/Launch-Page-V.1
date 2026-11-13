@@ -1,5 +1,5 @@
 import { makeStore } from './store';
-import { isoDate } from './launchers';
+import { isoDate } from './rockets';
 
 /** V20-083: one of the three, or any colour you choose as #rrggbb. */
 export type EventColor = 'teal' | 'purple' | 'green' | 'pink' | 'blue' | `#${string}`;
@@ -36,7 +36,7 @@ export const eventStore = makeStore<CalEvent, Row>({
   table: 'events',
   localKey: 'launchpage.events.v1',
   orderBy: 'start_date',
-  script: 'supabase/migrations/0003_launchers_events.sql',
+  script: 'supabase/migrations/0003_rockets_events.sql',
   seed: () => [],
   toRow: (e) => ({ id: e.id, title: e.title, start_date: e.startDate, end_date: e.endDate, color: e.color, sort: e.sort }),
   fromRow: (r) => ({ id: r.id, title: r.title, startDate: r.start_date, endDate: r.end_date, color: r.color, sort: r.sort })

@@ -3,7 +3,7 @@ import { HiddenPicksContext, launchListFor, pickKey as hiddenKey } from '../lib/
 import { FormActions, Sheet } from './Sheet';
 import {
   describeSchedule,
-  LAUNCHER_PRESETS,
+  ROCKET_PRESETS,
   happensOn,
   happensToday,
   launchDate,
@@ -20,7 +20,7 @@ import {
   type LaunchLog,
   openTabs,
   type Launch,
-  type Launcher,
+  type Rocket,
   type Repeat,
   type TileColor,
   runKey,
@@ -30,7 +30,7 @@ import {
   dayOrder,
   missedRuns,
   MONTH_WEEK,
-} from '../lib/launchers';
+} from '../lib/rockets';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
 import { useMobile } from '../lib/useMobile';
@@ -44,12 +44,12 @@ type Props = {
   routineName: string | null;
   /** New tiles belong to this routine only. */
   routineId: string | null;
-  launchers: Launcher[];
+  rockets: Rocket[];
   launches: Launch[];
-  onSaveLauncher: (l: Launcher) => Promise<void>;
+  onSaveRocket: (l: Rocket) => Promise<void>;
   /** Saves a reordered set of tiles in one go. */
-  onSaveLaunchers: (l: Launcher[]) => Promise<void>;
-  onDeleteLauncher: (id: string) => Promise<void>;
+  onSaveRockets: (l: Rocket[]) => Promise<void>;
+  onDeleteRocket: (id: string) => Promise<void>;
   onSaveLaunch: (l: Launch) => Promise<void>;
   onDeleteLaunch: (id: string) => Promise<void>;
   onStatus: (msg: string) => void;
@@ -122,9 +122,9 @@ const isBarePrefix = (v: string) => /^https?:\/\/(www\.)?$/i.test(v.trim());
 export const BLOCKED_HELP =
   'Your browser blocked some tabs. Allow pop-ups for this site, then launch again.';
 
-export function LaunchersPanel(p: Props) {
+export function RocketsPanel(p: Props) {
   const [editing, setEditing] = useState(false);
-  const [tile, setTile] = useState<Launcher | null>(null);
+  const [tile, setTile] = useState<Rocket | null>(null);
   const [tileOpen, setTileOpen] = useState(false);
   const [timed, setTimed] = useState<Launch | null>(null);
   const [timedOpen, setTimedOpen] = useState(false);
@@ -148,10 +148,10 @@ export function LaunchersPanel(p: Props) {
   }, [p.editLaunch]);
   const [launched, setLaunched] = useState<{ count: number; blocked: number } | null>(null);
   // Nov 5 (V20-028): edit mode drags rockets into a new order (⠿ grip; mouse and touch) and × hides one.
-  const visible = p.launchers.filter((l) => !l.hidden).slice().sort((a, b) => a.sort - b.sort);
+  const visible = p.rockets.filter((l) => !l.hidden).slice().sort((a, b) => a.sort - b.sort);
   const [drag, setDrag] = useState<{ id: string; order: string[] } | null>(null);
-  const byId = new Map(p.launchers.map((l) => [l.id, l] as const));
-  const shownTiles = drag ? drag.order.map((id) => byId.get(id)).filter((l): l is Launcher => !!l) : visible;
+  const byId = new Map(p.rockets.map((l) => [l.id, l] as const));
+  const shownTiles = drag ? drag.order.map((id) => byId.get(id)).filter((l): l is Rocket => !!l) : visible;
   const moveTo = (order: string[], id: string, overId: string) => {
     if (id === overId) return order;
     const next = order.filter((x) => x !== id);
@@ -171,8 +171,8 @@ export function LaunchersPanel(p: Props) {
         const sort = ok ? slots[i] : i;
         return l.sort === sort ? null : { ...l, sort };
       })
-      .filter((l): l is Launcher => !!l);
-    if (changed.length) void p.onSaveLaunchers(changed);
+      .filter((l): l is Rocket => !!l);
+    if (changed.length) void p.onSaveRockets(changed);
   };
   // Follow the pointer on the whole page while dragging: moving a tile in the list drops a pointer
   // capture on it, so the tile itself can't be relied on to hear the move and the drop.
@@ -213,8 +213,8 @@ export function LaunchersPanel(p: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragging]);
-  const hideRocket = (l: Launcher) => {
-    void p.onSaveLauncher({ ...l, hidden: true });
+  const hideRocket = (l: Rocket) => {
+    void p.onSaveRocket({ ...l, hidden: true });
     p.onStatus(`${l.name} hidden. Bring it back from + Add rocket.`);
   };
   // The rocket tiles start hidden; ⌄ beside the title shows them (remembered on this device).
@@ -471,7 +471,7 @@ export function LaunchersPanel(p: Props) {
   }, [view, showAllTimed]);
 
   function launchAll() {
-    const urls = p.launchers.filter((l) => !l.hidden).map((l) => l.url).filter(Boolean);
+    const urls = p.rockets.filter((l) => !l.hidden).map((l) => l.url).filter(Boolean);
     if (!urls.length) return p.onStatus('Add links to your tiles first.');
     const blocked = openTabs(urls);
     setLaunched({ count: urls.length, blocked });
@@ -479,10 +479,10 @@ export function LaunchersPanel(p: Props) {
   }
 
   return (
-    <section className={`panel panel-launchers${showTiles ? '' : ' tiles-hidden'}`} aria-labelledby="h-launchers">
+    <section className={`panel panel-rockets${showTiles ? '' : ' tiles-hidden'}`} aria-labelledby="h-rockets">
       <div className="panel-head">
         <div className="rockets-title">
-          <h2 id="h-launchers" className="panel-title">
+          <h2 id="h-rockets" className="panel-title">
             Rockets
           </h2>
           <button
@@ -1019,26 +1019,26 @@ export function LaunchersPanel(p: Props) {
       <Sheet open={tileOpen} title={tile ? `Edit ${tile.name}` : 'Add rocket'} onClose={() => setTileOpen(false)}>
         <TileForm
           tile={tile}
-          nextSort={p.launchers.length}
+          nextSort={p.rockets.length}
           routineId={p.routineId}
-          taken={p.launchers.map((l) => l.name)}
-          tiles={p.launchers}
+          taken={p.rockets.map((l) => l.name)}
+          tiles={p.rockets}
           onCancel={() => setTileOpen(false)}
           onSave={async (l, position) => {
-            const others = p.launchers.filter((x) => x.id !== l.id);
-            const from = p.launchers.findIndex((x) => x.id === l.id);
+            const others = p.rockets.filter((x) => x.id !== l.id);
+            const from = p.rockets.findIndex((x) => x.id === l.id);
             if (position === null || position === from) {
-              await p.onSaveLauncher(l);
+              await p.onSaveRocket(l);
             } else {
               others.splice(position, 0, l);
-              await p.onSaveLaunchers(
-                others.map((x, i) => ({ ...x, sort: i })).filter((x) => x.id === l.id || p.launchers.find((o) => o.id === x.id)?.sort !== x.sort)
+              await p.onSaveRockets(
+                others.map((x, i) => ({ ...x, sort: i })).filter((x) => x.id === l.id || p.rockets.find((o) => o.id === x.id)?.sort !== x.sort)
               );
             }
             setTileOpen(false);
           }}
           onDelete={async (id) => {
-            await p.onDeleteLauncher(id);
+            await p.onDeleteRocket(id);
             setTileOpen(false);
           }}
         />
@@ -1060,9 +1060,9 @@ export function LaunchersPanel(p: Props) {
           launch={timed}
           today={p.today}
           fill={timed ? null : fill?.fill ?? null}
-          launchers={p.launchers}
+          rockets={p.rockets}
           onAddRocket={async (url) => {
-            await p.onSaveLauncher({ id: crypto.randomUUID(), name: nameFromUrl(url), note: '', url, color: 'teal', routineIds: p.routineId ? [p.routineId] : null, sort: p.launchers.length });
+            await p.onSaveRocket({ id: crypto.randomUUID(), name: nameFromUrl(url), note: '', url, color: 'teal', routineIds: p.routineId ? [p.routineId] : null, sort: p.rockets.length });
           }}
           projects={p.projects ?? []}
           titles={[...new Set(p.launches.map((l) => l.title.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
@@ -1104,17 +1104,17 @@ function TileForm({
   onSave,
   onDelete
 }: {
-  tile: Launcher | null;
+  tile: Rocket | null;
   nextSort: number;
   routineId: string | null;
   taken: string[];
-  tiles: Launcher[];
+  tiles: Rocket[];
   onCancel?: () => void;
   /** position: the new place in the routine's tiles (0 = first), or null to leave it. */
-  onSave: (l: Launcher, position: number | null) => Promise<void>;
+  onSave: (l: Rocket, position: number | null) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
-  const [d, setD] = useState<Launcher>(
+  const [d, setD] = useState<Rocket>(
     () =>
       tile ?? {
         id: crypto.randomUUID(),
@@ -1126,10 +1126,10 @@ function TileForm({
         sort: nextSort
       }
   );
-  const open = LAUNCHER_PRESETS.filter((p) => !taken.includes(p.name));
+  const open = ROCKET_PRESETS.filter((p) => !taken.includes(p.name));
   const from = tile ? tiles.findIndex((t) => t.id === tile.id) : -1;
   const [position, setPosition] = useState(from);
-  const set = <K extends keyof Launcher>(k: K, v: Launcher[K]) => setD((x) => ({ ...x, [k]: v }));
+  const set = <K extends keyof Rocket>(k: K, v: Rocket[K]) => setD((x) => ({ ...x, [k]: v }));
 
   const formId = useId();
   return (
@@ -1258,7 +1258,7 @@ function TimedForm({
   launch,
   today,
   fill,
-  launchers,
+  rockets,
   projects,
   titles,
   nextSort,
@@ -1269,7 +1269,7 @@ function TimedForm({
   launch: Launch | null;
   today: Date;
   fill?: Partial<Launch> | null;
-  launchers: Launcher[];
+  rockets: Rocket[];
   /** Add new rocket: saves a pasted link as a rocket tile. */
   onAddRocket: (url: string) => Promise<void>;
   projects: { id: string; name: string; parentId: string | null; sort: number; status?: string; shortName?: string }[];
@@ -1607,7 +1607,7 @@ function TimedForm({
 
       <fieldset className="field">
         <legend>Rockets to launch</legend>
-        <RocketPicker options={rocketOptions(launchers)} picked={d.urls} onChange={(urls) => set('urls', urls)} onAddNew={onAddRocket} />
+        <RocketPicker options={rocketOptions(rockets)} picked={d.urls} onChange={(urls) => set('urls', urls)} onAddNew={onAddRocket} />
         <p className="field-hint">Apps: the first time, your browser asks to open the app. Tick “Always allow” and it opens straight away after that.</p>
       </fieldset>
 
@@ -1756,13 +1756,13 @@ export function nameFromUrl(url: string) {
 }
 
 /** Everything a launch or a ritual step can open: your rockets, then the originals and apps you don't have yet. */
-export function rocketOptions(tiles: Launcher[]): RocketOption[] {
+export function rocketOptions(tiles: Rocket[]): RocketOption[] {
   const out: RocketOption[] = [];
   const add = (o: RocketOption) => {
     if (o.url && !out.some((x) => x.url === o.url)) out.push(o);
   };
   for (const t of tiles) add({ name: t.name, note: t.note, url: t.url, color: t.color, kind: 'Rocket' });
-  for (const p of LAUNCHER_PRESETS) add({ name: p.name, note: p.note, url: p.url, color: p.color, kind: 'Original' });
+  for (const p of ROCKET_PRESETS) add({ name: p.name, note: p.note, url: p.url, color: p.color, kind: 'Original' });
   for (const a of APP_LINKS) add({ name: a.name, note: 'App', url: a.url, color: 'purple', kind: 'App' });
   for (const c of CARD_LINKS) add({ name: c.name, note: 'LaunchPage card', url: c.url, color: 'green', kind: 'Card' });
   return out;

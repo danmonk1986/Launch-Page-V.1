@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
 import { RitualForm, RitualPicker, RitualRunner, duplicateRitual, stepType } from './Rituals';
-import { TitleCombo, type RocketOption } from './Launchers';
+import { TitleCombo, type RocketOption } from './Rockets';
 import { shiftMinutes, type Routine, type Shift } from '../lib/routines';
 import {
   H2O_SIZES,

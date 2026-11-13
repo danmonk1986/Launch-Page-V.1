@@ -4,8 +4,8 @@ import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
 import type { Routine, RoutineItem } from '../lib/routines';
 import { logKindFor, type NonNeg, type StepLog } from '../lib/days26';
-import { RocketPicker, type RocketOption } from './Launchers';
-import { openCard } from '../lib/launchers';
+import { RocketPicker, type RocketOption } from './Rockets';
+import { openCard } from '../lib/rockets';
 
 const CHECK = 'M5 12l5 5L20 7';
 const PLAY = 'M7 4v16l13-8z';

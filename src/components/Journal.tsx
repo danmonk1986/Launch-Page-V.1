@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type TextareaHTMLAttributes } from 
 import { FormActions, Sheet } from './Sheet';
 import { Icon } from './Tasks';
 import { byNewest, checkinsOf, isBlank, MOODS, newEntry, shortDate, streak, withCheckins, type CheckIn, type JournalEntry } from '../lib/journal';
-import { isoDate } from '../lib/launchers';
+import { isoDate } from '../lib/rockets';
 import { useMobile } from '../lib/useMobile';
 
 const PLUS = 'M12 5v14M5 12h14';
