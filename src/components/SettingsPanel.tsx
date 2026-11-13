@@ -272,13 +272,13 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
 
               {/* V20-129 (Dan, Nov 12): BACKGROUND, a row of five tiles for day and for night. Four backgrounds (any can be
                   swapped for your own image; deleting it brings the default back) and a colour. Picking one makes it that
-                  mode's background (the sun / moon switch goes to it) and shows it now. */}
+                  mode's background. V20-141: each row ticks its own saved pick; only the sun / moon switch changes what shows. */}
               <h3 className="timed-title settings-section">Background</h3>
               {(['day', 'night'] as const).map((mode) => (
                 <BgRow
                   key={mode}
                   mode={mode}
-                  current={draft.background}
+                  current={mode === 'day' ? draft.dayBackground : draft.nightBackground}
                   colour={mode === 'day' ? draft.dayColour : draft.nightColour}
                   palette={mode === 'day' ? [draft.dayPurple, draft.dayTeal, draft.dayGreen, draft.dayPink, '#f5f5eb', '#ffffff'] : [draft.accentPurple, draft.accentTeal, draft.accentGreen, draft.accentPink, '#0b0820', '#1a1338']}
                   slots={bgSlots[mode]}

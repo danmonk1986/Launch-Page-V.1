@@ -127,11 +127,18 @@ export const DEFAULT_SETTINGS: BrandSettings = {
 
 /** V20-120: day mode = a light background. */
 export const isDay = (b: Background) => LIGHT_BACKGROUNDS.includes(b);
-/** Picking a background also remembers it for its side of the switch. */
-export const withBackground = (s: BrandSettings, b: Background): BrandSettings =>
-  isDay(b) ? { ...s, background: b, dayBackground: b } : { ...s, background: b, nightBackground: b };
-/** The switch: go to the other side's remembered background. */
-export const flipDayNight = (s: BrandSettings, toDay: boolean): BrandSettings => withBackground(s, toDay ? s.dayBackground : s.nightBackground);
+/** Picking a background sets it for its side of the switch. V20-141 (Dan, Nov 12): the switch alone decides which side
+ *  shows, so picking a night tile in day mode saves it for night and the page stays on day. */
+export const withBackground = (s: BrandSettings, b: Background): BrandSettings => {
+  const day = isDay(b);
+  const next = day ? { ...s, dayBackground: b } : { ...s, nightBackground: b };
+  return isDay(s.background) === day ? { ...next, background: b } : next;
+};
+/** The switch: go to that side's saved background. */
+export const flipDayNight = (s: BrandSettings, toDay: boolean): BrandSettings => {
+  const b = toDay ? s.dayBackground : s.nightBackground;
+  return { ...s, background: b };
+};
 
 /** Oct 15: the neon pair from the logo became the master palette. Move the old defaults over. */
 function upgradePalette(s: BrandSettings): BrandSettings {
