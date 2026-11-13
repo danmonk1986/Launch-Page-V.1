@@ -675,17 +675,20 @@ function BgRow({ mode, current, colour, palette, slots, onPick, onColour, onImag
           const img = slots[slot];
           const id = (img ? `${mode}-img-${slot}` : t) as Background;
           const on = current === id;
+          // V20-154 (Dan, Nov 12): the defaults, Damascus and Synthwave (slot 0), can't be replaced by your image.
+          const locked = slot === 0 && !img;
           const pick = () => {
             if (pending) {
+              if (locked) return;
               onImage(slot, pending);
               setPending(null);
             } else onPick(id);
           };
           return (
-            <div key={t} className={`bg-tile${on ? ' is-on' : ''}`}>
-              <button type="button" className="bg-screen" onClick={pick} aria-label={pending ? `Replace ${img ? 'your image' : BG_NAME[t]}` : `Use ${img ? 'your image' : BG_NAME[t]}`}>
+            <div key={t} className={`bg-tile${on ? ' is-on' : ''}${locked ? ' is-locked' : ''}`}>
+              <button type="button" className="bg-screen" onClick={pick} disabled={!!pending && locked} aria-label={pending ? `Replace ${img ? 'your image' : BG_NAME[t]}` : `Use ${img ? 'your image' : BG_NAME[t]}`}>
                 <img src={img ?? tilePreview(t)} alt="" loading="lazy" />
-                {pending && <span className="bg-replace">Replace</span>}
+                {pending && !locked && <span className="bg-replace">Replace</span>}
               </button>
               {img && !pending && (
                 <button type="button" className="bg-remove" aria-label={`Remove your image (${BG_NAME[t]} comes back)`} title={`Remove (${BG_NAME[t]} comes back)`} onClick={() => onImage(slot, null)}>
