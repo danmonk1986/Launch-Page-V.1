@@ -3120,6 +3120,12 @@ button.kb-btn { font-family: inherit; }
   .topbar:not(.topbar-slim)::after { content: ''; order: 4; flex-basis: 100%; height: 0; }
   .topbar:not(.topbar-slim) > .tabs { order: 5; flex: 1 1 0; min-width: 0; margin-top: 6px; }
   .topbar:not(.topbar-slim) .header-clock { order: 6; flex: none; margin: 6px 0 0 auto; }
+  /* V20-163 (Dan, Nov 13): the logo row sits centred between the top and the tabs again. The flex lines were
+     stretched by the 190px min-height (with an empty line between rows), which left the logo high. Now the space
+     above the row and below it match. */
+  .topbar:not(.topbar-slim) { min-height: 0; padding-top: 30px; align-content: flex-start; }
+  .topbar:not(.topbar-slim)::after { height: 22px; }
+  .app.is-scrolled .topbar:not(.topbar-slim)::after { height: 10px; }
 }
 .field > .field-label:has(select) { display: grid; gap: 6px; }
 .settings-save-state { font-size: 13px; color: var(--accent-teal); min-width: 64px; text-align: right; }
