@@ -3240,7 +3240,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 @media (max-width: 640px) { .module-grid { grid-template-columns: minmax(0, 1fr); } }
 .module-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--edge); border-radius: 12px; }
 .module-row.is-on { border-color: color-mix(in srgb, var(--accent-teal) 60%, transparent); }
-.module-sub { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--mist); cursor: pointer; }
 .module-group + .module-group { margin-top: 4px; }
 .module-row .field-hint { margin: 2px 0 0; }
 .module-name { margin: 0; font-weight: 600; color: var(--beige); }

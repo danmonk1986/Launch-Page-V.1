@@ -65,13 +65,13 @@ export interface BrandSettings {
 /** V20-158 (Dan, Nov 13): modules in sections. Launch Page essentials are on by default; everything from Personal
  *  Alchemy down is off by default. Some are still to be built (MODULE_SOON). */
 export interface Modules {
-  rockets: boolean; routine: boolean; tasks: boolean; week: boolean; followTime: boolean;
+  rockets: boolean; routine: boolean; tasks: boolean; week: boolean;
   journal: boolean; days26: boolean; goals: boolean; milestones: boolean;
   budget: boolean; trips: boolean;
   invoice: boolean; records: boolean; crm: boolean; marketing: boolean; planner: boolean;
 }
 export const DEFAULT_MODULES: Modules = {
-  rockets: true, routine: true, tasks: true, week: true, followTime: true,
+  rockets: true, routine: true, tasks: true, week: true,
   journal: false, days26: false, goals: false, milestones: false,
   budget: false, trips: false,
   invoice: false, records: false, crm: false, marketing: false, planner: false

@@ -269,19 +269,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                           on={!soon && draft.modules[k]}
                           disabled={soon}
                           onChange={(v) => saveNow((d) => ({ ...d, modules: { ...d.modules, [k]: v } }))}
-                        >
-                          {k === 'routine' && (
-                            <label className="module-sub">
-                              <input
-                                type="checkbox"
-                                checked={draft.modules.followTime}
-                                disabled={!draft.modules.routine}
-                                onChange={(e) => saveNow((d) => ({ ...d, modules: { ...d.modules, followTime: e.target.checked } }))}
-                              />
-                              Follows the time
-                            </label>
-                          )}
-                        </ModuleSwitch>
+                        />
                       );
                     })}
                   </div>
@@ -775,7 +763,7 @@ const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }
     title: 'Launch Page essentials',
     items: [
       ['rockets', 'Rockets', 'Timed launches and your rockets.'],
-      ['routine', 'Routine', 'Your routine beside the cards.'],
+      ['routine', 'Routine', 'Your routine beside the cards, following the time.'],
       ['tasks', 'Tasks', 'Due today, key tasks and the rest.'],
       ['week', 'This Week', 'The week calendar.']
     ]
@@ -809,13 +797,12 @@ const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }
 ];
 
 /** V20-156: one on / off box in MODULES. */
-function ModuleSwitch({ label, hint, on, disabled, onChange, children }: { label: string; hint: string; on: boolean; disabled?: boolean; onChange: (v: boolean) => void; children?: ReactNode }) {
+function ModuleSwitch({ label, hint, on, disabled, onChange }: { label: string; hint: string; on: boolean; disabled?: boolean; onChange: (v: boolean) => void }) {
   return (
     <div className={`module-row${disabled ? ' is-disabled' : ''}${on ? ' is-on' : ''}`}>
       <div>
         <p className="module-name">{label}</p>
         <p className="field-hint">{hint}</p>
-        {children}
       </div>
       <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} className={`module-switch${on ? ' is-on' : ''}`} onClick={() => onChange(!on)}>
         <span />

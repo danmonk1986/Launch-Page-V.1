@@ -1686,7 +1686,7 @@ export default function App() {
               journal={!settings.modules.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!settings.modules.routine ? null : 
                 <TodayPanel
-                  follow={settings.modules.followTime}
+                  follow
                   routine={activeRoutine}
                   shift={shift}
                   onEdit={() => setEditor({ open: true, routine: activeRoutine })}
