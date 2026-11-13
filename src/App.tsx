@@ -114,6 +114,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(!supabase);
   const [settings, setSettings] = useState<BrandSettings>(DEFAULT_SETTINGS);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState<false | SettingsTab>(false);
   // V20-129: your own background images, one per tile slot.
   const [bgSlots, setBgSlots] = useState<BgSlots>(EMPTY_SLOTS);
@@ -365,7 +366,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    loadSettings(userId).then(setSettings);
+    loadSettings(userId).then((x) => {
+      setSettings(x);
+      setSettingsLoaded(true);
+    });
     loadBgImages(userId).then(setBgSlots);
   }, [userId]);
 
@@ -467,6 +471,15 @@ export default function App() {
   // Rituals are kept for 26 Days but no longer picked or shown on the Launch Page.
   const shownRoutines = routinesOnly(routines);
   const activeRoutine = shownRoutines.find((r) => r.id === activeId) ?? shownRoutines[0] ?? null;
+  // V20-158: pages switched off in Settings › Modules leave the menu (and send you to the Launch Page).
+  const hiddenPages = ([['days26', settings.modules.days26], ['budget', settings.modules.budget], ['invoices', settings.modules.records]] as const)
+    .filter(([, on]) => !on)
+    .map(([id]) => id) as PageId[];
+  const hiddenPagesKey = hiddenPages.join(',');
+  useEffect(() => {
+    if (settingsLoaded && hiddenPages.includes(page)) setPage('launch');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hiddenPagesKey, page, settingsLoaded]);
   // "+ Timed launch" from a routine step: opens Add timed launch on the Launch Page, filled in.
   const [timedPreset, setTimedPreset] = useState<TimedPreset | null>(null);
   const [editLaunch, setEditLaunch] = useState<Launch | null>(null);
@@ -1553,6 +1566,7 @@ export default function App() {
       </div>
       <Header
         settings={settings}
+        hidden={settingsLoaded ? hiddenPages : []}
         slim={kb}
         page={page}
         onPage={(pg) => {

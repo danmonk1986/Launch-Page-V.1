@@ -62,8 +62,22 @@ export interface BrandSettings {
   modules: Modules;
 }
 
-export interface Modules { rockets: boolean; week: boolean; tasks: boolean; journal: boolean; routine: boolean; followTime: boolean }
-export const DEFAULT_MODULES: Modules = { rockets: true, week: true, tasks: true, journal: true, routine: true, followTime: true };
+/** V20-158 (Dan, Nov 13): modules in sections. Launch Page essentials are on by default; everything from Personal
+ *  Alchemy down is off by default. Some are still to be built (MODULE_SOON). */
+export interface Modules {
+  rockets: boolean; routine: boolean; tasks: boolean; week: boolean; followTime: boolean;
+  journal: boolean; days26: boolean; goals: boolean; milestones: boolean;
+  budget: boolean; trips: boolean;
+  invoice: boolean; records: boolean; crm: boolean; marketing: boolean; planner: boolean;
+}
+export const DEFAULT_MODULES: Modules = {
+  rockets: true, routine: true, tasks: true, week: true, followTime: true,
+  journal: false, days26: false, goals: false, milestones: false,
+  budget: false, trips: false,
+  invoice: false, records: false, crm: false, marketing: false, planner: false
+};
+/** Not built yet: shown greyed out with Coming soon. */
+export const MODULE_SOON: (keyof Modules)[] = ['goals', 'milestones', 'trips', 'invoice', 'crm', 'marketing', 'planner'];
 
 export interface Surface { header: string; headerSolid: number; card: string; cardSolid: number }
 export interface Surfaces { day: Surface; night: Surface }

@@ -3236,10 +3236,15 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app[data-bg='night'] .sky > * { display: none; }
 
 /* V20-156 (Dan, Nov 12): MODULES, an on / off switch per Launch Page card. */
-.module-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--edge); }
+.module-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 640px) { .module-grid { grid-template-columns: minmax(0, 1fr); } }
+.module-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--edge); border-radius: 12px; }
+.module-row.is-on { border-color: color-mix(in srgb, var(--accent-teal) 60%, transparent); }
+.module-sub { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--mist); cursor: pointer; }
+.module-group + .module-group { margin-top: 4px; }
 .module-row .field-hint { margin: 2px 0 0; }
 .module-name { margin: 0; font-weight: 600; color: var(--beige); }
-.module-row.is-disabled { opacity: 0.5; }
+.module-row.is-disabled { opacity: 0.4; }
 .app .module-switch { all: unset; box-sizing: border-box; cursor: pointer; flex: none; position: relative; width: 48px; height: 28px; border-radius: 999px; border: 1px solid var(--edge-strong); background: color-mix(in srgb, var(--beige) 12%, transparent); transition: background 0.15s ease, border-color 0.15s ease; }
 .app .module-switch > span { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--beige); transition: transform 0.15s ease; }
 .app .module-switch.is-on { background: var(--accent-teal); border-color: var(--accent-teal); }

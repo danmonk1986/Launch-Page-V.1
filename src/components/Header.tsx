@@ -19,6 +19,8 @@ const PAGES: { id: PageId; label: string }[] = [
 
 type Props = {
   settings: BrandSettings;
+  /** V20-158: pages switched off in Settings › Modules don't show in the menu. */
+  hidden?: PageId[];
   /** KNOWLEDGE!B4SE: just the page menu and ⚙, top right, no header bar (Dan, Nov 6). */
   slim?: boolean;
   page: PageId;
@@ -27,13 +29,14 @@ type Props = {
   right?: ReactNode;
 };
 
-export function Header({ settings, slim, page, onPage, right }: Props) {
+export function Header({ settings, slim, page, onPage, right, hidden = [] }: Props) {
+  const pages = PAGES.filter((p) => !hidden.includes(p.id));
   if (slim) {
     return (
       <header className="topbar topbar-slim">
         {/* KNOWLEDGE!B4SE inner pages put their wordmark and title here, like the Launch Page's logo and headline. */}
         <div className="topbar-slot" id="kb-topbar-slot" />
-        <TabBar page={page} onPage={onPage} />
+        <TabBar pages={pages} page={page} onPage={onPage} />
         {right && <div className="topbar-slim-right">{right}</div>}
       </header>
     );
@@ -48,7 +51,7 @@ export function Header({ settings, slim, page, onPage, right }: Props) {
       )}
       <HeaderWords goal={settings.goal} mantra={settings.mantra} />
       {right && <div className="topbar-right">{right}</div>}
-      <TabBar page={page} onPage={onPage} />
+      <TabBar pages={pages} page={page} onPage={onPage} />
     </header>
   );
 }
@@ -91,19 +94,19 @@ function HeaderWords({ goal, mantra }: { goal: string; mantra: string }) {
  * Page tabs. When the header gets too narrow, the tabs that don't fit fold into a
  * teal ⌄ menu at the end of the row instead of stacking.
  */
-function TabBar({ page, onPage }: { page: PageId; onPage: (p: PageId) => void }) {
+function TabBar({ pages, page, onPage }: { pages: typeof PAGES; page: PageId; onPage: (p: PageId) => void }) {
   // Phones (Oct 30): the menu shows the page you're on with a ∨ to the rest.
   if (useMobile()) {
     return (
       <nav className="tabs tabs-one" aria-label="Pages">
-        <OneMenu label="Page" items={PAGES} value={page} onPick={onPage} className="page-menu" />
+        <OneMenu label="Page" items={pages} value={page} onPick={onPage} className="page-menu" />
       </nav>
     );
   }
-  return <WideTabBar page={page} onPage={onPage} />;
+  return <WideTabBar key={pages.length} PAGES={pages} page={page} onPage={onPage} />;
 }
 
-function WideTabBar({ page, onPage }: { page: PageId; onPage: (p: PageId) => void }) {
+function WideTabBar({ PAGES, page, onPage }: { PAGES: { id: PageId; label: string }[]; page: PageId; onPage: (p: PageId) => void }) {
   const wrap = useRef<HTMLElement>(null);
   const measure = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState(PAGES.length);

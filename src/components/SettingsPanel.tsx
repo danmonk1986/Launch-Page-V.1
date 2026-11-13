@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
-import { BG_NAME, DEFAULT_MODULES, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
+import { BG_NAME, DEFAULT_MODULES, MODULE_SOON, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
 
@@ -247,31 +247,47 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
             </>
           )}
 
-          {/* V20-156 (Dan, Nov 12): MODULES. Switch each Launch Page card on or off (nothing in it is deleted), and choose
-              whether the routine follows the time. */}
+          {/* V20-156 / V20-158 (Dan, Nov 12–13): MODULES, in sections, two to a row. Launch Page essentials are on by
+              default; from Personal Alchemy down they're off by default. Ones still to be built are greyed out. */}
           {tab === 'modules' && (
             <>
-              <SectionHead title="Launch Page cards" onRestore={() => saveNow((d) => ({ ...d, modules: DEFAULT_MODULES }))} />
-              {(
-                [
-                  ['rockets', 'Rockets', 'Timed launches and your launchers.'],
-                  ['week', 'This Week', 'The week calendar, with Google Calendar.'],
-                  ['tasks', 'Tasks', 'Due today, key tasks and the rest.'],
-                  ['journal', 'Journal', 'Today’s journal and check-ins.'],
-                  ['routine', 'Routine', 'Your routine beside the cards.']
-                ] as [keyof Modules, string, string][]
-              ).map(([k, label, hint]) => (
-                <ModuleSwitch key={k} label={label} hint={hint} on={draft.modules[k]} onChange={(v) => saveNow((d) => ({ ...d, modules: { ...d.modules, [k]: v } }))} />
+              {MODULE_GROUPS.map((g, gi) => (
+                <div key={g.title} className="module-group">
+                  {gi === 0 ? (
+                    <SectionHead title={g.title} onRestore={() => saveNow((d) => ({ ...d, modules: DEFAULT_MODULES }))} />
+                  ) : (
+                    <h3 className="timed-title settings-section settings-section-gap">{g.title}</h3>
+                  )}
+                  <div className="module-grid">
+                    {g.items.map(([k, label, hint]) => {
+                      const soon = MODULE_SOON.includes(k);
+                      return (
+                        <ModuleSwitch
+                          key={k}
+                          label={label}
+                          hint={soon ? 'Coming soon.' : hint}
+                          on={!soon && draft.modules[k]}
+                          disabled={soon}
+                          onChange={(v) => saveNow((d) => ({ ...d, modules: { ...d.modules, [k]: v } }))}
+                        >
+                          {k === 'routine' && (
+                            <label className="module-sub">
+                              <input
+                                type="checkbox"
+                                checked={draft.modules.followTime}
+                                disabled={!draft.modules.routine}
+                                onChange={(e) => saveNow((d) => ({ ...d, modules: { ...d.modules, followTime: e.target.checked } }))}
+                              />
+                              Follows the time
+                            </label>
+                          )}
+                        </ModuleSwitch>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
-              <h3 className="timed-title settings-section settings-section-gap">Routine</h3>
-              <ModuleSwitch
-                label="Follows the time"
-                hint="The step happening now stays on top and the list moves along with the clock. Off: the whole day in order."
-                on={draft.modules.followTime}
-                disabled={!draft.modules.routine}
-                onChange={(v) => saveNow((d) => ({ ...d, modules: { ...d.modules, followTime: v } }))}
-              />
-              <p className="field-hint">Switching a card off only hides it from the Launch Page; nothing in it is deleted, and its page in the menu still works.</p>
+              <p className="field-hint">Off hides a card from the Launch Page, or a page from the menu. Nothing in it is deleted; switch it back on and it's all there.</p>
             </>
           )}
           {tab === 'appearance' && (
@@ -753,13 +769,53 @@ function BgRow({ mode, current, colour, palette, slots, onPick, onColour, onImag
 }
 
 /** V20-130: one colour as a tile: a swatch shaped like the background tiles (tap to pick), its name, and the hex code. */
-/** V20-156: one on / off row in MODULES. */
-function ModuleSwitch({ label, hint, on, disabled, onChange }: { label: string; hint: string; on: boolean; disabled?: boolean; onChange: (v: boolean) => void }) {
+/** V20-158 (Dan, Nov 13): the module sections, two to a row. */
+const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }[] = [
+  {
+    title: 'Launch Page essentials',
+    items: [
+      ['rockets', 'Rockets', 'Timed launches and your rockets.'],
+      ['routine', 'Routine', 'Your routine beside the cards.'],
+      ['tasks', 'Tasks', 'Due today, key tasks and the rest.'],
+      ['week', 'This Week', 'The week calendar.']
+    ]
+  },
+  {
+    title: 'Growth',
+    items: [
+      ['journal', 'Personal Alchemy', 'Your journal and check-ins.'],
+      ['days26', '26 Days', 'The 26 Days page.'],
+      ['goals', 'Goals', ''],
+      ['milestones', 'Milestones', '']
+    ]
+  },
+  {
+    title: 'Spending',
+    items: [
+      ['budget', 'Budget', 'The Budget page.'],
+      ['trips', 'Trip Planner', '']
+    ]
+  },
+  {
+    title: 'Business',
+    items: [
+      ['invoice', 'Invoice', ''],
+      ['records', 'Records', 'Expenses and invoices.'],
+      ['crm', 'CRM', ''],
+      ['marketing', 'Marketing', ''],
+      ['planner', 'Project Planner', '']
+    ]
+  }
+];
+
+/** V20-156: one on / off box in MODULES. */
+function ModuleSwitch({ label, hint, on, disabled, onChange, children }: { label: string; hint: string; on: boolean; disabled?: boolean; onChange: (v: boolean) => void; children?: ReactNode }) {
   return (
-    <div className={`module-row${disabled ? ' is-disabled' : ''}`}>
+    <div className={`module-row${disabled ? ' is-disabled' : ''}${on ? ' is-on' : ''}`}>
       <div>
         <p className="module-name">{label}</p>
         <p className="field-hint">{hint}</p>
+        {children}
       </div>
       <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} className={`module-switch${on ? ' is-on' : ''}`} onClick={() => onChange(!on)}>
         <span />
