@@ -456,7 +456,39 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
           </div>
         )}
 
-        {tab === 'privacy' && <p className="settings-note">Coming next: the privacy statement, drafted for Dan to review.</p>}
+        {/* V20-169 (Nov 13): first draft of the privacy statement, for Dan to review. Not legal advice. */}
+        {tab === 'privacy' && (
+          <div className="privacy">
+            <p className="privacy-draft">Draft for review · Nov 13, 2026</p>
+            <h3 className="timed-title settings-section">Privacy statement</h3>
+            <p>L4UNCH P4GE is a personal planner made by STARDVST. This is what it keeps, where, and what you can do about it.</p>
+            <h4>What we keep</h4>
+            <ul>
+              <li><strong>Your account:</strong> your sign-in email and password (the password is stored scrambled by our sign-in provider; we can't read it).</li>
+              <li><strong>What you tell us in Settings:</strong> name, alias, business details, backup email, birthday, address, and your look (logo, backgrounds, colours).</li>
+              <li><strong>What you make:</strong> tasks, projects, timed launches and how long they ran, routines, rituals, journal entries and check-ins, calendar events, and, if you use them, budget and records.</li>
+            </ul>
+            <h4>Where it lives</h4>
+            <ul>
+              <li>In your account on our database (Supabase), locked so only you can read it.</li>
+              <li>A copy on each device you use, so the app opens offline. Signing out clears that copy.</li>
+              <li>The app itself is served by Cloudflare.</li>
+            </ul>
+            <h4>Google Calendar</h4>
+            <p>Only if you connect it. We show your calendars on This Week and add events you ask us to. The Google sign-in stays in your browser. Disconnect any time in Data Management; your Launch Page events stay.</p>
+            <h4>What we don't do</h4>
+            <ul>
+              <li>We don't sell your data or show you ads.</li>
+              <li>We don't share it with anyone, except the services above that run the app.</li>
+            </ul>
+            <h4>Your choices</h4>
+            <ul>
+              <li><strong>Export</strong> everything any time (Data Management › Export my data).</li>
+              <li><strong>Delete</strong> your account and its data: ask us at [contact email] and it's done within 30 days.</li>
+            </ul>
+            <p className="field-hint">Questions: [contact email]. If this statement changes, we'll tell you in the app.</p>
+          </div>
+        )}
 
         {tab === 'signout' && (
           <div className="settings-action">
