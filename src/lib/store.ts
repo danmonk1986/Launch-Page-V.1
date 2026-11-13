@@ -171,12 +171,16 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
             const problem = stuck ? `${stuck} change${stuck === 1 ? '' : 's'} saved on this device only (${opts.table}). They'll retry on the next load.` : null;
             return { items: list, problem };
           }
-          const seed = readLocal() ?? opts.seed();
+          // V20-147 (Dan, Nov 12): an empty table is not a reason to bring back what this device has on file. Anything
+          // that was in the cloud before (its version is known) was deleted there, so it stays deleted; only records
+          // never synced (a first sign-in, or the starter seed) go up.
+          const seed = (readLocal() ?? opts.seed()).filter((x) => !versions[x.id]);
           if (seed.length) {
             const { error: insertError } = await supabase.from(opts.table).insert(seed.map(opts.toRow));
             writeLocal(seed);
             return { items: seed, problem: insertError ? insertError.message : null };
           }
+          writeLocal([]);
           return { items: [], problem: null };
         }
         return {
