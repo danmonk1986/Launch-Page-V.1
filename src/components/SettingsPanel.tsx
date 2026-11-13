@@ -763,7 +763,7 @@ const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }
     title: 'Launch Page essentials',
     items: [
       ['rockets', 'Rockets', 'Timed launches and your rockets.'],
-      ['routine', 'Routine', 'Your routine beside the cards, following the time.'],
+      ['routine', 'Routine', 'Your routine plan based on activity.'],
       ['tasks', 'Tasks', 'Due today, key tasks and the rest.'],
       ['week', 'This Week', 'The week calendar.']
     ]
