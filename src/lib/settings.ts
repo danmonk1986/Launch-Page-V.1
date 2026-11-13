@@ -58,7 +58,12 @@ export interface BrandSettings {
   nightNeutral: string;
   /** V20-146 (Dan, Nov 12): CARDS + HEADER, each mode's header and card colour and how solid each is (0–100). */
   surfaces: Surfaces;
+  /** V20-156 (Dan, Nov 12): MODULES, which cards the Launch Page shows, and whether the routine follows the time. */
+  modules: Modules;
 }
+
+export interface Modules { rockets: boolean; week: boolean; tasks: boolean; journal: boolean; routine: boolean; followTime: boolean }
+export const DEFAULT_MODULES: Modules = { rockets: true, week: true, tasks: true, journal: true, routine: true, followTime: true };
 
 export interface Surface { header: string; headerSolid: number; card: string; cardSolid: number }
 export interface Surfaces { day: Surface; night: Surface }
@@ -140,7 +145,8 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   dayColour: '#f5f5dc',
   dayNeutral: '#444242',
   nightNeutral: '#f5f5dc',
-  surfaces: DEFAULT_SURFACES
+  surfaces: DEFAULT_SURFACES,
+  modules: DEFAULT_MODULES
 };
 
 /** V20-120: day mode = a light background. */
@@ -173,7 +179,7 @@ function readLocal(): BrandSettings {
     const raw = localStorage.getItem(LOCAL_KEY);
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw);
-    const s = upgradePalette({ ...DEFAULT_SETTINGS, ...parsed, account: { ...EMPTY_ACCOUNT, ...(parsed.account ?? {}) } });
+    const s = upgradePalette({ ...DEFAULT_SETTINGS, ...parsed, account: { ...EMPTY_ACCOUNT, ...(parsed.account ?? {}) }, modules: { ...DEFAULT_MODULES, ...(parsed.modules ?? {}) } });
     const bg = normalizeBackground(s.background);
     return { ...s, background: bg, ...modeBackgrounds(bg, s.dayBackground, s.nightBackground) };
   } catch {
@@ -213,6 +219,7 @@ type Row = {
   day_neutral?: string | null;
   night_neutral?: string | null;
   surfaces?: Partial<Record<'day' | 'night', Partial<Surface>>> | null;
+  modules?: Partial<Modules> | null;
   day_colour?: string | null;
 };
 
@@ -240,7 +247,8 @@ const toRow = (s: BrandSettings): Row => ({
   day_colour: s.dayColour,
   day_neutral: s.dayNeutral,
   night_neutral: s.nightNeutral,
-  surfaces: s.surfaces
+  surfaces: s.surfaces,
+  modules: s.modules
 });
 
 const fromRow = (r: Row): BrandSettings => ({
@@ -272,7 +280,8 @@ const fromRow = (r: Row): BrandSettings => ({
   surfaces: {
     day: { ...DEFAULT_SURFACES.day, ...(r.surfaces?.day ?? {}) },
     night: { ...DEFAULT_SURFACES.night, ...(r.surfaces?.night ?? {}) }
-  }
+  },
+  modules: { ...DEFAULT_MODULES, ...(r.modules ?? {}) }
 });
 
 /** The remembered background for each mode; the current one fills its own side when nothing is saved yet. */

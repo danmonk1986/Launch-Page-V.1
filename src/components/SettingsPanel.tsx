@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
-import { BG_NAME, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
+import { BG_NAME, DEFAULT_MODULES, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
 
@@ -118,7 +118,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
 
 
   // Account Information and Appearance share one draft and one Save.
-  const saves = tab === 'account' || tab === 'appearance';
+  const saves = tab === 'account' || tab === 'appearance' || tab === 'modules';
   const current = SETTINGS_TABS.find((t) => t.id === tab)!;
 
   return (
@@ -247,6 +247,33 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
             </>
           )}
 
+          {/* V20-156 (Dan, Nov 12): MODULES. Switch each Launch Page card on or off (nothing in it is deleted), and choose
+              whether the routine follows the time. */}
+          {tab === 'modules' && (
+            <>
+              <SectionHead title="Launch Page cards" onRestore={() => saveNow((d) => ({ ...d, modules: DEFAULT_MODULES }))} />
+              {(
+                [
+                  ['rockets', 'Rockets', 'Timed launches and your launchers.'],
+                  ['week', 'This Week', 'The week calendar, with Google Calendar.'],
+                  ['tasks', 'Tasks', 'Due today, key tasks and the rest.'],
+                  ['journal', 'Journal', 'Today’s journal and check-ins.'],
+                  ['routine', 'Routine', 'Your routine beside the cards.']
+                ] as [keyof Modules, string, string][]
+              ).map(([k, label, hint]) => (
+                <ModuleSwitch key={k} label={label} hint={hint} on={draft.modules[k]} onChange={(v) => saveNow((d) => ({ ...d, modules: { ...d.modules, [k]: v } }))} />
+              ))}
+              <h3 className="timed-title settings-section settings-section-gap">Routine</h3>
+              <ModuleSwitch
+                label="Follows the time"
+                hint="The step happening now stays on top and the list moves along with the clock. Off: the whole day in order."
+                on={draft.modules.followTime}
+                disabled={!draft.modules.routine}
+                onChange={(v) => saveNow((d) => ({ ...d, modules: { ...d.modules, followTime: v } }))}
+              />
+              <p className="field-hint">Switching a card off only hides it from the Launch Page; nothing in it is deleted, and its page in the menu still works.</p>
+            </>
+          )}
           {tab === 'appearance' && (
             <>
               {/* V20-128 (Dan, Nov 12): Appearance is in sections; the first is BRAND (logo, headline, mantra). Same look as
@@ -369,7 +396,6 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
         )}
         {onSetPassword && <PasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} email={email ?? null} onSetPassword={onSetPassword} onCheckPassword={onCheckPassword} onSendReset={onSendReset} />}
 
-        {tab === 'modules' && <p className="settings-note">Coming next: switch each card on the Launch Page on or off.</p>}
 
         {tab === 'projects' && projects}
 
@@ -727,6 +753,21 @@ function BgRow({ mode, current, colour, palette, slots, onPick, onColour, onImag
 }
 
 /** V20-130: one colour as a tile: a swatch shaped like the background tiles (tap to pick), its name, and the hex code. */
+/** V20-156: one on / off row in MODULES. */
+function ModuleSwitch({ label, hint, on, disabled, onChange }: { label: string; hint: string; on: boolean; disabled?: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className={`module-row${disabled ? ' is-disabled' : ''}`}>
+      <div>
+        <p className="module-name">{label}</p>
+        <p className="field-hint">{hint}</p>
+      </div>
+      <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} className={`module-switch${on ? ' is-on' : ''}`} onClick={() => onChange(!on)}>
+        <span />
+      </button>
+    </div>
+  );
+}
+
 /** V20-149 (Dan, Nov 12): Restore default on each Appearance section. Asks once ("Sure?") before it resets. */
 function SectionHead({ title, onRestore }: { title: string; onRestore: () => void }) {
   const [ask, setAsk] = useState(false);

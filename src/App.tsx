@@ -1589,7 +1589,7 @@ export default function App() {
         <main aria-label={page === 'launch' ? 'Launch Page' : 'Page'}>
           {page === 'launch' ? (
             <LaunchPageHome
-              launchers={
+              launchers={!settings.modules.rockets ? null : 
                 <LaunchersPanel
                   rituals={routines.filter((r) => r.kind === 'ritual').map((r) => ({ id: r.id, name: r.name }))}
                   projects={projects}
@@ -1620,7 +1620,7 @@ export default function App() {
                   onEditOpened={() => setEditLaunch(null)}
                 />
               }
-              week={
+              week={!settings.modules.week ? null : 
                 <WeekCalendar
                   userId={userId}
                   disconnectTick={gcalOff}
@@ -1646,7 +1646,7 @@ export default function App() {
                   onAddTask={(e) => setTaskPreset({ fill: { task: e.title, startDate: e.startDate, endDate: e.endDate }, n: Date.now() })}
                 />
               }
-              tasks={
+              tasks={!settings.modules.tasks ? null : 
                 <TasksPanel
                   addPreset={taskPreset}
                   onAddPresetUsed={() => setTaskPreset(null)}
@@ -1669,10 +1669,10 @@ export default function App() {
                   }}
                 />
               }
-              journal={<JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
-              today={
+              journal={!settings.modules.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
+              today={!settings.modules.routine ? null : 
                 <TodayPanel
-                  follow
+                  follow={settings.modules.followTime}
                   routine={activeRoutine}
                   shift={shift}
                   onEdit={() => setEditor({ open: true, routine: activeRoutine })}
