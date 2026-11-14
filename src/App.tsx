@@ -2026,16 +2026,13 @@ export default function App() {
       <Sheet open={!!pastAsk} title={pastAsk?.title ?? 'Already started?'} onClose={() => answerPast('not')}>
         {pastAsk && (
           <div className="timed-logask-sheet">
-            <p className="logask-q">{`${clock12(timeFor(pastAsk, new Date()))} has already passed today.`}</p>
-            <div className="sheet-actions sheet-actions-stack">
+            <p className="logask-q">{`${clock12(timeFor(pastAsk, new Date()))} has passed. Started then, or log the time?`}</p>
+            <div className="sheet-actions">
+              <button type="button" className="btn btn-quiet" onClick={() => answerPast('done')}>
+                Log
+              </button>
               <button type="button" className="btn" onClick={() => answerPast('started')}>
                 {`Started at ${clock12(timeFor(pastAsk, new Date()))}`}
-              </button>
-              <button type="button" className="btn btn-quiet" onClick={() => answerPast('done')}>
-                Already done
-              </button>
-              <button type="button" className="btn btn-quiet" onClick={() => answerPast('not')}>
-                Not started
               </button>
             </div>
           </div>
