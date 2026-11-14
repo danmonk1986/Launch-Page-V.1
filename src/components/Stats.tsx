@@ -128,7 +128,7 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
       <div className="pd-cards">
         {card('Hours worked', fmtH(s.workMin), `${s.work.length} runs · from ${fmtDay(hoursFrom)}`, true)}
         {card('Launches done', s.total ? `${Math.round((s.done / s.total) * 100)}%` : '—', `${s.done} of ${s.total} (cleared left out)`)}
-        {card('Time saved', `${Math.round(s.savedMin)} min`, `finished early · ${s.saved.length} timed runs${s.overRuns ? ` · ${s.overRuns} ran over` : ''}`, true)}
+        {card('Time saved', fmtH(s.savedMin), `finished early · ${s.saved.length} timed runs${s.overRuns ? ` · ${s.overRuns} ran over` : ''}`, true)}
         {card('Baseline days', s.baseDays ? `${Math.round((s.baseOn / s.baseDays) * 100)}%` : '—', `${s.baseOn} of ${s.baseDays} days`)}
         {card('Personal time', fmtH(s.personalMin), `${s.personal.length} runs · Log Productivity off`)}
       </div>
