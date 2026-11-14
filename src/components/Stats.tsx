@@ -54,7 +54,8 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
       runs, work, personal,
       workMin: sum(work), personalMin: sum(personal),
       rates, done, total,
-      savedMin: saved.reduce((t, x) => t + x.saved, 0), saved: saved.sort((a, b) => b.saved - a.saved),
+      // V20-186 (Dan, Nov 14): finishing late doesn't count against time saved; only early finishes add up.
+      savedMin: saved.reduce((t, x) => t + Math.max(0, x.saved), 0), overRuns: saved.filter((x) => x.saved < 0).length, saved: saved.sort((a, b) => b.saved - a.saved),
       baseOn: base.filter((b) => b.on).length, baseDays: base.length,
       perDay, sources,
       byProject: groupBy(runs, (r) => r.projectName, undefined, (r) => r.color),
@@ -119,7 +120,7 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
       <div className="pd-cards">
         {card('Hours worked', fmtH(s.workMin), `${s.work.length} runs · from ${fmtDay(hoursFrom)}`, true)}
         {card('Launches done', s.total ? `${Math.round((s.done / s.total) * 100)}%` : '—', `${s.done} of ${s.total} (cleared left out)`)}
-        {card('Time saved', `${s.savedMin > 0 ? '+' : ''}${Math.round(s.savedMin)} min`, `allotted − spent · ${s.saved.length} timed runs`, true)}
+        {card('Time saved', `${Math.round(s.savedMin)} min`, `finished early · ${s.saved.length} timed runs${s.overRuns ? ` · ${s.overRuns} ran over` : ''}`, true)}
         {card('Baseline days', s.baseDays ? `${Math.round((s.baseOn / s.baseDays) * 100)}%` : '—', `${s.baseOn} of ${s.baseDays} days`)}
         {card('Personal time', fmtH(s.personalMin), `${s.personal.length} runs · Log Productivity off`)}
       </div>
@@ -208,7 +209,7 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
         )}
         <div className="st-card st-wide">
           <h4 className="st-h">Time saved, run by run</h4>
-          <p className="st-note">Timed runs only. Positive = finished early. Pauses come out of the time spent.</p>
+          <p className="st-note">Timed runs only. + = finished early and counts as saved; running over is shown but never counts against you.</p>
           {s.saved.length === 0 ? (
             <p className="st-note">No timed runs in this range yet.</p>
           ) : (
@@ -224,7 +225,7 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
                       <td>{r.title}</td>
                       <td className="r">{r.planned + r.extra}</td>
                       <td className="r">{r.loggedMin}</td>
-                      <td className={`r ${saved > 0 ? 'st-pos' : saved < 0 ? 'st-neg' : ''}`}>{saved > 0 ? '+' : ''}{saved}</td>
+                      <td className={`r ${saved > 0 ? 'st-pos' : 'st-dim'}`}>{saved > 0 ? `+${saved}` : saved < 0 ? `${-saved} over` : '0'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -240,7 +241,7 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
           <dt>Personal time</dt><dd>The same, on projects with Log Productivity off.</dd>
           <dt>Overlap</dt><dd>A run started while another was running keeps its minutes; the one it started inside gives them up. The day counts the time once.</dd>
           <dt>Launches done</dt><dd>Done out of done + skipped + missed, from Oct 16. Cleared counts neither way.</dd>
-          <dt>Time saved</dt><dd>Allotted (planned + added) minus spent, on timed runs.</dd>
+          <dt>Time saved</dt><dd>Allotted (planned + added) minus spent, on timed runs that finished early. Running over counts as 0.</dd>
           <dt>Baseline day</dt><dd>At most one non-negotiable unticked. Off days left out.</dd>
         </dl>
       </details>
