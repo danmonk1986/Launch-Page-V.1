@@ -172,7 +172,6 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
           <div className="project-list">{archived.map((p) => row(p, !!p.parentId))}</div>
         </div>
       )}
-      {!calendars.length && <p className="field-hint">Connect Google Calendar on the Launch Page to link projects to your calendars.</p>}
     </div>
   );
 }
