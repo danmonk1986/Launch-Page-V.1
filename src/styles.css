@@ -3076,6 +3076,8 @@ button.kb-btn { font-family: inherit; }
 /* V20-110 (Dan, Nov 12): the Tasks page's groups are tabs like Timed launches, not pills. In the card's column they
    keep their own height (the 300px basis is for sitting in a row). */
 .panel-tasks-page > .fold-tabs { flex: none; margin: 0 0 14px; }
+/* V20-192: Records' tabs (V20-191) didn't get this, so they stretched 300 px tall in the page column. */
+.panel-records > .fold-tabs { flex: none; margin: 2px 0 14px; }
 
 /* V20-111 (Dan, Nov 12): Settings, a wide pop-out window with tabs across the top like Timed launches and Tasks. */
 .sheet-settings { width: min(960px, calc(100vw - 32px)); /* V20-168: wide enough for every tab (was 806px, V20-142) */ min-height: min(640px, calc(100dvh - 48px)); }
@@ -3295,8 +3297,9 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .project-line.is-off .project-row { opacity: 0.5; }
 .app .project-edit { padding: 6px 14px; min-height: 0; font-size: 12px; }
 /* V20-181: the "Active" label above the switches; a hidden Edit keeps it lined up. */
-.project-cols { margin-bottom: -4px; pointer-events: none; }
-.project-cols .project-row { padding-top: 0; padding-bottom: 0; }
+/* V20-192: the Active label row is one short line, not a full row's height. */
+.project-cols { pointer-events: none; height: 14px; margin: -2px 0 -4px; overflow: visible; }
+.project-cols > * { padding-top: 0 !important; padding-bottom: 0 !important; min-height: 0 !important; height: 14px; line-height: 14px; }
 .project-col-label { width: 48px; flex: none; text-align: center; font-size: 12px; font-weight: 500; color: var(--dim); }
 .app .project-edit-ghost { visibility: hidden; }
 .project-dash { display: flex; flex-direction: column; gap: 10px; }
