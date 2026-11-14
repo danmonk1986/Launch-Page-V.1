@@ -156,8 +156,9 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
               </button>
             )}
             {projectHead.onEdit ? (
-              <button type="button" className="btn btn-quiet" onClick={projectHead.onEdit}>
-                Edit
+              // V20-211 (Dan, Nov 14): Edit is an icon like the × beside it.
+              <button type="button" className="icon-btn tool-btn" aria-label="Edit project" title="Edit" onClick={projectHead.onEdit}>
+                <HeadIcon d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" />
               </button>
             ) : (
               <button type="button" className="icon-btn tool-btn tool-btn-go" aria-label="Save project" title="Save" onClick={() => (document.getElementById(PROJECT_FORM_ID) as HTMLFormElement | null)?.requestSubmit()}>

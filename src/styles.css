@@ -3397,3 +3397,12 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .what-sub { margin: 16px 0 6px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
 .pd-list li.pd-row-btn { cursor: pointer; border-radius: 6px; }
 .pd-list li.pd-row-btn:hover, .pd-list li.pd-row-btn:focus-visible { background: color-mix(in srgb, var(--accent-teal) 10%, transparent); outline: none; }
+
+/* V20-211 (Dan, Nov 14): the add-a-What box is a normal form field; the hint sits beside the What label;
+   KNOWLEDGE!B4SE's pills take the same shape (selected = filled Colour 2, the rest outlined). */
+.what-add-field { flex: 1; min-width: 0; margin: 0; }
+.what-hint { color: var(--dim); font-weight: 400; }
+.what-add .quick-btn { font-size: 18px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+.kb-pill { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 14px; background: transparent; border-color: color-mix(in srgb, var(--kb-ink) 40%, transparent); }
+.kb-pill[aria-pressed='true'] { background: var(--accent-teal); border-color: var(--accent-teal); color: #14102b; font-weight: 600; }
+.kb-domains .kb-pill { font-size: 12px; }

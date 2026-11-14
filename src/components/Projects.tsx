@@ -344,7 +344,9 @@ function ProjectForm({
         </label>
       </div>
       <div className="what-section" id="project-whats">
-        <span className="field-label">What</span>
+        <span className="field-label">
+          What <span className="what-hint">· Tap a pill to turn it on or off for this project.</span>
+        </span>
         <div className="what-pills" role="group" aria-label="Whats this project uses">
           {whats.map((w) => (
             <button key={w.name} type="button" className="what-pill" aria-pressed={picked.includes(w.name)} title={`${w.minutes} min`} onClick={() => toggleWhat(w.name)}>
@@ -353,7 +355,9 @@ function ProjectForm({
           ))}
         </div>
         <div className="what-add">
+          <label className="field what-add-field">
           <input
+            aria-label="Add a What"
             list="what-names"
             value={adding}
             placeholder="Add a What: type a new one or pick"
@@ -372,11 +376,11 @@ function ProjectForm({
                 <option key={n} value={n} />
               ))}
           </datalist>
+          </label>
           <button type="button" className="quick-btn" aria-label="Add this What" title="Add" disabled={!adding.trim()} onClick={() => void addWhat()}>
             +
           </button>
         </div>
-        <p className="field-hint">Tap a pill to turn it on or off for this project. Its timed launches pick their What from these.</p>
       </div>
       {d.parentId && <p className="field-hint">A project under an area takes its area's type.</p>}
       {d.status === 'archived' && <p className="field-hint">Archived: it leaves the project pickers, and its tasks, launches and time stay in your history.</p>}
