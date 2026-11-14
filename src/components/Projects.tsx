@@ -11,6 +11,9 @@ import { kindOf, logsProductivity, projectTree, type Project, type ProjectKind, 
 import type { GoogleCalendar } from '../lib/google';
 import type { Task } from '../lib/tasks';
 import type { Launch, LaunchLog } from '../lib/rockets';
+import { Icon } from './Tasks';
+
+const PENCIL = 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4';
 
 type Props = {
   projects: Project[];
@@ -122,8 +125,9 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
       >
         <span />
       </button>
-      <button type="button" className="btn btn-quiet project-edit" onClick={() => setEditing(p)}>
-        Edit
+      {/* V20-194 (Dan, Nov 14): Edit is an icon, the same size as the + above it. */}
+      <button type="button" className="icon-btn tool-btn project-edit" aria-label={`Edit ${p.name}`} title={`Edit ${p.name}`} onClick={() => setEditing(p)}>
+        <Icon d={PENCIL} />
       </button>
     </div>
   );
@@ -138,7 +142,6 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
             <span className="project-head-right">
               {i === 0 && <span className="project-col-label">Active</span>}
               <span className="project-plus-slot">
-                <span className="btn btn-quiet project-edit project-edit-ghost" aria-hidden="true">Edit</span>
                 <button type="button" className="icon-btn tool-btn project-plus" aria-label={`Add a ${k.label.toLowerCase()} project`} title="Add project" onClick={() => startNew(k.id)}>
                   +
                 </button>
