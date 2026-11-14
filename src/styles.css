@@ -3314,11 +3314,11 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .pd-label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mist); }
 .pd-num { font-size: 30px; font-weight: 700; color: var(--beige); font-variant-numeric: tabular-nums; }
 .pd-sub { font-size: 12px; color: var(--mist); }
-.pd-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.pd-list li { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 12px; padding: 8px 4px; border-bottom: 1px solid var(--edge); font-size: 14px; }
+.pd-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) max-content; column-gap: 12px; }
+.pd-list li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; text-align: left; gap: 12px; padding: 8px 4px; border-bottom: 1px solid var(--edge); font-size: 14px; }
 .pd-name { color: var(--beige); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pd-dim { color: var(--mist); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pd-when { color: var(--accent-teal); font-variant-numeric: tabular-nums; }
+.pd-when { color: var(--accent-teal); font-variant-numeric: tabular-nums; text-align: right; }
 /* V20-176: footer logo centred; the status line only when there's a message. */
 .app .toolbar { flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 6px; }
 .app .toolbar-status { flex: none; min-width: 0; }
@@ -3394,7 +3394,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .what-head .timed-title { margin: 0; }
 .what-head-actions { display: inline-flex; gap: 8px; }
 .what-head-actions .quick-btn { font-size: 18px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
-.what-sub { margin: 16px 0 6px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+/* CARD HEADER · Colour 2: the small uppercase teal heading for a section inside a card */
+.card-h, .what-sub { margin: 16px 0 6px; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-teal); font-weight: 600; }
 .pd-list li.pd-row-btn { cursor: pointer; border-radius: 6px; }
 .pd-list li.pd-row-btn:hover, .pd-list li.pd-row-btn:focus-visible { background: color-mix(in srgb, var(--accent-teal) 10%, transparent); outline: none; }
 

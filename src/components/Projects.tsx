@@ -491,7 +491,7 @@ function ProjectDashboard({
           </button>
         ))}
       </div>
-      <h4 className="what-sub">Open tasks</h4>
+      <h4 className="card-h">Open tasks</h4>
       {openShown.length ? (
         <ul className="pd-list">
           {openShown.map((t) => (
@@ -505,7 +505,7 @@ function ProjectDashboard({
       ) : (
         <p className="field-hint">No open tasks{allShown ? '' : ' for these'}.</p>
       )}
-      <h4 className="what-sub">Timed launches</h4>
+      <h4 className="card-h">Timed launches</h4>
       {launchesShown.length ? (
         <ul className="pd-list">
           {launchesShown.map((l) => (
