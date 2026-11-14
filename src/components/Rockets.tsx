@@ -61,6 +61,8 @@ type Props = {
   onLaunchNow: (l: Launch) => void;
   /** Oct 25: pause / resume a launched run. */
   isPaused?: (l: Launch) => boolean;
+  /** V20-178: minutes on the clock when a launched run is more than an hour past its time, else null. */
+  overrun?: (l: Launch) => number | null;
   onPause?: (l: Launch) => void;
   /** Opens Add timed launch filled in (from a routine step or a task) to check before saving. */
   preset?: TimedPreset | null;
@@ -240,7 +242,7 @@ export function RocketsPanel(p: Props) {
   const [xAsk, setXAsk] = useState<string | null>(null);
   // V20-073 (Nov 12): checking off a run that never ran on the clock asks Log the time? (minutes, or Don't log).
   // Launches that log a fixed amount (H2O, Food, Vice) don't ask.
-  const [logAsk, setLogAsk] = useState<{ key: string; minutes: number; onLog: (m: number | null) => void } | null>(null);
+  const [logAsk, setLogAsk] = useState<{ key: string; minutes: number; onLog: (m: number | null) => void; q?: string } | null>(null);
   const asksTime = (l: Launch) => !['h2o', 'food', 'vices'].includes(l.logKind ?? '');
   const askLog = (key: string, l: Launch, onLog: (m: number | null) => void) => {
     if (!asksTime(l)) return onLog(undefined as unknown as null);
@@ -250,7 +252,7 @@ export function RocketsPanel(p: Props) {
   const logAskUi = (key: string) =>
     logAsk?.key === key && (
       <div className="timed-quick timed-xask timed-logask" role="group" aria-label="Log the time?">
-        <span className="logask-q">Log the time?</span>
+        <span className="logask-q">{logAsk.q ?? 'Log the time?'}</span>
         <label className="logask-min">
           <input
             type="number"
@@ -960,7 +962,15 @@ export function RocketsPanel(p: Props) {
                         className="quick-btn quick-done"
                         aria-label={`Check off ${l.title} for today`}
                         title="Done today"
-                        onClick={() => (how === 'launched' ? p.onFinish(l, 'done') : askLog(`${l.id}:today`, l, (m) => p.onFinish(l, 'done', m)))}
+                        onClick={() => {
+                          // V20-178: left running more than an hour past its time: ask, starting from the time allotted.
+                          const over = how === 'launched' && asksTime(l) ? p.overrun?.(l) ?? null : null;
+                          if (over !== null) {
+                            setXAsk(null);
+                            return setLogAsk({ key: `${l.id}:today`, minutes: Math.min(480, l.minutes), q: `On the clock ${Math.floor(over / 60)}h ${over % 60}m. Log the time?`, onLog: (m) => p.onFinish(l, 'done', m) });
+                          }
+                          return how === 'launched' ? p.onFinish(l, 'done') : askLog(`${l.id}:today`, l, (m) => p.onFinish(l, 'done', m));
+                        }}
                       >
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M5 12.5l4.5 4.5L19 7.5" />

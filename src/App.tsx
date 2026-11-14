@@ -238,11 +238,25 @@ export default function App() {
   const [launchLog, setLaunchLog] = useState<LaunchLog[]>([]);
   const logRef = useRef<LaunchLog[]>([]);
   logRef.current = launchLog;
+  const d26TodayRef = useRef('');
+  /**
+   * V20-178 (Nov 13): minutes on the clock so far when a launched run has gone more than an hour past
+   * its time (left running), else null. Done then asks Log the time? instead of saving every minute.
+   */
+  const overrun = (l: Launch): number | null => {
+    const run = logFor(logRef.current, l, new Date());
+    if (!run.launchedAt) return null;
+    const on = (Date.now() - new Date(run.launchedAt).getTime()) / 60_000 - pausedMin(l);
+    return on > (run.planned || l.minutes) + run.extra + 60 ? Math.round(on) : null;
+  };
   function logLaunch(l: Launch, patch: (g: LaunchLog) => Partial<LaunchLog>) {
     const list = logRef.current;
     const cur = logFor(list, l, new Date());
     // V20-074: each run carries the launch's project as it was when the run happened.
-    const item = { ...cur, ...patch(cur), title: l.title, projectId: l.projectId ?? null };
+    const changed = patch(cur);
+    const item = { ...cur, ...changed, title: l.title, projectId: l.projectId ?? null };
+    // V20-178: a run finished now belongs to today's routine day (where its productivity block goes).
+    if (changed.finishedAt) item.routineDay = d26TodayRef.current;
     const next = list.some((g) => g.id === item.id) ? list.map((g) => (g.id === item.id ? item : g)) : [...list, item];
     logRef.current = next;
     setLaunchLog(next);
@@ -1029,6 +1043,7 @@ export default function App() {
   const d26Mode = modeOf(activeRoutine);
   const d26Shift = effShift(d26Mode, shift);
   const d26Today = routineDay(now, activeRoutine, shift, flipsNow(d26Mode, shift));
+  d26TodayRef.current = d26Today;
   // Card rockets open one of LaunchPage's pages.
   setCardOpener((pg) => {
     setPage(pg as PageId);
@@ -1317,6 +1332,7 @@ export default function App() {
       outcome: how,
       launchedAt: null,
       finishedAt: at,
+      routineDay: day,
       ...(how === 'done' ? { loggedMin: entered, timeSource: entered ? 'entered' : 'none' } : { loggedMin: null, timeSource: null })
     } as LaunchLog;
     const next = cur ? list.map((g) => (g.id === item.id ? item : g)) : [...list, item];
@@ -1376,7 +1392,12 @@ export default function App() {
     let source: TimeSource | null = null;
     let mins: number | null = null;
     if (how === 'done') {
-      if (run0.launchedAt) {
+      // V20-178: a run left running past its time asks Log the time? too; its answer wins over the clock.
+      if (run0.launchedAt && logMin === null) source = 'none';
+      else if (run0.launchedAt && typeof logMin === 'number' && logMin > 0) {
+        source = 'entered';
+        mins = Math.round(logMin);
+      } else if (run0.launchedAt) {
         source = 'timed';
         mins = Math.max(0, Math.round((Date.now() - new Date(run0.launchedAt).getTime()) / 60_000 - pausedMin(l)));
       } else if (logMin === null) source = 'none';
@@ -1636,6 +1657,7 @@ export default function App() {
                   onFinish={finishLaunch}
                   onLaunchNow={launchNow}
                   isPaused={isPaused}
+                  overrun={overrun}
                   onPause={togglePause}
                   log={launchLog}
                   onSettleMissed={settleMissed}

@@ -672,6 +672,8 @@ export interface LaunchLog {
   /** V12-003 (Nov 12): minutes paused so far (closed pauses), and when the current pause began (null = running). */
   pausedMin?: number;
   pausedAt?: string | null;
+  /** V20-178 (Nov 13): the routine day the run was finished in (its 26 Days day); Stats buckets hours by it. */
+  routineDay?: string | null;
 }
 
 /** timed = ▶ / rocket to ✓ (pauses out) · entered = at the Log the time? prompt · none = Don't log ·
@@ -694,6 +696,7 @@ type LogRow = {
   project_id?: string | null;
   paused_min?: number | null;
   paused_at?: string | null;
+  routine_day?: string | null;
 };
 
 export const launchLogStore = makeStore<LaunchLog, LogRow>({
@@ -702,8 +705,8 @@ export const launchLogStore = makeStore<LaunchLog, LogRow>({
   orderBy: 'day',
   script: 'supabase/migrations/0016_launch_once_time_and_log.sql',
   seed: () => [],
-  toRow: (g) => ({ id: g.id, launch_id: g.launchId, day: g.day, title: g.title, planned: g.planned, extra: g.extra, outcome: g.outcome, launched_at: g.launchedAt, finished_at: g.finishedAt, sort: g.sort, logged_min: g.loggedMin ?? null, time_source: g.timeSource ?? null, project_id: g.projectId ?? null, paused_min: g.pausedMin ?? 0, paused_at: g.pausedAt ?? null }),
-  fromRow: (r) => ({ id: r.id, launchId: r.launch_id, day: r.day, title: r.title, planned: r.planned, extra: r.extra, outcome: r.outcome, launchedAt: r.launched_at, finishedAt: r.finished_at, sort: r.sort, loggedMin: r.logged_min ?? null, timeSource: r.time_source ?? null, projectId: r.project_id ?? null, pausedMin: Number(r.paused_min ?? 0), pausedAt: r.paused_at ?? null })
+  toRow: (g) => ({ id: g.id, launch_id: g.launchId, day: g.day, title: g.title, planned: g.planned, extra: g.extra, outcome: g.outcome, launched_at: g.launchedAt, finished_at: g.finishedAt, sort: g.sort, logged_min: g.loggedMin ?? null, time_source: g.timeSource ?? null, project_id: g.projectId ?? null, paused_min: g.pausedMin ?? 0, paused_at: g.pausedAt ?? null, routine_day: g.routineDay ?? null }),
+  fromRow: (r) => ({ id: r.id, launchId: r.launch_id, day: r.day, title: r.title, planned: r.planned, extra: r.extra, outcome: r.outcome, launchedAt: r.launched_at, finishedAt: r.finished_at, sort: r.sort, loggedMin: r.logged_min ?? null, timeSource: r.time_source ?? null, projectId: r.project_id ?? null, pausedMin: Number(r.paused_min ?? 0), pausedAt: r.paused_at ?? null, routineDay: r.routine_day ?? null })
 });
 
 /** Today's log row for a launch, made if missing. */
