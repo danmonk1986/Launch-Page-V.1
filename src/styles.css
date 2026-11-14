@@ -2913,6 +2913,9 @@ button.kb-btn { font-family: inherit; }
 .timed-item.is-logask > .timed-quick:not(.timed-logask) { display: none; }
 .timed-logask { flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; flex-direction: row; }
 .logask-q { flex-basis: 100%; text-align: right; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-teal); }
+/* V20-183: the app-wide Log the time? sheet. */
+.timed-logask-sheet { display: grid; gap: 12px; }
+.timed-logask-sheet .logask-q { text-align: left; margin: 0; }
 .logask-min { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mist); }
 .logask-min input { width: 64px; height: 30px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--edge); background: transparent; color: var(--beige); font: inherit; font-variant-numeric: tabular-nums; }
 

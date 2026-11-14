@@ -240,7 +240,8 @@ export function RocketsPanel(p: Props) {
   const [view, setView] = useState<TimedView>('active');
   // The X on a row asks first: skip just today, or remove the launch for good.
   const [xAsk, setXAsk] = useState<string | null>(null);
-  // V20-073 (Nov 12): checking off a run that never ran on the clock asks Log the time? (minutes, or Don't log).
+  // V20-073 (Nov 12): checking off a run that never ran on the clock asks Log the time?
+  // V20-183 (Dan, Nov 14): minutes only; Don't log is gone (no task takes 0 minutes).
   // Launches that log a fixed amount (H2O, Food, Vice) don't ask.
   const [logAsk, setLogAsk] = useState<{ key: string; minutes: number; onLog: (m: number | null) => void; q?: string } | null>(null);
   const asksTime = (l: Launch) => !['h2o', 'food', 'vices'].includes(l.logKind ?? '');
@@ -266,9 +267,6 @@ export function RocketsPanel(p: Props) {
         </label>
         <button type="button" className="btn btn-quiet" onClick={() => { const a = logAsk; setLogAsk(null); a.onLog(a.minutes); }}>
           Log
-        </button>
-        <button type="button" className="btn btn-quiet" onClick={() => { const a = logAsk; setLogAsk(null); a.onLog(null); }}>
-          Don't log
         </button>
         <button type="button" className="quick-btn" aria-label="Cancel" title="Cancel" onClick={() => setLogAsk(null)}>
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -1466,7 +1464,7 @@ function TimedForm({
               const v = e.target.value;
               setWhat(v, desc);
               const def = WHAT_DEFAULTS.find((w) => w.cat === v);
-              if (def) setD((x) => ({ ...x, minutes: def.minutes, logKind: v === 'PERSONAL' ? null : 'productivity', logAmount: null }));
+              if (def) setD((x) => ({ ...x, minutes: def.minutes, logKind: 'productivity', logAmount: null }));
             }}
           >
             <option value="" disabled>
@@ -1514,7 +1512,7 @@ function TimedForm({
       </div>
 
       {/* V20-076 (Dan, Nov 12): Logs when checked off is gone; What says what kind of time it is. Every What
-          logs Productivity except PERSONAL, which logs nothing. Launches already set to H2O, Food, Vice,
+          logs Productivity; V20-183: the project's Log Productivity switch decides (PERSONAL included). Launches already set to H2O, Food, Vice,
           Activity or Break keep it. */}
       <fieldset className="field">
         <legend>Alarm</legend>

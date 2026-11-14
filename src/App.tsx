@@ -160,6 +160,8 @@ export default function App() {
   const [launches, setLaunches] = useState<Launch[]>([]);
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  // V20-183: the app-wide Log the time? (for Done from the reminder, Missed pop-up, Time's up and rituals).
+  const [timeAsk, setTimeAsk] = useState<{ l: Launch; minutes: number; q: string } | null>(null);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
   // 26 Days
   const [nonnegs, setNonnegs] = useState<NonNeg[]>([]);
@@ -1384,27 +1386,38 @@ export default function App() {
   }
 
   async function finishLaunch(l: Launch, how: 'done' | 'skipped', logMin?: number | null) {
+    // V20-183 (Dan, Nov 14): every Done has a time. A Done that comes without one (the reminder, the Missed
+    // pop-up, Time's up, a ritual) asks Log the time? when the run never ran on the clock or was left running.
+    if (how === 'done' && logMin == null && !['h2o', 'food', 'vices'].includes(l.logKind ?? '')) {
+      const r = logFor(logRef.current, l, new Date());
+      const over = overrun(l);
+      if (!r.launchedAt || over !== null) {
+        if (reminder?.id === l.id) setReminder(null);
+        setTimeAsk({
+          l,
+          minutes: Math.min(480, (r.planned || l.minutes) + r.extra),
+          q: over !== null ? `On the clock ${Math.floor(over / 60)}h ${over % 60}m. Log the time?` : 'Log the time?'
+        });
+        return;
+      }
+    }
     setHandled(markHandled(l, new Date(), how));
     // V20-073 (Nov 12): where a done run's time comes from. Started with ▶ or the rocket: timed (pauses out).
-    // Not started: the Log the time? prompt passes its minutes (entered) or null (Don't log); anything that
-    // checks off without asking keeps the old way (the time allotted).
+    // Not started or left running: the Log the time? prompt passes its minutes (entered). V20-183: always minutes.
     const run0 = logFor(logRef.current, l, new Date());
     let source: TimeSource | null = null;
     let mins: number | null = null;
     if (how === 'done') {
       // V20-178: a run left running past its time asks Log the time? too; its answer wins over the clock.
-      if (run0.launchedAt && logMin === null) source = 'none';
-      else if (run0.launchedAt && typeof logMin === 'number' && logMin > 0) {
+      // V20-183: no more 'none'; a timed run is at least 1 minute.
+      if (typeof logMin === 'number' && logMin > 0) {
         source = 'entered';
         mins = Math.round(logMin);
       } else if (run0.launchedAt) {
         source = 'timed';
-        mins = Math.max(0, Math.round((Date.now() - new Date(run0.launchedAt).getTime()) / 60_000 - pausedMin(l)));
-      } else if (logMin === null) source = 'none';
-      else if (typeof logMin === 'number' && logMin > 0) {
-        source = 'entered';
-        mins = Math.round(logMin);
+        mins = Math.max(1, Math.round((Date.now() - new Date(run0.launchedAt).getTime()) / 60_000 - pausedMin(l)));
       } else {
+        // Only H2O / Food / Vice launches get here (fixed amounts; they don't ask).
         source = 'allotted';
         mins = (run0.planned || l.minutes) + run0.extra;
       }
@@ -1425,7 +1438,7 @@ export default function App() {
       setStatus(`${l.title} moved to tomorrow, same time.`);
     } else {
       const ticked = tickNonNegsFor(l.title);
-      const logged = source === 'none' ? '' : await logFromLaunch(l, source === 'entered' && mins ? { minutes: mins } : undefined);
+      const logged = await logFromLaunch(l, source === 'entered' && mins ? { minutes: mins } : undefined);
       const tasksDone = await completeTasksFor(l);
       const task = tasksDone.length ? ` Task done.` : '';
       if (ticked.length && !logged) return setStatus(`${l.title} checked off: ${ticked.join(', ')} ticked.${task}`);
@@ -1441,8 +1454,7 @@ export default function App() {
    * Returns a short description of what was logged, or '' if nothing.
    */
   async function logFromLaunch(l: Launch, opts?: { minutes?: number; day?: string; id?: string }): Promise<string> {
-    // V20-076: PERSONAL time isn't productivity, so it logs nothing to 26 Days.
-    if (/^PERSONAL\b/.test(l.title)) return '';
+    // V20-183 (Dan, Nov 14): PERSONAL is an ordinary What now; the project's Log Productivity switch decides.
     const kind = l.logKind ?? (l.urls.length && !l.ritualId ? 'productivity' : null);
     if (!kind) return '';
     // V20-181 (Dan, Nov 14): a project with Log Productivity off logs no Productivity blocks (its run keeps the time).
@@ -1926,6 +1938,42 @@ export default function App() {
         onSkip={(l) => finishLaunch(l, 'skipped')}
         onDone={(l) => finishLaunch(l, 'done')}
       />
+      <Sheet open={!!timeAsk} title={timeAsk?.l.title ?? 'Log the time?'} onClose={() => setTimeAsk(null)}>
+        {timeAsk && (
+          <form
+            className="timed-logask-sheet"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const a = timeAsk;
+              setTimeAsk(null);
+              void finishLaunch(a.l, 'done', Math.max(1, a.minutes));
+            }}
+          >
+            <p className="logask-q">{timeAsk.q}</p>
+            <label className="logask-min">
+              <input
+                type="number"
+                min={1}
+                max={480}
+                required
+                autoFocus
+                value={timeAsk.minutes}
+                aria-label="Minutes to log"
+                onChange={(e) => setTimeAsk((a) => (a ? { ...a, minutes: Math.min(480, Math.max(1, Number(e.target.value) || 1)) } : a))}
+              />
+              <span>min</span>
+            </label>
+            <div className="sheet-actions">
+              <button type="button" className="btn btn-quiet" onClick={() => setTimeAsk(null)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn">
+                Log
+              </button>
+            </div>
+          </form>
+        )}
+      </Sheet>
       <TimeUpReminder
         launch={timeUp}
         onDone={(l) => {
