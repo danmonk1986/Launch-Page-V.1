@@ -73,10 +73,10 @@ export function KnowledgeBasePage({ userId, onStatus }: Props) {
       const r = await importIndex(userId, index, setImporting);
       setImporting('');
       await refresh();
-      onStatus(`KNOWLEDGE!B4SE: ${r.slides} slides from ${r.decks} decks in ${r.courses} courses imported.`);
+      onStatus(`KNOWLEDGE B4SE: ${r.slides} slides from ${r.decks} decks in ${r.courses} courses imported.`);
     } catch (err) {
       setImporting('');
-      onStatus(`KNOWLEDGE!B4SE import stopped: ${(err as Error).message}`);
+      onStatus(`KNOWLEDGE B4SE import stopped: ${(err as Error).message}`);
     }
   }
 
@@ -309,9 +309,9 @@ function Masthead({ title, sub, onHome, right }: { title: string; sub?: string; 
 }
 
 function Wordmark({ onHome, small }: { onHome?: () => void; small?: boolean }) {
-  const img = <img src="/knowledge-b4se.png" alt="KNOWLEDGE!B4SE" className={small ? 'kb-mark-sm' : 'kb-mark'} />;
+  const img = <img src="/knowledge-b4se.png" alt="KNOWLEDGE B4SE" className={small ? 'kb-mark-sm' : 'kb-mark'} />;
   return onHome ? (
-    <button type="button" className="kb-mark-btn" onClick={onHome} title="KNOWLEDGE!B4SE home">
+    <button type="button" className="kb-mark-btn" onClick={onHome} title="KNOWLEDGE B4SE home">
       {img}
     </button>
   ) : (

@@ -2060,7 +2060,7 @@ export default function App() {
           },
           // KNOWLEDGE!B4SE: its import lives here so the page itself stays clean.
           ...(page === 'kb'
-            ? [{ label: 'Import knowledge base', hint: 'Adds courses and decks to KNOWLEDGE!B4SE.', button: 'Import', onClick: () => { setSettingsOpen(false); window.dispatchEvent(new Event('kb:import')); } }]
+            ? [{ label: 'Import knowledge base', hint: 'Adds courses and decks to KNOWLEDGE B4SE.', button: 'Import', onClick: () => { setSettingsOpen(false); window.dispatchEvent(new Event('kb:import')); } }]
             : []),
           ...(googleConfigured() && wasConnected()
             ? [

@@ -13,8 +13,8 @@ const PAGES: { id: PageId; label: string }[] = [
   { id: 'budget', label: 'Budget' },
   // Records (Oct 26): Expenses + Invoices; the id stays 'invoices' so saved card rockets keep working.
   { id: 'invoices', label: 'Records' },
-  // KNOWLEDGE!B4SE (Nov 6): course decks and cheat sheets, searchable.
-  { id: 'kb', label: 'KNOWLEDGE!B4SE' }
+  // KNOWLEDGE B4SE (Nov 6; '!' dropped Nov 14, V20-188, to match L4UNCH P4GE): course decks and cheat sheets, searchable.
+  { id: 'kb', label: 'KNOWLEDGE B4SE' }
 ];
 
 type Props = {

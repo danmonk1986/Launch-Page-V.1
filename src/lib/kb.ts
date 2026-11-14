@@ -140,7 +140,7 @@ const ARTIFACT_URL = /^https:\/\/claude\.ai\/(artifact|code\/artifact)\/[A-Za-z0
 /** Checks the file is a KNOWLEDGE!B4SE index before anything is saved. */
 export function readIndex(raw: unknown): KbIndex {
   const x = raw as KbIndex;
-  if (!x || x.kind !== 'launchpage-kb-index' || !Array.isArray(x.courses)) throw new Error('That file isn’t a KNOWLEDGE!B4SE index (kb-index.json).');
+  if (!x || x.kind !== 'launchpage-kb-index' || !Array.isArray(x.courses)) throw new Error('That file isn’t a KNOWLEDGE B4SE index (kb-index.json).');
   for (const c of x.courses) {
     if (!c.domain || !c.course || !Array.isArray(c.decks)) throw new Error('The index has a course without a domain, name or decks.');
     for (const d of c.decks) {
