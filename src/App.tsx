@@ -1292,22 +1292,18 @@ export default function App() {
   // End alarm: a launched launch whose time allotted has run out.
   useEffect(() => {
     if (timeUp || reminder || !logReady) return;
-    const nowMin = now.getHours() * 60 + now.getMinutes();
     const over = launches.find((l) => {
       const key = runKey(l, now);
       if (handled[key] !== 'launched' || endAlerted[key] || isPaused(l)) return false;
-      const [h, m] = timeFor(l, now).split(':').map(Number);
       // V20-063 (Nov 11): the clock runs from the later of the set time and when it was started, so a run
       // started late (▶ on a missed run, or late from Active) gets its full time instead of being up at once.
-      let start = h * 60 + m;
+      // V20-184 (Nov 14): real timestamps, not minutes of the day, so a run that ends after midnight still
+      // gets its Time's up (10:03 PM + 120 min never matched "24:03").
+      let start = new Date(`${isoDate(launchDate(l, now))}T${timeFor(l, now)}:00`).getTime();
       const at = logFor(launchLog, l, now).launchedAt;
-      if (at) {
-        const t = new Date(at);
-        const atMin = t.getHours() * 60 + t.getMinutes();
-        if (isoDate(t) === isoDate(now) && atMin > start) start = atMin;
-      }
-      const end = start + l.minutes + extraToday(l) + Math.round(pausedMin(l, now.getTime()));
-      return nowMin >= end;
+      if (at && new Date(at).getTime() > start) start = new Date(at).getTime();
+      const end = start + (l.minutes + extraToday(l) + Math.round(pausedMin(l, now.getTime()))) * 60_000;
+      return now.getTime() >= end;
     });
     if (!over) return;
     setEndAlerted((m) => ({ ...m, [runKey(over, now)]: true }));
