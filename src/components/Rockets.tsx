@@ -1,3 +1,5 @@
+import { StatsPanel } from './Stats';
+import type { Project } from '../lib/projects';
 import { Fragment, useContext, useEffect, useLayoutEffect, useState, useId, useRef } from 'react';
 import { HiddenPicksContext, launchListFor, pickKey as hiddenKey } from '../lib/hiddenPicks';
 import { FormActions, Sheet } from './Sheet';
@@ -83,6 +85,8 @@ type Props = {
   rituals?: { id: string; name: string }[];
   /** V20-074: projects a timed launch can count toward. */
   projects?: { id: string; name: string; parentId: string | null; sort: number; status?: string; shortName?: string }[];
+  /** V20-185: past routine days and whether each was a baseline day (Stats). */
+  baseline?: { day: string; on: boolean }[];
 };
 
 /** What fits on one line of a fixed-width tile. */
@@ -344,31 +348,6 @@ export function RocketsPanel(p: Props) {
         };
       })
   ].sort((a, b) => b.day.localeCompare(a.day));
-  // V20-002: done rate per launch over the last 14 days (the Launch gate: 60% done). Runs are grouped by the
-  // launch's name before its first ' - ' (Work Block #2 - … counts as Work Block #2); cleared runs count neither way.
-  const rates = (() => {
-    const since = isoDate(new Date(p.today.getFullYear(), p.today.getMonth(), p.today.getDate() - 13, 12));
-    const todayIso = isoDate(p.today);
-    const nameOf = (t: string) => t.split(/ [-·–—] /)[0].trim() || t;
-    const groups = new Map<string, { name: string; done: number; skipped: number; missed: number }>();
-    const add = (t: string, k: 'done' | 'skipped' | 'missed') => {
-      const name = nameOf(t);
-      const g = groups.get(name) ?? { name, done: 0, skipped: 0, missed: 0 };
-      g[k] += 1;
-      groups.set(name, g);
-    };
-    for (const g of p.log ?? []) {
-      if (g.day < since || g.day > todayIso) continue;
-      if (g.outcome === 'done' || (g.outcome === 'launched' && g.finishedAt)) add(g.title, 'done');
-      else if (g.outcome === 'skipped') add(g.title, 'skipped');
-    }
-    for (const m of missedRuns(p.launches, p.log ?? [], p.today, 14, new Set(p.offDays ?? []))) if (m.day >= since) add(m.launch.title, 'missed');
-    return [...groups.values()]
-      .map((g) => ({ ...g, total: g.done + g.skipped + g.missed }))
-      .filter((g) => g.total > 0)
-      .map((g) => ({ ...g, pct: Math.round((g.done / g.total) * 100) }))
-      .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
-  })();
   // V20-062 (Nov 11): ▶ on a missed run. The missed day is taken out of the counts, the launch moves
   // to today (Active), and it starts now.
   async function startMissedNow(l: Launch, day: string | null) {
@@ -755,28 +734,8 @@ export function RocketsPanel(p: Props) {
             </>
           )
         ) : view === 'stats' ? (
-          // V20-071 (Nov 12): the summary moved off Complete into its own tab. To be built out.
-          rates.length === 0 ? (
-            <p className="panel-empty timed-empty">{EMPTY.stats}</p>
-          ) : (
-            <>
-            {rates.length > 0 && (
-              <div className="timed-rates" aria-label="Done rate per launch, last 14 days">
-                <p className="timed-rates-title">Done rate · last 14 days</p>
-                <ul>
-                  {rates.map((r) => (
-                    <li key={r.name} className={`timed-rate${r.pct < 60 ? ' is-low' : ''}`}>
-                      <span className="timed-rate-name">{r.name}</span>
-                      <span className="timed-rate-bar" aria-hidden="true"><span style={{ width: `${r.pct}%` }} /></span>
-                      <span className="timed-rate-pct">{r.pct}%</span>
-                      <span className="timed-rate-meta">{r.done} done · {r.skipped} skipped · {r.missed} missed</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            </>
-          )
+          // V20-185 (Dan, Nov 14): Stats like the CEO dashboard; the done rate per launch moved inside it.
+          <StatsPanel launches={p.launches} log={p.log ?? []} projects={(p.projects ?? []) as Project[]} today={p.today} offDays={p.offDays ?? []} baseline={p.baseline ?? []} />
         ) : list.length === 0 ? (
           <p className="panel-empty timed-empty">{p.launches.length === 0 ? 'At a set time, a reminder pops up and one tap opens every tab you need.' : EMPTY[view]}</p>
         ) : (

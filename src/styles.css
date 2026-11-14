@@ -3315,3 +3315,44 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app .toolbar { flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 6px; }
 .app .toolbar-status { flex: none; min-width: 0; }
 .app .toolbar-status:empty { display: none; }
+
+/* V20-185 (Dan, Nov 14): Stats, like the CEO dashboard. */
+.stats { display: flex; flex-direction: column; gap: 14px; }
+.st-range { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.app .st-range-btn { all: unset; cursor: pointer; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--edge-strong); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mist); }
+.app .st-range-btn.is-on { background: var(--accent-purple); border-color: var(--accent-purple); color: var(--beige); }
+.st-range-note { margin-left: auto; font-size: 12px; color: var(--dim); }
+.pd-card.st-hero { border-left-color: var(--accent-teal); }
+.pd-card.st-hero .pd-num { color: var(--accent-teal); }
+.st-sec { margin: 10px 0 0; }
+.st-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.st-card { border: 1px solid var(--edge); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.st-wide { grid-column: 1 / -1; }
+.st-flag { border-color: var(--accent-pink); }
+.st-h { margin: 0; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--beige); }
+.st-note { margin: 4px 0 10px; font-size: 12px; color: var(--dim); }
+.st-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.st-bars li { display: grid; grid-template-columns: minmax(6rem, 10rem) 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
+.st-bar-name { color: var(--beige); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-track { height: 10px; border-radius: 5px; background: color-mix(in srgb, var(--mist) 18%, transparent); overflow: hidden; }
+.st-track > span { display: block; height: 100%; border-radius: 5px; }
+.st-val { font-variant-numeric: tabular-nums; color: var(--beige); min-width: 5rem; text-align: right; }
+.st-val span { color: var(--dim); }
+.st-days { display: flex; align-items: flex-end; gap: 8px; height: 200px; overflow-x: auto; padding-top: 4px; }
+.st-day { flex: 1 0 34px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.st-stack { width: 100%; max-width: 48px; display: flex; flex-direction: column-reverse; border-radius: 4px; overflow: hidden; min-height: 2px; }
+.st-stack > span { display: block; min-height: 1px; }
+.st-day-val { font-size: 11px; color: var(--mist); font-variant-numeric: tabular-nums; }
+.st-day-lab { font-size: 11px; color: var(--dim); white-space: nowrap; }
+.st-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.st-table th { text-align: left; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-teal); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--edge); }
+.st-table td { padding: 5px 6px; border-bottom: 1px solid var(--edge); color: var(--beige); }
+.st-table .r { text-align: right; }
+.st-pos { color: var(--accent-teal); font-weight: 600; }
+.st-neg { color: var(--accent-pink); font-weight: 600; }
+.st-scroll { overflow-x: auto; }
+.st-card .timed-rates { margin: 0; background: none; padding: 0; }
+.st-defs { font-size: 12px; color: var(--dim); }
+.st-defs summary { cursor: pointer; color: var(--mist); letter-spacing: 0.1em; text-transform: uppercase; font-size: 11px; }
+.st-defs dt { color: var(--beige); font-weight: 600; margin-top: 8px; }
+.st-defs dd { margin: 0; }

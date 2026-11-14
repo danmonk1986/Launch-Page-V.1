@@ -42,6 +42,7 @@ import {
   pickKey,
   quoteStore,
   routineDay,
+  scoreDay,
   snapshot,
   type Config,
   type DayRecord,
@@ -1674,6 +1675,9 @@ export default function App() {
                   onSettleMissed={settleMissed}
                   onUndoRun={undoRun}
                   offDays={d26Days.filter((d) => d.off).map((d) => d.day)}
+                  baseline={d26Days
+                    .filter((r) => r.day < d26Today && r.items.length && !r.off)
+                    .map((r) => ({ day: r.day, on: scoreDay(r, d26Logs, d26Config).on }))}
                   offToday={offToday}
                   preset={timedPreset}
                   onPresetUsed={() => setTimedPreset(null)}
