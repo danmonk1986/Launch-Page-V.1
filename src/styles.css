@@ -3369,3 +3369,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-187: Stats legend, theme colours. */
 .st-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; font-size: 12px; color: var(--mist); }
 .st-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+
+/* V20-208 (Dan, Nov 14): Projects' pencils and + are in-card size (36 px), like the ✓ / ⋯ on task rows. */
+.app .projects-manager .project-edit, .app .projects-manager .project-plus { width: 36px; height: 36px; min-width: 0; min-height: 0; padding: 0; border-radius: 8px; }
+.app .projects-manager .project-edit svg { width: 15px; height: 15px; }
