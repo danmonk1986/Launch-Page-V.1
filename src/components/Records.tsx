@@ -90,6 +90,8 @@ export function RecordsPage(
         </h2>
         {view === 'draws' || view === 'income' ? <FyNav fy={fy} fyEnd={fyEnd} onChange={setFy} /> : <MonthNav month={month} onChange={setMonth} />}
         <div className="panel-actions">
+          {/* V20-195 (Dan, Nov 14): search always first (outermost), like Tasks and Budget. */}
+          <SearchToggle value={q} onChange={setQ} placeholder={view === 'draws' ? 'Search draws' : view === 'income' ? 'Search income' : 'Search expenses'} />
           <button type="button" className="icon-btn tool-btn" aria-label="Import CSV" title="Import bank statements (CSV) into Expenses and Draws" onClick={() => setImporting(true)}>
             <Icon d={IMPORT} />
           </button>
@@ -98,7 +100,6 @@ export function RecordsPage(
               <Icon d={PLUS} />
             </button>
           )}
-          <SearchToggle value={q} onChange={setQ} placeholder={view === 'draws' ? 'Search draws' : view === 'income' ? 'Search income' : 'Search expenses'} />
           <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
             <Icon d={CLOSE} />
           </button>
