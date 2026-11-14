@@ -785,7 +785,7 @@ export function SearchToggle({ value, onChange, placeholder }: { value: string; 
 
 export function TasksPage(
   p: PageProps & {
-    onOpenProjects: () => void;
+    onOpenProjects?: () => void;
     onClose: () => void;
     focusId?: string | null;
     /** V20-210: open this task's edit form on arrival (from a project's What list). */
@@ -862,9 +862,11 @@ export function TasksPage(
         <ViewToggle month={layout === 'month'} listName="List" onToggle={() => setLayout(layout === 'month' ? 'list' : 'month')} nav={{ month, onMonth: setMonth }} />
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder="Search tasks" />
-          <button type="button" className="icon-btn tool-btn" aria-label="Projects" title="Areas and projects" onClick={p.onOpenProjects}>
-            <Icon d={FOLDER} />
-          </button>
+          {p.onOpenProjects && (
+            <button type="button" className="icon-btn tool-btn" aria-label="Projects" title="Areas and projects" onClick={p.onOpenProjects}>
+              <Icon d={FOLDER} />
+            </button>
+          )}
           <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={() => editor.add()}>
             <Icon d={PLUS} />
           </button>

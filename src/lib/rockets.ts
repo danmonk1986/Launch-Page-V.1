@@ -462,7 +462,7 @@ export function describeSchedule(l: Launch) {
   return dates.length ? dates.map((x) => new Date(`${x}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })).join(' / ') : 'One date';
 }
 
-function clock12(t: string) {
+export function clock12(t: string) {
   const m = toMinutes(t);
   const h = Math.floor(m / 60) % 24;
   return `${h % 12 === 0 ? 12 : h % 12}${m % 60 ? `:${String(m % 60).padStart(2, '0')}` : ''} ${h < 12 ? 'AM' : 'PM'}`;

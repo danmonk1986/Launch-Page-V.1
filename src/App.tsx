@@ -94,6 +94,7 @@ import {
   logFor,
   happensToday,
   launchDate,
+  clock12,
   timeFor,
   type Rocket
 } from './lib/rockets';
@@ -168,6 +169,9 @@ export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   // V20-183: the app-wide Log the time? (for Done from the reminder, Missed pop-up, Time's up and rituals).
   const [timeAsk, setTimeAsk] = useState<{ l: Launch; minutes: number; q: string } | null>(null);
+  // V20-214 (Dan, Nov 14): a launch saved for today after its time has passed asks once: started at the set
+  // time (the clock runs from then), already done (Log the time?), or not started (Missed, as before).
+  const [pastAsk, setPastAsk] = useState<Launch | null>(null);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
   // 26 Days
   const [nonnegs, setNonnegs] = useState<NonNeg[]>([]);
@@ -677,7 +681,24 @@ export default function App() {
       const changed = linked.map((t) => taskFromLaunch(old, l, t)).filter((t): t is Task => !!t);
       if (changed.length) void taskOps.saveMany(changed);
     }
+    const n = new Date();
+    if (!fromTask && moved && l.active && l.repeat !== 'hourly' && happensToday(l, n) && !handled[runKey(l, n)]) {
+      const start = new Date(`${isoDate(launchDate(l, n))}T${timeFor(l, n)}:00`).getTime();
+      if (start <= n.getTime() && !logFor(logRef.current, l, n).launchedAt) setPastAsk(l);
+    }
     return launchOps.save(l);
+  }
+  function answerPast(how: 'started' | 'done' | 'not') {
+    const l = pastAsk;
+    setPastAsk(null);
+    if (!l) return;
+    const n = new Date();
+    if (how === 'started') {
+      const at = new Date(`${isoDate(launchDate(l, n))}T${timeFor(l, n)}:00`).toISOString();
+      setHandled(markHandled(l, n, 'launched'));
+      logLaunch(l, () => ({ outcome: 'launched', launchedAt: at, planned: l.minutes }));
+      setStatus(`${l.title}: on the clock since ${clock12(timeFor(l, n))}.`);
+    } else if (how === 'done') void finishLaunch(l, 'done');
   }
   /** V20-201: deleting a launch keeps its task, unlinked. */
   async function deleteLaunch(id: string) {
@@ -1309,7 +1330,7 @@ export default function App() {
   const stillOpen = (l: Launch) => !handled[runKey(l, now)] && !missedClosed[runKey(l, now)];
   // V12-043: on an off day, timed launches stay quiet (no reminder, no Missed pop-up).
   const offToday = !!d26Days.find((d) => d.day === d26Today)?.off;
-  const missedNow = offToday ? [] : launches.filter((l) => isMissed(l, now) && stillOpen(l));
+  const missedNow = offToday ? [] : launches.filter((l) => isMissed(l, now) && stillOpen(l) && l.id !== pastAsk?.id);
   const missedList = missedNow.length
     ? [...missedNow, ...launches.filter((l) => isDue(l, now) && stillOpen(l) && !(snoozed[l.id] && snoozed[l.id] > now.getTime()))].sort((a, b) =>
         timeFor(a, now).localeCompare(timeFor(b, now))
@@ -1328,13 +1349,13 @@ export default function App() {
 
   // Timed launches: pop the reminder when one is due and not handled today.
   useEffect(() => {
-    if (reminder || missedList.length || offToday) return;
+    if (reminder || pastAsk || missedList.length || offToday) return;
     const due = launches.find(
       (l) => isDue(l, now) && !handled[runKey(l, now)] && !(snoozed[l.id] && snoozed[l.id] > now.getTime())
     );
     if (due) setReminder(due);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [now, launches, reminder, snoozed, handled, missedList.length, offToday]);
+  }, [now, launches, reminder, pastAsk, snoozed, handled, missedList.length, offToday]);
 
   // Start alert: chime + desktop notification when a reminder pops.
   useEffect(() => {
@@ -1816,7 +1837,7 @@ export default function App() {
                   onAddToCalendar={addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
                   hasLaunch={(id) => launches.some((l) => l.id === id)}
-              onOpenProjects={() => setSettingsOpen('projects')}
+              onOpenProjects={settings.modules.projects ? () => setSettingsOpen('projects') : undefined}
               onClose={() => {
                 returnTo.current = 'h-tasks';
                 setPage('launch');
@@ -2002,6 +2023,24 @@ export default function App() {
         onSkip={(l) => finishLaunch(l, 'skipped')}
         onDone={(l) => finishLaunch(l, 'done')}
       />
+      <Sheet open={!!pastAsk} title={pastAsk?.title ?? 'Already started?'} onClose={() => answerPast('not')}>
+        {pastAsk && (
+          <div className="timed-logask-sheet">
+            <p className="logask-q">{`${clock12(timeFor(pastAsk, new Date()))} has already passed today.`}</p>
+            <div className="sheet-actions sheet-actions-stack">
+              <button type="button" className="btn" onClick={() => answerPast('started')}>
+                {`Started at ${clock12(timeFor(pastAsk, new Date()))}`}
+              </button>
+              <button type="button" className="btn btn-quiet" onClick={() => answerPast('done')}>
+                Already done
+              </button>
+              <button type="button" className="btn btn-quiet" onClick={() => answerPast('not')}>
+                Not started
+              </button>
+            </div>
+          </div>
+        )}
+      </Sheet>
       <Sheet open={!!timeAsk} title={timeAsk?.l.title ?? 'Log the time?'} onClose={() => setTimeAsk(null)}>
         {timeAsk && (
           <form

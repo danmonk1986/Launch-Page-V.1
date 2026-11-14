@@ -3407,3 +3407,4 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .kb-pill { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 14px; background: transparent; border-color: color-mix(in srgb, var(--kb-ink) 40%, transparent); }
 .kb-pill[aria-pressed='true'] { background: var(--accent-teal); border-color: var(--accent-teal); color: #14102b; font-weight: 600; }
 .kb-domains .kb-pill { font-size: 12px; }
+.sheet-actions-stack { flex-wrap: wrap; }
