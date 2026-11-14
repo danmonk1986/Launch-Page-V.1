@@ -75,11 +75,11 @@ export function InvoicesPage(p: Props) {
           {p.title ?? 'Invoices'}
         </h2>
         <div className="panel-actions">
-          <button type="button" className="icon-btn tool-btn" aria-label="New invoice" title="New invoice" onClick={() => setEditing(startInvoice(p.invoices, p.customers, isoDate(new Date())))}>
-            <Icon d={PLUS} />
-          </button>
           <button type="button" className="icon-btn tool-btn" aria-label="Business details and customers" title="Your details and customers" onClick={() => setDetails(true)}>
             <Icon d={ID_CARD} />
+          </button>
+          <button type="button" className="icon-btn tool-btn" aria-label="New invoice" title="New invoice" onClick={() => setEditing(startInvoice(p.invoices, p.customers, isoDate(new Date())))}>
+            <Icon d={PLUS} />
           </button>
           <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
             <Icon d={CLOSE} />

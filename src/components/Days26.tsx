@@ -503,6 +503,12 @@ function QuoteCard({ quotes, onSave, onDelete }: { quotes: Quote[]; onSave: (q: 
           “
         </span>
         <div className="panel-actions">
+          <button type="button" className="icon-btn tool-btn" aria-label="Another quote" title="Another quote" disabled={quotes.length < 2} onClick={() => show(shuffleFrom(sorted, q?.id ?? null))}>
+            <Icon d={SHUFFLE} />
+          </button>
+          <button type="button" className="icon-btn tool-btn" aria-label="Edit this quote" title="Edit this quote" disabled={!q} onClick={() => q && setForm({ q, isNew: false })}>
+            <Icon d={PEN} />
+          </button>
           <button
             type="button"
             className="icon-btn tool-btn"
@@ -511,12 +517,6 @@ function QuoteCard({ quotes, onSave, onDelete }: { quotes: Quote[]; onSave: (q: 
             onClick={() => setForm({ q: { id: crypto.randomUUID(), text: '', author: '', sort: quotes.length }, isNew: true })}
           >
             <Icon d={PLUS} />
-          </button>
-          <button type="button" className="icon-btn tool-btn" aria-label="Another quote" title="Another quote" disabled={quotes.length < 2} onClick={() => show(shuffleFrom(sorted, q?.id ?? null))}>
-            <Icon d={SHUFFLE} />
-          </button>
-          <button type="button" className="icon-btn tool-btn" aria-label="Edit this quote" title="Edit this quote" disabled={!q} onClick={() => q && setForm({ q, isNew: false })}>
-            <Icon d={PEN} />
           </button>
         </div>
       </div>

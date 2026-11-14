@@ -340,11 +340,6 @@ export function BudgetPage(p: Props) {
         <ViewToggle month={view === 'month'} listName="Master" onToggle={() => setView(view === 'month' ? 'master' : 'month')} nav={{ month, onMonth: setMonth }} />
         <div className="panel-actions">
           <SearchToggle value={q} onChange={setQ} placeholder="Search the budget" />
-          {(
-            <button type="button" className="icon-btn tool-btn" aria-label="Add line" title="Add a budget line (it goes to Tasks too, unless withheld)" onClick={() => setAdding(true)}>
-            <Icon d={PLUS} />
-          </button>
-          )}
           {view === 'master' && (
           <>
           <button
@@ -358,6 +353,12 @@ export function BudgetPage(p: Props) {
             <Icon d={SYNC} />
           </button>
           </>
+          )}
+          {/* V20-203 (Dan, Nov 14): search on one side, + on the other (then ×). */}
+          {(
+            <button type="button" className="icon-btn tool-btn" aria-label="Add line" title="Add a budget line (it goes to Tasks too, unless withheld)" onClick={() => setAdding(true)}>
+            <Icon d={PLUS} />
+          </button>
           )}
           <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
             <Icon d={CLOSE} />
