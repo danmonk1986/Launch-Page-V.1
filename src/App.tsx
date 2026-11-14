@@ -64,7 +64,7 @@ import { JournalPanel } from './components/Journal';
 import { Sheet } from './components/Sheet';
 import { RitualRunner } from './components/Rituals';
 import { buildImport, doneToday, isRecurring, repeatOf, taskName, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
-import { addTaskToGoogle, googleConfigured, knownCalendars, wasConnected } from './lib/google';
+import { addTaskToGoogle, googleConfigured, knownCalendars } from './lib/google';
 import {
   isDue,
   isMissed,
@@ -2139,21 +2139,8 @@ export default function App() {
               setTimeout(() => window.dispatchEvent(new Event('kb:import')), 250);
             }
           },
-          ...(googleConfigured() && wasConnected()
-            ? [
-                {
-                  group: 'Connections',
-                  label: 'Disconnect Google Calendar',
-                  hint: 'Stops showing your Google calendars on This Week. Your Launch Page events stay.',
-                  button: 'Disconnect',
-                  onClick: () => {
-                    setSettingsOpen(false);
-                    setPage('launch');
-                    setGcalOff((n) => n + 1);
-                  }
-                }
-              ]
-            : [])
+          // V20-200 (Dan, Nov 14): Disconnect Google Calendar left out of Data Management for now; how the beta
+          // manages Calendar is still to decide (NEXT plan item 5).
         ]}
         settings={settings}
         onClose={() => setSettingsOpen(false)}
