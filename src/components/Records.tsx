@@ -9,6 +9,7 @@ import type { BankAccount, BankLine, CommonExpense, Draw } from '../lib/bank';
 import { BankImport, type ImportResult } from './BankImport';
 import { DrawsView, FyNav, thisFy } from './Draws';
 import { IncomeView } from './Income';
+import { FoldTabs } from './FoldTabs';
 
 const CLOSE = 'M6 6l12 12M18 6L6 18';
 const IMPORT = 'M12 3v12M7 10l5 5 5-5M5 21h14';
@@ -76,15 +77,8 @@ export function RecordsPage(
     if (firstShown) setView(firstShown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firstShown]);
-  const views = (
-    <div className="area-filter pill-row records-views" role="group" aria-label="Records">
-      {shownViews.map((v) => (
-        <button key={v.id} type="button" className="area-pill" aria-pressed={view === v.id} title={v.hint} onClick={() => setView(v.id)}>
-          {v.label}
-        </button>
-      ))}
-    </div>
-  );
+  // V20-191 (Dan, Nov 14): the views are tabs, the same as Tasks and Timed launches (were pills).
+  const views = <FoldTabs label="Records" items={shownViews.map((v) => ({ id: v.id, label: v.label }))} value={view} onPick={setView} />;
 
   if (view === 'invoices' && p.showInvoices !== false) return <InvoicesPage {...p} title="Records" below={views} />;
 
