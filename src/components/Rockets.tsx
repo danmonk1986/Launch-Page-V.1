@@ -73,6 +73,8 @@ type Props = {
   log?: LaunchLog[];
   /** Oct 29 · Missed tab: done without logging time, or cleared out of the counts. */
   onSettleMissed?: (l: Launch, day: string, how: 'done' | 'cleared', logMin?: number | null) => void;
+  /** V20-216: Stats › + adds a log by hand (no launch). */
+  onAddLog?: (x: { title: string; projectId: string | null; day: string; start: string; minutes: number }) => Promise<void>;
   /** V20-060: take a run out of the log (History → Undo). */
   onUndoRun?: (id: string) => void;
   /** V12-043: off days (a quiet card today; their runs aren't Missed). */
@@ -135,6 +137,7 @@ export function RocketsPanel(p: Props) {
   const [tileOpen, setTileOpen] = useState(false);
   const [timed, setTimed] = useState<Launch | null>(null);
   const [timedOpen, setTimedOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const [fill, setFill] = useState<TimedPreset | null>(null);
   useEffect(() => {
     if (!p.preset) return;
@@ -645,9 +648,11 @@ export function RocketsPanel(p: Props) {
           <button
             type="button"
             className="icon-btn tool-btn"
-            aria-label="Add a timed launch"
-            title="Add timed launch"
+            aria-label={view === 'stats' ? 'Add a log' : 'Add a timed launch'}
+            title={view === 'stats' ? 'Add a log (work done without a launch)' : 'Add timed launch'}
             onClick={() => {
+              // V20-216 (Dan, Nov 14): in Stats, + adds to the record (a log), not a launch.
+              if (view === 'stats' && p.onAddLog) return setLogOpen(true);
               setTimed(null);
               setFill(null);
               setTimedOpen(true);
@@ -1014,6 +1019,19 @@ export function RocketsPanel(p: Props) {
         />
       </Sheet>
 
+      <Sheet open={logOpen} title="Add a log" onClose={() => setLogOpen(false)} wide>
+        {logOpen && p.onAddLog && (
+          <LogForm
+            today={p.today}
+            projects={p.projects ?? []}
+            onCancel={() => setLogOpen(false)}
+            onSave={async (x) => {
+              await p.onAddLog!(x);
+              setLogOpen(false);
+            }}
+          />
+        )}
+      </Sheet>
       <Sheet
         open={timedOpen}
         title={timed ? `Edit ${timed.title}` : 'Add timed launch'}
@@ -1922,5 +1940,117 @@ function NameCombo({ value, options, onType, onPick, placeholder, required = tru
         </ul>
       )}
     </div>
+  );
+}
+
+/**
+ * V20-216 (Dan, Nov 14): Add a log, from Stats › +. Work done with no launch behind it (errands for the
+ * project, a sketch on a napkin): Project, What, Description, Date, Start time, Minutes. Nothing is logged
+ * without a time. Saved as a done run with no launch: it counts in hours, never in the Done rate.
+ */
+function LogForm({
+  today,
+  projects,
+  onCancel,
+  onSave
+}: {
+  today: Date;
+  projects: { id: string; name: string; parentId: string | null; sort: number; status?: string; shortName?: string; whats?: string[] | null }[];
+  onCancel: () => void;
+  onSave: (x: { title: string; projectId: string | null; day: string; start: string; minutes: number }) => Promise<void>;
+}) {
+  const n = new Date();
+  const back = new Date(n.getTime() - 60 * 60_000);
+  const [projectId, setProjectId] = useState('');
+  const [cat, setCat] = useState('');
+  const [desc, setDesc] = useState('');
+  const [day, setDay] = useState(isoDate(today));
+  const [start, setStart] = useState(`${String(back.getHours()).padStart(2, '0')}:${String(Math.floor(back.getMinutes() / 5) * 5).padStart(2, '0')}`);
+  const [minutes, setMinutes] = useState(60);
+  const [busy, setBusy] = useState(false);
+  const proj = projects.find((x) => x.id === projectId);
+  const whats = WHATS().filter((w) => projectWhats(projectId || null, projects).includes(w.cat));
+  const ordered = projects
+    .filter((x) => x.status !== 'archived' && !x.parentId)
+    .sort((x, y) => x.sort - y.sort || x.name.localeCompare(y.name))
+    .flatMap((top) => [top, ...projects.filter((c) => c.parentId === top.id && c.status !== 'archived').sort((x, y) => x.sort - y.sort || x.name.localeCompare(y.name))]);
+  return (
+    <form
+      className="log-form"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!cat || !(minutes > 0)) return;
+        const name = proj ? (proj.shortName?.trim() || proj.name).toUpperCase() : '';
+        const title = joinTitle(cat, [name, desc.trim()].filter(Boolean).join(' - '));
+        setBusy(true);
+        await onSave({ title, projectId: projectId || null, day, start, minutes });
+        setBusy(false);
+      }}
+    >
+      <div className="time-grid">
+        <label className="field">
+          <span>Project</span>
+          <select required value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+            <option value="" disabled>
+              Pick a project
+            </option>
+            {ordered.map((x) => {
+              const parent = x.parentId ? projects.find((q) => q.id === x.parentId) : null;
+              return (
+                <option key={x.id} value={x.id}>
+                  {x.shortName?.trim() || (parent ? `${parent.name} › ${x.name}` : x.name)}
+                </option>
+              );
+            })}
+          </select>
+        </label>
+        <label className="field">
+          <span>What</span>
+          <select
+            required
+            value={cat}
+            onChange={(e) => {
+              setCat(e.target.value);
+            }}
+          >
+            <option value="" disabled>
+              Pick what kind of work
+            </option>
+            {whats.map((w) => (
+              <option key={w.cat} value={w.cat}>
+                {w.cat}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label className="field">
+        <span>Description</span>
+        <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Errands for the launch, napkin sketch of a feature" />
+      </label>
+      <div className="time-grid log-form-grid">
+        <label className="field">
+          <span>Date</span>
+          <input type="date" required value={day} max={isoDate(today)} onChange={(e) => setDay(e.target.value || isoDate(today))} />
+        </label>
+        <label className="field">
+          <span>Start time</span>
+          <input type="time" required value={start} onChange={(e) => setStart(e.target.value || start)} />
+        </label>
+        <label className="field">
+          <span>Minutes</span>
+          <input type="number" required min={1} max={720} value={minutes} onChange={(e) => setMinutes(Math.min(720, Math.max(1, Number(e.target.value) || 1)))} />
+        </label>
+      </div>
+      <p className="field-hint">Work done with no launch. Counts in your hours and Productivity (if the project logs it), not in Launches done.</p>
+      <div className="sheet-actions">
+        <button type="button" className="btn btn-quiet" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="submit" className="btn" disabled={busy || !cat}>
+          Log
+        </button>
+      </div>
+    </form>
   );
 }

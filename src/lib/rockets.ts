@@ -677,12 +677,13 @@ export interface LaunchLog {
 }
 
 /** timed = ▶ / rocket to ✓ (pauses out) · entered = at the Log the time? prompt · none = Don't log ·
- *  allotted = checked off without starting the old way (the time allotted). */
-export type TimeSource = 'timed' | 'entered' | 'none' | 'allotted';
+ *  allotted = checked off without starting the old way (the time allotted).
+ *  manual = V20-216: a log added by hand in Stats (no launch; launchId is ''). */
+export type TimeSource = 'timed' | 'entered' | 'none' | 'allotted' | 'manual';
 
 type LogRow = {
   id: string;
-  launch_id: string;
+  launch_id: string | null;
   day: string;
   title: string;
   planned: number;
@@ -705,8 +706,8 @@ export const launchLogStore = makeStore<LaunchLog, LogRow>({
   orderBy: 'day',
   script: 'supabase/migrations/0016_launch_once_time_and_log.sql',
   seed: () => [],
-  toRow: (g) => ({ id: g.id, launch_id: g.launchId, day: g.day, title: g.title, planned: g.planned, extra: g.extra, outcome: g.outcome, launched_at: g.launchedAt, finished_at: g.finishedAt, sort: g.sort, logged_min: g.loggedMin ?? null, time_source: g.timeSource ?? null, project_id: g.projectId ?? null, paused_min: g.pausedMin ?? 0, paused_at: g.pausedAt ?? null, routine_day: g.routineDay ?? null }),
-  fromRow: (r) => ({ id: r.id, launchId: r.launch_id, day: r.day, title: r.title, planned: r.planned, extra: r.extra, outcome: r.outcome, launchedAt: r.launched_at, finishedAt: r.finished_at, sort: r.sort, loggedMin: r.logged_min ?? null, timeSource: r.time_source ?? null, projectId: r.project_id ?? null, pausedMin: Number(r.paused_min ?? 0), pausedAt: r.paused_at ?? null, routineDay: r.routine_day ?? null })
+  toRow: (g) => ({ id: g.id, launch_id: g.launchId || null, day: g.day, title: g.title, planned: g.planned, extra: g.extra, outcome: g.outcome, launched_at: g.launchedAt, finished_at: g.finishedAt, sort: g.sort, logged_min: g.loggedMin ?? null, time_source: g.timeSource ?? null, project_id: g.projectId ?? null, paused_min: g.pausedMin ?? 0, paused_at: g.pausedAt ?? null, routine_day: g.routineDay ?? null }),
+  fromRow: (r) => ({ id: r.id, launchId: r.launch_id ?? '', day: r.day, title: r.title, planned: r.planned, extra: r.extra, outcome: r.outcome, launchedAt: r.launched_at, finishedAt: r.finished_at, sort: r.sort, loggedMin: r.logged_min ?? null, timeSource: r.time_source ?? null, projectId: r.project_id ?? null, pausedMin: Number(r.paused_min ?? 0), pausedAt: r.paused_at ?? null, routineDay: r.routine_day ?? null })
 });
 
 /** Today's log row for a launch, made if missing. */

@@ -39,8 +39,8 @@ const ms = (s: string | null | undefined) => (s ? new Date(s).getTime() : NaN);
 export function hourRuns(log: LaunchLog[], projects: Project[], from: string, to: string): StatRun[] {
   const start = from < DAY27 ? DAY27 : from;
   const done = log.filter((g) => g.outcome === 'done' && dayOf(g) >= start && dayOf(g) <= to && (g.loggedMin ?? 0) > 0 && g.timeSource !== 'none');
-  // Overlap: only runs that really ran on the clock have a start and an end.
-  const timed = done.filter((g) => g.timeSource === 'timed' && g.launchedAt && g.finishedAt);
+  // Overlap: only runs that really ran on the clock (or a hand log with its start time) have a start and an end.
+  const timed = done.filter((g) => (g.timeSource === 'timed' || g.timeSource === 'manual') && g.launchedAt && g.finishedAt);
   const cut = new Map<string, number>();
   for (const a of timed) {
     const a0 = ms(a.launchedAt), a1 = ms(a.finishedAt);
@@ -67,7 +67,7 @@ export function hourRuns(log: LaunchLog[], projects: Project[], from: string, to
       productive: p ? logsProductivity(projects, p) : true,
       minutes,
       overlapMin,
-      startHour: g.timeSource === 'timed' && t ? t.getHours() : null,
+      startHour: (g.timeSource === 'timed' || g.timeSource === 'manual') && t ? t.getHours() : null,
       long: (g.loggedMin ?? 0) > 240
     };
   });
@@ -98,6 +98,8 @@ export function doneRates(launches: Launch[], log: LaunchLog[], today: Date, fro
   };
   for (const g of log) {
     if (g.day < from || g.day > to) continue;
+    // V20-216: a hand log had no launch, so it says nothing about launches getting done.
+    if (g.timeSource === 'manual' || !g.launchId) continue;
     if (g.outcome === 'done') add(g.title, 'done');
     else if (g.outcome === 'skipped') add(g.title, 'skipped');
   }
@@ -120,5 +122,6 @@ export const SOURCE_LABEL: Record<string, string> = {
   timed: '▶ to ✓, pauses out',
   entered: 'Log the time?',
   allotted: 'Time allotted (before Nov 14)',
-  none: "Don't log (before Nov 14)"
+  none: "Don't log (before Nov 14)",
+  manual: 'Logged by hand (Stats › +)'
 };

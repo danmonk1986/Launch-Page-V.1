@@ -1422,6 +1422,39 @@ export default function App() {
     setStatus(how === 'done' ? `${l.title} (${day}): marked done, no time logged.` : `${l.title} (${day}): cleared, it won't count either way.`);
   }
 
+  /** V20-216 (Dan, Nov 14): Stats › + adds a log by hand: work done with no launch (errands, a napkin sketch).
+   *  It's a done run with no launch (time source 'manual'): counts in hours, project, What and Productivity,
+   *  never in the Done rate. */
+  async function addManualLog(x: { title: string; projectId: string | null; day: string; start: string; minutes: number }) {
+    const minutes = Math.max(1, Math.round(x.minutes));
+    const t0 = new Date(`${x.day}T${x.start}:00`);
+    const item: LaunchLog = {
+      id: crypto.randomUUID(),
+      launchId: '',
+      day: x.day,
+      title: x.title,
+      planned: minutes,
+      extra: 0,
+      outcome: 'done',
+      launchedAt: t0.toISOString(),
+      finishedAt: new Date(t0.getTime() + minutes * 60_000).toISOString(),
+      sort: 0,
+      loggedMin: minutes,
+      timeSource: 'manual',
+      projectId: x.projectId,
+      routineDay: x.day,
+      pausedMin: 0,
+      pausedAt: null
+    };
+    const next = [...logRef.current, item];
+    logRef.current = next;
+    setLaunchLog(next);
+    await launchLogStore.save(userId, item, next);
+    const stand = { id: '', title: x.title, minutes, urls: [], projectId: x.projectId, logKind: 'productivity', repeat: 'once' } as unknown as Launch;
+    const logged = await logFromLaunch(stand, { minutes, day: x.day, id: item.id });
+    setStatus(`${x.title}: ${minutes} min logged${logged ? `, ${logged}` : ''}.`);
+  }
+
   /** V20-060 (Nov 11): undo a run from History. The log entry goes, so the run is back in Active
    * (today), Tomorrow, or Missed (a past day). Tasks it completed stay done. */
   function undoRun(id: string) {
@@ -1753,6 +1786,7 @@ export default function App() {
                   onPause={togglePause}
                   log={launchLog}
                   onSettleMissed={settleMissed}
+                  onAddLog={addManualLog}
                   onUndoRun={undoRun}
                   offDays={d26Days.filter((d) => d.off).map((d) => d.day)}
                   baseline={d26Days
