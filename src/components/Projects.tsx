@@ -141,11 +141,14 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
             {/* V20-193 (Dan, Nov 14): "Active" sits beside the + on the top section's line, over the switches. */}
             <span className="project-head-right">
               {i === 0 && <span className="project-col-label">Active</span>}
-              <span className="project-plus-slot">
-                <button type="button" className="icon-btn tool-btn project-plus" aria-label={`Add a ${k.label.toLowerCase()} project`} title="Add project" onClick={() => startNew(k.id)}>
-                  +
-                </button>
-              </span>
+              {/* V20-206 (Dan, Nov 14): one + at the top; a new project starts as Business (Type can change it). */}
+              {i === 0 && (
+                <span className="project-plus-slot">
+                  <button type="button" className="icon-btn tool-btn project-plus" aria-label="Add a project" title="Add project" onClick={() => startNew('business')}>
+                    +
+                  </button>
+                </span>
+              )}
             </span>
           </div>
           <div className="project-list">
