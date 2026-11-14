@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
 import { settingsPatch, BG_NAME, DEFAULT_MODULES, MODULE_SOON, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, TRASH_ICON, useClickOff } from './Sheet';
@@ -19,7 +19,7 @@ export const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
 ];
 
 /** One thing you can do in Data Management (export, import, disconnect). */
-export type DataAction = { label: string; hint: string; button: string; onClick: () => void };
+export type DataAction = { label: string; hint: string; button: string; onClick: () => void; /** V20-198: section heading (Export, Import, Connections). */ group?: string };
 
 type Props = {
   open: boolean;
@@ -457,8 +457,10 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
 
         {tab === 'data' && (
           <div className="settings-actions">
-            {data.map((a) => (
-              <div key={a.label} className="settings-action">
+            {data.map((a, i) => (
+              <Fragment key={a.label}>
+              {a.group && a.group !== data[i - 1]?.group && <h3 className={`timed-title settings-section${i ? ' settings-section-gap' : ''}`}>{a.group}</h3>}
+              <div className="settings-action">
                 <div>
                   <p className="settings-action-title">{a.label}</p>
                   <p className="field-hint">{a.hint}</p>
@@ -467,6 +469,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                   {a.button}
                 </button>
               </div>
+              </Fragment>
             ))}
           </div>
         )}

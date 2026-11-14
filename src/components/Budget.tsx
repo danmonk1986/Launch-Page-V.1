@@ -1,4 +1,3 @@
-import { isoDate } from '../lib/rockets';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from './Sheet';
 import { Icon, SearchToggle, TaskSheet, ViewToggle } from './Tasks';
@@ -17,10 +16,8 @@ import {
   BUDGET_SECTIONS,
   GROUP_BY,
   groupKey,
-  download,
   newBudgetLine,
   linesFromFile,
-  linesToCsv,
   money,
   monthlyByCategory,
   sumLines,
@@ -132,19 +129,12 @@ export function BudgetPage(p: Props) {
   const [incoming, setIncoming] = useState<{ name: string; lines: BudgetLine[] } | null>(null);
   const [importError, setImportError] = useState('');
   const file = useRef<HTMLInputElement>(null);
-  // V20-189 (Dan, Nov 14): Budget's import / export live in Settings › Data Management now; they reach here by event.
+  // V20-189 / V20-198: Budget's import lives in Settings › Data Management; it reaches here by event.
   useEffect(() => {
     const imp = () => file.current?.click();
-    const exp = () => {
-      if (p.lines.length) download(`launchpage-budget-${isoDate(new Date())}.csv`, linesToCsv(p.lines), 'text/csv');
-    };
     window.addEventListener('budget:import', imp);
-    window.addEventListener('budget:export', exp);
-    return () => {
-      window.removeEventListener('budget:import', imp);
-      window.removeEventListener('budget:export', exp);
-    };
-  }, [p.lines]);
+    return () => window.removeEventListener('budget:import', imp);
+  }, []);
   const [linkPlan, setLinkPlan] = useState<LinkPlan | null>(null);
   const [linking, setLinking] = useState(false);
   const [adding, setAdding] = useState(false);

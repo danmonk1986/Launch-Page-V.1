@@ -4,12 +4,13 @@ import type { Session } from '@supabase/supabase-js';
 import { checkPassword, supabase } from './lib/supabase';
 import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettingsPatch, applySettingsPatch, shownName, syncLinkedEmail, loadBgImages, saveBgImage, resolveBackground, EMPTY_SLOTS, type BgSlots, type BrandSettings } from './lib/settings';
 import { downloadLaunchSheet } from './lib/launchSheet';
+import { downloadRecords } from './lib/recordsSheet';
 import { loadCached } from './lib/gcalCache';
 import { Header, type PageId } from './components/Header';
 import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
-import { budgetStore, newBudgetLine, type BudgetLine } from './lib/budget';
+import { budgetStore, download as downloadText, linesToCsv, newBudgetLine, type BudgetLine } from './lib/budget';
 import { rateToCad, toCad } from './lib/currency';
 import { expenseFromLine, expenseStore, type Expense } from './lib/expenses';
 import { billName, fromLine, moneyIn, sectionForTask, type LinkPlan } from './lib/links';
@@ -2037,7 +2038,10 @@ export default function App() {
         projects={<ProjectsManager projects={projects} calendars={knownCalendars()} onSave={projectOps.save} onDelete={deleteProject} tasks={tasks} launches={launches} runs={launchLog} />}
         onSignOut={supabase && session ? () => void signOutClean() : undefined}
         data={[
+          // V20-198 (Dan, Nov 14): Data Management lists every export and import, whatever page it's opened from.
+          // An import opens its page first, so you see where the data went. Rows for modules switched off stay hidden.
           {
+            group: 'Export',
             label: 'Export my data',
             hint: 'Downloads the Launch Sheet: one .xlsx with a tab for every card.',
             button: 'Export',
@@ -2051,7 +2055,37 @@ export default function App() {
               setStatus(`Launch Sheet exported: ${counts.length + 1} tabs, ${counts.reduce((a, c) => a + c.rows, 0)} rows.`);
             }
           },
+          ...(settings.modules.records || settings.modules.invoice
+            ? [
+                {
+                  group: 'Export',
+                  label: 'Export records',
+                  hint: 'Expenses, Draws and Invoices: one .xlsx with a tab each.',
+                  button: 'Export',
+                  onClick: () =>
+                    void downloadRecords({
+                      business: (settings.account.businessName || '').trim().toUpperCase(),
+                      expenses, draws, invoices, customers,
+                      colors: { purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' }
+                    })
+                }
+              ]
+            : []),
+          ...(settings.modules.budget
+            ? [
+                {
+                  group: 'Export',
+                  label: 'Export budget (CSV)',
+                  hint: 'The budget only. Opens in Google Sheets and imports back in.',
+                  button: 'Export',
+                  onClick: () => {
+                    if (budget.length) downloadText(`launchpage-budget-${isoDate(new Date())}.csv`, linesToCsv(budget), 'text/csv');
+                  }
+                }
+              ]
+            : []),
           {
+            group: 'Import',
             label: 'Import tasks',
             hint: 'Adds tasks from a Launch Sheet export or a tasks CSV. Rows already in your list are skipped.',
             button: 'Import',
@@ -2060,20 +2094,51 @@ export default function App() {
               importInput.current?.click();
             }
           },
-          // V20-189 (Dan, Nov 14): Budget's import / export, here instead of on the Budget card.
-          ...(page === 'budget'
+          ...(settings.modules.budget
             ? [
-                { label: 'Import budget', hint: 'The BUDGET tab of the Launch Sheet (CSV) or a JSON file.', button: 'Import', onClick: () => { setSettingsOpen(false); window.dispatchEvent(new Event('budget:import')); } },
-                { label: 'Export budget (CSV)', hint: 'Opens in Google Sheets and imports back in here.', button: 'Export', onClick: () => window.dispatchEvent(new Event('budget:export')) }
+                {
+                  group: 'Import',
+                  label: 'Import budget',
+                  hint: 'The BUDGET tab of the Launch Sheet (CSV) or a JSON file. Opens Budget first.',
+                  button: 'Import',
+                  onClick: () => {
+                    setSettingsOpen(false);
+                    setPage('budget');
+                    setTimeout(() => window.dispatchEvent(new Event('budget:import')), 250);
+                  }
+                }
               ]
             : []),
-          // KNOWLEDGE!B4SE: its import lives here so the page itself stays clean.
-          ...(page === 'kb'
-            ? [{ label: 'Import knowledge base', hint: 'Adds courses and decks to KNOWLEDGE!B4SE.', button: 'Import', onClick: () => { setSettingsOpen(false); window.dispatchEvent(new Event('kb:import')); } }]
+          ...(settings.modules.records
+            ? [
+                {
+                  group: 'Import',
+                  label: 'Import bank statements',
+                  hint: 'Bank CSVs into Expenses and Draws. Opens Records first.',
+                  button: 'Import',
+                  onClick: () => {
+                    setSettingsOpen(false);
+                    setPage('invoices');
+                    setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
+                  }
+                }
+              ]
             : []),
+          {
+            group: 'Import',
+            label: 'Import knowledge base',
+            hint: 'Adds courses and decks to KNOWLEDGE!B4SE (kb-index.json). Opens it first.',
+            button: 'Import',
+            onClick: () => {
+              setSettingsOpen(false);
+              setPage('kb');
+              setTimeout(() => window.dispatchEvent(new Event('kb:import')), 250);
+            }
+          },
           ...(googleConfigured() && wasConnected()
             ? [
                 {
+                  group: 'Connections',
                   label: 'Disconnect Google Calendar',
                   hint: 'Stops showing your Google calendars on This Week. Your Launch Page events stay.',
                   button: 'Disconnect',

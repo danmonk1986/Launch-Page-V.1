@@ -60,6 +60,12 @@ export function RecordsPage(
   const [month, setMonth] = useState(thisMonth);
   const [q, setQ] = useState('');
   const [importing, setImporting] = useState(false);
+  // V20-198: ⚙ › Data Management › Import bank statements opens Records, then this.
+  useEffect(() => {
+    const open = () => setImporting(true);
+    window.addEventListener('records:import', open);
+    return () => window.removeEventListener('records:import', open);
+  }, []);
   const fyEnd = p.profile?.fyEnd ?? '09-30';
   const [fy, setFy] = useState(() => thisFy(fyEnd));
   const [addTick, setAddTick] = useState(0);
