@@ -201,6 +201,14 @@ export default function App() {
   }, [authReady, session]);
   const importInput = useRef<HTMLInputElement>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  // V20-175 (Dan, Nov 13): a project switched off (archived) takes its tasks off the Tasks card and page; they stay
+  // in the data and come back when it's switched on. An area switched off hides its projects' tasks too.
+  const archivedIds = useMemo(() => {
+    const off = new Set(projects.filter((p) => p.status === 'archived').map((p) => p.id));
+    for (const p of projects) if (p.parentId && off.has(p.parentId)) off.add(p.id);
+    return off;
+  }, [projects]);
+  const shownTasks = useMemo(() => (archivedIds.size ? tasks.filter((t) => !t.projectId || !archivedIds.has(t.projectId)) : tasks), [tasks, archivedIds]);
   // eslint-disable-next-line react-hooks/refs
   tasksRef.current = tasks;
   const [calVersion, setCalVersion] = useState(0);
@@ -1670,7 +1678,7 @@ export default function App() {
                 <TasksPanel
                   addPreset={taskPreset}
                   onAddPresetUsed={() => setTaskPreset(null)}
-                  tasks={tasks}
+                  tasks={shownTasks}
                   onPushToBudget={pushToBudget}
                   projects={projects}
                   today={now}
@@ -1701,7 +1709,7 @@ export default function App() {
             />
           ) : page === 'tasks' ? (
             <TasksPage
-              tasks={tasks}
+              tasks={shownTasks}
                   onPushToBudget={pushToBudget}
               projects={projects}
               today={now}
