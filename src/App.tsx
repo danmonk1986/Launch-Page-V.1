@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
 import type { Session } from '@supabase/supabase-js';
 import { checkPassword, supabase } from './lib/supabase';
-import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettings, shownName, syncLinkedEmail, loadBgImages, saveBgImage, resolveBackground, EMPTY_SLOTS, type BgSlots, type BrandSettings } from './lib/settings';
+import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettingsPatch, applySettingsPatch, shownName, syncLinkedEmail, loadBgImages, saveBgImage, resolveBackground, EMPTY_SLOTS, type BgSlots, type BrandSettings } from './lib/settings';
 import { downloadLaunchSheet } from './lib/launchSheet';
 import { loadCached } from './lib/gcalCache';
 import { Header, type PageId } from './components/Header';
@@ -115,6 +115,8 @@ export default function App() {
   const [authReady, setAuthReady] = useState(!supabase);
   const [settings, setSettings] = useState<BrandSettings>(DEFAULT_SETTINGS);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
   const [settingsOpen, setSettingsOpen] = useState<false | SettingsTab>(false);
   // V20-129: your own background images, one per tile slot.
   const [bgSlots, setBgSlots] = useState<BgSlots>(EMPTY_SLOTS);
@@ -1471,9 +1473,13 @@ export default function App() {
     setStatus(gone ? `${gone.name} deleted.` : 'Deleted.');
   }
 
-  async function handleSave(next: BrandSettings) {
+  // V20-172: Settings sends only what changed; it's applied onto the latest copy and only those columns are written.
+  async function handleSave(patch: Partial<BrandSettings>) {
+    const prev = settingsRef.current;
+    const next = applySettingsPatch(prev, patch);
+    settingsRef.current = next;
     setSettings(next);
-    const { synced } = await saveSettings(userId, next);
+    const { synced } = await saveSettingsPatch(userId, prev, next, patch);
     const linkErr = await syncLinkedEmail(userId, next.account);
     setStatus(linkErr ?? (synced ? 'Settings saved and synced.' : 'Settings saved on this device.'));
   }
@@ -1944,7 +1950,7 @@ export default function App() {
         tab={settingsOpen || 'account'}
         onTab={setSettingsOpen}
         email={session?.user.email ?? null}
-        projects={<ProjectsManager projects={projects} calendars={knownCalendars()} onSave={projectOps.save} onDelete={deleteProject} />}
+        projects={<ProjectsManager projects={projects} calendars={knownCalendars()} onSave={projectOps.save} onDelete={deleteProject} tasks={tasks} launches={launches} runs={launchLog} />}
         onSignOut={supabase && session ? () => void signOutClean() : undefined}
         data={[
           {

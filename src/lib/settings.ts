@@ -342,6 +342,63 @@ export async function saveSettings(
   return { synced: !error };
 }
 
+/** V20-172 (Nov 13): what changed between two copies, one level deep for grouped settings (account, modules,
+ *  surfaces), so a save only carries the fields someone actually changed. */
+export function settingsPatch(before: BrandSettings, after: BrandSettings): Partial<BrandSettings> {
+  const out: Record<string, unknown> = {};
+  const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+  for (const k of Object.keys(after) as (keyof BrandSettings)[]) {
+    const a = before[k] as unknown, b = after[k] as unknown;
+    if (JSON.stringify(a) === JSON.stringify(b)) continue;
+    if (isObj(a) && isObj(b)) {
+      const sub: Record<string, unknown> = {};
+      for (const sk of Object.keys(b)) if (JSON.stringify(a[sk]) !== JSON.stringify(b[sk])) sub[sk] = b[sk];
+      out[k] = sub;
+    } else out[k] = b;
+  }
+  return out as Partial<BrandSettings>;
+}
+/** Applies a patch from settingsPatch: grouped settings merge, everything else replaces. */
+export function applySettingsPatch(s: BrandSettings, patch: Partial<BrandSettings>): BrandSettings {
+  const next = { ...s } as Record<string, unknown>;
+  for (const [k, v] of Object.entries(patch)) {
+    const cur = next[k];
+    next[k] = cur && typeof cur === 'object' && !Array.isArray(cur) && v && typeof v === 'object' && !Array.isArray(v) ? { ...(cur as object), ...(v as object) } : v;
+  }
+  return next as unknown as BrandSettings;
+}
+
+/**
+ * V20-172 (Dan, Nov 13): Account Information and the module switches were wiped by a save from a device whose
+ * Settings form still held an old copy (every save wrote every column). Now a save writes only the columns that
+ * changed, and grouped columns (account, modules, surfaces) are merged into what the cloud holds, field by field,
+ * so a stale device can't put back old values it never touched.
+ */
+export async function saveSettingsPatch(userId: string | null, prev: BrandSettings, full: BrandSettings, patch: Partial<BrandSettings>): Promise<{ synced: boolean }> {
+  writeLocal(full);
+  if (!supabase || !userId) return { synced: false };
+  const all = toRow(full) as Record<string, unknown>;
+  const was = toRow(prev) as Record<string, unknown>;
+  const cols = Object.keys(all).filter((c) => JSON.stringify(all[c]) !== JSON.stringify(was[c]));
+  if (!cols.length) return { synced: true };
+  const grouped: Record<string, keyof BrandSettings> = { account: 'account', modules: 'modules', surfaces: 'surfaces' };
+  const write: Record<string, unknown> = {};
+  const needCloud = cols.filter((c) => grouped[c]);
+  let cloud: Record<string, unknown> | null = null;
+  if (needCloud.length) {
+    const { data } = await supabase.from('settings').select(needCloud.join(',')).eq('user_id', userId).maybeSingle();
+    cloud = (data as Record<string, unknown> | null) ?? null;
+  }
+  for (const c of cols) {
+    const key = grouped[c];
+    if (key && cloud && cloud[c] && typeof cloud[c] === 'object') write[c] = { ...(cloud[c] as object), ...((patch[key] as object) ?? {}) };
+    else write[c] = all[c];
+  }
+  if (!Object.keys(write).length) return { synced: true };
+  const { error } = await supabase.from('settings').upsert({ user_id: userId, ...write });
+  return { synced: !error };
+}
+
 /**
  * V20-118: keep the account's linked email (public.account_emails) in step with Account Information.
  * Ticked with a backup email = that email signs in to this account; unticked = no linked email.

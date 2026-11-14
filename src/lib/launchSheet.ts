@@ -46,7 +46,8 @@ const rep = (raw: string | null | undefined) => {
 const when = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '');
 
 export function launchSheet(d: ExportData): { blob: Blob; name: string; counts: { tab: string; rows: number }[] } {
-  const brand = d.settings.logoUrl ? d.settings.logoText || 'L4UNCH!P4GE' : 'L4UNCH!P4GE';
+  // V20-173 (Dan, Nov 13): the sheet is named for the business name first, then the alias / name, in capitals.
+  const brand = (d.settings.account.businessName.trim() || shownName(d.settings).trim() || 'L4UNCH!P4GE').toUpperCase();
   const exported = new Date();
   const top = (card: string): SheetSpec['top'] => [
     { text: `${brand} · ${card}`, style: 'title' },

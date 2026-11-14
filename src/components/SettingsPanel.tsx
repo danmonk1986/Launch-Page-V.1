@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
-import { BG_NAME, DEFAULT_MODULES, MODULE_SOON, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
+import { settingsPatch, BG_NAME, DEFAULT_MODULES, MODULE_SOON, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, TRASH_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
 import { PROJECT_FORM_ID, ProjectHeadContext, type ProjectHead } from './Projects';
@@ -27,7 +27,8 @@ type Props = {
   onTab: (t: SettingsTab) => void;
   settings: BrandSettings;
   onClose: () => void;
-  onSave: (s: BrandSettings) => Promise<void>;
+  /** V20-172: only what changed in the form since it last loaded or saved. */
+  onSave: (patch: Partial<BrandSettings>) => Promise<void>;
   /** Present only when signed in to the cloud. Returns an error message, or null on success. */
   onSetPassword?: (password: string) => Promise<string | null>;
   /** True when the password is the one this account signs in with. */
@@ -60,22 +61,30 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
   const [saveState, setSaveState] = useState<'' | 'typing' | 'saved'>('');
   const saveRef = useRef(onSave);
   saveRef.current = onSave;
+  // V20-172: the copy the form started from, so a save carries only what was changed here.
+  const base = useRef(settings);
   const flush = () => {
     window.clearTimeout(timer.current);
     timer.current = undefined;
     if (!dirty.current) return;
     dirty.current = false;
-    const d = latest.current;
-    void saveRef.current({ ...d, logoUrl: d.logoUrl?.trim() || null });
+    const d = { ...latest.current, logoUrl: latest.current.logoUrl?.trim() || null };
+    const patch = settingsPatch(base.current, d);
+    base.current = d;
+    if (Object.keys(patch).length) void saveRef.current(patch);
     setSaveState('saved');
   };
   // A newer copy from the cloud or another device replaces the form only when nothing is waiting to save.
   useEffect(() => {
-    if (!dirty.current) setDraft(settings);
+    if (!dirty.current) {
+      setDraft(settings);
+      base.current = settings;
+    }
   }, [settings]);
   useEffect(() => {
     if (open) {
       setDraft(settings);
+      base.current = settings;
       setSaveState('');
     } else flush();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,9 +155,15 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                 {askDelete ? <span className="ask-delete">Sure?</span> : <HeadIcon d={TRASH_ICON} />}
               </button>
             )}
-            <button type="button" className="icon-btn tool-btn tool-btn-go" aria-label="Save project" title="Save" onClick={() => (document.getElementById(PROJECT_FORM_ID) as HTMLFormElement | null)?.requestSubmit()}>
-              <HeadIcon d={SAVE_ICON} />
-            </button>
+            {projectHead.onEdit ? (
+              <button type="button" className="btn btn-quiet" onClick={projectHead.onEdit}>
+                Edit
+              </button>
+            ) : (
+              <button type="button" className="icon-btn tool-btn tool-btn-go" aria-label="Save project" title="Save" onClick={() => (document.getElementById(PROJECT_FORM_ID) as HTMLFormElement | null)?.requestSubmit()}>
+                <HeadIcon d={SAVE_ICON} />
+              </button>
+            )}
             <button type="button" className="icon-btn tool-btn" onClick={projectHead.onBack} aria-label="Back to projects" title="Back">
               <HeadIcon d={CLOSE_ICON} />
             </button>
