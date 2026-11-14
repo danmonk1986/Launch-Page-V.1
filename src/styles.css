@@ -3290,6 +3290,11 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .project-line .project-row { flex: 1; min-width: 0; }
 .project-line.is-off .project-row { opacity: 0.5; }
 .app .project-edit { padding: 6px 14px; min-height: 0; font-size: 12px; }
+/* V20-181: the "Active" label above the switches; a hidden Edit keeps it lined up. */
+.project-cols { margin-bottom: -4px; pointer-events: none; }
+.project-cols .project-row { padding-top: 0; padding-bottom: 0; }
+.project-col-label { width: 48px; flex: none; text-align: center; font-size: 12px; font-weight: 500; color: var(--dim); }
+.app .project-edit-ghost { visibility: hidden; }
 .project-dash { display: flex; flex-direction: column; gap: 10px; }
 .pd-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; color: var(--mist); font-size: 14px; }
 .pd-meta a { color: var(--accent-teal); }

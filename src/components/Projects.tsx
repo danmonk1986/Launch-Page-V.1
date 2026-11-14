@@ -102,7 +102,7 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
 
   // V20-174: the switch is on = in use; off = archived (out of the task and launch pickers, history kept).
   const toggle = (p: Project, on: boolean) => void onSave({ ...p, status: on ? 'active' : 'archived' });
-  const row = (p: Project, child: boolean, areaName?: string) => (
+  const row = (p: Project, child: boolean) => (
     <div key={p.id} className={`project-line ${child ? 'project-child' : 'project-area'}${p.status === 'archived' ? ' is-off' : ''}`}>
       <button type="button" className="project-row" onClick={() => setViewing(p)} title={`Open ${p.name}`}>
         <span className="project-dot" style={{ background: p.color }} aria-hidden="true" />
@@ -110,7 +110,7 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
           {p.name}
           {p.status === 'paused' && <span className="project-badge">Paused</span>}
         </span>
-        <span className="project-cal">{calName(p.calendarId) ?? (child ? `Uses ${areaName}` : '')}</span>
+        <span className="project-cal">{calName(p.calendarId) ?? ''}</span>
       </button>
       <button
         type="button"
@@ -128,6 +128,15 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
     </div>
   );
 
+  // V20-181 (Dan, Nov 14): "Active" heads the switch column.
+  const cols = (
+    <div className="project-line project-cols" aria-hidden="true">
+      <span className="project-row" />
+      <span className="project-col-label">Active</span>
+      <span className="btn btn-quiet project-edit project-edit-ghost">Edit</span>
+    </div>
+  );
+
   return (
     <div className="projects-manager">
       {sections.map((k, i) => (
@@ -139,12 +148,13 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
             </button>
           </div>
           <div className="project-list">
+            {cols}
             {tree
               .filter(({ area }) => kindOf(projects, area) === k.id)
               .map(({ area, children }) => (
                 <div key={area.id} className="project-group">
                   {row(area, false)}
-                  {children.map((c) => row(c, true, area.name))}
+                  {children.map((c) => row(c, true))}
                 </div>
               ))}
           </div>
@@ -156,7 +166,7 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
           <div className="settings-section-head settings-section-gap">
             <h3 className="timed-title settings-section">Archived</h3>
           </div>
-          <div className="project-list">{archived.map((p) => row(p, !!p.parentId, projects.find((x) => x.id === p.parentId)?.name))}</div>
+          <div className="project-list">{cols}{archived.map((p) => row(p, !!p.parentId))}</div>
         </div>
       )}
       {!calendars.length && <p className="field-hint">Connect Google Calendar on the Launch Page to link projects to your calendars.</p>}
