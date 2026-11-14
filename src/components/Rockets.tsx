@@ -1255,7 +1255,11 @@ export function splitTitle(t: string) {
   const m = / (-|·|–|—) /.exec(t);
   return !m ? { cat: t.trim(), desc: '' } : { cat: t.slice(0, m.index).trim(), desc: t.slice(m.index + m[0].length).trim() };
 }
-export const joinTitle = (c: string, x: string) => (x.trim() ? `${c.trim()} - ${x.trim()}` : c.trim());
+// V20-180: a description left as just the project's "NAME -" saves without the dangling dash.
+export const joinTitle = (c: string, x: string) => {
+  const t = x.trim().replace(/\s*[-·–—]$/, '').trim();
+  return t ? `${c.trim()} - ${t}` : c.trim();
+};
 /** The day after the latest date already picked, for + Add another date. */
 function nextFree(l: Launch) {
   const all = [l.onDate, ...(l.moreDates ?? [])].filter((x): x is string => !!x).sort();
@@ -1413,7 +1417,25 @@ function TimedForm({
         <label className="field">
           <span>Project</span>
           {/* V20-094 (Dan, Nov 12): every timed launch needs a project (data tracking). */}
-          <select required value={d.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || null)}>
+          <select
+            required
+            value={d.projectId ?? ''}
+            onChange={(e) => {
+              const id = e.target.value || null;
+              set('projectId', id);
+              // V20-180 (Nov 13): the project's name starts the description ("L4UNCH P4GE - "), and you add the rest.
+              // Changing project swaps the old project's name; a description that doesn't start with one is left alone.
+              const pre = (pid: string | null | undefined) => {
+                const pr = projects.find((x) => x.id === pid);
+                return pr ? `${pr.name.toUpperCase()} - ` : '';
+              };
+              const old = pre(d.projectId);
+              const next = pre(id);
+              const cur = desc.trim();
+              if (!cur) setWhat(cat, next);
+              else if (old && (desc.startsWith(old) || cur === old.trim())) setWhat(cat, next + desc.slice(old.length).replace(/^\s+/, ''));
+            }}
+          >
             <option value="" disabled>
               Pick a project
             </option>
