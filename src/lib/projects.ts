@@ -19,6 +19,8 @@ export interface Project {
   /** V20-181 (Dan, Nov 14): does its time count as productivity (hours + 26 Days blocks)? null = by type
    *  (Business on, Personal off); a project under an area follows its area unless set itself. */
   logProductivity?: boolean | null;
+  /** V20-210: the Whats this project uses (null = all). */
+  whats?: string[] | null;
 }
 export type ProjectKind = 'personal' | 'business';
 export type ProjectStatus = 'active' | 'paused' | 'archived';
@@ -36,6 +38,7 @@ type Row = {
   status?: string | null;
   link?: string | null;
   log_productivity?: boolean | null;
+  whats?: string[] | null;
 };
 
 /** Dan's areas, from his Google calendars and the Launch Sheet, in pastel neons. */
@@ -71,7 +74,8 @@ export const projectStore = makeStore<Project, Row>({
   toRow: (p) => ({
     id: p.id, name: p.name, color: p.color, parent_id: p.parentId, calendar_id: p.calendarId, sort: p.sort,
     kind: p.kind ?? 'personal', description: p.description ?? '', short_name: p.shortName ?? '', status: p.status ?? 'active', link: p.link ?? '',
-    log_productivity: p.logProductivity ?? null
+    log_productivity: p.logProductivity ?? null,
+    whats: p.whats ?? null
   }),
   fromRow: (r) => ({
     id: r.id, name: r.name, color: r.color, parentId: r.parent_id, calendarId: r.calendar_id, sort: r.sort,
@@ -80,7 +84,8 @@ export const projectStore = makeStore<Project, Row>({
     shortName: r.short_name ?? '',
     status: r.status === 'paused' || r.status === 'archived' ? r.status : 'active',
     link: r.link ?? '',
-    logProductivity: typeof r.log_productivity === 'boolean' ? r.log_productivity : null
+    logProductivity: typeof r.log_productivity === 'boolean' ? r.log_productivity : null,
+    whats: Array.isArray(r.whats) ? r.whats : null
   })
 });
 

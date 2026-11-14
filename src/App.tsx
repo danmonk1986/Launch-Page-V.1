@@ -5,6 +5,7 @@ import { checkPassword, supabase } from './lib/supabase';
 import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettingsPatch, applySettingsPatch, shownName, syncLinkedEmail, loadBgImages, saveBgImage, resolveBackground, EMPTY_SLOTS, type BgSlots, type BrandSettings } from './lib/settings';
 import { downloadLaunchSheet } from './lib/launchSheet';
 import { downloadRecords } from './lib/recordsSheet';
+import { setWhatList, whatList } from './lib/whats';
 import { launchFromTask, taskFromLaunch } from './lib/linkSync';
 import { loadCached } from './lib/gcalCache';
 import { Header, type PageId } from './components/Header';
@@ -191,6 +192,8 @@ export default function App() {
   const tasksRef = useRef<Task[]>([]);
   const [gcalOff, setGcalOff] = useState(0);
   const [focusTask, setFocusTask] = useState<string | null>(null);
+  // V20-210: a task to open for editing on the Tasks page (from a project's What list).
+  const [editTask, setEditTask] = useState<string | null>(null);
   // V20-083: a new calendar event with Add a task too opens Add task filled in.
   const [taskPreset, setTaskPreset] = useState<{ fill: Partial<Task>; n: number } | null>(null);
   // V20-126 (Dan, Nov 12): card by card is the only way the page scrolls (the Free / Card by card setting is gone).
@@ -1575,6 +1578,12 @@ export default function App() {
     setStatus(linkErr ?? (synced ? 'Settings saved and synced.' : 'Settings saved on this device.'));
   }
 
+  // V20-210: the shared What list for every form this render.
+  setWhatList(settings.whats);
+  /** V20-210: add a What to the shared list (name in capitals, default time 60), or rename / retime / remove one. */
+  async function saveWhats(next: { name: string; minutes: number }[]) {
+    await handleSave({ whats: next });
+  }
   const light = LIGHT_BACKGROUNDS.includes(settings.background);
   // Night mode (dark backgrounds) and day mode (light backgrounds) each have their own four colours.
   // V20-048 (Dan, Nov 11): day mode uses its colours exactly as picked (no deepening), so the same
@@ -1813,6 +1822,8 @@ export default function App() {
                 setPage('launch');
               }}
               focusId={focusTask}
+              editId={editTask}
+              onEditOpened={() => setEditTask(null)}
               expenses={expenses}
             />
           ) : page === 'journal' ? (
@@ -2085,7 +2096,30 @@ export default function App() {
         tab={settingsOpen || 'account'}
         onTab={setSettingsOpen}
         email={session?.user.email ?? null}
-        projects={<ProjectsManager projects={projects} calendars={knownCalendars()} onSave={projectOps.save} onDelete={deleteProject} tasks={tasks} launches={launches} runs={launchLog} />}
+        projects={
+          <ProjectsManager
+            projects={projects}
+            calendars={knownCalendars()}
+            onSave={projectOps.save}
+            onDelete={deleteProject}
+            tasks={tasks}
+            launches={launches}
+            runs={launchLog}
+            whats={whatList()}
+            onSaveWhats={saveWhats}
+            onEditLaunch={(l) => {
+              setSettingsOpen(false);
+              setPage('launch');
+              setEditLaunch(l);
+            }}
+            onEditTask={(t) => {
+              setSettingsOpen(false);
+              setFocusTask(t.id);
+              setEditTask(t.id);
+              setPage('tasks');
+            }}
+          />
+        }
         onSignOut={supabase && session ? () => void signOutClean() : undefined}
         data={[
           // V20-198 (Dan, Nov 14): Data Management lists every export and import, whatever page it's opened from.

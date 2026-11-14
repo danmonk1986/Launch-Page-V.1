@@ -1,3 +1,4 @@
+import { projectWhats, whatList } from '../lib/whats';
 import { StatsPanel } from './Stats';
 import type { Project } from '../lib/projects';
 import { Fragment, useContext, useEffect, useLayoutEffect, useState, useId, useRef } from 'react';
@@ -1186,23 +1187,13 @@ function TileForm({
 /** The starting list for a timed launch's What; anything typed there joins it once saved. */
 // V20-072 (Dan, Nov 12): What is a fixed list, each with its default time allotted, so the data stays clean.
 // Later (beta Settings): add, remove and retime these there; these six are the defaults.
-export const WHAT_DEFAULTS: { cat: string; minutes: number }[] = [
-  { cat: 'WORK BLOCK', minutes: 90 },
-  { cat: 'EXPANSION WORK', minutes: 60 },
-  { cat: 'LEISURE WORK', minutes: 60 },
-  { cat: 'MEETING', minutes: 60 },
-  { cat: 'SETUP', minutes: 30 },
-  { cat: 'SHOP WORK', minutes: 90 },
-  { cat: 'BANKING', minutes: 15 },
-  { cat: 'DIGITAL ORGANIZATION', minutes: 45 },
-  { cat: 'PERSONAL', minutes: 30 },
-  { cat: 'TRAINING', minutes: 60 }
-];
+// V20-210: the list is the user's (Settings › Projects › What); WHAT_DEFAULTS reads it live.
+const WHATS = () => whatList().map((w) => ({ cat: w.name, minutes: w.minutes }));
 /** V20-078: an old category name → its What (for new launches filled in from a task, a routine step or a
  *  past run). Anything else: What is left to pick and the whole name becomes the description. */
 function whatFor(cat: string): string | null {
   const c = cat.trim().toLowerCase();
-  const exact = WHAT_DEFAULTS.find((w) => w.cat.toLowerCase() === c);
+  const exact = WHATS().find((w) => w.cat.toLowerCase() === c);
   if (exact) return exact.cat;
   if (/^work block\b/.test(c)) return 'WORK BLOCK';
   if (/^(plan exp|impo|bill pmt)$/.test(c)) return 'BANKING';
@@ -1298,7 +1289,7 @@ function TimedForm({
   const [desc, setDesc] = useState(start.desc);
   useEffect(() => {
     if (launch || !d.title.trim()) return;
-    const def = WHAT_DEFAULTS.find((w) => w.cat === start.cat);
+    const def = WHATS().find((w) => w.cat === start.cat);
     setD((x) => ({
       ...x,
       title: joinTitle(start.cat, start.desc),
@@ -1424,21 +1415,24 @@ function TimedForm({
             onChange={(e) => {
               const v = e.target.value;
               setWhat(v, desc);
-              const def = WHAT_DEFAULTS.find((w) => w.cat === v);
+              const def = WHATS().find((w) => w.cat === v);
               if (def) setD((x) => ({ ...x, minutes: def.minutes, logKind: 'productivity', logAmount: null }));
             }}
           >
             <option value="" disabled>
               Pick what kind of work
             </option>
-            {WHAT_DEFAULTS.map((w) => (
-              <option key={w.cat} value={w.cat}>
-                {w.cat}
-              </option>
-            ))}
-            {cat && !WHAT_DEFAULTS.some((w) => w.cat === cat) && (
+            {/* V20-210 (Dan, Nov 14): only the picked project's Whats. */}
+            {WHATS()
+              .filter((w) => projectWhats(d.projectId, projects as { id: string; parentId: string | null; whats?: string[] | null }[]).includes(w.cat))
+              .map((w) => (
+                <option key={w.cat} value={w.cat}>
+                  {w.cat}
+                </option>
+              ))}
+            {cat && !projectWhats(d.projectId, projects as { id: string; parentId: string | null; whats?: string[] | null }[]).includes(cat) && (
               // A launch made before the fixed list keeps its old name until you pick one of the six.
-              <option value={cat}>{cat} (old, pick a new one)</option>
+              <option value={cat}>{WHATS().some((w) => w.cat === cat) ? cat : `${cat} (old, pick a new one)`}</option>
             )}
           </select>
         </label>

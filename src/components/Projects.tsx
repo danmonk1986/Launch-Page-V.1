@@ -12,6 +12,7 @@ import type { GoogleCalendar } from '../lib/google';
 import type { Task } from '../lib/tasks';
 import type { Launch, LaunchLog } from '../lib/rockets';
 import { Icon } from './Tasks';
+import { cleanWhat, whatOfName, type WhatItem } from '../lib/whats';
 
 const PENCIL = 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4';
 
@@ -24,6 +25,11 @@ type Props = {
   tasks?: Task[];
   launches?: Launch[];
   runs?: LaunchLog[];
+  /** V20-210: the shared What list, saving it, and opening a task / launch to edit from a project. */
+  whats?: WhatItem[];
+  onSaveWhats?: (list: WhatItem[]) => Promise<void>;
+  onEditTask?: (t: Task) => void;
+  onEditLaunch?: (l: Launch) => void;
 };
 
 const KINDS: { id: ProjectKind; label: string }[] = [
@@ -42,7 +48,7 @@ const STATUSES: { id: ProjectStatus; label: string }[] = [
  * fold away at the bottom. The add / edit card: Project | Parent, Description, Type | Colour, Short name | Status,
  * Calendar | Link. (V20-111: lives in Settings › Projects; it was its own sheet from the Tasks page.)
  */
-export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks = [], launches = [], runs = [] }: Props) {
+export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks = [], launches = [], runs = [], whats = [], onSaveWhats, onEditTask, onEditLaunch }: Props) {
   const [editing, setEditing] = useState<Project | null>(null);
   // V20-174 (Dan, Nov 13): tapping a project opens its dashboard; Edit is its own button.
   const [viewing, setViewing] = useState<Project | null>(null);
@@ -83,6 +89,8 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
           isNew={isNew}
           projects={projects}
           calendars={calendars}
+          whats={whats}
+          onSaveWhats={onSaveWhats}
           onSave={async (p) => {
             await onSave(p);
             setEditing(null);
@@ -94,7 +102,21 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
 
   if (viewing) {
     const v = projects.find((p) => p.id === viewing.id);
-    if (v) return <ProjectDashboard project={v} projects={projects} tasks={tasks} launches={launches} runs={runs} calendar={calName(v.calendarId)} />;
+    if (v)
+      return (
+        <ProjectDashboard
+          project={v}
+          projects={projects}
+          tasks={tasks}
+          launches={launches}
+          runs={runs}
+          calendar={calName(v.calendarId)}
+          whats={whats}
+          onEdit={() => setEditing(v)}
+          onEditTask={onEditTask}
+          onEditLaunch={onEditLaunch}
+        />
+      );
   }
 
   const live = projects.filter((p) => p.status !== 'archived');
@@ -180,13 +202,17 @@ function ProjectForm({
   project,
   projects,
   calendars,
-  onSave
+  onSave,
+  whats = [],
+  onSaveWhats
 }: {
   project: Project;
   isNew: boolean;
   projects: Project[];
   calendars: GoogleCalendar[];
   onSave: (p: Project) => Promise<void>;
+  whats?: WhatItem[];
+  onSaveWhats?: (list: WhatItem[]) => Promise<void>;
 }) {
   const [d, setD] = useState<Project>(project);
   const set = <K extends keyof Project>(k: K, v: Project[K]) => setD((x) => ({ ...x, [k]: v }));
@@ -194,6 +220,18 @@ function ProjectForm({
   const areas = projects.filter((p) => !p.parentId && p.id !== project.id && p.status !== 'archived');
   const parent = d.parentId ? projects.find((p) => p.id === d.parentId) : null;
   const logOn = logsProductivity(projects, { ...d, kind: parent ? parent.kind ?? 'personal' : d.kind ?? 'personal' });
+  // V20-210 (Dan, Nov 14): the Whats this project uses: pills to turn on / off, a field to add one.
+  const allNames = whats.map((w) => w.name);
+  const picked = d.whats ?? parent?.whats ?? allNames;
+  const toggleWhat = (n: string) => set('whats', picked.includes(n) ? picked.filter((x) => x !== n) : allNames.filter((x) => x === n || picked.includes(x)));
+  const [adding, setAdding] = useState('');
+  const addWhat = async () => {
+    const n = cleanWhat(adding);
+    if (!n) return;
+    if (!allNames.includes(n)) await onSaveWhats?.([...whats, { name: n, minutes: 60 }]);
+    if (d.whats || parent?.whats) set('whats', [...picked.filter((x) => x !== n), n]);
+    setAdding('');
+  };
   return (
     <form
       id={PROJECT_FORM_ID}
@@ -305,6 +343,41 @@ function ProjectForm({
           <input type="url" value={d.link ?? ''} onChange={(e) => set('link', e.target.value)} placeholder="https://" />
         </label>
       </div>
+      <div className="what-section" id="project-whats">
+        <span className="field-label">What</span>
+        <div className="what-pills" role="group" aria-label="Whats this project uses">
+          {whats.map((w) => (
+            <button key={w.name} type="button" className="what-pill" aria-pressed={picked.includes(w.name)} title={`${w.minutes} min`} onClick={() => toggleWhat(w.name)}>
+              {w.name}
+            </button>
+          ))}
+        </div>
+        <div className="what-add">
+          <input
+            list="what-names"
+            value={adding}
+            placeholder="Add a What: type a new one or pick"
+            onChange={(e) => setAdding(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void addWhat();
+              }
+            }}
+          />
+          <datalist id="what-names">
+            {allNames
+              .filter((n) => !picked.includes(n))
+              .map((n) => (
+                <option key={n} value={n} />
+              ))}
+          </datalist>
+          <button type="button" className="quick-btn" aria-label="Add this What" title="Add" disabled={!adding.trim()} onClick={() => void addWhat()}>
+            +
+          </button>
+        </div>
+        <p className="field-hint">Tap a pill to turn it on or off for this project. Its timed launches pick their What from these.</p>
+      </div>
       {d.parentId && <p className="field-hint">A project under an area takes its area's type.</p>}
       {d.status === 'archived' && <p className="field-hint">Archived: it leaves the project pickers, and its tasks, launches and time stay in your history.</p>}
     </form>
@@ -315,7 +388,29 @@ function ProjectForm({
  * V20-174 (Dan, Nov 13): everything for one project. Counts its own projects too when it's an area. Hours only
  * start Nov 12, when runs began saving their project.
  */
-function ProjectDashboard({ project, projects, tasks, launches, runs, calendar }: { project: Project; projects: Project[]; tasks: Task[]; launches: Launch[]; runs: LaunchLog[]; calendar: string | null }) {
+function ProjectDashboard({
+  project,
+  projects,
+  tasks,
+  launches,
+  runs,
+  calendar,
+  whats = [],
+  onEdit,
+  onEditTask,
+  onEditLaunch
+}: {
+  project: Project;
+  projects: Project[];
+  tasks: Task[];
+  launches: Launch[];
+  runs: LaunchLog[];
+  calendar: string | null;
+  whats?: WhatItem[];
+  onEdit?: () => void;
+  onEditTask?: (t: Task) => void;
+  onEditLaunch?: (l: Launch) => void;
+}) {
   const ids = new Set([project.id, ...projects.filter((p) => p.parentId === project.id).map((p) => p.id)]);
   const mine = (id?: string | null) => !!id && ids.has(id);
   const liveTasks = tasks.filter((t) => !t.deletedAt && !t.parentId && mine(t.projectId));
@@ -328,6 +423,16 @@ function ProjectDashboard({ project, projects, tasks, launches, runs, calendar }
   const minutes = doneRuns.reduce((s, g) => s + (g.timeSource && g.timeSource !== 'none' ? g.loggedMin ?? 0 : 0), 0);
   const parent = project.parentId ? projects.find((p) => p.id === project.parentId) : null;
   const subs = projects.filter((p) => p.parentId === project.id);
+  const allNames = whats.map((w) => w.name);
+  const myWhats = (project.whats ?? parent?.whats ?? allNames).filter((n) => allNames.includes(n));
+  const [shown, setShown] = useState<string[]>(myWhats);
+  const allShown = myWhats.every((n) => shown.includes(n));
+  // Everything shows while every pill is on (tasks and launches without a matching What too).
+  const keep = (cat: string) => allShown || shown.includes(whatOfName(cat) ?? '');
+  const openShown = open.filter((t) => keep(t.task));
+  const launchesShown = myLaunches
+    .filter((l) => keep(l.title.split(/ [-·–—] /)[0]))
+    .sort((a, b) => (a.repeat === 'once' ? a.onDate ?? '' : '0000').localeCompare(b.repeat === 'once' ? b.onDate ?? '' : '0000') || a.atTime.localeCompare(b.atTime));
   const fmtDay = (d?: string | null) => (d ? new Date(d + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—');
   const card = (label: string, value: string, sub: string) => (
     <div className="pd-card">
@@ -362,11 +467,31 @@ function ProjectDashboard({ project, projects, tasks, launches, runs, calendar }
         {card('Open tasks', String(open.length), `${doneTasks.length} done`)}
         {card('Timed launches', String(myLaunches.length), 'scheduled')}
       </div>
-      <h3 className="timed-title settings-section settings-section-gap">Open tasks</h3>
-      {open.length ? (
+      {/* V20-210 (Dan, Nov 14): WHAT: the project's Whats as pills (all selected to start), then its open tasks
+          and open timed launches for the selected ones. Tap a row to edit it. */}
+      <div className="what-head settings-section-gap">
+        <h3 className="timed-title settings-section">What</h3>
+        <span className="what-head-actions">
+          <button type="button" className="quick-btn" aria-label="Edit this project's Whats" title="Edit Whats" onClick={onEdit}>
+            <Icon d={PENCIL} />
+          </button>
+          <button type="button" className="quick-btn" aria-label="Add a What" title="Add a What" onClick={onEdit}>
+            +
+          </button>
+        </span>
+      </div>
+      <div className="what-pills" role="group" aria-label="Show">
+        {myWhats.map((n) => (
+          <button key={n} type="button" className="what-pill" aria-pressed={shown.includes(n)} onClick={() => setShown(shown.includes(n) ? shown.filter((x) => x !== n) : [...shown, n])}>
+            {n}
+          </button>
+        ))}
+      </div>
+      <h4 className="what-sub">Open tasks</h4>
+      {openShown.length ? (
         <ul className="pd-list">
-          {open.map((t) => (
-            <li key={t.id}>
+          {openShown.map((t) => (
+            <li key={t.id} className="pd-row-btn" role="button" tabIndex={0} title="Edit task" onClick={() => onEditTask?.(t)} onKeyDown={(e) => e.key === 'Enter' && onEditTask?.(t)}>
               <span className="pd-name">{(t.task || t.description).toUpperCase()}</span>
               <span className="pd-dim">{t.task && t.description ? t.description : ''}</span>
               <span className="pd-when">{fmtDay(t.endDate)}</span>
@@ -374,21 +499,21 @@ function ProjectDashboard({ project, projects, tasks, launches, runs, calendar }
           ))}
         </ul>
       ) : (
-        <p className="field-hint">No open tasks.</p>
+        <p className="field-hint">No open tasks{allShown ? '' : ' for these'}.</p>
       )}
-      <h3 className="timed-title settings-section settings-section-gap">Timed launches</h3>
-      {myLaunches.length ? (
+      <h4 className="what-sub">Timed launches</h4>
+      {launchesShown.length ? (
         <ul className="pd-list">
-          {myLaunches.map((l) => (
-            <li key={l.id}>
+          {launchesShown.map((l) => (
+            <li key={l.id} className="pd-row-btn" role="button" tabIndex={0} title="Edit launch" onClick={() => onEditLaunch?.(l)} onKeyDown={(e) => e.key === 'Enter' && onEditLaunch?.(l)}>
               <span className="pd-name">{l.title}</span>
               <span className="pd-dim">{l.minutes} min</span>
-              <span className="pd-when">{l.atTime}</span>
+              <span className="pd-when">{l.repeat === 'once' && l.onDate ? `${fmtDay(l.onDate)} · ${l.atTime}` : l.atTime}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="field-hint">No timed launches for this project.</p>
+        <p className="field-hint">No timed launches{allShown ? '' : ' for these'}.</p>
       )}
       <h3 className="timed-title settings-section settings-section-gap">Recent runs</h3>
       {myRuns.length ? (

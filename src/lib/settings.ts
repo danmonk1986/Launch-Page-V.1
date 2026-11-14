@@ -1,3 +1,4 @@
+import type { WhatItem } from './whats';
 import { supabase } from './supabase';
 
 /**
@@ -60,6 +61,8 @@ export interface BrandSettings {
   surfaces: Surfaces;
   /** V20-156 (Dan, Nov 12): MODULES, which cards the Launch Page shows, and whether the routine follows the time. */
   modules: Modules;
+  /** V20-210: the shared What list (null = the ten defaults). */
+  whats: WhatItem[] | null;
 }
 
 /** V20-158 (Dan, Nov 13): modules in sections. Launch Page essentials are on by default; everything from Personal
@@ -160,7 +163,8 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   dayNeutral: '#444242',
   nightNeutral: '#f5f5dc',
   surfaces: DEFAULT_SURFACES,
-  modules: DEFAULT_MODULES
+  modules: DEFAULT_MODULES,
+  whats: null
 };
 
 /** V20-120: day mode = a light background. */
@@ -235,6 +239,7 @@ type Row = {
   surfaces?: Partial<Record<'day' | 'night', Partial<Surface>>> | null;
   modules?: Partial<Modules> | null;
   day_colour?: string | null;
+  whats?: WhatItem[] | null;
 };
 
 const toRow = (s: BrandSettings): Row => ({
@@ -262,7 +267,8 @@ const toRow = (s: BrandSettings): Row => ({
   day_neutral: s.dayNeutral,
   night_neutral: s.nightNeutral,
   surfaces: s.surfaces,
-  modules: s.modules
+  modules: s.modules,
+  whats: s.whats
 });
 
 const fromRow = (r: Row): BrandSettings => ({
@@ -295,7 +301,8 @@ const fromRow = (r: Row): BrandSettings => ({
     day: { ...DEFAULT_SURFACES.day, ...(r.surfaces?.day ?? {}) },
     night: { ...DEFAULT_SURFACES.night, ...(r.surfaces?.night ?? {}) }
   },
-  modules: { ...DEFAULT_MODULES, ...(r.modules ?? {}) }
+  modules: { ...DEFAULT_MODULES, ...(r.modules ?? {}) },
+  whats: Array.isArray(r.whats) && r.whats.length ? r.whats : null
 });
 
 /** The remembered background for each mode; the current one fills its own side when nothing is saved yet. */

@@ -788,11 +788,21 @@ export function TasksPage(
     onOpenProjects: () => void;
     onClose: () => void;
     focusId?: string | null;
+    /** V20-210: open this task's edit form on arrival (from a project's What list). */
+    editId?: string | null;
+    onEditOpened?: () => void;
     /** Month view (LP-030 step 6): Paid comes from Expenses. */
     expenses?: Expense[];
   }
 ) {
   const editor = useTaskEditor(p);
+  useEffect(() => {
+    if (!p.editId) return;
+    const t = p.tasks.find((x) => x.id === p.editId);
+    if (t) editor.edit(t);
+    p.onEditOpened?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.editId]);
   const [layout, setLayoutState] = useState<'list' | 'month'>(() => {
     try {
       return localStorage.getItem('launchpage.tasks.view') === 'month' ? 'month' : 'list';

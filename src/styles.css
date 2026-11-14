@@ -3375,3 +3375,25 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app .projects-manager .project-plus { font-size: 18px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
 .app .timed-xask .btn { min-height: 30px; height: 30px; padding: 0 10px; font-size: 12px; border-radius: 8px; }
 .app .timed-xask .logask-min input { height: 30px; }
+
+/* V20-210 (Dan, Nov 14): What pills. Selected = filled Colour 2; not selected = outlined in Neutral. Stats' range
+   and the bank import's account filter use the same pill. */
+.app .what-pill, .app .st-range-btn, .app .area-pill {
+  all: unset; box-sizing: border-box; cursor: pointer; padding: 6px 14px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--beige) 45%, transparent); color: var(--beige);
+  font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
+}
+.app .what-pill[aria-pressed='true'], .app .st-range-btn.is-on, .app .area-pill[aria-pressed='true'] {
+  background: var(--accent-teal); border-color: var(--accent-teal); color: #14102b;
+}
+.what-section { margin: 6px 0 14px; display: grid; gap: 10px; }
+.what-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.what-add { display: flex; gap: 8px; align-items: center; }
+.what-add input { flex: 1; min-width: 0; }
+.what-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.what-head .timed-title { margin: 0; }
+.what-head-actions { display: inline-flex; gap: 8px; }
+.what-head-actions .quick-btn { font-size: 18px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+.what-sub { margin: 16px 0 6px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+.pd-list li.pd-row-btn { cursor: pointer; border-radius: 6px; }
+.pd-list li.pd-row-btn:hover, .pd-list li.pd-row-btn:focus-visible { background: color-mix(in srgb, var(--accent-teal) 10%, transparent); outline: none; }
