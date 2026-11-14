@@ -110,7 +110,12 @@ export function doneRates(launches: Launch[], log: LaunchLog[], today: Date, fro
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 }
 
-export const fmtH = (min: number) => (min / 60).toFixed(1);
+/** V20-197 (Dan, Nov 14): hours and minutes, not decimal hours: 3h 03m, 3m, 0m. */
+export const fmtH = (min: number) => {
+  const m = Math.round(min);
+  const h = Math.floor(m / 60);
+  return h ? `${h}h ${String(m % 60).padStart(2, '0')}m` : `${m}m`;
+};
 export const SOURCE_LABEL: Record<string, string> = {
   timed: '▶ to ✓, pauses out',
   entered: 'Log the time?',

@@ -100,7 +100,7 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
                   <span style={{ width: `${(b.minutes / max) * 100}%`, background: b.color ?? color }} />
                 </span>
                 <span className="st-val">
-                  {fmtH(b.minutes)} h <span>· {b.runs}</span>
+                  {fmtH(b.minutes)} <span>· {b.runs}</span>
                 </span>
               </li>
             ))}
@@ -144,11 +144,11 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
             {s.perDay.map((d) => {
               const tot = d.bars.reduce((t, b) => t + b.minutes, 0);
               return (
-                <div key={d.day} className="st-day" title={`${fmtDay(d.day)}: ${fmtH(tot)} h`}>
+                <div key={d.day} className="st-day" title={`${fmtDay(d.day)}: ${fmtH(tot)}`}>
                   <span className="st-day-val">{fmtH(tot)}</span>
                   <span className="st-stack" style={{ height: `${(tot / dayMax) * 100}%` }}>
                     {d.bars.map((b) => (
-                      <span key={b.key} style={{ flexGrow: b.minutes, background: b.color }} title={`${b.label}: ${fmtH(b.minutes)} h`} />
+                      <span key={b.key} style={{ flexGrow: b.minutes, background: b.color }} title={`${b.label}: ${fmtH(b.minutes)}`} />
                     ))}
                   </span>
                   <span className="st-day-lab">{fmtDay(d.day).split(',')[0]}</span>
@@ -182,7 +182,7 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
           <p className="st-note">Every done run that counts hours, by where its minutes came from.</p>
           <table className="st-table">
             <thead>
-              <tr><th>Source</th><th>What it means</th><th className="r">Runs</th><th className="r">Hours</th></tr>
+              <tr><th>Source</th><th>What it means</th><th className="r">Runs</th><th className="r">Time</th></tr>
             </thead>
             <tbody>
               {s.sources.map((b) => (
@@ -219,7 +219,7 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
             <table className="st-table">
               <tbody>
                 {s.long.map((r) => (
-                  <tr key={r.id}><td>{fmtDay(r.routineDay ?? r.day)}</td><td>{r.title}</td><td className="r">{fmtH(r.loggedMin ?? 0)} h</td></tr>
+                  <tr key={r.id}><td>{fmtDay(r.routineDay ?? r.day)}</td><td>{r.title}</td><td className="r">{fmtH(r.loggedMin ?? 0)}</td></tr>
                 ))}
               </tbody>
             </table>
