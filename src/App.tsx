@@ -500,6 +500,9 @@ export default function App() {
   // Rituals are kept for 26 Days but no longer picked or shown on the Launch Page.
   const shownRoutines = routinesOnly(routines);
   const activeRoutine = shownRoutines.find((r) => r.id === activeId) ?? shownRoutines[0] ?? null;
+  // V20-199: the file-name prefix every export shares, the same as the Launch Sheet's (STARDVST-LTD).
+  const exportBrand = () =>
+    ((settings.account.businessName || '').trim() || shownName(settings).trim() || 'L4UNCH!P4GE').toUpperCase().replace(/[^A-Za-z0-9!_-]+/g, '-').replace(/^-|-$/g, '') || 'LAUNCH-SHEET';
   // V20-158: pages switched off in Settings › Modules leave the menu (and send you to the Launch Page).
   const hiddenPages = ([['days26', settings.modules.days26], ['budget', settings.modules.budget], ['invoices', settings.modules.records || settings.modules.invoice]] as const)
     .filter(([, on]) => !on)
@@ -2064,7 +2067,7 @@ export default function App() {
                   button: 'Export',
                   onClick: () =>
                     void downloadRecords({
-                      business: (settings.account.businessName || '').trim().toUpperCase(),
+                      business: exportBrand(),
                       expenses, draws, invoices, customers,
                       colors: { purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' }
                     })
@@ -2079,7 +2082,8 @@ export default function App() {
                   hint: 'The budget only. Opens in Google Sheets and imports back in.',
                   button: 'Export',
                   onClick: () => {
-                    if (budget.length) downloadText(`launchpage-budget-${isoDate(new Date())}.csv`, linesToCsv(budget), 'text/csv');
+                    // V20-199: named like the Launch Sheet and Records exports (STARDVST-LTD-BUDGET-2026-11-14.csv).
+                    if (budget.length) downloadText(`${exportBrand()}-BUDGET-${isoDate(new Date())}.csv`, linesToCsv(budget), 'text/csv');
                   }
                 }
               ]
