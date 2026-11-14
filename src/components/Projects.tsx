@@ -126,7 +126,7 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
         <span />
       </button>
       {/* V20-194 (Dan, Nov 14): Edit is an icon, the same size as the + above it. */}
-      <button type="button" className="icon-btn tool-btn project-edit" aria-label={`Edit ${p.name}`} title={`Edit ${p.name}`} onClick={() => setEditing(p)}>
+      <button type="button" className="quick-btn project-edit" aria-label={`Edit ${p.name}`} title={`Edit ${p.name}`} onClick={() => setEditing(p)}>
         <Icon d={PENCIL} />
       </button>
     </div>
@@ -144,7 +144,7 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
               {/* V20-206 (Dan, Nov 14): one + at the top; a new project starts as Business (Type can change it). */}
               {i === 0 && (
                 <span className="project-plus-slot">
-                  <button type="button" className="icon-btn tool-btn project-plus" aria-label="Add a project" title="Add project" onClick={() => startNew('business')}>
+                  <button type="button" className="quick-btn project-plus" aria-label="Add a project" title="Add project" onClick={() => startNew('business')}>
                     +
                   </button>
                 </span>

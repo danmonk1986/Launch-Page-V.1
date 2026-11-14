@@ -3370,6 +3370,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .st-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; font-size: 12px; color: var(--mist); }
 .st-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
 
-/* V20-208 (Dan, Nov 14): Projects' pencils and + are in-card size (36 px), like the ✓ / ⋯ on task rows. */
-.app .projects-manager .project-edit, .app .projects-manager .project-plus { width: 36px; height: 36px; min-width: 0; min-height: 0; padding: 0; border-radius: 8px; }
-.app .projects-manager .project-edit svg { width: 15px; height: 15px; }
+/* V20-208 (Dan, Nov 14): Projects' pencils and + use the in-card quick button (30 px), like the ✓ / ⋯ on rows.
+   The ask rows (Skip / Remove, Log the time?) use the same height, with an × to cancel. */
+.app .projects-manager .project-plus { font-size: 18px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+.app .timed-xask .btn { min-height: 30px; height: 30px; padding: 0 10px; font-size: 12px; border-radius: 8px; }
+.app .timed-xask .logask-min input { height: 30px; }
