@@ -1244,6 +1244,13 @@ export default function App() {
   /** ⋯ → Create launch: a timed launch from the task, opening its link at its time. */
   /** Create launch from a task: opens Add timed launch filled in, so it can be checked before saving. */
   function createLaunchFromTask(t: Task) {
+    // V20-209 (Dan, Nov 14): its launch still exists: open it to edit instead of making a second one.
+    const linked = t.launchId ? launches.find((l) => l.id === t.launchId) : null;
+    if (linked) {
+      setPage('launch');
+      setEditLaunch(linked);
+      return;
+    }
     // Repeats carry over: weekly days, a monthly date; anything else launches once on its next date.
     const rep = repeatOf(t);
     const monthly = rep.kind === 'monthly' && /^\d{1,2}$/.test(rep.rule);
@@ -1767,6 +1774,7 @@ export default function App() {
                   onSaveMany={saveTasks}
                   onAddToCalendar={addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
+                  hasLaunch={(id) => launches.some((l) => l.id === id)}
                   onOpenAll={() => {
                     setFocusTask(null);
                     setPage('tasks');
@@ -1798,6 +1806,7 @@ export default function App() {
                   onSaveMany={saveTasks}
                   onAddToCalendar={addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
+                  hasLaunch={(id) => launches.some((l) => l.id === id)}
               onOpenProjects={() => setSettingsOpen('projects')}
               onClose={() => {
                 returnTo.current = 'h-tasks';

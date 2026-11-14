@@ -39,6 +39,8 @@ type Common = {
   onDelete: (id: string) => Promise<void>;
   /** Push to Budget: a budget line for this task, linked (amount from Notes). */
   onPushToBudget?: (t: Task) => Promise<void>;
+  /** V20-209: whether a task's launch still exists (then the menu says Edit launch). */
+  hasLaunch?: (id: string) => boolean;
 };
 
 const LIST_ICON = 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01';
@@ -105,6 +107,7 @@ type Actions = {
   clear: (t: Task) => void;
   toCalendar: (t: Task) => void;
   toLaunch: (t: Task) => void;
+  hasLaunch?: (id: string) => boolean;
 };
 
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -196,7 +199,8 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
             {t.googleEventId ? 'Add to calendar again' : 'Add to calendar'}
           </button>
           <button type="button" role="menuitem" onClick={run(() => act.toLaunch(t))}>
-            {t.launchId ? 'Create launch again' : 'Create launch'}
+            {/* V20-209 (Dan, Nov 14): a task whose launch still exists edits it instead of making another. */}
+            {t.launchId && act.hasLaunch?.(t.launchId) ? 'Edit launch' : 'Create launch'}
           </button>
           <button type="button" role="menuitem" onClick={run(() => act.addStep(t))}>
             Add a step
@@ -685,7 +689,8 @@ function useActions(p: PageProps, editor: ReturnType<typeof useTaskEditor>, open
     purge: (t) => p.onDelete(t.id),
     clear: (t) => p.onSave({ ...t, cleared: true }),
     toCalendar: p.onAddToCalendar,
-    toLaunch: p.onCreateLaunch
+    toLaunch: p.onCreateLaunch,
+    hasLaunch: p.hasLaunch
   };
 }
 
