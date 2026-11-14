@@ -1980,7 +1980,7 @@ function LogForm({
       className="log-form"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (!cat || !(minutes > 0)) return;
+        if (!cat || !desc.trim() || !(minutes > 0)) return;
         const name = proj ? (proj.shortName?.trim() || proj.name).toUpperCase() : '';
         const title = joinTitle(cat, [name, desc.trim()].filter(Boolean).join(' - '));
         setBusy(true);
@@ -2030,7 +2030,7 @@ function LogForm({
       </div>
       <label className="field">
         <span>Description</span>
-        <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Errands for the launch, napkin sketch of a feature" />
+        <input required value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Errands for the launch, napkin sketch of a feature" />
       </label>
       <div className="time-grid log-form-grid">
         <label className="field">
