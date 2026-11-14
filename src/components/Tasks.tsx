@@ -853,6 +853,10 @@ export function TasksPage(
           <button type="button" className="icon-btn tool-btn" aria-label="Add task" title="Add task" onClick={() => editor.add()}>
             <Icon d={PLUS} />
           </button>
+          {/* V20-205 (Dan, Nov 14): × back to the Launch Page, like Budget, Records and Journal. */}
+          <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
+            <Icon d={CLOSE} />
+          </button>
         </div>
       </div>
       {layout === 'month' && (
