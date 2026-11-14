@@ -16,6 +16,9 @@ export interface Project {
   /** Archived projects leave the pickers but keep their history. */
   status?: ProjectStatus;
   link?: string;
+  /** V20-181 (Dan, Nov 14): does its time count as productivity (hours + 26 Days blocks)? null = by type
+   *  (Business on, Personal off); a project under an area follows its area unless set itself. */
+  logProductivity?: boolean | null;
 }
 export type ProjectKind = 'personal' | 'business';
 export type ProjectStatus = 'active' | 'paused' | 'archived';
@@ -32,6 +35,7 @@ type Row = {
   short_name?: string | null;
   status?: string | null;
   link?: string | null;
+  log_productivity?: boolean | null;
 };
 
 /** Dan's areas, from his Google calendars and the Launch Sheet, in pastel neons. */
@@ -66,7 +70,8 @@ export const projectStore = makeStore<Project, Row>({
   seed: seedProjects,
   toRow: (p) => ({
     id: p.id, name: p.name, color: p.color, parent_id: p.parentId, calendar_id: p.calendarId, sort: p.sort,
-    kind: p.kind ?? 'personal', description: p.description ?? '', short_name: p.shortName ?? '', status: p.status ?? 'active', link: p.link ?? ''
+    kind: p.kind ?? 'personal', description: p.description ?? '', short_name: p.shortName ?? '', status: p.status ?? 'active', link: p.link ?? '',
+    log_productivity: p.logProductivity ?? null
   }),
   fromRow: (r) => ({
     id: r.id, name: r.name, color: r.color, parentId: r.parent_id, calendarId: r.calendar_id, sort: r.sort,
@@ -74,7 +79,8 @@ export const projectStore = makeStore<Project, Row>({
     description: r.description ?? '',
     shortName: r.short_name ?? '',
     status: r.status === 'paused' || r.status === 'archived' ? r.status : 'active',
-    link: r.link ?? ''
+    link: r.link ?? '',
+    logProductivity: typeof r.log_productivity === 'boolean' ? r.log_productivity : null
   })
 });
 
@@ -84,6 +90,13 @@ export const shortOf = (p: Project) => p.shortName?.trim() || p.name.replace(/^S
 export const kindOf = (list: Project[], p: Project): ProjectKind => {
   const area = p.parentId ? list.find((x) => x.id === p.parentId) : null;
   return (area ?? p).kind ?? 'personal';
+};
+/** V20-181: whether a project's time counts as productivity: its own switch, else its area's, else by type. */
+export const logsProductivity = (list: Project[], p: Project): boolean => {
+  if (typeof p.logProductivity === 'boolean') return p.logProductivity;
+  const area = p.parentId ? list.find((x) => x.id === p.parentId) : null;
+  if (area && typeof area.logProductivity === 'boolean') return area.logProductivity;
+  return kindOf(list, p) === 'business';
 };
 /** V20-165: what a picker offers: everything not archived (plus the one already picked). */
 export const pickable = (list: Project[], keepId?: string | null) => list.filter((p) => p.status !== 'archived' || p.id === keepId);

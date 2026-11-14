@@ -56,7 +56,7 @@ import { chime, unlockAudioOnFirstGesture } from './lib/alerts';
 import { WeekCalendar } from './components/WeekCalendar';
 import { TasksPage, TasksPanel } from './components/Tasks';
 import { ProjectsManager } from './components/Projects';
-import { matchCalendar, projectStore, type Project } from './lib/projects';
+import { logsProductivity, matchCalendar, projectStore, type Project } from './lib/projects';
 import { buildJournalImport, byNewest, checkinsOf, journalStore, mergeJournal, newEntry, withCheckins, type JournalEntry } from './lib/journal';
 import { JournalPanel } from './components/Journal';
 import { Sheet } from './components/Sheet';
@@ -1445,6 +1445,9 @@ export default function App() {
     if (/^PERSONAL\b/.test(l.title)) return '';
     const kind = l.logKind ?? (l.urls.length && !l.ritualId ? 'productivity' : null);
     if (!kind) return '';
+    // V20-181 (Dan, Nov 14): a project with Log Productivity off logs no Productivity blocks (its run keeps the time).
+    const proj = l.projectId ? projects.find((p) => p.id === l.projectId) : null;
+    if (kind === 'productivity' && proj && !logsProductivity(projects, proj)) return '';
     // Hourly launches log once an hour, so each gets its own line; others update today's line.
     const run = logFor(logRef.current, l, new Date());
     const id = opts?.id ?? (l.repeat === 'hourly' ? crypto.randomUUID() : run.id);

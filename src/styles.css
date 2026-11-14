@@ -3266,6 +3266,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .project-form { display: grid; gap: 4px; }
 .project-colour { display: flex; align-items: center; gap: 10px; min-height: 44px; }
 .project-colour input[type='color'] { width: 56px; height: 40px; padding: 2px; border-radius: 8px; border: 1px solid var(--edge-strong); background: none; cursor: pointer; }
+.project-colour-log { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 16px; align-items: start; } /* V20-181 */
 .project-colour code { font-family: var(--font-mono); font-size: 13px; color: var(--mist); }
 .project-form-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
 .project-form-actions .sheet-actions { margin: 0; }

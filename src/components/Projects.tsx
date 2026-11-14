@@ -7,7 +7,7 @@ export const PROJECT_FORM_ID = 'settings-project-form';
  *  and × (back to the list). The tabs and the day / night switch step aside. */
 export type ProjectHead = { title: string; onBack: () => void; onDelete?: () => void; onEdit?: () => void } | null;
 export const ProjectHeadContext = createContext<(h: ProjectHead) => void>(() => {});
-import { kindOf, projectTree, type Project, type ProjectKind, type ProjectStatus } from '../lib/projects';
+import { kindOf, logsProductivity, projectTree, type Project, type ProjectKind, type ProjectStatus } from '../lib/projects';
 import type { GoogleCalendar } from '../lib/google';
 import type { Task } from '../lib/tasks';
 import type { Launch, LaunchLog } from '../lib/rockets';
@@ -181,6 +181,7 @@ function ProjectForm({
   const hasChildren = projects.some((p) => p.parentId === project.id);
   const areas = projects.filter((p) => !p.parentId && p.id !== project.id && p.status !== 'archived');
   const parent = d.parentId ? projects.find((p) => p.id === d.parentId) : null;
+  const logOn = logsProductivity(projects, { ...d, kind: parent ? parent.kind ?? 'personal' : d.kind ?? 'personal' });
   return (
     <form
       id={PROJECT_FORM_ID}
@@ -233,13 +234,31 @@ function ProjectForm({
             ))}
           </select>
         </label>
-        <label className="field">
-          <span className="field-label">Colour</span>
-          <span className="project-colour">
-            <input type="color" value={d.color} onChange={(e) => set('color', e.target.value)} aria-label="Colour" />
-            <code>{d.color.toLowerCase()}</code>
-          </span>
-        </label>
+        <div className="project-colour-log">
+          <label className="field">
+            <span className="field-label">Colour</span>
+            <span className="project-colour">
+              <input type="color" value={d.color} onChange={(e) => set('color', e.target.value)} aria-label="Colour" />
+              <code>{d.color.toLowerCase()}</code>
+            </span>
+          </label>
+          {/* V20-181 (Dan, Nov 14): Log Productivity, beside Colour. Off = the time still logs, as personal time. */}
+          <div className="field">
+            <span className="field-label">Log Productivity</span>
+            <span className="project-colour">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={logOn}
+                aria-label={`Log Productivity ${logOn ? 'on' : 'off'}`}
+                className={`module-switch${logOn ? ' is-on' : ''}`}
+                onClick={() => set('logProductivity', !logOn)}
+              >
+                <span />
+              </button>
+            </span>
+          </div>
+        </div>
       </div>
       <div className="settings-grid">
         <label className="field">
@@ -310,6 +329,8 @@ function ProjectDashboard({ project, projects, tasks, launches, runs, calendar }
       <p className="pd-meta">
         <span className="project-dot" style={{ background: project.color }} aria-hidden="true" />
         {project.kind === 'business' || parent?.kind === 'business' ? 'Business' : 'Personal'}
+        {' · '}
+        <span className="project-badge">{logsProductivity(projects, project) ? 'Productivity' : 'Personal time'}</span>
         {parent ? ` · under ${parent.name}` : subs.length ? ` · ${subs.length} project${subs.length === 1 ? '' : 's'} under it` : ''}
         {project.status === 'paused' ? ' · Paused' : project.status === 'archived' ? ' · Archived' : ''}
         {calendar ? ` · ${calendar}` : ''}
