@@ -5,6 +5,7 @@ import { checkPassword, supabase } from './lib/supabase';
 import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettingsPatch, applySettingsPatch, shownName, syncLinkedEmail, loadBgImages, saveBgImage, resolveBackground, EMPTY_SLOTS, type BgSlots, type BrandSettings } from './lib/settings';
 import { downloadLaunchSheet } from './lib/launchSheet';
 import { downloadRecords } from './lib/recordsSheet';
+import { launchFromTask, taskFromLaunch } from './lib/linkSync';
 import { loadCached } from './lib/gcalCache';
 import { Header, type PageId } from './components/Header';
 import { HeaderClock } from './components/Clock';
@@ -90,6 +91,7 @@ import {
   opensSomething,
   describeLog,
   logFor,
+  happensToday,
   launchDate,
   timeFor,
   type Rocket
@@ -656,7 +658,7 @@ export default function App() {
   const launchOps = ops(launchStore, launches, setLaunches, (l) => l.title);
   // Oct 25: a launch saved with a new time drops its snooze, so it pops up at the new time
   // (Snooze → Edit snoozes 10 minutes, which hid an edit to 3 minutes from now).
-  function saveLaunchEdit(l: Launch) {
+  function saveLaunchEdit(l: Launch, fromTask = false) {
     const old = launches.find((x) => x.id === l.id);
     const moved = !old || old.atTime !== l.atTime || old.onDate !== l.onDate || JSON.stringify(old.onceTime) !== JSON.stringify(l.onceTime) || old.repeat !== l.repeat;
     if (moved && snoozed[l.id]) {
@@ -666,7 +668,19 @@ export default function App() {
         return next;
       });
     }
+    // V20-201: the task it was made from follows (name while they match, date / time, project, link).
+    if (old && !fromTask) {
+      const linked = tasksRef.current.filter((t) => t.launchId === l.id && !t.deletedAt);
+      const changed = linked.map((t) => taskFromLaunch(old, l, t)).filter((t): t is Task => !!t);
+      if (changed.length) void taskOps.saveMany(changed);
+    }
     return launchOps.save(l);
+  }
+  /** V20-201: deleting a launch keeps its task, unlinked. */
+  async function deleteLaunch(id: string) {
+    await launchOps.remove(id);
+    const linked = tasksRef.current.filter((t) => t.launchId === id);
+    if (linked.length) await taskOps.saveMany(linked.map((t) => ({ ...t, launchId: null })));
   }
   const eventOps = ops(eventStore, events, setEvents, (e) => e.title);
   const projectOps = ops(projectStore, projects, setProjects, (p) => p.name);
@@ -860,12 +874,36 @@ export default function App() {
     const kind = billName(next);
     if (kind !== t.task) await taskOps.save({ ...t, task: kind });
   }
+  /**
+   * V20-201 (Dan, Nov 14): a task with a launch keeps it in step: its name (while they match), date / time,
+   * project and link go to the launch, and ticking the task done checks off today's run (asking the time
+   * like any Done). Deleting the task leaves the launch.
+   */
+  function launchFollowsTasks(items: Task[]) {
+    const before = tasksRef.current;
+    const now = new Date();
+    for (const t of items) {
+      if (!t.launchId || t.deletedAt) continue;
+      const old = before.find((x) => x.id === t.id);
+      const l = launches.find((x) => x.id === t.launchId);
+      if (!old || !l) continue;
+      const next = launchFromTask(old, t, l);
+      if (next) void saveLaunchEdit(next, true);
+      const nowDone = isRecurring(t) ? doneToday(t, now) && !doneToday(old, now) : t.done && !old.done;
+      const run = logFor(logRef.current, l, now);
+      if (nowDone && l.active !== false && happensToday(next ?? l, now) && !run.finishedAt && run.outcome !== 'skipped' && run.outcome !== 'cleared' && !handled[runKey(l, now)]) {
+        void finishLaunch(next ?? l, 'done');
+      }
+    }
+  }
   const saveTask = async (t: Task) => {
+    launchFollowsTasks([t]);
     await taskOps.save(t);
     await payFor([t]);
     await lineFollowsTask(t);
   };
   const saveTasks = async (items: Task[]) => {
+    launchFollowsTasks(items);
     await taskOps.saveMany(items);
     await payFor(items);
   };
@@ -1666,8 +1704,8 @@ export default function App() {
                   onSaveRocket={rocketOps.save}
                   onSaveRockets={rocketOps.saveMany}
                   onDeleteRocket={rocketOps.remove}
-                  onSaveLaunch={saveLaunchEdit}
-                  onDeleteLaunch={launchOps.remove}
+                  onSaveLaunch={(l) => saveLaunchEdit(l)}
+                  onDeleteLaunch={deleteLaunch}
                   onStatus={setStatus}
                   handled={handled}
                   today={now}
