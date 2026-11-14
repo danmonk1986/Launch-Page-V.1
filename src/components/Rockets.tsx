@@ -1427,10 +1427,7 @@ function TimedForm({
               // Changing project swaps the old project's name; a description that doesn't start with one is left alone.
               const pre = (pid: string | null | undefined) => {
                 const pr = projects.find((x) => x.id === pid);
-                if (!pr) return '';
-                // V20-181: a nested project carries its parent too ("FNTSY LVNG - TRAVEL+ADVENTURE - ").
-                const up = pr.parentId ? projects.find((x) => x.id === pr.parentId) : null;
-                return `${up ? `${up.name.toUpperCase()} - ` : ''}${pr.name.toUpperCase()} - `;
+                return pr ? `${pr.name.toUpperCase()} - ` : '';
               };
               const old = pre(d.projectId);
               const next = pre(id);
