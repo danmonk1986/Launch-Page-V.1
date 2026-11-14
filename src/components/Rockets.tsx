@@ -658,7 +658,8 @@ export function RocketsPanel(p: Props) {
               setTimedOpen(true);
             }}
           >
-            <Icon d="M12 5v14M5 12h14" />
+            {/* V20-218 (Dan, Nov 14): in Stats the button adds a log, so it looks like one: lines with a +. */}
+            <Icon d={view === 'stats' && p.onAddLog ? 'M4 6h13M4 11h13M4 16h7M18 14v7M14.5 17.5h7' : 'M12 5v14M5 12h14'} />
           </button>
         </div>
         {p.offToday && view === 'active' && (
