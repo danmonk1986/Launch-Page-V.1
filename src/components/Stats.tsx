@@ -3,6 +3,11 @@ import { isoDate, type Launch, type LaunchLog } from '../lib/rockets';
 import type { Project } from '../lib/projects';
 import { DAY1, DAY27, RANGES, SOURCE_LABEL, doneRates, fmtH, groupBy, hourRuns, rangeFrom, type Bar, type StatsRange } from '../lib/stats';
 
+/** V20-187 (Dan, Nov 14): Stats pulls from the theme (Settings › Appearance): Colour 2, Colour 1, Accent 1,
+ *  Accent 2, then lighter mixes of the same four. */
+const THEME = ['var(--accent-teal)', 'var(--accent-purple)', 'var(--accent-green)', 'var(--accent-pink)'];
+const themeColor = (i: number) => (i < 4 ? THEME[i] : `color-mix(in srgb, ${THEME[i % 4]} ${i < 8 ? 55 : 30}%, transparent)`);
+
 type Props = {
   launches: Launch[];
   log: LaunchLog[];
@@ -48,7 +53,10 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
     const base = baseline.filter((b) => b.day >= from && b.day <= to);
     // Hours per routine day, stacked by project.
     const days = [...new Set(runs.map((r) => r.routineDay ?? r.day))].sort();
-    const perDay = days.map((d) => ({ day: d, bars: groupBy(runs.filter((r) => (r.routineDay ?? r.day) === d), (r) => r.projectName, undefined, (r) => r.color) }));
+    // Each project gets a theme colour by its rank in the range (most hours first), the same in every chart.
+    const rank = groupBy(runs, (r) => r.projectName).map((b) => b.key);
+    const pc = (r: { projectName: string }) => themeColor(Math.max(0, rank.indexOf(r.projectName)));
+    const perDay = days.map((d) => ({ day: d, bars: groupBy(runs.filter((r) => (r.routineDay ?? r.day) === d), (r) => r.projectName, undefined, pc) }));
     const sources = groupBy(runs, (r) => r.timeSource ?? 'none');
     return {
       runs, work, personal,
@@ -58,9 +66,9 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
       savedMin: saved.reduce((t, x) => t + Math.max(0, x.saved), 0), overRuns: saved.filter((x) => x.saved < 0).length, saved: saved.sort((a, b) => b.saved - a.saved),
       baseOn: base.filter((b) => b.on).length, baseDays: base.length,
       perDay, sources,
-      byProject: groupBy(runs, (r) => r.projectName, undefined, (r) => r.color),
+      byProject: groupBy(runs, (r) => r.projectName, undefined, pc),
       byWhat: groupBy(work, (r) => r.what),
-      byKind: groupBy(runs, (r) => (r.productive ? 'Productivity' : 'Personal time')),
+      byKind: groupBy(runs, (r) => (r.productive ? 'Productivity' : 'Personal time'), undefined, (r) => (r.productive ? THEME[0] : THEME[3])),
       bySlot: groupBy(timed.filter((r) => r.productive && r.startHour !== null), (r) => `${String(r.startHour).padStart(2, '0')}:00`),
       long: runs.filter((r) => r.long),
       overlap: runs.filter((r) => r.overlapMin > 0)
@@ -128,7 +136,7 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
       <h3 className="timed-title settings-section st-sec">Where the hours went</h3>
       <div className="st-card st-wide">
         <h4 className="st-h">Hours per routine day, by project</h4>
-        <p className="st-note">Each bar is one routine day; colours are the projects' colours.</p>
+        <p className="st-note">Each bar is one routine day, split by project.</p>
         {s.perDay.length === 0 ? (
           <p className="st-note">Nothing logged in this range yet.</p>
         ) : (
@@ -149,12 +157,22 @@ export function StatsPanel({ launches, log, projects, today, offDays, baseline }
             })}
           </div>
         )}
+        {s.byProject.length > 0 && (
+          <p className="st-legend">
+            {s.byProject.map((b) => (
+              <span key={b.key}>
+                <i style={{ background: b.color }} aria-hidden="true" />
+                {b.label}
+              </span>
+            ))}
+          </p>
+        )}
       </div>
       <div className="st-grid">
         {bars('By project', 'Hours and runs per project.', s.byProject)}
         {bars('By What', 'Productivity hours per launch category.', s.byWhat, 'var(--accent-purple)')}
-        {bars('Productivity vs personal', "From each project's Log Productivity switch.", s.byKind, 'var(--accent-purple)')}
-        {bars('Best start hour', 'Timed productivity hours by the hour they started.', s.bySlot, '#98EE92')}
+        {bars('Productivity vs personal', "From each project's Log Productivity switch.", s.byKind)}
+        {bars('Best start hour', 'Timed productivity hours by the hour they started.', s.bySlot, 'var(--accent-green)')}
       </div>
 
       <h3 className="timed-title settings-section st-sec">Can the hours be trusted</h3>
