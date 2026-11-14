@@ -11,13 +11,21 @@ import { taskName, type Task } from './tasks';
  * Ticking either one done is handled by the caller; deleting either one just unlinks.
  */
 const web = (u: string) => /^https?:\/\//i.test(u);
+/** V20-204: a launch title is "WHAT - name" (SETUP - TEST THIS · Test Task Feature); the name part is what
+ *  matches the task. A prefix counts as the What when it's all capitals. */
+const split = (title: string) => {
+  const m = title.match(/^([^a-z]+?) - (.+)$/);
+  return m && m[1] === m[1].toUpperCase() ? { prefix: `${m[1]} - `, name: m[2] } : { prefix: '', name: title };
+};
+const sameName = (title: string, t: Pick<Task, 'task' | 'description'>) => split(title).name.trim() === taskName(t) || title.trim() === taskName(t);
 
 /** The launch changed (old → next): what its linked task should become, or null if nothing changes. */
 export function taskFromLaunch(old: Launch, next: Launch, t: Task): Task | null {
   let u: Task = { ...t };
-  if (old.title !== next.title && taskName(t) === old.title) {
-    const [task, ...rest] = next.title.split(' · ');
-    u = t.description ? { ...u, task: task.trim(), description: rest.join(' · ').trim() } : { ...u, task: next.title.trim() };
+  if (old.title !== next.title && sameName(old.title, t)) {
+    const name = split(next.title).name;
+    const [task, ...rest] = name.split(' · ');
+    u = t.description ? { ...u, task: task.trim(), description: rest.join(' · ').trim() } : { ...u, task: name.trim() };
   }
   if (next.repeat === 'once' && next.onDate && old.onDate !== next.onDate) {
     const single = !t.startDate || t.startDate === t.endDate;
@@ -33,7 +41,7 @@ export function taskFromLaunch(old: Launch, next: Launch, t: Task): Task | null 
 /** The task changed (old → next): what its linked launch should become, or null if nothing changes. */
 export function launchFromTask(old: Task, next: Task, l: Launch): Launch | null {
   let u: Launch = { ...l };
-  if (taskName(old) !== taskName(next) && taskName(old) === l.title) u = { ...u, title: taskName(next) };
+  if (taskName(old) !== taskName(next) && sameName(l.title, old)) u = { ...u, title: split(l.title).prefix + taskName(next) };
   const due = next.endDate ?? next.startDate;
   if (l.repeat === 'once' && due && (old.endDate ?? old.startDate) !== due) u = { ...u, onDate: due, onceTime: null };
   if (next.atTime && old.atTime !== next.atTime) u = { ...u, atTime: next.atTime };
