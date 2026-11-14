@@ -1301,10 +1301,11 @@ function TimedForm({
         id: crypto.randomUUID(),
         title: '',
         atTime: '10:00',
-        repeat: 'weekly',
+        // V20-179 (Nov 13): a new launch is Once, today, by default.
+        repeat: 'once',
         weekdays: [1, 2, 3, 4, 5],
         monthDay: 1,
-        onDate: null,
+        onDate: todayIso,
         minutes: 30,
         urls: [],
         active: true,
