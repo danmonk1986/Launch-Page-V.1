@@ -1877,7 +1877,7 @@ export default function App() {
                   onAddToCalendar={addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
                   hasLaunch={(id) => launches.some((l) => l.id === id)}
-              onOpenProjects={settings.modules.projects ? () => setSettingsOpen('projects') : undefined}
+              onOpenProjects={() => setSettingsOpen('projects')}
               onClose={() => {
                 returnTo.current = 'h-tasks';
                 setPage('launch');

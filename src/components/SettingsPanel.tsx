@@ -218,7 +218,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
         </div>
         )}
       </div>
-      {!projectHead && <FoldTabs label="Settings" items={SETTINGS_TABS.filter((t) => t.id !== 'projects' || draft.modules.projects)} value={tab} onPick={onTab} />}
+      {!projectHead && <FoldTabs label="Settings" items={SETTINGS_TABS} value={tab} onPick={onTab} />}
 
       <div className="settings-body" role="tabpanel" aria-label={current.label}>
         <form id="settings-form" onSubmit={submit} hidden={!saves}>
@@ -878,6 +878,14 @@ const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }
     ]
   },
   {
+    // V20-220 (Dan, Nov 14): its own section; Projects will be a Launch Page card (coming soon).
+    title: 'Projects',
+    items: [
+      ['projects', 'Projects', ''],
+      ['planner', 'Project Planner', '']
+    ]
+  },
+  {
     title: 'Spending',
     items: [
       ['budget', 'Budget', 'The Budget page.'],
@@ -890,9 +898,7 @@ const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }
       ['invoice', 'Invoice', 'Invoices, in Records.'],
       ['records', 'Records', 'Bookkeeping activity.'],
       ['crm', 'CRM', ''],
-      ['marketing', 'Marketing', ''],
-      ['projects', 'Projects', 'Areas, projects and their Whats.'],
-      ['planner', 'Project Planner', '']
+      ['marketing', 'Marketing', '']
     ]
   }
 ];
