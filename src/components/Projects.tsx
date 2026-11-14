@@ -128,27 +128,24 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
     </div>
   );
 
-  // V20-181 (Dan, Nov 14): "Active" heads the switch column.
-  const cols = (
-    <div className="project-line project-cols" aria-hidden="true">
-      <span className="project-row" />
-      <span className="project-col-label">Active</span>
-      <span className="btn btn-quiet project-edit project-edit-ghost">Edit</span>
-    </div>
-  );
-
   return (
     <div className="projects-manager">
       {sections.map((k, i) => (
         <div key={k.id} className="project-section">
           <div className={`settings-section-head${i ? ' settings-section-gap' : ''}`}>
             <h3 className="timed-title settings-section">{k.label}</h3>
-            <button type="button" className="icon-btn tool-btn project-plus" aria-label={`Add a ${k.label.toLowerCase()} project`} title="Add project" onClick={() => startNew(k.id)}>
-              +
-            </button>
+            {/* V20-193 (Dan, Nov 14): "Active" sits beside the + on the top section's line, over the switches. */}
+            <span className="project-head-right">
+              {i === 0 && <span className="project-col-label">Active</span>}
+              <span className="project-plus-slot">
+                <span className="btn btn-quiet project-edit project-edit-ghost" aria-hidden="true">Edit</span>
+                <button type="button" className="icon-btn tool-btn project-plus" aria-label={`Add a ${k.label.toLowerCase()} project`} title="Add project" onClick={() => startNew(k.id)}>
+                  +
+                </button>
+              </span>
+            </span>
           </div>
           <div className="project-list">
-            {cols}
             {tree
               .filter(({ area }) => kindOf(projects, area) === k.id)
               .map(({ area, children }) => (
@@ -166,7 +163,7 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
           <div className="settings-section-head settings-section-gap">
             <h3 className="timed-title settings-section">Archived</h3>
           </div>
-          <div className="project-list">{cols}{archived.map((p) => row(p, !!p.parentId))}</div>
+          <div className="project-list">{archived.map((p) => row(p, !!p.parentId))}</div>
         </div>
       )}
       {!calendars.length && <p className="field-hint">Connect Google Calendar on the Launch Page to link projects to your calendars.</p>}

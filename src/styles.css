@@ -3297,9 +3297,13 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .project-line.is-off .project-row { opacity: 0.5; }
 .app .project-edit { padding: 6px 14px; min-height: 0; font-size: 12px; }
 /* V20-181: the "Active" label above the switches; a hidden Edit keeps it lined up. */
-/* V20-192: the Active label row is one short line, not a full row's height. */
-.project-cols { pointer-events: none; height: 14px; margin: -2px 0 -4px; overflow: visible; }
-.project-cols > * { padding-top: 0 !important; padding-bottom: 0 !important; min-height: 0 !important; height: 14px; line-height: 14px; }
+/* V20-193 (Dan, Nov 14): Active beside the + on the top section's line; the + sits over the Edit column; tighter list. */
+.project-head-right { display: inline-flex; align-items: center; gap: 12px; }
+.project-plus-slot { display: grid; place-items: center; }
+.project-plus-slot > * { grid-area: 1 / 1; }
+.projects-manager .project-list { gap: 2px; }
+.projects-manager .project-row { padding-top: 5px; padding-bottom: 5px; }
+.projects-manager .settings-section-head { margin-bottom: 4px; }
 .project-col-label { width: 48px; flex: none; text-align: center; font-size: 12px; font-weight: 500; color: var(--dim); }
 .app .project-edit-ghost { visibility: hidden; }
 .project-dash { display: flex; flex-direction: column; gap: 10px; }
