@@ -112,7 +112,6 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
           runs={runs}
           calendar={calName(v.calendarId)}
           whats={whats}
-          onEdit={() => setEditing(v)}
           onEditTask={onEditTask}
           onEditLaunch={onEditLaunch}
         />
@@ -400,7 +399,6 @@ function ProjectDashboard({
   runs,
   calendar,
   whats = [],
-  onEdit,
   onEditTask,
   onEditLaunch
 }: {
@@ -411,7 +409,6 @@ function ProjectDashboard({
   runs: LaunchLog[];
   calendar: string | null;
   whats?: WhatItem[];
-  onEdit?: () => void;
   onEditTask?: (t: Task) => void;
   onEditLaunch?: (l: Launch) => void;
 }) {
@@ -475,14 +472,6 @@ function ProjectDashboard({
           and open timed launches for the selected ones. Tap a row to edit it. */}
       <div className="what-head settings-section-gap">
         <h3 className="timed-title settings-section">What</h3>
-        <span className="what-head-actions">
-          <button type="button" className="quick-btn" aria-label="Edit this project's Whats" title="Edit Whats" onClick={onEdit}>
-            <Icon d={PENCIL} />
-          </button>
-          <button type="button" className="quick-btn" aria-label="Add a What" title="Add a What" onClick={onEdit}>
-            +
-          </button>
-        </span>
       </div>
       <div className="what-pills" role="group" aria-label="Show">
         {myWhats.map((n) => (
