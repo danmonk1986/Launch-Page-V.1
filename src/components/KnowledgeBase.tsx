@@ -798,7 +798,6 @@ function Browse({
 }) {
   // A group pill (Dan, Nov 6) opens just that group's courses; ALL shows everything.
   const domains = tree(outline).filter((d) => !domain || d.domain.toLowerCase() === domain.toLowerCase());
-  const first = openCourse ?? domains[0]?.courses[0]?.course.id ?? null;
   const groupCourses = domains.flatMap((d) => d.courses);
   const nPrograms = domains.reduce((n, d) => n + d.programs.length, 0);
   const groupDecks = groupCourses.flatMap((c) => c.decks);
@@ -807,7 +806,8 @@ function Browse({
   const counts = groupCourses.length
     ? `${nPrograms} ${nPrograms === 1 ? 'program' : 'programs'} · ${groupCourses.length} ${groupCourses.length === 1 ? 'course' : 'courses'} · ${nDecks} ${nDecks === 1 ? 'deck' : 'decks'} · ${nSlides} slides`
     : 'Nothing imported yet';
-  const [open, setOpen] = useState<Set<string>>(() => new Set(first ? [first] : []));
+  // Browse starts with every course closed (Dan, Nov 14); only a course you came here for opens.
+  const [open, setOpen] = useState<Set<string>>(() => new Set(openCourse ? [openCourse] : []));
   const [deckOpen, setDeckOpen] = useState<string | null>(null);
   const toggle = (id: string) =>
     setOpen((o) => {
