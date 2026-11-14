@@ -121,7 +121,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState<false | SettingsTab>(false);
   // V20-129: your own background images, one per tile slot.
   const [bgSlots, setBgSlots] = useState<BgSlots>(EMPTY_SLOTS);
-  const [status, setStatus] = useState('');
+  // V20-189: messages are still set (for later), but the footer no longer shows them.
+  const [, setStatus] = useState('');
   // A page in the address (#tasks, #budget…) opens there: card rockets from a timed launch use it.
   const [page, setPage] = useState<PageId>(() => {
     const h = window.location.hash.replace('#', '');
@@ -1875,7 +1876,8 @@ export default function App() {
           <img className="toolbar-logo" src="/launchpage-logo.png" alt="LaunchPage" />
           {/* V20-176 (Dan, Nov 13): the logo alone, centred; a message only shows while there is one. */}
           <p className="toolbar-status" role="status">
-            {status || (supabase ? '' : 'Running on this device only. Add Supabase keys to sync.')}
+            {/* V20-189 (Dan, Nov 14): no "last action" line under the logo; only the device-only warning shows. */}
+            {supabase ? '' : 'Running on this device only. Add Supabase keys to sync.'}
           </p>
         </footer>
       </div>
@@ -2058,6 +2060,13 @@ export default function App() {
               importInput.current?.click();
             }
           },
+          // V20-189 (Dan, Nov 14): Budget's import / export, here instead of on the Budget card.
+          ...(page === 'budget'
+            ? [
+                { label: 'Import budget', hint: 'The BUDGET tab of the Launch Sheet (CSV) or a JSON file.', button: 'Import', onClick: () => { setSettingsOpen(false); window.dispatchEvent(new Event('budget:import')); } },
+                { label: 'Export budget (CSV)', hint: 'Opens in Google Sheets and imports back in here.', button: 'Export', onClick: () => window.dispatchEvent(new Event('budget:export')) }
+              ]
+            : []),
           // KNOWLEDGE!B4SE: its import lives here so the page itself stays clean.
           ...(page === 'kb'
             ? [{ label: 'Import knowledge base', hint: 'Adds courses and decks to KNOWLEDGE!B4SE.', button: 'Import', onClick: () => { setSettingsOpen(false); window.dispatchEvent(new Event('kb:import')); } }]

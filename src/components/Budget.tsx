@@ -1,5 +1,5 @@
 import { isoDate } from '../lib/rockets';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from './Sheet';
 import { Icon, SearchToggle, TaskSheet, ViewToggle } from './Tasks';
 import { useOpensUp } from './Rockets';
@@ -40,8 +40,6 @@ const GROUP_ICON: Record<BudgetGroupBy, string> = {
 };
 // Oct 28: the same Sync icon as the calendar.
 const SYNC = 'M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18.5 3v4h-4M5.5 21v-4h4';
-const IMPORT = 'M12 3v12M7 10l5 5 5-5M5 21h14';
-const EXPORT = 'M12 15V3M7 8l5-5 5 5M5 21h14';
 
 type Props = {
   lines: BudgetLine[];
@@ -134,6 +132,19 @@ export function BudgetPage(p: Props) {
   const [incoming, setIncoming] = useState<{ name: string; lines: BudgetLine[] } | null>(null);
   const [importError, setImportError] = useState('');
   const file = useRef<HTMLInputElement>(null);
+  // V20-189 (Dan, Nov 14): Budget's import / export live in Settings › Data Management now; they reach here by event.
+  useEffect(() => {
+    const imp = () => file.current?.click();
+    const exp = () => {
+      if (p.lines.length) download(`launchpage-budget-${isoDate(new Date())}.csv`, linesToCsv(p.lines), 'text/csv');
+    };
+    window.addEventListener('budget:import', imp);
+    window.addEventListener('budget:export', exp);
+    return () => {
+      window.removeEventListener('budget:import', imp);
+      window.removeEventListener('budget:export', exp);
+    };
+  }, [p.lines]);
   const [linkPlan, setLinkPlan] = useState<LinkPlan | null>(null);
   const [linking, setLinking] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -356,19 +367,6 @@ export function BudgetPage(p: Props) {
           >
             <Icon d={SYNC} />
           </button>
-          <button type="button" className="icon-btn tool-btn" aria-label="Import" title="Import the BUDGET tab (CSV) or a JSON file" onClick={() => file.current?.click()}>
-            <Icon d={IMPORT} />
-          </button>
-          <button
-            type="button"
-            className="icon-btn tool-btn"
-            aria-label="Export CSV"
-            title="Export as CSV (opens in Google Sheets; imports back in here)"
-            disabled={!p.lines.length}
-            onClick={() => download(`launchpage-budget-${isoDate(new Date())}.csv`, linesToCsv(p.lines), 'text/csv')}
-          >
-            <Icon d={EXPORT} />
-          </button>
           </>
           )}
           <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
@@ -422,7 +420,7 @@ export function BudgetPage(p: Props) {
       {view !== 'master' ? null : p.lines.length === 0 ? (
         <div className="budget-empty">
           <p className="panel-empty">
-            No budget yet. In the Launch Sheet, open the <strong>BUDGET</strong> tab, then <strong>File → Download → Comma-separated values (.csv)</strong>, and import that file here.
+            No budget yet. In the Launch Sheet, open the <strong>BUDGET</strong> tab, then <strong>File → Download → Comma-separated values (.csv)</strong>, and import it from ⚙ › Data Management › Import budget.
           </p>
           <button type="button" className="btn" onClick={() => file.current?.click()}>
             Import the BUDGET tab
