@@ -3409,3 +3409,9 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .kb-domains .kb-pill { font-size: 12px; }
 .log-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 560px) { .log-form-grid { grid-template-columns: 1fr 1fr; } }
+/* V20-217 (Dan, Nov 14): one focus look for typed fields: the border turns teal, no second ring around it. */
+.app :is(input, select, textarea):not([type='checkbox']):not([type='radio']):not([type='color']):not([type='range']):focus-visible {
+  outline: none;
+  border-color: var(--accent-teal);
+  box-shadow: 0 0 0 1px var(--accent-teal);
+}

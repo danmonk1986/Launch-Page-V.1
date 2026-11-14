@@ -1450,8 +1450,14 @@ export default function App() {
     logRef.current = next;
     setLaunchLog(next);
     await launchLogStore.save(userId, item, next);
-    const stand = { id: '', title: x.title, minutes, urls: [], projectId: x.projectId, logKind: 'productivity', repeat: 'once' } as unknown as Launch;
-    const logged = await logFromLaunch(stand, { minutes, day: x.day, id: item.id });
+    // A stand-in launch for the Productivity log (V20-216 fix: it needs a time, or launchDate throws and the form hangs).
+    const stand = { id: `manual:${item.id}`, title: x.title, atTime: x.start, minutes, urls: [], projectId: x.projectId, logKind: 'productivity', repeat: 'once', onDate: x.day, weekdays: [] } as unknown as Launch;
+    let logged = '';
+    try {
+      logged = await logFromLaunch(stand, { minutes, day: x.day, id: item.id });
+    } catch {
+      /* the run is saved; Productivity just didn't log */
+    }
     setStatus(`${x.title}: ${minutes} min logged${logged ? `, ${logged}` : ''}.`);
   }
 

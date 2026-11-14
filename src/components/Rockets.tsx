@@ -1983,8 +1983,11 @@ function LogForm({
         const name = proj ? (proj.shortName?.trim() || proj.name).toUpperCase() : '';
         const title = joinTitle(cat, [name, desc.trim()].filter(Boolean).join(' - '));
         setBusy(true);
-        await onSave({ title, projectId: projectId || null, day, start, minutes });
-        setBusy(false);
+        try {
+          await onSave({ title, projectId: projectId || null, day, start, minutes });
+        } finally {
+          setBusy(false);
+        }
       }}
     >
       <div className="time-grid">
