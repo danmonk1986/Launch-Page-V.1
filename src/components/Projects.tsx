@@ -43,7 +43,6 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
   const [editing, setEditing] = useState<Project | null>(null);
   // V20-174 (Dan, Nov 13): tapping a project opens its dashboard; Edit is its own button.
   const [viewing, setViewing] = useState<Project | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
   const calName = (id: string | null) => calendars.find((c) => c.id === id)?.summary ?? null;
 
   const startNew = (kind: ProjectKind) =>
@@ -151,12 +150,13 @@ export function ProjectsManager({ projects, calendars, onSave, onDelete, tasks =
           </div>
         </div>
       ))}
+      {/* V20-176 (Dan, Nov 13): ARCHIVED is a section like Personal and Business; switch one on to bring it back. */}
       {archived.length > 0 && (
-        <div className="project-section settings-section-gap">
-          <button type="button" className="link-btn link-btn-inline" onClick={() => setShowArchived((v) => !v)}>
-            {showArchived ? 'Hide archived' : `Archived (${archived.length})`}
-          </button>
-          {showArchived && <div className="project-list project-archived">{archived.map((p) => row(p, false))}</div>}
+        <div className="project-section">
+          <div className="settings-section-head settings-section-gap">
+            <h3 className="timed-title settings-section">Archived</h3>
+          </div>
+          <div className="project-list">{archived.map((p) => row(p, !!p.parentId, projects.find((x) => x.id === p.parentId)?.name))}</div>
         </div>
       )}
       {!calendars.length && <p className="field-hint">Connect Google Calendar on the Launch Page to link projects to your calendars.</p>}

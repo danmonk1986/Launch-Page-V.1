@@ -3302,3 +3302,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .pd-name { color: var(--beige); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pd-dim { color: var(--mist); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pd-when { color: var(--accent-teal); font-variant-numeric: tabular-nums; }
+/* V20-176: footer logo centred; the status line only when there's a message. */
+.app .toolbar { flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 6px; }
+.app .toolbar-status { flex: none; min-width: 0; }
+.app .toolbar-status:empty { display: none; }

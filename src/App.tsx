@@ -1836,8 +1836,9 @@ export default function App() {
         </main>
         <footer className="toolbar">
           <img className="toolbar-logo" src="/launchpage-logo.png" alt="LaunchPage" />
+          {/* V20-176 (Dan, Nov 13): the logo alone, centred; a message only shows while there is one. */}
           <p className="toolbar-status" role="status">
-            {status || (supabase ? `Signed in as ${session?.user.email}` : 'Running on this device only. Add Supabase keys to sync.')}
+            {status || (supabase ? '' : 'Running on this device only. Add Supabase keys to sync.')}
           </p>
         </footer>
       </div>
