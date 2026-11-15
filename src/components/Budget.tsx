@@ -28,7 +28,6 @@ import {
 } from '../lib/budget';
 
 const PLUS = 'M12 5v14M5 12h14';
-const CLOSE = 'M6 6l12 12M18 6L6 18';
 // One square button cycles the totals: layers (section), a list (payment category), a folder (project), four boxes (budget group).
 const GROUP_ICON: Record<BudgetGroupBy, string> = {
   section: 'M12 3 2 8l10 5 10-5zM2 12l10 5 10-5M2 16l10 5 10-5',
@@ -336,9 +335,15 @@ export function BudgetPage(p: Props) {
   return (
     <section className="panel panel-tasks-page panel-budget" aria-labelledby="h-budget">
       <div className="panel-head">
-        <h2 id="h-budget" className="panel-title">
-          Budget
-        </h2>
+        {/* V20-250 (Dan, Nov 15): like Tasks, the ^ beside BUDGET goes back to the Launch Page card (the × is gone). */}
+        <div className="rockets-title">
+          <h2 id="h-budget" className="panel-title">
+            Budget
+          </h2>
+          <button type="button" className="rockets-toggle is-open" aria-label="Back to the Budget card" title="Back to the Budget card" onClick={p.onClose}>
+            <Icon d="M6 9l6 6 6-6" />
+          </button>
+        </div>
         <ViewToggle month={view === 'month'} listName="Master" onToggle={() => setView(view === 'month' ? 'master' : 'month')} nav={{ month, onMonth: setMonth }} />
         <div className="panel-actions">
           {view === 'master' && (
@@ -361,9 +366,6 @@ export function BudgetPage(p: Props) {
             <Icon d={PLUS} />
           </button>
           )}
-          <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
-            <Icon d={CLOSE} />
-          </button>
           <input
             ref={file}
             type="file"
