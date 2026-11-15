@@ -225,6 +225,10 @@ export function PlannerPanel(p: {
                     <button type="button" className="icon-btn tool-btn is-key" aria-label="Save decision" title="Save" disabled={!o.title.trim()} onClick={() => void save(d.id)}>
                       <Icon d={SAVE} />
                     </button>
+                    {/* V20-261 (Dan, Nov 15): a way to bail: × closes it without saving. */}
+                    <button type="button" className="icon-btn tool-btn" aria-label="Close without saving" title="Close without saving" onClick={() => toggle(d)}>
+                      <Icon d={X} />
+                    </button>
                   </div>
                   <div className="pl-grid3">
                     <label className="field">

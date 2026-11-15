@@ -3606,7 +3606,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-260 (Dan, Nov 15): less space above the fields; each option is three fields (Option · Link · Cost) + ✓ ×. */
 .app.app .pl-edit { gap: 4px; padding-top: 8px; }
 .app.app .pl-edit-acts { margin-bottom: -30px; position: relative; z-index: 1; }
-.app.app .pl-grid3 { padding-right: 190px; }
+.app.app .pl-grid3 { padding-right: 260px; }
 .app.app .pl-opt3 { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 120px 32px 32px; gap: 0 18px; align-items: end; }
 .app.app .pl-opt3 > .quick-btn { margin-bottom: 14px; }
 .app.app .pl-opt3.is-picked input { color: var(--accent-teal); }
