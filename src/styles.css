@@ -3529,3 +3529,29 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app :is(.rockets-toggle, .week-arrow, .timed-more, .tabs-more-btn):hover { background: none; box-shadow: none; color: var(--accent-purple); }
 /* V20-241: word buttons never wrap (Time's up showed '+10 / MIN' on two lines at 36px high). */
 :is(.app.app, .signin.signin) .btn { white-space: nowrap; }
+
+/* ==========================================================================
+   CONTROLS v1 (Dan, Nov 14; V20-242). Option B from the style guide: ONE Colour 1 pill, no dividers.
+   - Switches (7 DAYS / 26 DAYS / ALL, Records views, bank import): the picked part fills Colour 2 with Colour 1 text.
+   - Steppers (‹ NOV 2026 ›, fiscal year): Colour 2 arrows inside, the label in Colour 1.
+   - Pickers (routine, ritual): the name in Colour 1, a Colour 2 ⌄ inside, no divider.
+   ========================================================================== */
+.app.app .d26-range {
+  display: inline-flex; align-items: center; gap: 2px; height: 36px; box-sizing: border-box; padding: 2px;
+  border: 2px solid var(--accent-purple); border-radius: 999px; overflow: visible; background: transparent;
+}
+.app.app .d26-range button {
+  min-height: 28px; height: 28px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent;
+  color: var(--accent-purple); white-space: nowrap;
+}
+.app.app .d26-range button + button { border-left: 0; }
+.app.app .d26-range button[aria-pressed='true'] { background: var(--accent-teal); color: var(--accent-purple); }
+.app.app .d26-range button:not([aria-pressed='true']):hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
+.app.app .month-nav button:first-child, .app.app .month-nav button:last-child {
+  width: 28px; min-width: 28px; padding: 0; color: var(--accent-teal); font-size: 16px;
+}
+.app.app .month-nav button:nth-child(2) { background: transparent; color: var(--accent-purple); }
+.app.app .picker-split { height: 36px; padding: 2px 2px 2px 0; box-sizing: border-box; align-items: center; }
+.app.app .picker-main { height: 100%; }
+.app.app .picker-caret { width: 28px; height: 28px; border-left: 0; border-radius: 50%; color: var(--accent-teal); }
+.app.app .picker-caret:hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
