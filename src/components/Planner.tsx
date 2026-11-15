@@ -79,7 +79,9 @@ export function PlannerPanel(p: {
   const save = async (id: string) => {
     const d = open[id];
     if (!d || !d.title.trim()) return;
-    await p.onSave({ ...d, title: d.title.trim() });
+    // V20-264: keep the task / rocket links Workflow saved while this was open.
+    const cur = p.decisions.find((x) => x.id === id);
+    await p.onSave({ ...d, title: d.title.trim(), taskId: cur?.taskId ?? d.taskId, launchId: cur?.launchId ?? d.launchId });
     setOpen((o) => {
       const n = { ...o };
       delete n[id];
@@ -200,7 +202,7 @@ export function PlannerPanel(p: {
                       Who decides + Decide by beside Notes. Workflow sends it to the calendar, Tasks or Rockets. */}
                   <div className="pl-edit-acts">
                     {p.decisions.some((x) => x.id === d.id) && (
-                      <Workflow d={o} onCalendar={() => p.onToCalendar(o)} onTask={() => p.onToTask(o)} onRocket={() => p.onToRocket(o)} />
+                      <Workflow d={p.decisions.find((x) => x.id === d.id) ?? o} onCalendar={() => p.onToCalendar(o)} onTask={() => p.onToTask(o)} onRocket={() => p.onToRocket(o)} />
                     )}
                     {p.decisions.some((x) => x.id === d.id) && (
                       <button
@@ -483,7 +485,7 @@ function Workflow({ d, onCalendar, onTask, onRocket }: { d: Decision; onCalendar
             {d.taskId ? 'Open its task' : 'Make it a task'}
           </button>
           <button type="button" role="menuitem" onClick={run(onRocket)}>
-            Push rocket
+            {d.launchId ? 'Open its rocket' : 'Push rocket'}
           </button>
         </div>
       )}

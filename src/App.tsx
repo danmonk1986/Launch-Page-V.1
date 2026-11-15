@@ -1320,26 +1320,40 @@ export default function App() {
   /** Create launch from a task: opens Add timed launch filled in, so it can be checked before saving. */
   // V20-259 (Dan, Nov 15): Project Planner › Workflow. A decision goes to the calendar, Tasks or Rockets.
   // V20-262 (Dan, Nov 15): Add to calendar puts it on the Launch Page's own calendar (THIS WEEK), not Google.
+  // V20-264: each one shows you where it went (the calendar card / the task form), and a second tap doesn't
+  // make a copy: the latest saved decision is read, and an event already there is reused.
+  const latest = (d: Decision) => ({ ...d, ...pickLinks(decisions.find((x) => x.id === d.id)) });
+  const pickLinks = (x?: Decision) => (x ? { taskId: x.taskId, launchId: x.launchId } : {});
   async function decisionToCalendar(d: Decision) {
     const date = d.decideBy ?? isoDate(new Date());
-    const ev: CalEvent = { id: crypto.randomUUID(), title: `Decide: ${d.title}`, startDate: date, endDate: date, color: 'purple', sort: events.reduce((m, x) => Math.max(m, x.sort + 1), 0) };
-    await eventOps.save(ev);
-    setStatus(`${d.title} is on your calendar on ${new Date(`${date}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`);
+    const title = `Decide: ${d.title}`;
+    const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
+    if (!events.some((e) => !e.google && e.title === title && e.startDate === date)) {
+      const ev: CalEvent = { id: crypto.randomUUID(), title, startDate: date, endDate: date, color: 'purple', sort: events.reduce((m, x) => Math.max(m, x.sort + 1), 0) };
+      await eventOps.save(ev);
+      setStatus(`${d.title} is on your calendar on ${dateLabel}.`);
+    } else setStatus(`${d.title} is already on your calendar on ${dateLabel}.`);
+    setPage('launch');
+    setTimeout(() => document.getElementById('h-week')?.closest('section')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 60);
   }
-  async function decisionToTask(d: Decision) {
+  async function decisionToTask(raw: Decision) {
+    const d = latest(raw);
     const linked = d.taskId ? tasks.find((x) => x.id === d.taskId && !x.deletedAt) : null;
-    if (linked) {
+    if (!linked) {
+      const t: Task = { ...newTask(tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0), d.projectId), task: d.title, description: d.description, notes: d.notes, endDate: d.decideBy, status: 'PENDING' };
+      await taskOps.save(t);
+      await decisionOps.save({ ...d, taskId: t.id });
+      setStatus(`${d.title} is now a task${d.decideBy ? `, due ${new Date(`${d.decideBy}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}` : ''}.`);
+      setFocusTask(t.id);
+      setEditTask(t.id);
+    } else {
       setFocusTask(linked.id);
       setEditTask(linked.id);
-      setPage('tasks');
-      return;
     }
-    const t: Task = { ...newTask(tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0), d.projectId), task: d.title, description: d.description, notes: d.notes, endDate: d.decideBy, status: 'PENDING' };
-    await taskOps.save(t);
-    await decisionOps.save({ ...d, taskId: t.id });
-    setStatus(`${d.title} is now a task${d.decideBy ? `, due ${new Date(`${d.decideBy}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}` : ''}.`);
+    setPage('tasks');
   }
-  function decisionToRocket(d: Decision) {
+  function decisionToRocket(raw: Decision) {
+    const d = latest(raw);
     const linked = d.launchId ? launches.find((l) => l.id === d.launchId) : null;
     if (linked) {
       setPage('launch');
