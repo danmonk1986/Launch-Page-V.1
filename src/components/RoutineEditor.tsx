@@ -74,7 +74,11 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (open && !d.open) d.showModal();
+    if (open && !d.open) {
+      d.showModal();
+      // V20-256: no focus ring on the × when it opens; the box takes the focus.
+      if (document.activeElement?.closest('.sheet-tools')) d.focus();
+    }
     if (!open && d.open) d.close();
   }, [open]);
 
@@ -134,7 +138,7 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
   }
 
   return (
-    <dialog ref={ref} className="sheet sheet-wide" onClose={onClose} aria-labelledby="routine-title" {...clickOff}>
+    <dialog ref={ref} tabIndex={-1} className="sheet sheet-wide" onClose={onClose} aria-labelledby="routine-title" {...clickOff}>
       <form onSubmit={submit}>
         <div className="sheet-head">
           <h2 id="routine-title">{routine ? `Edit ${routine.name}` : 'New routine'}</h2>

@@ -56,12 +56,19 @@ export function Sheet({ open, title, onClose, wide, children }: Props) {
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (open && !d.open) d.showModal();
+    if (open && !d.open) {
+      // V20-256 (Dan, Nov 15): opening a pop-up put the focus ring on its × (a second circle). A field that asked
+      // for the cursor (autoFocus) keeps it; otherwise the box itself takes the focus.
+      const was = document.activeElement as HTMLElement | null;
+      d.showModal();
+      if (was && was !== d && d.contains(was)) was.focus();
+      else if (document.activeElement?.closest('.sheet-tools')) d.focus();
+    }
     if (!open && d.open) d.close();
   }, [open]);
 
   return (
-    <dialog ref={ref} className={`sheet${wide ? ' sheet-wide' : ''}`} onClose={onClose} aria-labelledby={titleId} {...clickOff}>
+    <dialog ref={ref} tabIndex={-1} className={`sheet${wide ? ' sheet-wide' : ''}`} onClose={onClose} aria-labelledby={titleId} {...clickOff}>
       <div className="sheet-head">
         <h2 id={titleId}>{title}</h2>
         <div className="sheet-tools">

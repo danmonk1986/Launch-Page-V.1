@@ -94,7 +94,11 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (open && !d.open) d.showModal();
+    if (open && !d.open) {
+      d.showModal();
+      // V20-256: no focus ring on the × when it opens; the box takes the focus.
+      if (document.activeElement?.closest('.sheet-tools')) d.focus();
+    }
     if (!open && d.open) d.close();
   }, [open]);
 
@@ -139,7 +143,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
   const current = SETTINGS_TABS.find((t) => t.id === tab)!;
 
   return (
-    <dialog ref={ref} className="sheet sheet-settings" onClose={onClose} aria-labelledby="settings-title" {...clickOff}>
+    <dialog ref={ref} tabIndex={-1} className="sheet sheet-settings" onClose={onClose} aria-labelledby="settings-title" {...clickOff}>
       <div className="sheet-head">
         <h2 id="settings-title">{projectHead ? projectHead.title : 'Settings'}</h2>
         {projectHead ? (
@@ -605,7 +609,11 @@ function PasswordDialog({
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (open && !d.open) d.showModal();
+    if (open && !d.open) {
+      d.showModal();
+      // V20-256: no focus ring on the × when it opens; the box takes the focus.
+      if (document.activeElement?.closest('.sheet-tools')) d.focus();
+    }
     if (!open && d.open) d.close();
     if (open) {
       setCurrent('');
@@ -644,7 +652,7 @@ function PasswordDialog({
   }
   const kind = show ? 'text' : 'password';
   return (
-    <dialog ref={ref} className="sheet sheet-password" onClose={onClose} aria-labelledby="pw-title" {...clickOff}>
+    <dialog ref={ref} tabIndex={-1} className="sheet sheet-password" onClose={onClose} aria-labelledby="pw-title" {...clickOff}>
       <form onSubmit={submit}>
         <div className="sheet-head">
           <h2 id="pw-title">Change password</h2>
