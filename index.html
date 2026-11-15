@@ -13,6 +13,33 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&family=Roboto+Slab:wght@500;600;700&family=Roboto:wght@400;500;700&display=swap"
     />
+    <script>
+      // V20-235: put the font theme on the page before the app loads, so a refresh or a new page doesn't flash
+      // the default font first (the app takes over once settings load).
+      (function () {
+        try {
+          var s = JSON.parse(localStorage.getItem('launchpage.settings.v1') || '{}');
+          var t = s.fontTheme === 'zaptor' ? 'robot' : s.fontTheme === 'launch' ? 'space' : s.fontTheme;
+          if (t !== 'robot' && t !== 'yours') return;
+          var root = document.documentElement;
+          root.dataset.font = t;
+          if (t === 'yours' && s.fontCustom) {
+            var c = s.fontCustom, fam = [c.head, c.body, c.mono].filter(Boolean);
+            root.style.setProperty('--font-head', "'" + c.head + "'");
+            root.style.setProperty('--font-body', "'" + c.body + "'");
+            root.style.setProperty('--font-mono', "'" + c.mono + "', monospace");
+            var l = document.createElement('link');
+            l.id = 'font-yours';
+            l.rel = 'stylesheet';
+            l.href = 'https://fonts.googleapis.com/css2?' + fam.filter(function (f, i) { return fam.indexOf(f) === i; }).map(function (f) {
+              var w = f === 'Bebas Neue' || f === 'Archivo Black' ? '' : f === 'Space Mono' ? ':wght@400;700' : f === 'DM Mono' ? ':wght@400;500' : ':wght@400;500;700';
+              return 'family=' + f.replace(/ /g, '+') + w;
+            }).join('&') + '&display=swap';
+            document.head.appendChild(l);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <title>LaunchPage</title>
   </head>
   <body>
