@@ -3612,3 +3612,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .pl-opt3.is-picked input { color: var(--accent-teal); }
 .app.app .pl-opt-link a { color: var(--accent-teal); text-decoration: none; font-weight: 700; }
 @media (max-width: 760px) { .app.app .pl-opt3 { grid-template-columns: 1fr 32px 32px; } .app.app .pl-opt3 > .field:not(:first-child) { grid-column: 1; } .app.app .pl-grid3 { padding-right: 0; } .app.app .pl-edit-acts { margin-bottom: 0; } }
+/* V20-263 (Dan, Nov 15): Tasks is the good font. The Planner and Budget card tables use the Tasks table type:
+   13px rows, names bold (600) in capitals. */
+.app.app :is(.pl-row, .bc-row) { font-size: 13px; }
+.app.app :is(.pl-name, .bc-name) { font-weight: 600; color: var(--beige); }
+.app.app .pl-name:hover { color: var(--accent-teal); }
