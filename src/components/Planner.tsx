@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useId, useState } from 'react';
 import { Icon } from './Tasks';
 import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
 import { byDate, newDecision, DECISION_STATUSES, type Decision, type DecisionOption, type DecisionStatus } from '../lib/decisions';
-import type { Project } from '../lib/projects';
+import { pickLabel as projectPick, pickable, projectTree, type Project } from '../lib/projects';
+import { newPlan, type Plan } from '../lib/plans';
+import { Sheet, FormActions } from './Sheet';
 
 /**
  * V20-247 (Dan, Nov 14): Project Planner · the List. One card on the Launch Page (Settings › Modules › Project
@@ -11,6 +13,8 @@ import type { Project } from '../lib/projects';
  * Board and Timeline come next (mocked up on the style guide canvas).
  */
 const CHEV = 'M6 9l6 6 6-6';
+const LEFT = 'M15 6l-6 6 6 6';
+const RIGHT = 'M9 6l6 6-6 6';
 const UP = 'M6 15l6-6 6 6';
 const PLUS = 'M12 5v14M5 12h14';
 const CHECK = 'M5 12.5l4.5 4.5L19 7.5';
@@ -33,24 +37,29 @@ function fmtDate(iso: string | null): string {
 
 export function PlannerPanel(p: {
   decisions: Decision[];
+  /** V20-253: a project holds plans; a plan holds decisions. The pill steps through the plans. */
+  plans: Plan[];
   projects: Project[];
   onSave: (d: Decision) => Promise<void>;
+  onSaveMany: (d: Decision[]) => Promise<void>;
+  onSavePlan: (p: Plan) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
   /** V20-249: the card's ⌄ opens the planner full screen; ^ there comes back. */
   full?: boolean;
   onToggle?: () => void;
 }) {
   const { q } = useHeaderSearch();
-  const withDecisions = useMemo(() => {
-    const ids = new Set(p.decisions.map((d) => d.projectId));
-    return p.projects.filter((x) => ids.has(x.id));
-  }, [p.decisions, p.projects]);
-  const [projectId, setProjectId] = useState<string | null>(() => withDecisions[0]?.id ?? null);
-  const pid = projectId ?? withDecisions[0]?.id ?? null;
+  const plans = [...p.plans].sort((a, b) => a.sort - b.sort);
+  const [planId, setPlanId] = useState<string | null>(null);
+  const plan = plans.find((x) => x.id === planId) ?? plans[0] ?? null;
+  const pid = plan?.projectId ?? null;
+  const at = plan ? plans.indexOf(plan) : -1;
+  const step = (by: number) => plans.length && setPlanId(plans[(at + by + plans.length) % plans.length].id);
+  const [sheet, setSheet] = useState<{ plan: Plan; isNew: boolean } | null>(null);
   const [open, setOpen] = useState<Record<string, Decision>>({});
   const [ask, setAsk] = useState<string | null>(null);
   const list = p.decisions
-    .filter((d) => d.projectId === pid)
+    .filter((d) => !!plan && d.planId === plan.id)
     .filter((d) => matchesSearch(q, d.title, d.description, d.notes, ...d.options.map((o) => o.name)))
     .sort(byDate);
   const count = (s: DecisionStatus) => list.filter((d) => d.status === s).length;
@@ -74,12 +83,12 @@ export function PlannerPanel(p: {
     });
   };
   const add = () => {
-    const d = newDecision(pid, (p.decisions.reduce((m, x) => Math.max(m, x.sort), 0) || 0) + 1);
+    if (!plan) return;
+    const d = newDecision(pid, (p.decisions.reduce((m, x) => Math.max(m, x.sort), 0) || 0) + 1, plan.id);
     setOpen((o) => ({ [d.id]: d, ...o }));
   };
-  const fresh = Object.values(open).filter((d) => !p.decisions.some((x) => x.id === d.id) && d.projectId === pid);
+  const fresh = Object.values(open).filter((d) => !p.decisions.some((x) => x.id === d.id) && !!plan && d.planId === plan.id);
   const rows = [...fresh, ...list];
-  const projName = (id: string | null) => p.projects.find((x) => x.id === id)?.name ?? 'Pick a project';
 
   return (
     <section className={`panel panel-planner${p.full ? ' is-full' : ''}`} aria-labelledby="h-planner">
@@ -99,32 +108,21 @@ export function PlannerPanel(p: {
               <Icon d={CHEV} />
             </button>
           )}
-          <label className="pl-pick">
-            <span className="sr-only">Project</span>
-            <select value={pid ?? ''} onChange={(e) => setProjectId(e.target.value || null)}>
-              {!pid && <option value="">Pick a project</option>}
-              {(withDecisions.length ? withDecisions : p.projects).map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name}
-                </option>
-              ))}
-              {withDecisions.length > 0 && (
-                <optgroup label="Other projects">
-                  {p.projects
-                    .filter((x) => !withDecisions.some((w) => w.id === x.id))
-                    .map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.name}
-                      </option>
-                    ))}
-                </optgroup>
-              )}
-            </select>
-            <Icon d={CHEV} />
-          </label>
+          {/* V20-253 (Dan, Nov 15): not a drop-down; ‹ › step through the plans, the name opens it to edit. */}
+          <div className="picker-split pl-pill">
+            <button type="button" className="picker-caret" aria-label="Previous plan" title="Previous plan" onClick={() => step(-1)} disabled={plans.length < 2}>
+              <Icon d={LEFT} />
+            </button>
+            <button type="button" className="picker-main" title={plan ? 'Edit this plan' : 'Add a plan'} onClick={() => setSheet(plan ? { plan, isNew: false } : { plan: newPlan(null, 1), isNew: true })}>
+              {plan?.name || 'Add a plan'}
+            </button>
+            <button type="button" className="picker-caret" aria-label="Next plan" title="Next plan" onClick={() => step(1)} disabled={plans.length < 2}>
+              <Icon d={RIGHT} />
+            </button>
+          </div>
         </div>
         <div className="panel-actions">
-          <button type="button" className="icon-btn tool-btn is-key" aria-label="Add a decision" title="Add a decision" onClick={add} disabled={!pid}>
+          <button type="button" className="icon-btn tool-btn is-key" aria-label="Add a plan" title="Add a plan" onClick={() => setSheet({ plan: newPlan(plan?.projectId ?? null, plans.reduce((m, x) => Math.max(m, x.sort), 0) + 1), isNew: true })}>
             <Icon d={PLUS} />
           </button>
         </div>
@@ -147,17 +145,21 @@ export function PlannerPanel(p: {
         </div>
       </div>
 
-      <div className="pl-table" role="table" aria-label={`Decisions for ${projName(pid)}`}>
+      <div className="pl-table" role="table" aria-label={`Decisions in ${plan?.name ?? 'this plan'}`}>
         <div className="pl-row pl-head" role="row">
           <span role="columnheader">Status</span>
           <span role="columnheader">Decision</span>
           <span role="columnheader">Description</span>
           <span role="columnheader">Cost</span>
           <span role="columnheader">By</span>
-          <span role="columnheader" />
+          <span role="columnheader" className="pl-acts">
+            <button type="button" className="quick-btn task-quick is-key" aria-label="Add a decision" title="Add a decision" onClick={add} disabled={!plan}>
+              <Icon d={PLUS} />
+            </button>
+          </span>
           <span role="columnheader" />
         </div>
-        {!rows.length && <p className="field-hint pl-empty">No decisions yet. The teal + adds one.</p>}
+        {!rows.length && <p className="field-hint pl-empty">{plan ? 'No decisions yet. The + above adds one.' : 'No plans yet. The teal + adds one.'}</p>}
         {rows.map((d, i) => {
           const o = open[d.id];
           const shown = o ?? d;
@@ -273,7 +275,125 @@ export function PlannerPanel(p: {
           );
         })}
       </div>
+      <Sheet open={!!sheet} title={sheet?.isNew ? 'Add plan' : 'Edit plan'} onClose={() => setSheet(null)} wide>
+        {sheet && (
+          <PlanForm
+            key={sheet.plan.id}
+            plan={sheet.plan}
+            projects={p.projects}
+            existing={p.decisions.filter((d) => d.planId === sheet.plan.id).sort(byDate)}
+            onSave={async (pl, titles) => {
+              await p.onSavePlan(pl);
+              const base = p.decisions.reduce((m, x) => Math.max(m, x.sort), 0) + 1;
+              const kids = titles.map((t, i) => ({ ...newDecision(pl.projectId, base + i, pl.id), title: t }));
+              // A plan moved to another project takes its decisions with it.
+              const moved = p.decisions.filter((d) => d.planId === pl.id && d.projectId !== pl.projectId).map((d) => ({ ...d, projectId: pl.projectId }));
+              if (kids.length || moved.length) await p.onSaveMany([...moved, ...kids]);
+              setPlanId(pl.id);
+              setSheet(null);
+            }}
+          />
+        )}
+      </Sheet>
     </section>
+  );
+}
+
+/** V20-253: Add plan, built from Add task: Project | Plan, Description, Decisions (like steps), dates, Notes. */
+function PlanForm({ plan, projects, existing, onSave }: { plan: Plan; projects: Project[]; existing: Decision[]; onSave: (p: Plan, titles: string[]) => Promise<void> }) {
+  const [d, setD] = useState(plan);
+  const [lines, setLines] = useState<string[]>(existing.length ? [] : ['']);
+  const formId = useId();
+  const tree = projectTree(pickable(projects, plan.projectId));
+  const set = <K extends keyof Plan>(k: K, v: Plan[K]) => setD((x) => ({ ...x, [k]: v }));
+  const ok = !!d.name.trim() && !!d.projectId;
+  return (
+    <form
+      id={formId}
+      className="task-form task-card"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!ok) return;
+        await onSave({ ...d, name: d.name.trim(), description: d.description.trim(), notes: d.notes.trim() }, lines.map((x) => x.trim()).filter(Boolean));
+      }}
+    >
+      <FormActions formId={formId} saveDisabled={!ok} />
+      <div className="time-grid">
+        <label className="field">
+          <span>Project</span>
+          <select required value={d.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || null)}>
+            <option value="" disabled>
+              Pick a project
+            </option>
+            {tree.map(({ area, children }) => (
+              <optgroup key={area.id} label={area.name}>
+                <option value={area.id}>{projectPick(projects, area)}</option>
+                {children.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {projectPick(projects, c)}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          <span>Plan</span>
+          <input required value={d.name} onChange={(e) => set('name', e.target.value)} placeholder="BETA – WEEK 1" autoFocus />
+        </label>
+      </div>
+      <label className="field">
+        <span>Description</span>
+        <input value={d.description} onChange={(e) => set('description', e.target.value)} placeholder="What this plan is for" />
+      </label>
+      <div className="field steps-field">
+        <span>Decisions</span>
+        {existing.length > 0 && (
+          <ul className="steps-list">
+            {existing.map((x) => (
+              <li key={x.id} className={x.status === 'done' ? 'is-done' : ''}>
+                ↳ {x.title}
+              </li>
+            ))}
+          </ul>
+        )}
+        {lines.map((text, i) => (
+          <div key={i} className="step-input">
+            <span aria-hidden="true">↳</span>
+            <input
+              aria-label={`Decision ${existing.length + i + 1}`}
+              value={text}
+              autoFocus={i > 0 && i === lines.length - 1}
+              onChange={(e) => setLines((l) => l.map((x, j) => (j === i ? e.target.value : x)))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  setLines((l) => [...l, '']);
+                }
+              }}
+              placeholder="What needs deciding"
+            />
+          </div>
+        ))}
+        <button type="button" className="link-btn link-btn-inline step-more" onClick={() => setLines((l) => [...l, ''])}>
+          + Add a decision
+        </button>
+      </div>
+      <div className="time-grid">
+        <label className="field">
+          <span>Start</span>
+          <input type="date" value={d.startDate ?? ''} onChange={(e) => set('startDate', e.target.value || null)} />
+        </label>
+        <label className="field">
+          <span>Decide by</span>
+          <input type="date" min={d.startDate ?? undefined} value={d.decideBy ?? ''} onChange={(e) => set('decideBy', e.target.value || null)} />
+        </label>
+      </div>
+      <label className="field">
+        <span>Notes</span>
+        <textarea rows={3} value={d.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Anything to remember" />
+      </label>
+    </form>
   );
 }
 

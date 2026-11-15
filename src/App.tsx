@@ -14,6 +14,7 @@ import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
 import { HeaderSearchContext, matchesSearch } from './lib/headerSearch';
 import { decisionStore, type Decision } from './lib/decisions';
+import { planStore, type Plan } from './lib/plans';
 import { PlannerPanel } from './components/Planner';
 import { BudgetCard } from './components/BudgetCard';
 import { budgetStore, download as downloadText, linesToCsv, newBudgetLine, type BudgetLine } from './lib/budget';
@@ -173,6 +174,7 @@ export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   // V20-247 (Dan, Nov 14): Project Planner decisions.
   const [decisions, setDecisions] = useState<Decision[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   // V20-183: the app-wide Log the time? (for Done from the reminder, Missed pop-up, Time's up and rituals).
   const [timeAsk, setTimeAsk] = useState<{ l: Launch; minutes: number; q: string } | null>(null);
   // V20-214 (Dan, Nov 14): a launch saved for today after its time has passed asks once: started at the set
@@ -453,6 +455,8 @@ export default function App() {
   useEffect(() => {
     if (supabase && !session) return;
     decisionStore.load(userId).then((r) => setDecisions(r.items));
+    planStore.load(userId).then((r) => setPlans(r.items));
+    planStore.onNewer((id, newer) => setPlans((l) => (newer ? l.map((x) => (x.id === id ? newer : x)) : l.filter((x) => x.id !== id))));
     decisionStore.onNewer((id, newer) => setDecisions((l) => (newer ? l.map((x) => (x.id === id ? newer : x)) : l.filter((x) => x.id !== id))));
   }, [userId, session]);
 
@@ -754,6 +758,7 @@ export default function App() {
   const eventOps = ops(eventStore, events, setEvents, (e) => e.title);
   const projectOps = ops(projectStore, projects, setProjects, (p) => p.name);
   const decisionOps = ops(decisionStore, decisions, setDecisions, (d) => d.title || 'Decision');
+  const planOps = ops(planStore, plans, setPlans, (p) => p.name || 'Plan');
   const taskOps = ops(taskStore, tasks, setTasks, (t) => taskName(t));
   const nonNegOps = ops(nonNegStore, nonnegs, setNonnegs, (n) => n.label);
   // Meditations save from the newest copy (several can change in one ritual save).
@@ -1932,7 +1937,7 @@ export default function App() {
                 />
               }
               budget={!settings.modules.budget ? null : <BudgetCard lines={budget} today={now} onOpenAll={() => setPage('budget')} />}
-              planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} projects={projects} onSave={decisionOps.save} onRemove={decisionOps.remove} onToggle={() => setPage('planner')} />}
+              planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToggle={() => setPage('planner')} />}
               journal={!settings.modules.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!settings.modules.routine ? null : 
                 <TodayPanel
@@ -1966,7 +1971,7 @@ export default function App() {
               expenses={expenses}
             />
           ) : page === 'planner' ? (
-            <PlannerPanel full decisions={decisions} projects={projects} onSave={decisionOps.save} onRemove={decisionOps.remove} onToggle={() => setPage('launch')} />
+            <PlannerPanel full decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToggle={() => setPage('launch')} />
           ) : page === 'journal' ? (
             <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} full onClose={() => setPage('launch')} />
           ) : page === 'days26' ? (

@@ -3503,9 +3503,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
    inline editing, options like task steps.
    ========================================================================== */
 .pl-title { gap: 14px; flex-wrap: wrap; }
-.pl-pick { position: relative; display: inline-flex; align-items: center; height: 36px; box-sizing: border-box; border: 2px solid var(--accent-purple); border-radius: 999px; padding: 0 34px 0 14px; color: var(--accent-purple); }
-.pl-pick select { all: unset; cursor: pointer; font: 700 12px var(--font-body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-purple); max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pl-pick svg { position: absolute; right: 10px; color: var(--accent-teal); pointer-events: none; }
 .pl-stats { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 0 0 14px; }
 @media (max-width: 760px) { .pl-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .pl-stat .budget-stat-label { white-space: nowrap; }
@@ -3558,7 +3555,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app :is(.rockets-toggle, .week-arrow) svg { width: 20px; height: 20px; stroke-width: 2.8; }
 .app.app .rockets-title { gap: 6px; }
 .app.app .panel-head .view-switch:has(.week-toggle) { margin-left: 0; }
-.app.app .rockets-title > .pl-pick, .app.app .rockets-title > :not(h2):not(.rockets-toggle) { margin-left: 6px; }
+.app.app .rockets-title > .pl-pill, .app.app .rockets-title > :not(h2):not(.rockets-toggle) { margin-left: 6px; }
 .app.app .pl-title { gap: 6px; }
 .app.app .panel-week .panel-head .view-switch { margin-left: -6px; }
 
@@ -3578,3 +3575,11 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .d26-range button { cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
 .app.app.is-kb .kb-go { border-radius: 50%; }
 .app.app .daynight .daynight-btn { border: 0; }
+
+/* V20-253 (Dan, Nov 15): the plan pill steps through plans: ‹ NAME ›. Not a drop-down. */
+.app.app .pl-pill { display: inline-flex; align-items: stretch; height: 36px; box-sizing: border-box; }
+.app.app .pl-pill .picker-main { padding: 0 6px; font: 700 12px var(--font-body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-purple); max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app.app .pl-pill .picker-caret { width: 32px; display: grid; place-items: center; padding: 0; color: var(--accent-teal); }
+.app.app .pl-pill .picker-caret svg { stroke-width: 2.8; }
+.app.app .pl-pill .picker-caret:disabled { opacity: 0.35; cursor: default; background: transparent; }
+.app.app .pl-head .pl-acts { display: flex; justify-content: center; }
