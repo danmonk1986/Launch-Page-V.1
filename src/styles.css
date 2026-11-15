@@ -3392,32 +3392,32 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
    - REST: Colour 1 icon in a Colour 1 circle; hover a soft Colour 1 tint.
    Exceptions kept for now: delete (red), the header gear, KNOWLEDGE!B4SE's own look.
    ========================================================================== */
-.app:not(.is-kb) :is(.tool-btn, .quick-btn, .task-quick):not(.gear-btn) {
+.app :is(.tool-btn, .quick-btn, .task-quick):not(.gear-btn) {
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 50%; border: 2px solid var(--accent-purple);
   background: transparent; color: var(--accent-purple); filter: none;
   transition: background 0.15s, box-shadow 0.15s;
 }
-.app:not(.is-kb) :is(.tool-btn, .quick-btn, .task-quick):not(.gear-btn):hover {
+.app :is(.tool-btn, .quick-btn, .task-quick):not(.gear-btn):hover {
   background: color-mix(in srgb, var(--accent-purple) 14%, transparent); color: var(--accent-purple);
 }
-.app:not(.is-kb) :is(.tool-btn, .quick-btn, .task-quick)[aria-pressed='true'] {
+.app :is(.tool-btn, .quick-btn, .task-quick)[aria-pressed='true'] {
   background: color-mix(in srgb, var(--accent-purple) 22%, transparent);
 }
-.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .timed-item.is-launched .quick-done, .is-key),
-.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .timed-item.is-launched .quick-done, .is-key):hover {
+.app :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .timed-item.is-launched .quick-done, .is-key),
+.app :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .timed-item.is-launched .quick-done, .is-key):hover {
   background: var(--accent-teal); border-color: var(--accent-teal); color: var(--accent-purple);
 }
 /* V20-223: the hover ring sits on the outside edge (the border turns Colour 1). */
-.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .timed-item.is-launched .quick-done, .is-key):hover {
+.app :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .timed-item.is-launched .quick-done, .is-key):hover {
   border-color: var(--accent-purple); box-shadow: none;
 }
-.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .is-key):disabled { opacity: 1; box-shadow: none; }
-.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .is-key):disabled > * { opacity: 0.4; }
-.app:not(.is-kb) .tool-btn.tool-btn-danger { border-color: rgb(255 120 110 / 0.6); color: #e2675c; }
-.app:not(.is-kb) .tool-btn.tool-btn-danger:hover { background: rgb(255 120 110 / 0.12); }
-.app:not(.is-kb) .tool-btn.tool-btn-danger.is-armed { background: #e2675c; border-color: #e2675c; color: #ffffff; }
-.app:not(.is-kb) .tool-btn.is-asking { border-radius: 999px; }
+.app :is(.tool-btn-go, .quick-launch, .is-key):disabled { opacity: 1; box-shadow: none; }
+.app :is(.tool-btn-go, .quick-launch, .is-key):disabled > * { opacity: 0.4; }
+.app .tool-btn.tool-btn-danger { border-color: rgb(255 120 110 / 0.6); color: #e2675c; }
+.app .tool-btn.tool-btn-danger:hover { background: rgb(255 120 110 / 0.12); }
+.app .tool-btn.tool-btn-danger.is-armed { background: #e2675c; border-color: #e2675c; color: #ffffff; }
+.app .tool-btn.is-asking { border-radius: 999px; }
 
 /* V20-222 (Dan, Nov 14): font themes (Settings › Appearance › Fonts). L4UNCH is the default (Space Grotesk);
    Z4PTOR is the style guide: Roboto Slab headings, Roboto body, Roboto Mono. */
@@ -3452,20 +3452,20 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
    Shape: a pill in cards and forms everywhere; square (rounded corners) in Settings and on sign-in.
    Delete stays red. Old word-button colour rules were deleted.
    ========================================================================== */
-:is(.app:not(.is-kb), .signin) .btn {
+:is(.app, .signin) .btn {
   border: 2px solid var(--accent-teal); background: var(--accent-teal); color: var(--accent-purple);
   border-radius: 999px; padding: 0 18px; min-height: 36px; height: 36px; filter: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s, border-color 0.15s;
 }
-:is(.app:not(.is-kb), .signin) .btn:hover { border-color: var(--accent-purple); color: var(--accent-purple); background: var(--accent-teal); }
-:is(.app:not(.is-kb), .signin) .btn:disabled { opacity: 1; cursor: not-allowed; border-color: var(--accent-teal); }
-:is(.app:not(.is-kb), .signin) .btn:disabled > *, :is(.app:not(.is-kb), .signin) .btn:disabled { color: color-mix(in srgb, var(--accent-purple) 45%, var(--accent-teal)); }
-:is(.app:not(.is-kb), .signin) .btn.btn-quiet {
+:is(.app, .signin) .btn:hover { border-color: var(--accent-purple); color: var(--accent-purple); background: var(--accent-teal); }
+:is(.app, .signin) .btn:disabled { opacity: 1; cursor: not-allowed; border-color: var(--accent-teal); }
+:is(.app, .signin) .btn:disabled > *, :is(.app, .signin) .btn:disabled { color: color-mix(in srgb, var(--accent-purple) 45%, var(--accent-teal)); }
+:is(.app, .signin) .btn.btn-quiet {
   background: transparent; border: 2px solid var(--accent-purple); color: var(--accent-purple);
 }
-:is(.app:not(.is-kb), .signin) .btn.btn-quiet:hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
-:is(.app:not(.is-kb), .signin) .btn.btn-quiet:disabled { color: color-mix(in srgb, var(--accent-purple) 45%, transparent); border-color: color-mix(in srgb, var(--accent-purple) 45%, transparent); }
-:is(.app:not(.is-kb), .signin) .btn.btn-danger { background: transparent; border: 2px solid #e2675c; color: #e2675c; }
-:is(.app:not(.is-kb), .signin) .btn.btn-danger:hover { background: rgb(226 103 92 / 0.12); }
+:is(.app, .signin) .btn.btn-quiet:hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
+:is(.app, .signin) .btn.btn-quiet:disabled { color: color-mix(in srgb, var(--accent-purple) 45%, transparent); border-color: color-mix(in srgb, var(--accent-purple) 45%, transparent); }
+:is(.app, .signin) .btn.btn-danger { background: transparent; border: 2px solid #e2675c; color: #e2675c; }
+:is(.app, .signin) .btn.btn-danger:hover { background: rgb(226 103 92 / 0.12); }
 /* V20-228: word buttons are the same height as the icon buttons beside them (36px). Square in Settings and on sign-in. */
 :is(.sheet-settings, .sheet-password, .signin) .btn { border-radius: 0; }
 
@@ -3481,14 +3481,14 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
    Every form field (.field) in every form, pop-up, Settings and sign-in. The search bar keeps its pill.
    The line's colour and weight come from --line / --line-w, so required and focus never lose to the base rule.
    ========================================================================== */
-.app:not(.is-kb) .field :is(input:not([type='radio']):not([type='color']):not([type='checkbox']):not([type='file']):not([type='range']), select, textarea) {
+.app .field :is(input:not([type='radio']):not([type='color']):not([type='checkbox']):not([type='file']):not([type='range']), select, textarea) {
   border: 0; border-bottom: var(--line-w, 2px) solid var(--line, var(--accent-purple)); border-radius: 0; background-color: transparent;
   padding-left: 2px; padding-right: 28px; box-shadow: none; outline: none;
 }
-.app:not(.is-kb) .field input:not([type='radio']):not([type='color']):not([type='checkbox']):not([type='file']):not([type='range']):not([type='date']):not([type='time']) { padding-right: 2px; }
+.app .field input:not([type='radio']):not([type='color']):not([type='checkbox']):not([type='file']):not([type='range']):not([type='date']):not([type='time']) { padding-right: 2px; }
 .app .field :is(input, select, textarea):is(:required, [data-must]) { --line: var(--accent-teal); }
 .app .field :is(input, select, textarea):is(:focus, :focus-visible) { --line: var(--accent-teal); --line-w: 3px; box-shadow: none; outline: none; }
-.app:not(.is-kb) .field textarea { padding-top: 8px; }
+.app .field textarea { padding-top: 8px; }
 
 /* V20-233 (Dan, Nov 14): search pops out into the Z4PTOR pill: beige, bold 'Search', the round key button inside. */
 @keyframes search-pop { from { width: 36px; opacity: 0.4; } to { width: min(300px, 60vw); opacity: 1; } }
