@@ -1740,7 +1740,7 @@ export default function App() {
                 autoFocus
                 type="search"
                 value={headerQ}
-                placeholder={page === 'tasks' ? 'Search tasks' : page === 'budget' ? 'Search the budget' : page === 'records' ? 'Search records' : 'Search launches, tasks, rockets'}
+                placeholder={page === 'tasks' ? 'Search tasks' : page === 'budget' ? 'Search the budget' : page === 'invoices' ? 'Search records' : 'Search launches, tasks, rockets'}
                 aria-label="Search"
                 onChange={(e) => setHeaderQ(e.target.value)}
                 onKeyDown={(e) => {
