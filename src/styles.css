@@ -3520,3 +3520,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.is-kb .kb-btn.kb-btn-dark:hover { background: var(--accent-teal); border-color: var(--accent-purple); color: var(--accent-purple); }
 .app.is-kb .topbar-slim .gear-btn { border-radius: 50%; border: 2px solid var(--accent-purple); color: var(--accent-purple); background: transparent; }
 .app.is-kb .topbar-slim .gear-btn:hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
+/* V20-238: every icon button is a circle, beating the older 8px-corner rules in card headers. */
+.app.app :is(.tool-btn, .quick-btn, .task-quick, .view-toggle):not(.is-asking):not(.budget-groupby) { border-radius: 50%; }
