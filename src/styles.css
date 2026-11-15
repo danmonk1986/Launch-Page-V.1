@@ -3452,3 +3452,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .font-theme-name { font-size: 22px; font-weight: 700; line-height: 1.1; }
 .font-theme-body { font-size: 15px; color: var(--mist); }
 .font-theme-mono { font-size: 12px; letter-spacing: 0.12em; color: var(--accent-teal); }
+/* V20-225 (Dan, Nov 14): every header level uses the theme's heading font (Space Grotesk in L4UNCH, Roboto Slab in
+   Z4PTOR): card and page titles, section headers, sheet / pop-up titles. */
+:is(.panel-title, .sheet-head h2, .timed-title, .card-h, .what-sub, .records-sub, .journal-sub, .invoice-sub,
+  .d26-sec-name, .d26-tile-name, .d26-compare-title, .settings-section, .settings-head h2) { font-family: var(--font-head); }
