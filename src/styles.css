@@ -3520,3 +3520,16 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.is-kb .kb-btn.kb-btn-dark:hover { background: var(--accent-teal); border-color: var(--accent-purple); color: var(--accent-purple); }
 .app.is-kb .topbar-slim .gear-btn { border-radius: 50%; border: 2px solid var(--accent-purple); color: var(--accent-purple); background: transparent; }
 .app.is-kb .topbar-slim .gear-btn:hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
+
+/* ==========================================================================
+   LAUNCH PAGE on the style guide (Dan, Nov 14; V20-237). Colour 1 for every plain control, Colour 2 only for keys
+   and highlights (NOW, the next launch, selected tabs' underline stays).
+   - Chevrons (⌄ beside ROCKETS / TASKS, the calendar ‹ ›, Show more): Colour 1, no box; hover = a soft Colour 1 circle.
+   - The tile × in Rockets edit mode: a small Colour 1 circle (was pink).
+   ========================================================================== */
+.app .rockets-toggle, .app .week-arrow, .app .timed-more { color: var(--accent-purple); }
+.app .rockets-toggle, .app .week-arrow { border-radius: 50%; }
+.app .rockets-toggle:hover, .app .week-arrow:hover { color: var(--accent-purple); background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
+.app .timed-more:hover { color: var(--accent-purple); }
+.app .tile-x { border: 1.5px solid var(--accent-purple); color: var(--accent-purple); background: var(--surface-solid); }
+.app .tile-x:hover { background: var(--accent-purple); color: var(--surface-solid); }
