@@ -1319,19 +1319,12 @@ export default function App() {
   /** ⋯ → Create launch: a timed launch from the task, opening its link at its time. */
   /** Create launch from a task: opens Add timed launch filled in, so it can be checked before saving. */
   // V20-259 (Dan, Nov 15): Project Planner › Workflow. A decision goes to the calendar, Tasks or Rockets.
+  // V20-262 (Dan, Nov 15): Add to calendar puts it on the Launch Page's own calendar (THIS WEEK), not Google.
   async function decisionToCalendar(d: Decision) {
-    if (!googleConfigured()) return setStatus('Google Calendar isn’t set up for this app yet.');
-    const proj = projects.find((x) => x.id === d.projectId);
-    const parent = proj?.parentId ? projects.find((x) => x.id === proj.parentId) : null;
-    const calendarId = proj?.calendarId ?? parent?.calendarId ?? 'primary';
     const date = d.decideBy ?? isoDate(new Date());
-    try {
-      await addTaskToGoogle({ calendarId, title: `Decide: ${d.title}`, date, time: null, details: [d.description, d.notes].filter(Boolean).join('\n') });
-      const cal = knownCalendars().find((c) => c.id === calendarId)?.summary ?? 'your calendar';
-      setStatus(`${d.title} added to ${cal} on ${new Date(`${date}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`);
-    } catch (err) {
-      setStatus((err as Error).message || 'Could not add it to Google Calendar.');
-    }
+    const ev: CalEvent = { id: crypto.randomUUID(), title: `Decide: ${d.title}`, startDate: date, endDate: date, color: 'purple', sort: events.reduce((m, x) => Math.max(m, x.sort + 1), 0) };
+    await eventOps.save(ev);
+    setStatus(`${d.title} is on your calendar on ${new Date(`${date}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`);
   }
   async function decisionToTask(d: Decision) {
     const linked = d.taskId ? tasks.find((x) => x.id === d.taskId && !x.deletedAt) : null;
