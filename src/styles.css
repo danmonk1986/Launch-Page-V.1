@@ -3555,3 +3555,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .picker-main { height: 100%; }
 .app.app .picker-caret { width: 28px; height: 28px; border-left: 0; border-radius: 50%; color: var(--accent-teal); }
 .app.app .picker-caret:hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
+/* V20-243 (Dan, Nov 14): the By Category / Group toggle beside the totals (Expenses, Budget) is a normal 36px
+   icon circle, centred on the row (it stretched to the tiles' height). */
+.app.app .budget-groupby.icon-btn { width: 36px; height: 36px; min-height: 36px; min-width: 36px; border-radius: 50%; align-self: center; flex: none; }
