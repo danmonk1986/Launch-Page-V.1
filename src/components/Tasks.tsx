@@ -1,3 +1,4 @@
+import { useHeaderSearch } from '../lib/headerSearch';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { FormActions, Sheet } from './Sheet';
@@ -817,7 +818,8 @@ export function TasksPage(
   const [view, setView] = useState<Section | null>(null);
   // Search: a task matches on its name, description, notes, info or project; its steps come with
   // it, and a matching step brings its task.
-  const [q, setQ] = useState('');
+  // V20-245: the header search drives this page.
+  const { q } = useHeaderSearch();
   const needle = q.trim().toLowerCase();
   const hit = (t: Task) =>
     [t.task, t.description, t.notes, t.linkLabel, t.expense, p.projects.find((x) => x.id === t.projectId)?.name ?? ''].some((v) => (v ?? '').toLowerCase().includes(needle));
@@ -855,7 +857,6 @@ export function TasksPage(
         </div>
         <ViewToggle month={layout === 'month'} listName="List" onToggle={() => setLayout(layout === 'month' ? 'list' : 'month')} nav={{ month, onMonth: setMonth }} />
         <div className="panel-actions">
-          <SearchToggle value={q} onChange={setQ} placeholder="Search tasks" />
           {p.onOpenProjects && (
             <button type="button" className="icon-btn tool-btn" aria-label="Projects" title="Areas and projects" onClick={p.onOpenProjects}>
               <Icon d={FOLDER} />

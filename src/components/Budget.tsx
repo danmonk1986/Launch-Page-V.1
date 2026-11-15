@@ -1,6 +1,7 @@
+import { useHeaderSearch } from '../lib/headerSearch';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from './Sheet';
-import { Icon, SearchToggle, TaskSheet, ViewToggle } from './Tasks';
+import { Icon, TaskSheet, ViewToggle } from './Tasks';
 import { useOpensUp } from './Rockets';
 import { thisMonth } from './Expenses';
 import { originalLabel, rateToCad, toCad } from '../lib/currency';
@@ -123,7 +124,8 @@ function shortDate(iso: string | null) {
 export function BudgetPage(p: Props) {
   // The box clicked: shows only its lines. null = everything.
   const [pick, setPick] = useState<string | null>(null);
-  const [q, setQ] = useState('');
+  // V20-245: the header search drives this page.
+  const { q } = useHeaderSearch();
   const [closed, setClosed] = useState<Record<string, boolean>>({});
   const [editing, setEditing] = useState<BudgetLine | null>(null);
   const [incoming, setIncoming] = useState<{ name: string; lines: BudgetLine[] } | null>(null);
@@ -339,7 +341,6 @@ export function BudgetPage(p: Props) {
         </h2>
         <ViewToggle month={view === 'month'} listName="Master" onToggle={() => setView(view === 'month' ? 'master' : 'month')} nav={{ month, onMonth: setMonth }} />
         <div className="panel-actions">
-          <SearchToggle value={q} onChange={setQ} placeholder="Search the budget" />
           {view === 'master' && (
           <>
           <button

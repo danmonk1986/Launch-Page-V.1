@@ -3565,3 +3565,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .daynight .daynight-btn + .daynight-btn { border-left: 0; }
 .app.app .daynight .daynight-btn[aria-pressed='true'] { background: var(--accent-teal); color: var(--accent-purple); }
 .app.app .daynight .daynight-btn:not([aria-pressed='true']):hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
+/* V20-245: the header search: a teal key circle beside the gear; it pops out into the beige pill. */
+.app .topbar .header-search { width: min(320px, 50vw); height: 36px; }
+@media (max-width: 700px) { .app .topbar .header-search { width: min(240px, 60vw); } }

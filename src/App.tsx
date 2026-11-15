@@ -12,6 +12,7 @@ import { Header, type PageId } from './components/Header';
 import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
+import { HeaderSearchContext, matchesSearch } from './lib/headerSearch';
 import { budgetStore, download as downloadText, linesToCsv, newBudgetLine, type BudgetLine } from './lib/budget';
 import { rateToCad, toCad } from './lib/currency';
 import { expenseFromLine, expenseStore, type Expense } from './lib/expenses';
@@ -172,6 +173,10 @@ export default function App() {
   // V20-214 (Dan, Nov 14): a launch saved for today after its time has passed asks once: started at the set
   // time (the clock runs from then), already done (Log the time?), or not started (Missed, as before).
   const [pastAsk, setPastAsk] = useState<Launch | null>(null);
+  // V20-245 (Dan, Nov 14): one search in the header, on every page (KNOWLEDGE!B4SE has its own). The round teal key
+  // button pops out the beige pill; the page you're on filters itself. Clears when you change page.
+  const [headerQ, setHeaderQ] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   // V20-224: the font theme lives on <html>, so everything (body text, pop-ups) picks it up.
   useEffect(() => {
     // V20-235: wait for the real settings (the page already carries the last theme), so the default never flashes.
@@ -239,6 +244,10 @@ export default function App() {
     ro.observe(bar);
     return () => ro.disconnect();
   }, [authReady, session]);
+  useEffect(() => {
+    setHeaderQ('');
+    setSearchOpen(false);
+  }, [page]);
   const importInput = useRef<HTMLInputElement>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   // V20-175 (Dan, Nov 13): a project switched off (archived) takes its tasks off the Tasks card and page; they stay
@@ -1723,6 +1732,33 @@ export default function App() {
             e.target.value = '';
           }}
         />
+        {/* V20-245: the header search (not on KNOWLEDGE!B4SE, which has its own). */}
+        {page !== 'kb' &&
+          (searchOpen || headerQ ? (
+            <span className="search-box search-pill header-search">
+              <input
+                autoFocus
+                type="search"
+                value={headerQ}
+                placeholder={page === 'tasks' ? 'Search tasks' : page === 'budget' ? 'Search the budget' : page === 'records' ? 'Search records' : 'Search launches, tasks, rockets'}
+                aria-label="Search"
+                onChange={(e) => setHeaderQ(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setHeaderQ('');
+                    setSearchOpen(false);
+                  }
+                }}
+              />
+              <button type="button" className="icon-btn tool-btn is-key" aria-label="Close search" title="Close search" onClick={() => { setHeaderQ(''); setSearchOpen(false); }}>
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d={headerQ ? 'M6 6l12 12M18 6L6 18' : 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4.3-4.3'} /></svg>
+              </button>
+            </span>
+          ) : (
+            <button type="button" className="icon-btn tool-btn is-key header-search-btn" aria-label="Search" title="Search" onClick={() => setSearchOpen(true)}>
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4.3-4.3" /></svg>
+            </button>
+          ))}
         {/* V20-111 (Dan, Nov 12): the ⚙ opens the Settings window straight away (no drop-down). */}
         <button type="button" className="icon-btn tool-btn gear-btn" aria-label="Settings" title="Settings" onClick={() => setSettingsOpen('account')}>
           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1739,6 +1775,7 @@ export default function App() {
     : theme;
 
   return (
+    <HeaderSearchContext.Provider value={{ q: headerQ, setQ: setHeaderQ }}>
     <MeditationsContext.Provider value={{ list: meditations, save: saveMeditation, remove: removeMeditation }}>
     <HiddenPicksContext.Provider value={{ hidden: hiddenPicks, hide: hidePick }}>
     <div
@@ -1800,9 +1837,9 @@ export default function App() {
                   rituals={routines.filter((r) => r.kind === 'ritual').map((r) => ({ id: r.id, name: r.name }))}
                   projects={projects}
                   routineName={activeRoutine ? routineLabel(activeRoutine, shift) : null}
-                  rockets={rocketsFor(rockets, activeRoutine?.id ?? null)}
+                  rockets={rocketsFor(rockets, activeRoutine?.id ?? null).filter((r) => matchesSearch(headerQ, r.name, r.url))}
                   routineId={activeRoutine?.id ?? null}
-                  launches={launches}
+                  launches={headerQ ? launches.filter((l) => matchesSearch(headerQ, l.title)) : launches}
                   onSaveRocket={rocketOps.save}
                   onSaveRockets={rocketOps.saveMany}
                   onDeleteRocket={rocketOps.remove}
@@ -1816,7 +1853,7 @@ export default function App() {
                   isPaused={isPaused}
                   overrun={overrun}
                   onPause={togglePause}
-                  log={launchLog}
+                  log={headerQ ? launchLog.filter((g) => matchesSearch(headerQ, g.title)) : launchLog}
                   onSettleMissed={settleMissed}
                   onAddLog={addManualLog}
                   onUndoRun={undoRun}
@@ -1861,7 +1898,7 @@ export default function App() {
                 <TasksPanel
                   addPreset={taskPreset}
                   onAddPresetUsed={() => setTaskPreset(null)}
-                  tasks={shownTasks}
+                  tasks={headerQ ? shownTasks.filter((t) => matchesSearch(headerQ, t.description, t.notes)) : shownTasks}
                   onPushToBudget={pushToBudget}
                   projects={projects}
                   today={now}
@@ -2354,5 +2391,6 @@ export default function App() {
     </div>
     </HiddenPicksContext.Provider>
     </MeditationsContext.Provider>
+    </HeaderSearchContext.Provider>
   );
 }
