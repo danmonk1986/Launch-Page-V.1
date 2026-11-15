@@ -3630,9 +3630,9 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .pd-list li.pd-row-btn:hover { background: transparent; }
 .app.app .pd-list li.pd-row-btn:nth-child(even):hover { background: color-mix(in srgb, var(--accent-purple) 7%, transparent); }
 
-/* V20-266: the open decision's buttons are in-card size (36 px, like the row ✓), not the 56 px card-top size. */
-.app.app .pl-edit-acts :is(.tool-btn, .icon-btn) { width: 36px; height: 36px; min-width: 36px; min-height: 36px; padding: 0; }
-.app.app .pl-edit-acts :is(.tool-btn, .icon-btn) svg { width: 16px; height: 16px; }
+/* V20-266: the open decision's buttons are in-card size (30 px, like the row ✓), not the 56 px card-top size. */
+.app.app .pl-edit-acts :is(.tool-btn, .icon-btn) { width: 30px; height: 30px; min-width: 30px; min-height: 30px; padding: 0; }
+.app.app .pl-edit-acts :is(.tool-btn, .icon-btn) svg { width: 14px; height: 14px; }
 .app.app .pl-edit-acts .is-asking { width: auto; padding: 0 12px; border-radius: 999px; }
 .app.app .pl-edit-acts { margin-bottom: -22px; gap: 8px; }
 .app.app .pl-grid3 { padding-right: 190px; }
