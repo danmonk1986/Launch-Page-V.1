@@ -3621,3 +3621,13 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .bc-amt { text-align: right; }
 .panel-planner.is-full, .panel-budget-card { min-width: 0; }
 .app .tabs .tab.is-off { opacity: 0.4; }
+/* V20-251 (Dan, Nov 15): the chevron law. Every chevron (⌄ beside ROCKETS / THIS WEEK / TASKS / BUDGET / PROJECT
+   PLANNER, the planner rows, the calendar ‹ ›) is the same: a 32px spot, a 20px icon drawn a little heavier, Colour 2,
+   no box, Colour 1 on hover. Spacing: the gap from a title to its chevron (the ROCKETS spacing) is the gap to whatever
+   comes after it too. */
+.app.app :is(.rockets-toggle, .week-arrow) { width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; margin: 0; border: 0; border-radius: 50%; }
+.app.app :is(.rockets-toggle, .week-arrow) svg { width: 20px; height: 20px; stroke-width: 2.8; }
+.app.app .rockets-title { gap: 6px; }
+.app.app .panel-head .view-switch:has(.week-toggle) { margin-left: 0; }
+.app.app .rockets-title > .pl-pick, .app.app .rockets-title > :not(h2):not(.rockets-toggle) { margin-left: 6px; }
+.app.app .pl-title { gap: 6px; }
