@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useState, type KeyboardEvent } from 'react';
 import { Icon } from './Tasks';
 import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
 import { byDate, newDecision, DECISION_STATUSES, type Decision, type DecisionOption, type DecisionStatus } from '../lib/decisions';
@@ -261,16 +261,10 @@ export function PlannerPanel(p: {
                     </label>
                   </div>
                   <div className="pl-opts">
-                    <div className="pl-opt pl-opt-head" aria-hidden="true">
-                      <span>Options</span>
-                      <span>Link</span>
-                      <span>Cost</span>
-                      <span />
-                      <span />
-                    </div>
-                    {o.options.map((op) => (
+                    {o.options.map((op, n) => (
                       <OptionRow
                         key={op.id}
+                        n={n + 1}
                         op={op}
                         onChange={(v) => edit(d.id, { options: o.options.map((x) => (x.id === op.id ? v : x)) })}
                         onPick={() => edit(d.id, { options: o.options.map((x) => ({ ...x, picked: x.id === op.id ? !x.picked : false })) })}
@@ -423,19 +417,30 @@ function PlanForm({ plan, projects, existing, onSave }: { plan: Plan; projects: 
   );
 }
 
-function OptionRow({ op, onChange, onPick, onRemove }: { op: DecisionOption; onChange: (o: DecisionOption) => void; onPick: () => void; onRemove: () => void }) {
+/** V20-260 (Dan, Nov 15): an option is three fields in the form style: Option · Link · Cost, then ✓ pick and ×. */
+function OptionRow({ n, op, onChange, onPick, onRemove }: { n: number; op: DecisionOption; onChange: (o: DecisionOption) => void; onPick: () => void; onRemove: () => void }) {
+  const url = op.link?.trim() ? (/^https?:\/\//i.test(op.link) ? op.link : `https://${op.link}`) : '';
   return (
-    <div className={`pl-opt${op.picked ? ' is-picked' : ''}`}>
-      <input className="pl-opt-name" value={op.name} onChange={(e) => onChange({ ...op, name: e.target.value })} aria-label="Option" />
-      <span className="pl-opt-link">
-        <input value={op.link ?? ''} onChange={(e) => onChange({ ...op, link: e.target.value })} aria-label="Option link" placeholder="https://…" />
-        {op.link?.trim() && (
-          <a href={/^https?:\/\//i.test(op.link) ? op.link : `https://${op.link}`} target="_blank" rel="noreferrer" aria-label="Open link" title="Open link">
-            ↗
-          </a>
-        )}
-      </span>
-      <input className="pl-opt-cost" value={op.cost} onChange={(e) => onChange({ ...op, cost: e.target.value })} aria-label="Option cost" placeholder="Cost" />
+    <div className={`pl-opt3${op.picked ? ' is-picked' : ''}`}>
+      <label className="field">
+        <span>Option {n}</span>
+        <input value={op.name} onChange={(e) => onChange({ ...op, name: e.target.value })} />
+      </label>
+      <label className="field pl-opt-link">
+        <span>
+          Link
+          {url && (
+            <a href={url} target="_blank" rel="noreferrer" title="Open link">
+              {' '}↗
+            </a>
+          )}
+        </span>
+        <input value={op.link ?? ''} onChange={(e) => onChange({ ...op, link: e.target.value })} placeholder="https://…" />
+      </label>
+      <label className="field">
+        <span>Cost</span>
+        <input value={op.cost} onChange={(e) => onChange({ ...op, cost: e.target.value })} placeholder="$0" />
+      </label>
       <button type="button" className={`quick-btn task-quick${op.picked ? ' is-key' : ''}`} aria-label={op.picked ? 'Picked (tap to unpick)' : 'Pick this option'} title={op.picked ? 'Picked' : 'Pick'} onClick={onPick}>
         <Icon d={CHECK} />
       </button>
@@ -483,31 +488,36 @@ function Workflow({ d, onCalendar, onTask, onRocket }: { d: Decision; onCalendar
 }
 
 function AddOption({ onAdd }: { onAdd: (o: DecisionOption) => void }) {
-  const [name, setName] = useState('');
+  const [o, setO] = useState({ name: '', link: '', cost: '' });
   const go = () => {
-    if (!name.trim()) return;
-    onAdd({ id: crypto.randomUUID(), name: name.trim(), note: '', cost: '', picked: false });
-    setName('');
+    if (!o.name.trim()) return;
+    onAdd({ id: crypto.randomUUID(), name: o.name.trim(), note: '', cost: o.cost.trim(), link: o.link.trim(), picked: false });
+    setO({ name: '', link: '', cost: '' });
+  };
+  const enter = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      go();
+    }
   };
   return (
-    <div className="pl-addopt">
+    <div className="pl-opt3 pl-addopt3">
       <label className="field">
-        <span className="sr-only">Add an option</span>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Add an option"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              go();
-            }
-          }}
-        />
+        <span>Add an option</span>
+        <input value={o.name} onChange={(e) => setO({ ...o, name: e.target.value })} onKeyDown={enter} placeholder="Porkbun, Namecheap…" />
+      </label>
+      <label className="field">
+        <span>Link</span>
+        <input value={o.link} onChange={(e) => setO({ ...o, link: e.target.value })} onKeyDown={enter} placeholder="https://…" />
+      </label>
+      <label className="field">
+        <span>Cost</span>
+        <input value={o.cost} onChange={(e) => setO({ ...o, cost: e.target.value })} onKeyDown={enter} placeholder="$0" />
       </label>
       <button type="button" className="quick-btn task-quick" aria-label="Add option" title="Add option" onClick={go}>
         <Icon d={PLUS} />
       </button>
+      <span />
     </div>
   );
 }
