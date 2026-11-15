@@ -3467,4 +3467,4 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 :is(.app:not(.is-kb), .signin) .btn.btn-danger { background: transparent; border: 2px solid #e2675c; color: #e2675c; }
 :is(.app:not(.is-kb), .signin) .btn.btn-danger:hover { background: rgb(226 103 92 / 0.12); }
 /* V20-228: word buttons are the same height as the icon buttons beside them (36px). Square in Settings and on sign-in. */
-:is(.sheet-settings, .sheet-password, .signin) .btn { border-radius: 10px; }
+:is(.sheet-settings, .sheet-password, .signin) .btn { border-radius: 0; }
