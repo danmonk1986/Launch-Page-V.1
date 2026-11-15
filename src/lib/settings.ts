@@ -63,16 +63,43 @@ export interface BrandSettings {
   modules: Modules;
   /** V20-210: the shared What list (null = the ten defaults). */
   whats: WhatItem[] | null;
-  /** V20-222 (Dan, Nov 14): the font theme. launch = Space Grotesk; zaptor = the Z4PTOR style guide (Roboto Slab,
-   *  Roboto, Roboto Mono). */
+  /** V20-222 / V20-229 (Dan, Nov 14): the font theme: SPACE (Space Grotesk, the original), ROBOT (the Z4PTOR
+   *  style guide) or YOURS (your own name and three fonts). */
   fontTheme: FontTheme;
+  fontCustom: FontCustom;
 }
 
-export type FontTheme = 'launch' | 'zaptor';
+export type FontTheme = 'space' | 'robot' | 'yours';
+export interface FontCustom { name: string; head: string; body: string; mono: string }
+export const DEFAULT_FONT_CUSTOM: FontCustom = { name: 'YOURS', head: 'Oswald', body: 'Inter', mono: 'JetBrains Mono' };
 export const FONT_THEMES: { id: FontTheme; name: string; head: string; body: string; mono: string }[] = [
-  { id: 'launch', name: 'L4UNCH', head: 'Space Grotesk', body: 'Space Grotesk', mono: 'Roboto Mono' },
-  { id: 'zaptor', name: 'Z4PTOR', head: 'Roboto Slab', body: 'Roboto', mono: 'Roboto Mono' }
+  { id: 'robot', name: 'ROBOT', head: 'Roboto Slab', body: 'Roboto', mono: 'Roboto Mono' },
+  { id: 'space', name: 'SPACE', head: 'Space Grotesk', body: 'Space Grotesk', mono: 'Roboto Mono' }
 ];
+/** The fonts YOURS can pick from (Google Fonts, loaded only when picked). */
+export const FONT_CHOICES: { name: string; kind: 'sans' | 'serif' | 'display' | 'mono' }[] = [
+  { name: 'Space Grotesk', kind: 'sans' }, { name: 'Roboto', kind: 'sans' }, { name: 'Inter', kind: 'sans' },
+  { name: 'DM Sans', kind: 'sans' }, { name: 'Work Sans', kind: 'sans' }, { name: 'Rubik', kind: 'sans' },
+  { name: 'Poppins', kind: 'sans' }, { name: 'Montserrat', kind: 'sans' }, { name: 'IBM Plex Sans', kind: 'sans' },
+  { name: 'Archivo', kind: 'sans' }, { name: 'Roboto Slab', kind: 'serif' }, { name: 'Lora', kind: 'serif' },
+  { name: 'Playfair Display', kind: 'serif' }, { name: 'Source Serif 4', kind: 'serif' }, { name: 'Oswald', kind: 'display' },
+  { name: 'Bebas Neue', kind: 'display' }, { name: 'Archivo Black', kind: 'display' }, { name: 'Roboto Mono', kind: 'mono' },
+  { name: 'Space Mono', kind: 'mono' }, { name: 'JetBrains Mono', kind: 'mono' }, { name: 'IBM Plex Mono', kind: 'mono' },
+  { name: 'DM Mono', kind: 'mono' }
+];
+/** The weights to ask Google Fonts for (some fonts only come in a few; asking for a missing one fails). */
+export function fontWeights(name: string): string {
+  if (name === 'Bebas Neue' || name === 'Archivo Black') return '';
+  if (name === 'Space Mono') return ':wght@400;700';
+  if (name === 'DM Mono') return ':wght@400;500';
+  return ':wght@400;500;700';
+}
+/** The CSS family for a font name: a fallback that fits its kind. */
+export function fontStack(name: string): string {
+  const kind = FONT_CHOICES.find((f) => f.name === name)?.kind ?? 'sans';
+  const tail = kind === 'serif' ? 'Georgia, serif' : kind === 'mono' ? 'ui-monospace, monospace' : 'system-ui, sans-serif';
+  return `'${name}', ${tail}`;
+}
 
 /** V20-158 (Dan, Nov 13): modules in sections. Launch Page essentials are on by default; everything from Personal
  *  Alchemy down is off by default. Some are still to be built (MODULE_SOON). */
@@ -174,7 +201,8 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   surfaces: DEFAULT_SURFACES,
   modules: DEFAULT_MODULES,
   whats: null,
-  fontTheme: 'launch'
+  fontTheme: 'space',
+  fontCustom: DEFAULT_FONT_CUSTOM
 };
 
 /** V20-120: day mode = a light background. */
@@ -251,6 +279,7 @@ type Row = {
   day_colour?: string | null;
   whats?: WhatItem[] | null;
   font_theme?: string | null;
+  font_custom?: Partial<FontCustom> | null;
 };
 
 const toRow = (s: BrandSettings): Row => ({
@@ -280,7 +309,8 @@ const toRow = (s: BrandSettings): Row => ({
   surfaces: s.surfaces,
   modules: s.modules,
   whats: s.whats,
-  font_theme: s.fontTheme
+  font_theme: s.fontTheme,
+  font_custom: s.fontCustom
 });
 
 const fromRow = (r: Row): BrandSettings => ({
@@ -315,7 +345,8 @@ const fromRow = (r: Row): BrandSettings => ({
   },
   modules: { ...DEFAULT_MODULES, ...(r.modules ?? {}) },
   whats: Array.isArray(r.whats) && r.whats.length ? r.whats : null,
-  fontTheme: r.font_theme === 'zaptor' ? 'zaptor' : 'launch'
+  fontTheme: r.font_theme === 'robot' || r.font_theme === 'zaptor' ? 'robot' : r.font_theme === 'yours' ? 'yours' : 'space',
+  fontCustom: { ...DEFAULT_FONT_CUSTOM, ...(r.font_custom ?? {}) }
 });
 
 /** The remembered background for each mode; the current one fills its own side when nothing is saved yet. */

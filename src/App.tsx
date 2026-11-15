@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
 import type { Session } from '@supabase/supabase-js';
 import { checkPassword, supabase } from './lib/supabase';
-import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettingsPatch, applySettingsPatch, shownName, syncLinkedEmail, loadBgImages, saveBgImage, resolveBackground, EMPTY_SLOTS, type BgSlots, type BrandSettings } from './lib/settings';
+import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettingsPatch, fontStack, fontWeights, applySettingsPatch, shownName, syncLinkedEmail, loadBgImages, saveBgImage, resolveBackground, EMPTY_SLOTS, type BgSlots, type BrandSettings } from './lib/settings';
 import { downloadLaunchSheet } from './lib/launchSheet';
 import { downloadRecords } from './lib/recordsSheet';
 import { setWhatList, whatList } from './lib/whats';
@@ -174,8 +174,28 @@ export default function App() {
   const [pastAsk, setPastAsk] = useState<Launch | null>(null);
   // V20-224: the font theme lives on <html>, so everything (body text, pop-ups) picks it up.
   useEffect(() => {
-    document.documentElement.dataset.font = settings.fontTheme;
-  }, [settings.fontTheme]);
+    const root = document.documentElement;
+    root.dataset.font = settings.fontTheme;
+    // V20-229: YOURS = your three fonts, loaded from Google Fonts when picked.
+    const c = settings.fontCustom;
+    if (settings.fontTheme === 'yours') {
+      root.style.setProperty('--font-head', fontStack(c.head));
+      root.style.setProperty('--font-body', fontStack(c.body));
+      root.style.setProperty('--font-mono', fontStack(c.mono));
+    } else ['--font-head', '--font-body', '--font-mono'].forEach((v) => root.style.removeProperty(v));
+    const want = settings.fontTheme === 'yours' ? [c.head, c.body, c.mono] : [];
+    const href = want.length
+      ? `https://fonts.googleapis.com/css2?${[...new Set(want)].map((f) => `family=${f.trim().replace(/ /g, '+')}${fontWeights(f)}`).join('&')}&display=swap`
+      : '';
+    let link = document.getElementById('font-yours') as HTMLLinkElement | null;
+    if (href && !link) {
+      link = document.createElement('link');
+      link.id = 'font-yours';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+    if (link && link.href !== href) link.href = href;
+  }, [settings.fontTheme, settings.fontCustom]);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
   // 26 Days
   const [nonnegs, setNonnegs] = useState<NonNeg[]>([]);

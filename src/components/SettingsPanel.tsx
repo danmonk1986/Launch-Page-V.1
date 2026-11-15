@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
-import { settingsPatch, BG_NAME, DEFAULT_MODULES, MODULE_SOON, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, FONT_THEMES, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
+import { settingsPatch, BG_NAME, DEFAULT_MODULES, MODULE_SOON, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, FONT_THEMES, FONT_CHOICES, DEFAULT_FONT_CUSTOM, fontStack, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, TRASH_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
 import { PROJECT_FORM_ID, ProjectHeadContext, type ProjectHead } from './Projects';
@@ -417,10 +417,10 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
               })}
               <p className="field-hint">Neutral is the text colour. Colour 1 and Colour 2 run the app; Colour 1, Colour 2 and the two accents are the rocket colours. Tap a swatch to pick (the dropper picks from the screen), or paste a hex code.</p>
               {/* V20-146 (Dan, Nov 12): CARDS + HEADER, each mode's header and card colour and how solid each is. */}
-              {/* V20-222 (Dan, Nov 14): two font themes. */}
-              <SectionHead title="Fonts" onRestore={() => saveNow((d) => ({ ...d, fontTheme: 'launch' }))} />
+              {/* V20-222 / V20-229 (Dan, Nov 14): three font blocks: ROBOT, SPACE, YOURS (name it, pick the three levels). */}
+              <SectionHead title="Fonts" onRestore={() => saveNow((d) => ({ ...d, fontTheme: 'space', fontCustom: DEFAULT_FONT_CUSTOM }))} />
               <div className="font-themes" role="radiogroup" aria-label="Font theme">
-                {FONT_THEMES.map((f) => (
+                {[...FONT_THEMES, { id: 'yours' as const, name: draft.fontCustom.name.trim() || 'YOURS', head: draft.fontCustom.head, body: draft.fontCustom.body, mono: draft.fontCustom.mono }].map((f) => (
                   <button
                     key={f.id}
                     type="button"
@@ -429,12 +429,32 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                     className={`font-theme${draft.fontTheme === f.id ? ' is-on' : ''}`}
                     onClick={() => saveNow((d) => ({ ...d, fontTheme: f.id }))}
                   >
-                    <span className="font-theme-name" style={{ fontFamily: `'${f.head}', serif` }}>{f.name}</span>
-                    <span className="font-theme-body" style={{ fontFamily: `'${f.body}', sans-serif` }}>{`${f.head} headings · ${f.body} text`}</span>
-                    <span className="font-theme-mono" style={{ fontFamily: `'${f.mono}', monospace` }}>9:30 PM · {f.mono.toUpperCase()}</span>
+                    <span className="font-theme-name" style={{ fontFamily: fontStack(f.head) }}>{f.name}</span>
+                    <span className="font-theme-body" style={{ fontFamily: fontStack(f.body) }}>{`${f.head} headings · ${f.body} text`}</span>
+                    <span className="font-theme-mono" style={{ fontFamily: fontStack(f.mono) }}>9:30 PM · {f.mono.toUpperCase()}</span>
                   </button>
                 ))}
               </div>
+              {draft.fontTheme === 'yours' && (
+                <div className="font-yours-edit">
+                  <label className="field">
+                    <span>Name</span>
+                    <input value={draft.fontCustom.name} maxLength={16} onChange={(e) => set('fontCustom', { ...draft.fontCustom, name: e.target.value.toUpperCase() })} placeholder="YOURS" />
+                  </label>
+                  {([['head', 'Headings'], ['body', 'Text'], ['mono', 'Times and numbers']] as const).map(([k, label]) => (
+                    <label key={k} className="field">
+                      <span>{label}</span>
+                      <select value={draft.fontCustom[k]} onChange={(e) => set('fontCustom', { ...draft.fontCustom, [k]: e.target.value })} style={{ fontFamily: fontStack(draft.fontCustom[k]) }}>
+                        {FONT_CHOICES.map((c) => (
+                          <option key={c.name} value={c.name}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              )}
               <SectionHead title="Cards + header" onRestore={() => saveNow((d) => ({ ...d, surfaces: DEFAULT_SURFACES }))} />
               {(['day', 'night'] as const).map((mode) => {
                 const sf = draft.surfaces[mode];
