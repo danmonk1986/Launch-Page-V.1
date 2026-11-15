@@ -342,20 +342,22 @@ input:-webkit-autofill:focus {
 
 .picker { position: relative; }
 
+/* V20-236 (Dan, Nov 14): the routine picker on the button system: a Colour 1 pill (like the other word buttons),
+   Colour 1 text and caret, soft Colour 1 tint on hover. */
 .picker-split {
   display: flex;
   height: 46px;
-  border: 1px solid var(--accent-teal);
-  border-radius: 12px;
+  border: 2px solid var(--accent-purple);
+  border-radius: 999px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--accent-teal) 16%, transparent);
+  background: transparent;
 }
 
 .picker-main,
 .picker-caret {
   border: 0;
   background: transparent;
-  color: var(--accent-teal);
+  color: var(--accent-purple);
   cursor: pointer;
 }
 
@@ -374,11 +376,11 @@ input:-webkit-autofill:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-left: 1px solid color-mix(in srgb, var(--accent-teal) 55%, transparent);
+  border-left: 2px solid var(--accent-purple);
 }
 
 .picker-main:hover,
-.picker-caret:hover { background: color-mix(in srgb, var(--accent-teal) 10%, transparent); }
+.picker-caret:hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
 
 .picker-menu {
   position: absolute;
@@ -1112,7 +1114,7 @@ input:-webkit-autofill:focus {
 .tool-btn, .panel-rockets .tool-btn, .panel-week .tool-btn, .topbar-right .gear-btn, .sheet-tools .tool-btn,
 .quick-btn, .task-quick, .timed-quick .quick-btn { width: 36px; height: 36px; border-radius: 50%; }
 .tool-btn svg, .quick-btn svg { width: 16px; height: 16px; }
-.topbar-right .picker-split { height: 36px; border-radius: 8px; }
+.topbar-right .picker-split { height: 36px; border-radius: 999px; }
 .topbar-right .picker-caret { width: 36px; }
 .panel-head, .panel-week .panel-head, .panel-rockets .panel-head { margin-bottom: 14px; min-height: 36px; align-items: center; }
 .panel-head .panel-title { margin: 0; line-height: 36px; }
@@ -1222,7 +1224,6 @@ input:-webkit-autofill:focus {
 .now-card { border: 2px solid var(--accent-teal); box-shadow: 0 0 18px color-mix(in srgb, var(--accent-teal) 30%, transparent); }
 /* V20-048: day mode settings match night mode: teal outline, light teal tint, teal icon and text. */
 /* V20-050: same in night mode, so the gear matches the routine picker everywhere. */
-.app:not(.is-kb) .topbar .gear-btn { border-color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); color: var(--accent-teal); }
 .app[data-tone='light'] .ev-google { background: #ffffff; box-shadow: 0 1px 3px rgb(68 66 66 / 0.2); }
 .app[data-tone='light'] .motto { color: #444242; }
 /* V20-048: day mode uses the same bright teal as night mode, so text on a teal fill stays dark. */
@@ -3392,13 +3393,13 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
    - REST: Colour 1 icon in a Colour 1 circle; hover a soft Colour 1 tint.
    Exceptions kept for now: delete (red), the header gear, KNOWLEDGE!B4SE's own look.
    ========================================================================== */
-.app :is(.tool-btn, .quick-btn, .task-quick):not(.gear-btn) {
+.app :is(.tool-btn, .quick-btn, .task-quick) {
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 50%; border: 2px solid var(--accent-purple);
   background: transparent; color: var(--accent-purple); filter: none;
   transition: background 0.15s, box-shadow 0.15s;
 }
-.app :is(.tool-btn, .quick-btn, .task-quick):not(.gear-btn):hover {
+.app :is(.tool-btn, .quick-btn, .task-quick):hover {
   background: color-mix(in srgb, var(--accent-purple) 14%, transparent); color: var(--accent-purple);
 }
 .app :is(.tool-btn, .quick-btn, .task-quick)[aria-pressed='true'] {
