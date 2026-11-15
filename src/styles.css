@@ -701,8 +701,6 @@ input:-webkit-autofill:focus {
   cursor: pointer;
 }
 
-.quick-done { border: 1px solid var(--accent-teal); color: var(--accent-teal); }
-.quick-done:hover { background: color-mix(in srgb, var(--accent-teal) 18%, transparent); }
 .quick-skip { border: 1px solid var(--edge-strong); color: var(--mist); }
 .quick-skip:hover { background: rgb(136 105 203 / 0.2); color: var(--beige); }
 
@@ -770,11 +768,6 @@ input:-webkit-autofill:focus {
 }
 
 /* Rocket toolbar: icon buttons */
-.tool-btn { display: inline-flex; align-items: center; justify-content: center; color: var(--beige); border-color: var(--edge-strong); }
-.tool-btn:hover { border-color: var(--accent-teal); color: var(--accent-teal); }
-.tool-btn[aria-pressed='true'] { border-color: var(--accent-teal); color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 12%, transparent); }
-.tool-btn-go { background: var(--accent-teal); border-color: var(--accent-teal); color: #120c2a; }
-.tool-btn-go:hover { color: #120c2a; filter: brightness(1.08); }
 
 /* Per-launch alert chips */
 
@@ -924,8 +917,7 @@ input:-webkit-autofill:focus {
 .col-date, .col-time { font-family: var(--font-mono); font-size: 12px; color: var(--mist); white-space: nowrap; }
 .col-link a { color: var(--accent-teal); font-weight: 600; font-size: 12px; letter-spacing: 0.04em; }
 .col-actions { width: 80px; }
-.task-quick { width: 32px; height: 32px; border-radius: 8px; }
-.quick-done[aria-pressed='true'] { background: color-mix(in srgb, var(--accent-teal) 22%, transparent); }
+.task-quick { width: 32px; height: 32px; border-radius: 50%; }
 .chip {
   display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
   letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
@@ -1118,7 +1110,7 @@ input:-webkit-autofill:focus {
 
 /* One size for every icon button; one gap from each card's header to its first item */
 .tool-btn, .panel-rockets .tool-btn, .panel-week .tool-btn, .topbar-right .gear-btn, .sheet-tools .tool-btn,
-.quick-btn, .task-quick, .timed-quick .quick-btn { width: 36px; height: 36px; border-radius: 8px; }
+.quick-btn, .task-quick, .timed-quick .quick-btn { width: 36px; height: 36px; border-radius: 50%; }
 .tool-btn svg, .quick-btn svg { width: 16px; height: 16px; }
 .topbar-right .picker-split { height: 36px; border-radius: 8px; }
 .topbar-right .picker-caret { width: 36px; }
@@ -1234,7 +1226,6 @@ input:-webkit-autofill:focus {
 .app[data-tone='light'] .ev-google { background: #ffffff; box-shadow: 0 1px 3px rgb(68 66 66 / 0.2); }
 .app[data-tone='light'] .motto { color: #444242; }
 /* V20-048: day mode uses the same bright teal as night mode, so text on a teal fill stays dark. */
-.app[data-tone='light'] .tool-btn-go, .app[data-tone='light'] .tool-btn-go:hover { color: #14102b; }
 .app[data-tone='light'] .btn:not(.btn-quiet) { color: #14102b; }
 .app[data-tone='light'] .now-pill { color: #14102b; }
 .app[data-tone='light'] .ev-teal { color: #0d5c4b; }
@@ -1506,8 +1497,6 @@ html.snap-scroll { scroll-snap-type: y mandatory; scroll-padding-top: calc(var(-
 .journal-item-check { display: block; margin-top: 6px; color: var(--mist); font-size: 14px; line-height: 1.55; white-space: pre-wrap; text-transform: none; letter-spacing: normal; font-weight: 400; }
 .journal-item-check .checkin-label { display: block; font-size: 11px; margin-bottom: 2px; }
 .panel-journal.is-full .journal-item-head, .panel-journal.is-full .journal-item-theme { white-space: normal; }
-.quick-launch { border: 1px solid var(--accent-teal); background: var(--accent-teal); color: #120c2a; }
-.quick-launch:hover { filter: brightness(1.1); }
 .quick-launch:disabled { opacity: 0.35; cursor: default; }
 .journal-sub-row .journal-streak { margin-left: 0; text-transform: uppercase; font-weight: 700; }
 
@@ -1768,7 +1757,6 @@ dialog.crawl::backdrop { background: #000000; }
 @keyframes crawl-snow { to { transform: translateY(160px); } }
 .crawl-tools { position: absolute; top: 16px; right: 16px; z-index: 2; display: flex; gap: 8px; }
 .crawl-tools .tool-btn { background: rgb(15 11 34 / 0.6); }
-.app[data-tone='light'] .crawl-tools .tool-btn:not(.tool-btn-go) { background: rgb(255 255 255 / 0.8); }
 .crawl-stage {
   position: absolute; inset: 0; overflow: hidden; perspective: 420px;
   /* Words fade in at the top and only show once they're a line clear of the horizon (71%). */
@@ -2168,9 +2156,6 @@ select:not([multiple]) {
 }
 
 /* Oct 25: Pause / Resume on a launched run (in place of the rocket) */
-.quick-pause { border: 1px solid var(--accent-teal); color: var(--accent-teal); }
-.quick-pause:hover { background: color-mix(in srgb, var(--accent-teal) 18%, transparent); }
-.quick-pause.is-paused { background: var(--accent-teal); color: #120c2a; }
 .timed-item.is-launched:has(.quick-pause.is-paused) .timed-meta { color: var(--mist); }
 
 /* LP-030 · Budget | Expenses (Oct 25) */
@@ -2962,24 +2947,22 @@ button.kb-btn { font-family: inherit; }
    ✓ check off, ⏸ pause: colour 2 edge and icon.
    Every other outline button (⋯, ✕, +, Skip, Snooze, Back…): colour 1 edge, neutral icon; colour 2 tint on hover.
    Delete stays red; the header gear keeps its teal (V20-050); KNOWLEDGE!B4SE keeps its own look. */
-.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .btn:not(.btn-quiet), .event-push-task),
-.app[data-tone='light']:not(.is-kb) :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .btn:not(.btn-quiet), .event-push-task) {
+.app:not(.is-kb) :is(.btn:not(.btn-quiet), .event-push-task),
+.app[data-tone='light']:not(.is-kb) :is(.btn:not(.btn-quiet), .event-push-task) {
   background: var(--accent-teal); border-color: var(--accent-teal);
 }
 /* Disabled (e.g. Save before there's a name): the same teal fill, only the icon / text fades, so one teal per page. */
-.app:not(.is-kb) :is(.tool-btn-go, .btn:not(.btn-quiet)):disabled,
-.app[data-tone='light']:not(.is-kb) :is(.tool-btn-go, .btn:not(.btn-quiet)):disabled { opacity: 1; filter: none; color: #14102b; cursor: not-allowed; }
-.app:not(.is-kb) :is(.tool-btn-go, .btn:not(.btn-quiet)):disabled > * { opacity: 0.4; }
+.app:not(.is-kb) .btn:not(.btn-quiet):disabled,
+.app[data-tone='light']:not(.is-kb) .btn:not(.btn-quiet):disabled { opacity: 1; filter: none; color: #14102b; cursor: not-allowed; }
+.app:not(.is-kb) .btn:not(.btn-quiet):disabled > * { opacity: 0.4; }
 /* V20-087 (Dan, Nov 12): the bigger buttons (card headers, forms, sheet headers) draw a slightly heavier icon line. */
 .app:not(.is-kb) :is(.tool-btn, .icon-btn) svg { stroke-width: 2.4; }
-.app:not(.is-kb) :is(.quick-done, .quick-pause:not(.is-paused)),
-.app[data-tone='light']:not(.is-kb) :is(.quick-done, .quick-pause:not(.is-paused)) { border: 1px solid var(--accent-teal); color: var(--accent-teal); }
-.app:not(.is-kb) :is(.tool-btn:not(.tool-btn-go):not(.tool-btn-danger):not(.gear-btn):not([aria-pressed='true']), .quick-btn:not(.quick-done):not(.quick-launch):not(.quick-pause), .btn-quiet),
-.app[data-tone='light']:not(.is-kb) :is(.tool-btn:not(.tool-btn-go):not(.tool-btn-danger):not(.gear-btn):not([aria-pressed='true']), .quick-btn:not(.quick-done):not(.quick-launch):not(.quick-pause), .btn-quiet) {
+.app:not(.is-kb) .btn-quiet,
+.app[data-tone='light']:not(.is-kb) .btn-quiet {
   border-color: var(--accent-purple);
 }
-.app:not(.is-kb) :is(.tool-btn:not(.tool-btn-go):not(.tool-btn-danger):not(.gear-btn), .quick-btn:not(.quick-done):not(.quick-launch):not(.quick-pause), .btn-quiet):hover,
-.app[data-tone='light']:not(.is-kb) :is(.tool-btn:not(.tool-btn-go):not(.tool-btn-danger):not(.gear-btn), .quick-btn:not(.quick-done):not(.quick-launch):not(.quick-pause), .btn-quiet):hover {
+.app:not(.is-kb) .btn-quiet:hover,
+.app[data-tone='light']:not(.is-kb) .btn-quiet:hover {
   border-color: var(--accent-purple); background: color-mix(in srgb, var(--accent-teal) 14%, transparent);
 }
 /* V20-088: every disabled button shows the ⊘ cursor. */
@@ -3415,3 +3398,38 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   border-color: var(--accent-teal);
   box-shadow: 0 0 0 1px var(--accent-teal);
 }
+
+/* ==========================================================================
+   BUTTON SYSTEM v1 (Dan, Nov 14; V20-221). Z4PTOR style guide. Colour 1 and Colour 2 only.
+   Every icon button is a circle. Each menu has ONE key button; the rest are Colour 1 circles.
+   Positions stay where they are. Old icon-button colour rules were deleted, not overridden.
+   - KEY: Colour 2 fill, Colour 1 icon; hover adds a Colour 1 ring.
+     (.tool-btn-go · .quick-launch · .quick-pause.is-paused · ✓ on a running launch · .is-key)
+   - REST: Colour 1 icon in a Colour 1 circle; hover a soft Colour 1 tint.
+   Exceptions kept for now: delete (red), the header gear, KNOWLEDGE!B4SE's own look.
+   ========================================================================== */
+.app:not(.is-kb) :is(.tool-btn, .quick-btn, .task-quick):not(.gear-btn) {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; border: 2px solid var(--accent-purple);
+  background: transparent; color: var(--accent-purple); filter: none;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.app:not(.is-kb) :is(.tool-btn, .quick-btn, .task-quick):not(.gear-btn):hover {
+  background: color-mix(in srgb, var(--accent-purple) 14%, transparent); color: var(--accent-purple);
+}
+.app:not(.is-kb) :is(.tool-btn, .quick-btn, .task-quick)[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent-purple) 22%, transparent);
+}
+.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .timed-item.is-launched .quick-done, .is-key),
+.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .timed-item.is-launched .quick-done, .is-key):hover {
+  background: var(--accent-teal); border-color: var(--accent-teal); color: var(--accent-purple);
+}
+.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .quick-pause.is-paused, .timed-item.is-launched .quick-done, .is-key):hover {
+  box-shadow: inset 0 0 0 2.5px var(--accent-purple);
+}
+.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .is-key):disabled { opacity: 1; box-shadow: none; }
+.app:not(.is-kb) :is(.tool-btn-go, .quick-launch, .is-key):disabled > * { opacity: 0.4; }
+.app:not(.is-kb) .tool-btn.tool-btn-danger { border-color: rgb(255 120 110 / 0.6); color: #e2675c; }
+.app:not(.is-kb) .tool-btn.tool-btn-danger:hover { background: rgb(255 120 110 / 0.12); }
+.app:not(.is-kb) .tool-btn.tool-btn-danger.is-armed { background: #e2675c; border-color: #e2675c; color: #ffffff; }
+.app:not(.is-kb) .tool-btn.is-asking { border-radius: 999px; }

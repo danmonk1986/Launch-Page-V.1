@@ -647,7 +647,7 @@ export function RocketsPanel(p: Props) {
           </div>
           <button
             type="button"
-            className="icon-btn tool-btn"
+            className="icon-btn tool-btn is-key"
             aria-label={view === 'stats' ? 'Add a log' : 'Add a timed launch'}
             title={view === 'stats' ? 'Add a log (work done without a launch)' : 'Add timed launch'}
             onClick={() => {
