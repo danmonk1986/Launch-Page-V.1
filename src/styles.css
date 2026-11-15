@@ -3527,3 +3527,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app :is(.rockets-toggle, .week-arrow, .timed-more, .tabs-more-btn),
 .app.app :is(.rockets-toggle, .week-arrow, .timed-more, .tabs-more-btn):focus { background: none; box-shadow: none; color: var(--accent-teal); }
 .app.app :is(.rockets-toggle, .week-arrow, .timed-more, .tabs-more-btn):hover { background: none; box-shadow: none; color: var(--accent-purple); }
+/* V20-241: word buttons never wrap (Time's up showed '+10 / MIN' on two lines at 36px high). */
+:is(.app.app, .signin.signin) .btn { white-space: nowrap; }
