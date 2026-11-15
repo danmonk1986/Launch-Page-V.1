@@ -43,10 +43,8 @@ export function PlannerPanel(p: {
   onSave: (d: Decision) => Promise<void>;
   onSaveMany: (d: Decision[]) => Promise<void>;
   onSavePlan: (p: Plan) => Promise<void>;
-  /** V20-259: Workflow › Calendar / Task / Rocket. */
-  onToCalendar: (d: Decision) => void;
-  onToTask: (d: Decision) => void;
-  onToRocket: (d: Decision) => void;
+  /** V20-265: Add to workflow opens the calendar's Add event filled in (then Push task › rocket). */
+  onToWorkflow: (d: Decision) => void;
   onRemove: (id: string) => Promise<void>;
   /** V20-249: the card's ⌄ opens the planner full screen; ^ there comes back. */
   full?: boolean;
@@ -202,7 +200,9 @@ export function PlannerPanel(p: {
                       Who decides + Decide by beside Notes. Workflow sends it to the calendar, Tasks or Rockets. */}
                   <div className="pl-edit-acts">
                     {p.decisions.some((x) => x.id === d.id) && (
-                      <Workflow d={p.decisions.find((x) => x.id === d.id) ?? o} onCalendar={() => p.onToCalendar(o)} onTask={() => p.onToTask(o)} onRocket={() => p.onToRocket(o)} />
+                      <button type="button" className="icon-btn tool-btn" aria-label="Add to workflow" title="Add to workflow: calendar › task › rocket" onClick={() => p.onToWorkflow(o)}>
+                        <Icon d={FLOW} />
+                      </button>
                     )}
                     {p.decisions.some((x) => x.id === d.id) && (
                       <button
@@ -458,41 +458,6 @@ function OptionRow({ n, op, onChange, onPick, onRemove }: { n: number; op: Decis
 }
 
 const FLOW = 'M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9a9 9 0 0 1-9 9';
-/** V20-259: Add to workflow: the decision goes to the calendar, Tasks or Rockets. */
-function Workflow({ d, onCalendar, onTask, onRocket }: { d: Decision; onCalendar: () => void; onTask: () => void; onRocket: () => void }) {
-  const [open, setOpen] = useState(false);
-  const run = (fn: () => void) => () => {
-    setOpen(false);
-    fn();
-  };
-  return (
-    <div
-      className="row-menu pl-flow"
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
-      }}
-      onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}
-    >
-      <button type="button" className="icon-btn tool-btn" aria-haspopup="menu" aria-expanded={open} aria-label="Add to workflow" title="Add to workflow" onClick={() => setOpen((x) => !x)}>
-        <Icon d={FLOW} />
-      </button>
-      {open && (
-        <div className="row-menu-list" role="menu">
-          <button type="button" role="menuitem" onClick={run(onCalendar)}>
-            Add to calendar
-          </button>
-          <button type="button" role="menuitem" onClick={run(onTask)}>
-            {d.taskId ? 'Open its task' : 'Make it a task'}
-          </button>
-          <button type="button" role="menuitem" onClick={run(onRocket)}>
-            {d.launchId ? 'Open its rocket' : 'Push rocket'}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function AddOption({ onAdd }: { onAdd: (o: DecisionOption) => void }) {
   const [o, setO] = useState({ name: '', link: '', cost: '' });
   const go = () => {

@@ -70,7 +70,7 @@ import { buildJournalImport, byNewest, checkinsOf, journalStore, mergeJournal, n
 import { JournalPanel } from './components/Journal';
 import { Sheet } from './components/Sheet';
 import { RitualRunner } from './components/Rituals';
-import { buildImport, doneToday, isRecurring, newTask, repeatOf, taskName, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
+import { buildImport, doneToday, isRecurring, repeatOf, taskName, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
 import { addTaskToGoogle, googleConfigured, knownCalendars } from './lib/google';
 import {
   isDue,
@@ -1318,56 +1318,13 @@ export default function App() {
 
   /** ⋯ → Create launch: a timed launch from the task, opening its link at its time. */
   /** Create launch from a task: opens Add timed launch filled in, so it can be checked before saving. */
-  // V20-259 (Dan, Nov 15): Project Planner › Workflow. A decision goes to the calendar, Tasks or Rockets.
-  // V20-262 (Dan, Nov 15): Add to calendar puts it on the Launch Page's own calendar (THIS WEEK), not Google.
-  // V20-264: each one shows you where it went (the calendar card / the task form), and a second tap doesn't
-  // make a copy: the latest saved decision is read, and an event already there is reused.
-  const latest = (d: Decision) => ({ ...d, ...pickLinks(decisions.find((x) => x.id === d.id)) });
-  const pickLinks = (x?: Decision) => (x ? { taskId: x.taskId, launchId: x.launchId } : {});
-  async function decisionToCalendar(d: Decision) {
-    const date = d.decideBy ?? isoDate(new Date());
-    const title = `Decide: ${d.title}`;
-    const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
-    if (!events.some((e) => !e.google && e.title === title && e.startDate === date)) {
-      const ev: CalEvent = { id: crypto.randomUUID(), title, startDate: date, endDate: date, color: 'purple', sort: events.reduce((m, x) => Math.max(m, x.sort + 1), 0) };
-      await eventOps.save(ev);
-      setStatus(`${d.title} is on your calendar on ${dateLabel}.`);
-    } else setStatus(`${d.title} is already on your calendar on ${dateLabel}.`);
+  // V20-265 (Dan, Nov 15): Project Planner › Add to workflow opens the calendar's Add event filled in (the decision
+  // and its decide-by date). From there Push task opens Add task, and the task's rocket pushes a timed launch:
+  // calendar › task › rocket, the same chain as everywhere else.
+  const [eventPreset, setEventPreset] = useState<{ title: string; date: string; n: number } | null>(null);
+  function decisionToWorkflow(d: Decision) {
     setPage('launch');
-    setTimeout(() => document.getElementById('h-week')?.closest('section')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 60);
-  }
-  async function decisionToTask(raw: Decision) {
-    const d = latest(raw);
-    const linked = d.taskId ? tasks.find((x) => x.id === d.taskId && !x.deletedAt) : null;
-    if (!linked) {
-      const t: Task = { ...newTask(tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0), d.projectId), task: d.title, description: d.description, notes: d.notes, endDate: d.decideBy, status: 'PENDING' };
-      await taskOps.save(t);
-      await decisionOps.save({ ...d, taskId: t.id });
-      setStatus(`${d.title} is now a task${d.decideBy ? `, due ${new Date(`${d.decideBy}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}` : ''}.`);
-      setFocusTask(t.id);
-      setEditTask(t.id);
-    } else {
-      setFocusTask(linked.id);
-      setEditTask(linked.id);
-    }
-    setPage('tasks');
-  }
-  function decisionToRocket(raw: Decision) {
-    const d = latest(raw);
-    const linked = d.launchId ? launches.find((l) => l.id === d.launchId) : null;
-    if (linked) {
-      setPage('launch');
-      setEditLaunch(linked);
-      return;
-    }
-    const now = new Date();
-    const firstBlock = now.getHours() * 60 + now.getMinutes() < 9 * 60 + 30 ? now : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12);
-    setPage('launch');
-    setTimedPreset({
-      fill: { title: d.title, atTime: '09:30', repeat: 'once', weekdays: [], monthDay: null, onDate: d.decideBy ?? isoDate(firstBlock), urls: [], projectId: d.projectId ?? null },
-      n: Date.now(),
-      onSaved: (l) => void decisionOps.save({ ...d, launchId: l.id })
-    });
+    setEventPreset({ title: d.title, date: d.decideBy ?? isoDate(new Date()), n: Date.now() });
   }
 
   function createLaunchFromTask(t: Task) {
@@ -1940,6 +1897,7 @@ export default function App() {
               }
               week={!settings.modules.week ? null : 
                 <WeekCalendar
+                  addPreset={eventPreset}
                   userId={userId}
                   disconnectTick={gcalOff}
                   onDisconnected={() => setGcalOff(0)}
@@ -1989,7 +1947,7 @@ export default function App() {
                 />
               }
               budget={!settings.modules.budget ? null : <BudgetCard lines={budget} today={now} onOpenAll={() => setPage('budget')} />}
-              planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToCalendar={(d) => void decisionToCalendar(d)} onToTask={(d) => void decisionToTask(d)} onToRocket={decisionToRocket} onToggle={() => setPage('planner')} />}
+              planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
               journal={!settings.modules.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!settings.modules.routine ? null : 
                 <TodayPanel
@@ -2023,7 +1981,7 @@ export default function App() {
               expenses={expenses}
             />
           ) : page === 'planner' ? (
-            <PlannerPanel full decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToCalendar={(d) => void decisionToCalendar(d)} onToTask={(d) => void decisionToTask(d)} onToRocket={decisionToRocket} onToggle={() => {
+            <PlannerPanel full decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => {
               // V20-257 (Dan, Nov 15): ^ comes back to the Project Planner card, not the top of the page.
               returnTo.current = 'h-planner';
               setPage('launch');

@@ -38,6 +38,8 @@ type Props = {
   onOpenTask?: (taskId: string) => void;
   /** V20-083: Add a task too → opens Add task filled in from the event. */
   onAddTask?: (e: CalEvent) => void;
+  /** V20-265: opens Add event filled in (Project Planner › Add to workflow). */
+  addPreset?: { title: string; date: string; n: number } | null;
 };
 
 // V20-084: colours 1–4 from Settings (they follow your colour settings in day and night mode).
@@ -47,11 +49,22 @@ const COLOR_NAMES: Record<string, string> = { purple: 'Colour 1', teal: 'Colour 
 type GState = 'off' | 'reconnect' | 'loading' | 'on';
 
 /** Sunday to Saturday. Multi-day events span their days; click a day to add, an event to edit. */
-export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, events, projects = [], onCalendars, onSave, onDelete, onStatus, taskFor, onOpenTask, onAddTask }: Props) {
+export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, events, projects = [], onCalendars, onSave, onDelete, onStatus, taskFor, onOpenTask, onAddTask, addPreset }: Props) {
   const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<CalEvent | null>(null);
   const [newDate, setNewDate] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [presetTitle, setPresetTitle] = useState('');
+  useEffect(() => {
+    if (!addPreset) return;
+    setEditing(null);
+    setNewDate(addPreset.date);
+    setPresetTitle(addPreset.title);
+    setOpen(true);
+  }, [addPreset?.n]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!open) setPresetTitle('');
+  }, [open]);
   const [gEvents, setGEvents] = useState<CalEvent[]>([]);
   const [g, setG] = useState<GState>(() => (!googleConfigured() ? 'off' : hasToken() ? 'loading' : wasConnected() ? 'reconnect' : 'off'));
   const [gError, setGError] = useState<string | null>(null);
@@ -393,9 +406,10 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
 
       <Sheet open={open} title={editing ? `Edit ${editing.title}` : 'Add event'} onClose={() => setOpen(false)}>
         <EventForm
-          key={editing?.id ?? `new-${newDate}`}
+          key={editing?.id ?? `new-${newDate}-${addPreset?.n ?? 0}`}
           event={editing}
           date={newDate ?? today}
+          title={editing ? '' : presetTitle}
           googleOn={g === 'on' || g === 'reconnect'}
           onAddTask={onAddTask}
           onCancel={() => setOpen(false)}
@@ -449,6 +463,7 @@ function Icon({ d }: { d: string }) {
 function EventForm({
   event,
   date,
+  title = '',
   googleOn,
   onSave,
   onDelete,
@@ -456,6 +471,7 @@ function EventForm({
 }: {
   event: CalEvent | null;
   date: string;
+  title?: string;
   googleOn: boolean;
   onAddTask?: (e: CalEvent) => void;
   onCancel?: () => void;
@@ -463,7 +479,7 @@ function EventForm({
   onDelete: (e: CalEvent) => Promise<void>;
 }) {
   const [d, setD] = useState<CalEvent>(
-    () => event ?? { id: crypto.randomUUID(), title: '', startDate: date, endDate: '', color: 'teal', sort: 0 }
+    () => event ?? { id: crypto.randomUUID(), title, startDate: date, endDate: '', color: 'teal', sort: 0 }
   );
   // V20-083: new events always save to the Launch Page (Google picks them up in its sync).
   const toGoogle = false;
