@@ -3631,3 +3631,4 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .panel-head .view-switch:has(.week-toggle) { margin-left: 0; }
 .app.app .rockets-title > .pl-pick, .app.app .rockets-title > :not(h2):not(.rockets-toggle) { margin-left: 6px; }
 .app.app .pl-title { gap: 6px; }
+.app.app .panel-week .panel-head .view-switch { margin-left: -6px; }
