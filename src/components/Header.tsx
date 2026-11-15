@@ -7,7 +7,7 @@ import { OneMenu } from './OneMenu';
 export type PageId = 'launch' | 'tasks' | 'days26' | 'budget' | 'invoices' | 'journal' | 'kb' | 'planner';
 
 const PAGES: { id: PageId; label: string }[] = [
-  { id: 'launch', label: 'Launch Page' },
+  { id: 'launch', label: 'L4UNCH P4GE' },
   { id: 'days26', label: '26 Days' },
   // V20-249 (Dan, Nov 14): Tasks and Budget leave the menu; their Launch Page cards' ⌄ opens them full screen.
   // Records (Oct 26): Expenses + Invoices; the id stays 'invoices' so saved card rockets keep working.
@@ -29,7 +29,9 @@ type Props = {
 };
 
 export function Header({ settings, slim, page, onPage, right, hidden = [] }: Props) {
-  const pages = PAGES.map((p) => (hidden.includes(p.id) ? { ...p, off: true } : p));
+  // V20-266 (Dan, Nov 15): pages switched off leave the menu (no more greyed-out tabs); with only L4UNCH P4GE left,
+  // there's no menu at all.
+  const pages = PAGES.filter((p) => !hidden.includes(p.id) || p.id === page);
   if (slim) {
     return (
       <header className="topbar topbar-slim">
@@ -94,8 +96,10 @@ function HeaderWords({ goal, mantra }: { goal: string; mantra: string }) {
  * teal ⌄ menu at the end of the row instead of stacking.
  */
 function TabBar({ pages, page, onPage }: { pages: { id: PageId; label: string; off?: boolean }[]; page: PageId; onPage: (p: PageId) => void }) {
+  const mobile = useMobile();
+  if (pages.length < 2) return null;
   // Phones (Oct 30): the menu shows the page you're on with a ∨ to the rest.
-  if (useMobile()) {
+  if (mobile) {
     return (
       <nav className="tabs tabs-one" aria-label="Pages">
         <OneMenu label="Page" items={pages} value={page} onPick={onPage} className="page-menu" />

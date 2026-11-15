@@ -560,7 +560,6 @@ input:-webkit-autofill:focus {
   cursor: pointer;
 }
 
-.timed-row:hover { background: rgb(136 105 203 / 0.15); }
 .timed-time { grid-area: time; font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--accent-teal); }
 .timed-name { grid-area: name; font-weight: 600; }
 .timed-meta { grid-area: meta; font-size: 13px; color: var(--dim); }
@@ -898,7 +897,7 @@ input:-webkit-autofill:focus {
 .project-list { display: grid; gap: 10px; }
 .project-group { display: grid; gap: 2px; }
 .project-row { all: unset; cursor: pointer; display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; }
-.project-row:hover, .project-row:focus-visible { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
+.project-row:focus-visible { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
 .project-area .project-name { font-weight: 700; letter-spacing: 0.06em; }
 .project-child { padding-left: 34px; }
 .project-dot { width: 12px; height: 12px; border-radius: 50%; }
@@ -1032,7 +1031,6 @@ input:-webkit-autofill:focus {
 .task-row.is-alt td { background: var(--row-alt); }
 .task-row.is-alt td:first-child { border-radius: 8px 0 0 8px; }
 .task-row.is-alt td:last-child { border-radius: 0 8px 8px 0; }
-.task-row:hover td { background: var(--row-hover); }
 .row-menu-list > button { text-transform: uppercase; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
 
 /* Tasks table: centred info columns, fixed-width project pills, Task keeps its room when the page narrows */
@@ -1219,7 +1217,6 @@ input:-webkit-autofill:focus {
   background: none; border: 0; padding: 10px 4px; text-align: left; cursor: pointer; color: var(--beige); font: inherit;
   border-radius: 8px;
 }
-.journal-item:hover { background: color-mix(in srgb, var(--accent-purple) 10%, transparent); }
 
 .journal-item-text { display: grid; gap: 2px; min-width: 0; }
 
@@ -2202,7 +2199,6 @@ select.status-pick:not([multiple]) { padding: 3px 10px !important; min-width: 96
      stripe or hover laid over it, so the band still runs behind the buttons with no patch. */
   .task-scroll .task-table td.col-actions, .task-scroll .task-table th.col-actions { background: var(--pin, rgb(18 13 40)); }
   .task-scroll .task-table .task-row.is-alt td.col-actions { background: linear-gradient(var(--row-alt), var(--row-alt)), var(--pin, rgb(18 13 40)); }
-  .task-scroll .task-table .task-row:hover td.col-actions { background: linear-gradient(var(--row-hover), var(--row-hover)), var(--pin, rgb(18 13 40)); }
   .task-scroll .task-table thead th.col-actions { z-index: 4; }
   .task-table .task-row:not(.is-step) td.col-desc { max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
@@ -2943,7 +2939,6 @@ button.kb-btn { font-family: inherit; }
 /* One band across both halves: the stripe's round ends sit at the table's left and the column's right. */
 .task-split .task-scroll .task-row.is-alt td:last-child { border-radius: 0; }
 .task-split .task-pins .task-row.is-alt td { border-radius: 0 8px 8px 0; }
-.task-split .task-row.is-hover td { background: var(--row-hover); }
 .task-split .task-pin-table tr.task-section td { padding: 0; border: 0; background: none; }
 /* The Tasks / Budget / Records pages: both halves share the screen-sized box, and the column's header stays put too. */
 .panel-tasks-page .task-pins, .panel-budget .task-pins, .panel-records .task-pins { max-height: calc(100dvh - var(--header-h, 160px) - 48px); min-height: 280px; }
@@ -3617,3 +3612,27 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app :is(.pl-row, .bc-row) { font-size: 13px; }
 .app.app :is(.pl-name, .bc-name) { font-weight: 600; color: var(--beige); }
 .app.app .pl-name:hover { color: var(--accent-teal); }
+
+/* ==========================================================================
+   V20-266 (Dan, Nov 15): one table look, the Tasks one.
+   Rows: no line between every row (zebra only); the row you're on gets the teal line underneath, and its colour
+   doesn't change. Applies to Tasks, Budget, Records, the Budget card, the Project Planner, the Projects card lists
+   and the timed launch rows.
+   ========================================================================== */
+.app.app :is(.pl-row, .bc-row) { border-bottom: 0; border-radius: 8px; }
+.app.app :is(.pl-row, .bc-row).is-alt { background: color-mix(in srgb, var(--accent-purple) 7%, transparent); }
+@media (hover: hover) {
+  .app.app :is(.pl-row, .bc-row):hover { box-shadow: inset 0 -2px 0 var(--accent-teal); }
+  .app.app .pd-list li:hover { box-shadow: inset 0 -2px 0 var(--accent-teal); }
+}
+.app.app .pd-list li { border-bottom: 0; border-radius: 8px; }
+.app.app .pd-list li:nth-child(even) { background: color-mix(in srgb, var(--accent-purple) 7%, transparent); }
+.app.app .pd-list li.pd-row-btn:hover { background: transparent; }
+.app.app .pd-list li.pd-row-btn:nth-child(even):hover { background: color-mix(in srgb, var(--accent-purple) 7%, transparent); }
+
+/* V20-266: the open decision's buttons are in-card size (36 px, like the row ✓), not the 56 px card-top size. */
+.app.app .pl-edit-acts :is(.tool-btn, .icon-btn) { width: 36px; height: 36px; min-width: 36px; min-height: 36px; padding: 0; }
+.app.app .pl-edit-acts :is(.tool-btn, .icon-btn) svg { width: 16px; height: 16px; }
+.app.app .pl-edit-acts .is-asking { width: auto; padding: 0 12px; border-radius: 999px; }
+.app.app .pl-edit-acts { margin-bottom: -22px; gap: 8px; }
+.app.app .pl-grid3 { padding-right: 190px; }

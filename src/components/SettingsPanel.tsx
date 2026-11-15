@@ -332,7 +332,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                   </div>
                 </div>
               ))}
-              <p className="field-hint">Off hides a card from the Launch Page, or a page from the menu. Nothing in it is deleted; switch it back on and it's all there.</p>
+              <p className="field-hint">Off hides a card from L4UNCH P4GE, or a page from the menu. Nothing in it is deleted; switch it back on and it's all there.</p>
             </>
           )}
           {tab === 'appearance' && (
@@ -536,7 +536,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
               <li>The app itself is served by Cloudflare.</li>
             </ul>
             <h4>Google Calendar</h4>
-            <p>Only if you connect it. We show your calendars on This Week and add events you ask us to. The Google sign-in stays in your browser. Disconnect any time in Data Management; your Launch Page events stay.</p>
+            <p>Only if you connect it. We show your calendars on This Week and add events you ask us to. The Google sign-in stays in your browser. Disconnect any time in Data Management; your L4UNCH P4GE events stay.</p>
             <h4>What we don't do</h4>
             <ul>
               <li>We don't sell your data or show you ads.</li>
@@ -906,7 +906,7 @@ function BgRow({ mode, current, colour, palette, slots, onPick, onColour, onImag
 /** V20-158 (Dan, Nov 13): the module sections, two to a row. */
 const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }[] = [
   {
-    title: 'Launch Page essentials',
+    title: 'L4UNCH P4GE essentials',
     items: [
       ['rockets', 'Rockets', 'Timed launches and your rockets.'],
       ['routine', 'Routine', 'Your routine plan based on activity.'],

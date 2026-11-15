@@ -110,7 +110,7 @@ export function JournalPanel({ entries, today, day, onSave, onDelete, onImport, 
             <Icon d={PLUS} />
           </button>
           {onClose && (
-            <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={onClose}>
+            <button type="button" className="icon-btn tool-btn" aria-label="Back to L4UNCH P4GE" title="Back to L4UNCH P4GE" onClick={onClose}>
               <Icon d="M6 6l12 12M18 6L6 18" />
             </button>
           )}

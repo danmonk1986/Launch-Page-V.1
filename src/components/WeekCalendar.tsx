@@ -404,7 +404,7 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
         {!anyPlaced && <p className="panel-empty week-empty">{mobile ? 'Nothing in these 3 days. Tap a day to add an event.' : rowsShown === 4 ? 'Nothing in these 28 days yet. Tap a day to add an event.' : 'Nothing this week yet. Tap a day to add an event.'}</p>}
       </div>
 
-      <Sheet open={open} title={editing ? `Edit ${editing.title}` : 'Add event'} onClose={() => setOpen(false)}>
+      <Sheet open={open} title={editing ? 'Edit event' : 'Add event'} onClose={() => setOpen(false)}>
         <EventForm
           key={editing?.id ?? `new-${newDate}-${addPreset?.n ?? 0}`}
           event={editing}

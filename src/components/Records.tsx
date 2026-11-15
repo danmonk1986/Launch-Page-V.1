@@ -107,7 +107,7 @@ export function RecordsPage(
               <Icon d={PLUS} />
             </button>
           )}
-          <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
+          <button type="button" className="icon-btn tool-btn" aria-label="Back to L4UNCH P4GE" title="Back to L4UNCH P4GE" onClick={p.onClose}>
             <Icon d={CLOSE} />
           </button>
         </div>

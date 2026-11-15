@@ -41,7 +41,7 @@ export function LaunchReminder({ launch, onLaunch, onSnooze, onSkip, onDone, onE
         <div className="reminder">
           <div className="field">
             <span>Description · add to it or change it</span>
-            <TitleCombo value={desc} titles={descriptions} required={false} autoFocus placeholder="Launch Page Construction" onChange={setDesc} list={launchListFor(cat)} />
+            <TitleCombo value={desc} titles={descriptions} required={false} autoFocus placeholder="L4UNCH P4GE Construction" onChange={setDesc} list={launchListFor(cat)} />
           </div>
           <div className="reminder-actions snooze-actions">
             <button type="button" className="btn btn-quiet" onClick={() => setSnoozing(false)}>
@@ -137,7 +137,7 @@ export function TimeUpReminder({ launch, onDone, onMore, onTomorrow, titles = []
         <div className="reminder">
           <div className="field">
             <span>Description · add to it or change it</span>
-            <TitleCombo value={desc} titles={descriptions} required={false} autoFocus placeholder="Launch Page Construction" onChange={setDesc} list={launchListFor(cat)} />
+            <TitleCombo value={desc} titles={descriptions} required={false} autoFocus placeholder="L4UNCH P4GE Construction" onChange={setDesc} list={launchListFor(cat)} />
           </div>
           <div className="reminder-actions snooze-actions">
             <button type="button" className="btn btn-quiet" onClick={() => setMore(false)}>

@@ -1856,7 +1856,7 @@ export default function App() {
             {routineProblem ?? storeProblem}
           </p>
         )}
-        <main aria-label={page === 'launch' ? 'Launch Page' : 'Page'}>
+        <main aria-label={page === 'launch' ? 'L4UNCH P4GE' : 'Page'}>
           {page === 'launch' ? (
             <LaunchPageHome
               rockets={!settings.modules.rockets ? null : 

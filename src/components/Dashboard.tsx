@@ -19,7 +19,7 @@ export function LaunchPageHome({ rockets, week, tasks, budget, planner, journal,
 }
 
 const LATER: Record<string, { title: string; empty: string }> = {
-  days26: { title: '26 Days', empty: 'Mode, Non-Negotiables, logging, baseline and bounce-back. Built after the Launch Page.' },
+  days26: { title: '26 Days', empty: 'Mode, Non-Negotiables, logging, baseline and bounce-back. Built after L4UNCH P4GE.' },
   budget: { title: 'Budget', empty: 'Money in, money out and what’s left, alongside your expense tasks. Coming soon.' }
 };
 

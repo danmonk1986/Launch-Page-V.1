@@ -545,7 +545,7 @@ export function RocketsPanel(p: Props) {
           <li key={l.id} data-rocket={l.id} className={`${editing ? 'tile-slot' : ''}${drag?.id === l.id ? ' is-dragging' : ''}`}>
             {editing && (
               <>
-                <button type="button" className="tile-x" aria-label={`Hide ${l.name}`} title="Hide from the Launch Page" onClick={() => hideRocket(l)}>
+                <button type="button" className="tile-x" aria-label={`Hide ${l.name}`} title="Hide from L4UNCH P4GE" onClick={() => hideRocket(l)}>
                   <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                     <path d="M6 6l12 12M18 6L6 18" />
                   </svg>
@@ -1035,7 +1035,7 @@ export function RocketsPanel(p: Props) {
       </Sheet>
       <Sheet
         open={timedOpen}
-        title={timed ? `Edit ${timed.title}` : 'Add timed launch'}
+        title={timed ? 'Edit timed launch' : 'Add timed launch'}
         onClose={() => {
           setTimedOpen(false);
           setFill(null);
@@ -1196,7 +1196,7 @@ function TileForm({
       </fieldset>
       <label className="choice choice-wide">
         <input type="checkbox" checked={!!d.hidden} onChange={(e) => setD((x) => ({ ...x, hidden: e.target.checked }))} />
-        <span>Hide from the Launch Page (keeps it for timed launches and rituals; bring it back from + Add rocket)</span>
+        <span>Hide from L4UNCH P4GE (keeps it for timed launches and rituals; bring it back from + Add rocket)</span>
       </label>
       <FormActions formId={formId} saveDisabled={!d.name.trim()} onDelete={tile ? () => onDelete(tile.id) : undefined} deleteLabel={tile?.name} />
     </form>
@@ -1458,7 +1458,7 @@ function TimedForm({
       </div>
       <label className="field">
         <span>Description</span>
-        <TitleCombo value={desc} titles={descriptions} required={false} placeholder="Launch Page Construction" onChange={(v) => setWhat(cat, v)} list={launchListFor(cat)} />
+        <TitleCombo value={desc} titles={descriptions} required={false} placeholder="L4UNCH P4GE Construction" onChange={(v) => setWhat(cat, v)} list={launchListFor(cat)} />
       </label>
 
       <div className="time-grid">

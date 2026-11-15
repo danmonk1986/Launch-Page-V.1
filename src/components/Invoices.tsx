@@ -81,7 +81,7 @@ export function InvoicesPage(p: Props) {
           <button type="button" className="icon-btn tool-btn" aria-label="New invoice" title="New invoice" onClick={() => setEditing(startInvoice(p.invoices, p.customers, isoDate(new Date())))}>
             <Icon d={PLUS} />
           </button>
-          <button type="button" className="icon-btn tool-btn" aria-label="Back to the Launch Page" title="Back to the Launch Page" onClick={p.onClose}>
+          <button type="button" className="icon-btn tool-btn" aria-label="Back to L4UNCH P4GE" title="Back to L4UNCH P4GE" onClick={p.onClose}>
             <Icon d={CLOSE} />
           </button>
         </div>

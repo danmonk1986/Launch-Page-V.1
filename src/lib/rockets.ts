@@ -498,7 +498,7 @@ export const APP_LINKS: { name: string; url: string }[] = [
  * Stored like a link ("launchpage:journal"); App says how to open them (setCardOpener).
  */
 export const CARD_LINKS: { name: string; url: string; page: string }[] = [
-  { name: 'Launch Page', url: 'launchpage:launch', page: 'launch' },
+  { name: 'L4UNCH P4GE', url: 'launchpage:launch', page: 'launch' },
   { name: 'Personal Alchemy', url: 'launchpage:journal', page: 'journal' },
   { name: 'Tasks', url: 'launchpage:tasks', page: 'tasks' },
   { name: '26 Days', url: 'launchpage:days26', page: 'days26' },
