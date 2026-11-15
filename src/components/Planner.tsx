@@ -43,6 +43,10 @@ export function PlannerPanel(p: {
   onSave: (d: Decision) => Promise<void>;
   onSaveMany: (d: Decision[]) => Promise<void>;
   onSavePlan: (p: Plan) => Promise<void>;
+  /** V20-259: Workflow › Calendar / Task / Rocket. */
+  onToCalendar: (d: Decision) => void;
+  onToTask: (d: Decision) => void;
+  onToRocket: (d: Decision) => void;
   onRemove: (id: string) => Promise<void>;
   /** V20-249: the card's ⌄ opens the planner full screen; ^ there comes back. */
   full?: boolean;
@@ -192,20 +196,47 @@ export function PlannerPanel(p: {
               </div>
               {o && (
                 <div className="pl-edit">
-                  <div className="pl-edit-opts">
-                    <h3 className="card-h">Options</h3>
-                    {o.options.map((op) => (
-                      <OptionRow
-                        key={op.id}
-                        op={op}
-                        onChange={(v) => edit(d.id, { options: o.options.map((x) => (x.id === op.id ? v : x)) })}
-                        onPick={() => edit(d.id, { options: o.options.map((x) => ({ ...x, picked: x.id === op.id ? !x.picked : false })) })}
-                        onRemove={() => edit(d.id, { options: o.options.filter((x) => x.id !== op.id) })}
-                      />
-                    ))}
-                    <AddOption onAdd={(op) => edit(d.id, { options: [...o.options, op] })} />
+                  {/* V20-259 (Dan, Nov 15): buttons on top; Status · Decision · Description; options (name, link, cost);
+                      Who decides + Decide by beside Notes. Workflow sends it to the calendar, Tasks or Rockets. */}
+                  <div className="pl-edit-acts">
+                    {p.decisions.some((x) => x.id === d.id) && (
+                      <Workflow d={o} onCalendar={() => p.onToCalendar(o)} onTask={() => p.onToTask(o)} onRocket={() => p.onToRocket(o)} />
+                    )}
+                    {p.decisions.some((x) => x.id === d.id) && (
+                      <button
+                        type="button"
+                        className={`icon-btn tool-btn tool-btn-danger${ask === d.id ? ' is-asking' : ''}`}
+                        aria-label="Delete decision"
+                        title="Delete"
+                        onClick={() => {
+                          if (ask !== d.id) return setAsk(d.id);
+                          setAsk(null);
+                          setOpen((x) => {
+                            const n = { ...x };
+                            delete n[d.id];
+                            return n;
+                          });
+                          void p.onRemove(d.id);
+                        }}
+                      >
+                        {ask === d.id ? <span className="ask-delete">Sure?</span> : <Icon d={TRASH} />}
+                      </button>
+                    )}
+                    <button type="button" className="icon-btn tool-btn is-key" aria-label="Save decision" title="Save" disabled={!o.title.trim()} onClick={() => void save(d.id)}>
+                      <Icon d={SAVE} />
+                    </button>
                   </div>
-                  <div className="pl-edit-main">
+                  <div className="pl-grid3">
+                    <label className="field">
+                      <span>Status</span>
+                      <select required value={o.status} onChange={(e) => edit(d.id, { status: e.target.value as DecisionStatus })}>
+                        {DECISION_STATUSES.map((s) => (
+                          <option key={s} value={s}>
+                            {s.toUpperCase()}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     <label className="field">
                       <span>Decision</span>
                       <input
@@ -228,59 +259,41 @@ export function PlannerPanel(p: {
                       <span>Description</span>
                       <input value={o.description} onChange={(e) => edit(d.id, { description: e.target.value })} placeholder="One line" />
                     </label>
-                    <div className="pl-grid2">
-                      <label className="field">
-                        <span>Status</span>
-                        <select required value={o.status} onChange={(e) => edit(d.id, { status: e.target.value as DecisionStatus })}>
-                          {DECISION_STATUSES.map((s) => (
-                            <option key={s} value={s}>
-                              {s.toUpperCase()}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="field">
-                        <span>Decide by</span>
-                        <input type="date" value={o.decideBy ?? ''} onChange={(e) => edit(d.id, { decideBy: e.target.value || null })} />
-                      </label>
+                  </div>
+                  <div className="pl-opts">
+                    <div className="pl-opt pl-opt-head" aria-hidden="true">
+                      <span>Options</span>
+                      <span>Link</span>
+                      <span>Cost</span>
+                      <span />
+                      <span />
+                    </div>
+                    {o.options.map((op) => (
+                      <OptionRow
+                        key={op.id}
+                        op={op}
+                        onChange={(v) => edit(d.id, { options: o.options.map((x) => (x.id === op.id ? v : x)) })}
+                        onPick={() => edit(d.id, { options: o.options.map((x) => ({ ...x, picked: x.id === op.id ? !x.picked : false })) })}
+                        onRemove={() => edit(d.id, { options: o.options.filter((x) => x.id !== op.id) })}
+                      />
+                    ))}
+                    <AddOption onAdd={(op) => edit(d.id, { options: [...o.options, op] })} />
+                  </div>
+                  <div className="pl-bottom">
+                    <div className="pl-bottom-left">
                       <label className="field">
                         <span>Who decides</span>
                         <input value={o.who} onChange={(e) => edit(d.id, { who: e.target.value })} placeholder="Dan" />
                       </label>
                       <label className="field">
-                        <span>Cost</span>
-                        <input value={o.cost} onChange={(e) => edit(d.id, { cost: e.target.value })} placeholder="$0 / mo" />
+                        <span>Decide by</span>
+                        <input type="date" value={o.decideBy ?? ''} onChange={(e) => edit(d.id, { decideBy: e.target.value || null })} />
                       </label>
                     </div>
                     <label className="field">
                       <span>Notes</span>
-                      <textarea rows={3} value={o.notes} onChange={(e) => edit(d.id, { notes: e.target.value })} placeholder="Why, what it's waiting on" />
+                      <textarea rows={4} value={o.notes} onChange={(e) => edit(d.id, { notes: e.target.value })} placeholder="Why, what it's waiting on" />
                     </label>
-                    <div className="pl-edit-acts">
-                      {p.decisions.some((x) => x.id === d.id) && (
-                        <button
-                          type="button"
-                          className={`icon-btn tool-btn tool-btn-danger${ask === d.id ? ' is-asking' : ''}`}
-                          aria-label="Delete decision"
-                          title="Delete"
-                          onClick={() => {
-                            if (ask !== d.id) return setAsk(d.id);
-                            setAsk(null);
-                            setOpen((x) => {
-                              const n = { ...x };
-                              delete n[d.id];
-                              return n;
-                            });
-                            void p.onRemove(d.id);
-                          }}
-                        >
-                          {ask === d.id ? <span className="ask-delete">Sure?</span> : <Icon d={TRASH} />}
-                        </button>
-                      )}
-                      <button type="button" className="icon-btn tool-btn is-key" aria-label="Save decision" title="Save" disabled={!o.title.trim()} onClick={() => void save(d.id)}>
-                        <Icon d={SAVE} />
-                      </button>
-                    </div>
                   </div>
                 </div>
               )}
@@ -412,10 +425,15 @@ function PlanForm({ plan, projects, existing, onSave }: { plan: Plan; projects: 
 
 function OptionRow({ op, onChange, onPick, onRemove }: { op: DecisionOption; onChange: (o: DecisionOption) => void; onPick: () => void; onRemove: () => void }) {
   return (
-    <div className="pl-opt">
-      <span className="pl-opt-text">
-        <input className="pl-opt-name" value={op.name} onChange={(e) => onChange({ ...op, name: e.target.value })} aria-label="Option" />
-        <input className="pl-opt-note" value={op.note} onChange={(e) => onChange({ ...op, note: e.target.value })} aria-label="Option note" placeholder="Note" />
+    <div className={`pl-opt${op.picked ? ' is-picked' : ''}`}>
+      <input className="pl-opt-name" value={op.name} onChange={(e) => onChange({ ...op, name: e.target.value })} aria-label="Option" />
+      <span className="pl-opt-link">
+        <input value={op.link ?? ''} onChange={(e) => onChange({ ...op, link: e.target.value })} aria-label="Option link" placeholder="https://…" />
+        {op.link?.trim() && (
+          <a href={/^https?:\/\//i.test(op.link) ? op.link : `https://${op.link}`} target="_blank" rel="noreferrer" aria-label="Open link" title="Open link">
+            ↗
+          </a>
+        )}
       </span>
       <input className="pl-opt-cost" value={op.cost} onChange={(e) => onChange({ ...op, cost: e.target.value })} aria-label="Option cost" placeholder="Cost" />
       <button type="button" className={`quick-btn task-quick${op.picked ? ' is-key' : ''}`} aria-label={op.picked ? 'Picked (tap to unpick)' : 'Pick this option'} title={op.picked ? 'Picked' : 'Pick'} onClick={onPick}>
@@ -424,6 +442,42 @@ function OptionRow({ op, onChange, onPick, onRemove }: { op: DecisionOption; onC
       <button type="button" className="quick-btn task-quick" aria-label="Remove option" title="Remove" onClick={onRemove}>
         <Icon d={X} />
       </button>
+    </div>
+  );
+}
+
+const FLOW = 'M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9a9 9 0 0 1-9 9';
+/** V20-259: Add to workflow: the decision goes to the calendar, Tasks or Rockets. */
+function Workflow({ d, onCalendar, onTask, onRocket }: { d: Decision; onCalendar: () => void; onTask: () => void; onRocket: () => void }) {
+  const [open, setOpen] = useState(false);
+  const run = (fn: () => void) => () => {
+    setOpen(false);
+    fn();
+  };
+  return (
+    <div
+      className="row-menu pl-flow"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
+      onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}
+    >
+      <button type="button" className="icon-btn tool-btn" aria-haspopup="menu" aria-expanded={open} aria-label="Add to workflow" title="Add to workflow" onClick={() => setOpen((x) => !x)}>
+        <Icon d={FLOW} />
+      </button>
+      {open && (
+        <div className="row-menu-list" role="menu">
+          <button type="button" role="menuitem" onClick={run(onCalendar)}>
+            Add to calendar
+          </button>
+          <button type="button" role="menuitem" onClick={run(onTask)}>
+            {d.taskId ? 'Open its task' : 'Make it a task'}
+          </button>
+          <button type="button" role="menuitem" onClick={run(onRocket)}>
+            Push rocket
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -442,7 +496,7 @@ function AddOption({ onAdd }: { onAdd: (o: DecisionOption) => void }) {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Add an option (like a step)"
+          placeholder="Add an option"
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();

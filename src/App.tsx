@@ -70,7 +70,7 @@ import { buildJournalImport, byNewest, checkinsOf, journalStore, mergeJournal, n
 import { JournalPanel } from './components/Journal';
 import { Sheet } from './components/Sheet';
 import { RitualRunner } from './components/Rituals';
-import { buildImport, doneToday, isRecurring, repeatOf, taskName, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
+import { buildImport, doneToday, isRecurring, newTask, repeatOf, taskName, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
 import { addTaskToGoogle, googleConfigured, knownCalendars } from './lib/google';
 import {
   isDue,
@@ -1318,6 +1318,51 @@ export default function App() {
 
   /** ⋯ → Create launch: a timed launch from the task, opening its link at its time. */
   /** Create launch from a task: opens Add timed launch filled in, so it can be checked before saving. */
+  // V20-259 (Dan, Nov 15): Project Planner › Workflow. A decision goes to the calendar, Tasks or Rockets.
+  async function decisionToCalendar(d: Decision) {
+    if (!googleConfigured()) return setStatus('Google Calendar isn’t set up for this app yet.');
+    const proj = projects.find((x) => x.id === d.projectId);
+    const parent = proj?.parentId ? projects.find((x) => x.id === proj.parentId) : null;
+    const calendarId = proj?.calendarId ?? parent?.calendarId ?? 'primary';
+    const date = d.decideBy ?? isoDate(new Date());
+    try {
+      await addTaskToGoogle({ calendarId, title: `Decide: ${d.title}`, date, time: null, details: [d.description, d.notes].filter(Boolean).join('\n') });
+      const cal = knownCalendars().find((c) => c.id === calendarId)?.summary ?? 'your calendar';
+      setStatus(`${d.title} added to ${cal} on ${new Date(`${date}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`);
+    } catch (err) {
+      setStatus((err as Error).message || 'Could not add it to Google Calendar.');
+    }
+  }
+  async function decisionToTask(d: Decision) {
+    const linked = d.taskId ? tasks.find((x) => x.id === d.taskId && !x.deletedAt) : null;
+    if (linked) {
+      setFocusTask(linked.id);
+      setEditTask(linked.id);
+      setPage('tasks');
+      return;
+    }
+    const t: Task = { ...newTask(tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0), d.projectId), task: d.title, description: d.description, notes: d.notes, endDate: d.decideBy, status: 'PENDING' };
+    await taskOps.save(t);
+    await decisionOps.save({ ...d, taskId: t.id });
+    setStatus(`${d.title} is now a task${d.decideBy ? `, due ${new Date(`${d.decideBy}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}` : ''}.`);
+  }
+  function decisionToRocket(d: Decision) {
+    const linked = d.launchId ? launches.find((l) => l.id === d.launchId) : null;
+    if (linked) {
+      setPage('launch');
+      setEditLaunch(linked);
+      return;
+    }
+    const now = new Date();
+    const firstBlock = now.getHours() * 60 + now.getMinutes() < 9 * 60 + 30 ? now : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12);
+    setPage('launch');
+    setTimedPreset({
+      fill: { title: d.title, atTime: '09:30', repeat: 'once', weekdays: [], monthDay: null, onDate: d.decideBy ?? isoDate(firstBlock), urls: [], projectId: d.projectId ?? null },
+      n: Date.now(),
+      onSaved: (l) => void decisionOps.save({ ...d, launchId: l.id })
+    });
+  }
+
   function createLaunchFromTask(t: Task) {
     // V20-209 (Dan, Nov 14): its launch still exists: open it to edit instead of making a second one.
     const linked = t.launchId ? launches.find((l) => l.id === t.launchId) : null;
@@ -1937,7 +1982,7 @@ export default function App() {
                 />
               }
               budget={!settings.modules.budget ? null : <BudgetCard lines={budget} today={now} onOpenAll={() => setPage('budget')} />}
-              planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToggle={() => setPage('planner')} />}
+              planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToCalendar={(d) => void decisionToCalendar(d)} onToTask={(d) => void decisionToTask(d)} onToRocket={decisionToRocket} onToggle={() => setPage('planner')} />}
               journal={!settings.modules.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!settings.modules.routine ? null : 
                 <TodayPanel
@@ -1971,7 +2016,7 @@ export default function App() {
               expenses={expenses}
             />
           ) : page === 'planner' ? (
-            <PlannerPanel full decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToggle={() => {
+            <PlannerPanel full decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToCalendar={(d) => void decisionToCalendar(d)} onToTask={(d) => void decisionToTask(d)} onToRocket={decisionToRocket} onToggle={() => {
               // V20-257 (Dan, Nov 15): ^ comes back to the Project Planner card, not the top of the page.
               returnTo.current = 'h-planner';
               setPage('launch');

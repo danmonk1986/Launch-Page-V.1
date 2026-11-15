@@ -6,7 +6,7 @@ import { makeStore } from './store';
  */
 export type DecisionStatus = 'open' | 'deciding' | 'waiting' | 'decided' | 'done';
 export const DECISION_STATUSES: DecisionStatus[] = ['open', 'deciding', 'waiting', 'decided', 'done'];
-export interface DecisionOption { id: string; name: string; note: string; cost: string; picked: boolean }
+export interface DecisionOption { id: string; name: string; note: string; cost: string; picked: boolean; /** V20-259 */ link?: string }
 export interface Decision {
   id: string;
   projectId: string | null;
