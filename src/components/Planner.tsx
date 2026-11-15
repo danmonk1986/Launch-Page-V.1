@@ -152,12 +152,11 @@ export function PlannerPanel(p: {
           <span role="columnheader">Description</span>
           <span role="columnheader">Cost</span>
           <span role="columnheader">By</span>
-          <span role="columnheader" className="pl-acts">
+          <span role="columnheader" className="pl-acts pl-add">
             <button type="button" className="quick-btn task-quick is-key" aria-label="Add a decision" title="Add a decision" onClick={add} disabled={!plan}>
               <Icon d={PLUS} />
             </button>
           </span>
-          <span role="columnheader" />
         </div>
         {!rows.length && <p className="field-hint pl-empty">{plan ? 'No decisions yet. The + above adds one.' : 'No plans yet. The teal + adds one.'}</p>}
         {rows.map((d, i) => {
