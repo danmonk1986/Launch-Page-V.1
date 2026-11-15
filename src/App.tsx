@@ -174,6 +174,8 @@ export default function App() {
   const [pastAsk, setPastAsk] = useState<Launch | null>(null);
   // V20-224: the font theme lives on <html>, so everything (body text, pop-ups) picks it up.
   useEffect(() => {
+    // V20-235: wait for the real settings (the page already carries the last theme), so the default never flashes.
+    if (!settingsLoaded) return;
     const root = document.documentElement;
     root.dataset.font = settings.fontTheme;
     // V20-229: YOURS = your three fonts, loaded from Google Fonts when picked.
@@ -195,7 +197,7 @@ export default function App() {
       document.head.appendChild(link);
     }
     if (link && link.href !== href) link.href = href;
-  }, [settings.fontTheme, settings.fontCustom]);
+  }, [settings.fontTheme, settings.fontCustom, settingsLoaded]);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
   // 26 Days
   const [nonnegs, setNonnegs] = useState<NonNeg[]>([]);
