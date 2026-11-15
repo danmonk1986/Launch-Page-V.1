@@ -3613,3 +3613,11 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .pl-opt-cost { font-family: var(--font-mono) !important; font-size: 12px !important; }
 .pl-addopt { display: grid; grid-template-columns: minmax(0, 1fr) 32px; gap: 8px; align-items: end; }
 .pl-addopt .field { margin: 0; }
+/* V20-249: the Budget card (Launch Page): totals like the Budget page, then the next 7 days like the Tasks card. */
+.bc-table { display: flex; flex-direction: column; overflow-x: auto; }
+.bc-row { display: grid; grid-template-columns: 110px minmax(160px, 1.6fr) minmax(90px, 1fr) 70px 110px; gap: 14px; align-items: center; min-height: 46px; padding: 0 12px; border-bottom: 2px solid color-mix(in srgb, var(--accent-teal) 35%, transparent); min-width: 560px; }
+.bc-row.is-alt { background: color-mix(in srgb, var(--accent-purple) 6%, transparent); }
+.bc-name { cursor: default; }
+.bc-amt { text-align: right; }
+.panel-planner.is-full, .panel-budget-card { min-width: 0; }
+.app .tabs .tab.is-off { opacity: 0.4; }

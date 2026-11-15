@@ -15,6 +15,7 @@ import { BudgetPage } from './components/Budget';
 import { HeaderSearchContext, matchesSearch } from './lib/headerSearch';
 import { decisionStore, type Decision } from './lib/decisions';
 import { PlannerPanel } from './components/Planner';
+import { BudgetCard } from './components/BudgetCard';
 import { budgetStore, download as downloadText, linesToCsv, newBudgetLine, type BudgetLine } from './lib/budget';
 import { rateToCad, toCad } from './lib/currency';
 import { expenseFromLine, expenseStore, type Expense } from './lib/expenses';
@@ -557,7 +558,7 @@ export default function App() {
   const exportBrand = () =>
     ((settings.account.businessName || '').trim() || shownName(settings).trim() || 'L4UNCH!P4GE').toUpperCase().replace(/[^A-Za-z0-9!_-]+/g, '-').replace(/^-|-$/g, '') || 'LAUNCH-SHEET';
   // V20-158: pages switched off in Settings › Modules leave the menu (and send you to the Launch Page).
-  const hiddenPages = ([['days26', settings.modules.days26], ['budget', settings.modules.budget], ['invoices', settings.modules.records || settings.modules.invoice]] as const)
+  const hiddenPages = ([['days26', settings.modules.days26], ['budget', settings.modules.budget], ['invoices', settings.modules.records || settings.modules.invoice], ['kb', settings.modules.kb !== false], ['tasks', settings.modules.tasks], ['planner', settings.modules.planner]] as const)
     .filter(([, on]) => !on)
     .map(([id]) => id) as PageId[];
   const hiddenPagesKey = hiddenPages.join(',');
@@ -1809,6 +1810,8 @@ export default function App() {
         slim={kb}
         page={page}
         onPage={(pg) => {
+          // V20-249: a greyed-out (switched off) page opens Settings › Modules instead.
+          if (hiddenPages.includes(pg)) return setSettingsOpen('modules');
           setFocusTask(null);
           setPage(pg);
         }}
@@ -1928,7 +1931,8 @@ export default function App() {
                   }}
                 />
               }
-              planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} projects={projects} onSave={decisionOps.save} onRemove={decisionOps.remove} />}
+              budget={!settings.modules.budget ? null : <BudgetCard lines={budget} today={now} onOpenAll={() => setPage('budget')} />}
+              planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} projects={projects} onSave={decisionOps.save} onRemove={decisionOps.remove} onToggle={() => setPage('planner')} />}
               journal={!settings.modules.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!settings.modules.routine ? null : 
                 <TodayPanel
@@ -1961,6 +1965,8 @@ export default function App() {
               onEditOpened={() => setEditTask(null)}
               expenses={expenses}
             />
+          ) : page === 'planner' ? (
+            <PlannerPanel full decisions={decisions} projects={projects} onSave={decisionOps.save} onRemove={decisionOps.remove} onToggle={() => setPage('launch')} />
           ) : page === 'journal' ? (
             <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} full onClose={() => setPage('launch')} />
           ) : page === 'days26' ? (

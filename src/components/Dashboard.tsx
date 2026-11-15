@@ -1,14 +1,15 @@
 import type { ReactNode } from 'react';
 
-type Slots = { rockets: ReactNode; week: ReactNode; tasks: ReactNode; planner?: ReactNode; journal: ReactNode; today: ReactNode };
+type Slots = { rockets: ReactNode; week: ReactNode; tasks: ReactNode; budget?: ReactNode; planner?: ReactNode; journal: ReactNode; today: ReactNode };
 
-export function LaunchPageHome({ rockets, week, tasks, planner, journal, today }: Slots) {
+export function LaunchPageHome({ rockets, week, tasks, budget, planner, journal, today }: Slots) {
   return (
     <div className="home">
       <div className="home-main">
         {rockets}
         {week}
         {tasks}
+        {budget}
         {planner}
         {journal}
       </div>

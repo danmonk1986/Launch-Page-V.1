@@ -108,12 +108,14 @@ export interface Modules {
   journal: boolean; days26: boolean; goals: boolean; milestones: boolean;
   budget: boolean; trips: boolean;
   invoice: boolean; records: boolean; crm: boolean; marketing: boolean; planner: boolean; projects: boolean;
+  /** V20-249: KNOWLEDGE B4SE in the menu. */
+  kb: boolean;
 }
 export const DEFAULT_MODULES: Modules = {
   rockets: true, routine: true, tasks: true, week: true,
   journal: false, days26: false, goals: false, milestones: false,
   budget: false, trips: false,
-  invoice: false, records: false, crm: false, marketing: false, planner: false, projects: false
+  invoice: false, records: false, crm: false, marketing: false, planner: false, projects: false, kb: true
 };
 /** Not built yet: shown greyed out with Coming soon. */
 export const MODULE_SOON: (keyof Modules)[] = ['goals', 'milestones', 'trips', 'crm', 'marketing', 'projects'];

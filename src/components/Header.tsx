@@ -4,13 +4,12 @@ import { useMobile } from '../lib/useMobile';
 import { OneMenu } from './OneMenu';
 
 /** journal is opened from the Journal panel, not the menu. */
-export type PageId = 'launch' | 'tasks' | 'days26' | 'budget' | 'invoices' | 'journal' | 'kb';
+export type PageId = 'launch' | 'tasks' | 'days26' | 'budget' | 'invoices' | 'journal' | 'kb' | 'planner';
 
 const PAGES: { id: PageId; label: string }[] = [
   { id: 'launch', label: 'Launch Page' },
   { id: 'days26', label: '26 Days' },
-  { id: 'tasks', label: 'Tasks' },
-  { id: 'budget', label: 'Budget' },
+  // V20-249 (Dan, Nov 14): Tasks and Budget leave the menu; their Launch Page cards' ⌄ opens them full screen.
   // Records (Oct 26): Expenses + Invoices; the id stays 'invoices' so saved card rockets keep working.
   { id: 'invoices', label: 'Records' },
   // KNOWLEDGE B4SE (Nov 6; '!' dropped Nov 14, V20-188, to match L4UNCH P4GE): course decks and cheat sheets, searchable.
@@ -19,7 +18,7 @@ const PAGES: { id: PageId; label: string }[] = [
 
 type Props = {
   settings: BrandSettings;
-  /** V20-158: pages switched off in Settings › Modules don't show in the menu. */
+  /** V20-158 / V20-249: pages switched off in Settings › Modules stay in the menu, greyed out. */
   hidden?: PageId[];
   /** KNOWLEDGE!B4SE: just the page menu and ⚙, top right, no header bar (Dan, Nov 6). */
   slim?: boolean;
@@ -30,7 +29,7 @@ type Props = {
 };
 
 export function Header({ settings, slim, page, onPage, right, hidden = [] }: Props) {
-  const pages = PAGES.filter((p) => !hidden.includes(p.id));
+  const pages = PAGES.map((p) => (hidden.includes(p.id) ? { ...p, off: true } : p));
   if (slim) {
     return (
       <header className="topbar topbar-slim">
@@ -94,7 +93,7 @@ function HeaderWords({ goal, mantra }: { goal: string; mantra: string }) {
  * Page tabs. When the header gets too narrow, the tabs that don't fit fold into a
  * teal ⌄ menu at the end of the row instead of stacking.
  */
-function TabBar({ pages, page, onPage }: { pages: typeof PAGES; page: PageId; onPage: (p: PageId) => void }) {
+function TabBar({ pages, page, onPage }: { pages: { id: PageId; label: string; off?: boolean }[]; page: PageId; onPage: (p: PageId) => void }) {
   // Phones (Oct 30): the menu shows the page you're on with a ∨ to the rest.
   if (useMobile()) {
     return (
@@ -106,7 +105,7 @@ function TabBar({ pages, page, onPage }: { pages: typeof PAGES; page: PageId; on
   return <WideTabBar key={pages.length} PAGES={pages} page={page} onPage={onPage} />;
 }
 
-function WideTabBar({ PAGES, page, onPage }: { PAGES: { id: PageId; label: string }[]; page: PageId; onPage: (p: PageId) => void }) {
+function WideTabBar({ PAGES, page, onPage }: { PAGES: { id: PageId; label: string; off?: boolean }[]; page: PageId; onPage: (p: PageId) => void }) {
   const wrap = useRef<HTMLElement>(null);
   const measure = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState(PAGES.length);
@@ -145,7 +144,7 @@ function WideTabBar({ PAGES, page, onPage }: { PAGES: { id: PageId; label: strin
         ))}
       </div>
       {shown.map((p) => (
-        <button key={p.id} type="button" className="tab" aria-current={page === p.id ? 'page' : undefined} onClick={() => onPage(p.id)}>
+        <button key={p.id} type="button" className={`tab${p.off ? ' is-off' : ''}`} title={p.off ? `${p.label} is off: tap to switch it on in Settings › Modules` : undefined} aria-current={page === p.id ? 'page' : undefined} onClick={() => onPage(p.id)}>
           {p.label}
         </button>
       ))}

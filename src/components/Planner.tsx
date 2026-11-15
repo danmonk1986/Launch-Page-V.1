@@ -36,6 +36,9 @@ export function PlannerPanel(p: {
   projects: Project[];
   onSave: (d: Decision) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
+  /** V20-249: the card's ⌄ opens the planner full screen; ^ there comes back. */
+  full?: boolean;
+  onToggle?: () => void;
 }) {
   const { q } = useHeaderSearch();
   const withDecisions = useMemo(() => {
@@ -79,12 +82,23 @@ export function PlannerPanel(p: {
   const projName = (id: string | null) => p.projects.find((x) => x.id === id)?.name ?? 'Pick a project';
 
   return (
-    <section className="panel panel-planner" aria-labelledby="h-planner">
+    <section className={`panel panel-planner${p.full ? ' is-full' : ''}`} aria-labelledby="h-planner">
       <div className="panel-head">
         <div className="rockets-title pl-title">
           <h2 id="h-planner" className="panel-title">
             Project Planner
           </h2>
+          {p.onToggle && (
+            <button
+              type="button"
+              className={`rockets-toggle${p.full ? ' is-open' : ''}`}
+              aria-label={p.full ? 'Back to the Project Planner card' : 'Open the full Project Planner'}
+              title={p.full ? 'Back to the card' : 'Open full screen'}
+              onClick={p.onToggle}
+            >
+              <Icon d={CHEV} />
+            </button>
+          )}
           <label className="pl-pick">
             <span className="sr-only">Project</span>
             <select value={pid ?? ''} onChange={(e) => setProjectId(e.target.value || null)}>

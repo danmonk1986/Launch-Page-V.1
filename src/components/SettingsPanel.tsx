@@ -911,6 +911,7 @@ const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }
     items: [
       ['journal', 'Personal Alchemy', 'Your journal and check-ins.'],
       ['days26', '26 Days', 'The 26 Days page.'],
+      ['kb', 'Knowledge B4SE', 'Course decks and cheat sheets.'],
       ['goals', 'Goals', ''],
       ['milestones', 'Milestones', '']
     ]
