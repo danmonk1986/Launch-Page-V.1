@@ -2797,7 +2797,7 @@ button.kb-btn { font-family: inherit; }
 .week-grid-next { margin-top: 10px; padding-top: 8px; border-top: 1px dashed color-mix(in srgb, var(--accent-purple) 40%, transparent); }
 .week-grid.is-28 .week-day { padding-top: 4px; padding-bottom: 4px; }
 /* KNOWLEDGE!B4SE slide viewer (KB-034): finished decks open here instead of on claude.ai. */
-.kb-viewer { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; background: #110c29; color: #f5f5dc; font-family: 'Space Grotesk', Arial, sans-serif; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.kb-viewer { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; background: #110c29; color: #f5f5dc; font-family: var(--font-body); padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
 .kb-viewer-bar { display: flex; align-items: center; gap: 16px; padding: 12px 16px; min-height: 56px; }
 .kb-viewer-title { flex: 1 1 auto; min-width: 0; margin: 0; display: flex; flex-direction: column; line-height: 1.25; }
 .kb-viewer-title b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -3505,6 +3505,17 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app .search-box.search-pill input::placeholder { color: color-mix(in srgb, var(--beige) 55%, transparent); font-weight: 700; opacity: 1; }
 .app .search-box.search-pill input::-webkit-search-cancel-button { display: none; }
 
-/* V20-232 (Dan, Nov 14): KNOWLEDGE!B4SE keeps its own fonts whatever the font theme, and no focus box inside its search. */
-.app.is-kb { --font-head: 'Space Grotesk', system-ui, sans-serif; --font-body: 'Space Grotesk', system-ui, sans-serif; --font-mono: 'Roboto Mono', ui-monospace, monospace; font-family: var(--font-body); }
+/* V20-232 / V20-234 (Dan, Nov 14): KNOWLEDGE!B4SE follows the Appearance font (the theme's body font everywhere on it),
+   no focus box inside its search, and its round search button is the key button (the dark button is never used). */
+.app.is-kb { font-family: var(--font-body); }
+.app.is-kb .kb-go { background: var(--accent-teal); border: 2px solid var(--accent-teal); color: var(--accent-purple); }
+.app.is-kb .kb-go:hover { border-color: var(--accent-purple); color: var(--accent-purple); }
 .app.is-kb .kb-search input, .app.is-kb .kb-search input:focus, .app.is-kb .kb-search input:focus-visible { border: 0; box-shadow: none; outline: none; }
+/* KNOWLEDGE!B4SE on the button system too (light page): key = Colour 2 fill, Colour 1 text; other = Colour 1 outline.
+   Its word buttons are pills, 36 high, like everywhere else; the gear is a Colour 1 circle. */
+.app.is-kb .kb-btn { min-height: 36px; height: 36px; border-radius: 999px; border: 2px solid var(--accent-purple); background: transparent; color: var(--accent-purple); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 13px; }
+.app.is-kb .kb-btn:hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); border-color: var(--accent-purple); }
+.app.is-kb .kb-btn.kb-btn-dark { background: var(--accent-teal); border-color: var(--accent-teal); color: var(--accent-purple); }
+.app.is-kb .kb-btn.kb-btn-dark:hover { background: var(--accent-teal); border-color: var(--accent-purple); color: var(--accent-purple); }
+.app.is-kb .topbar-slim .gear-btn { border-radius: 50%; border: 2px solid var(--accent-purple); color: var(--accent-purple); background: transparent; }
+.app.is-kb .topbar-slim .gear-btn:hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
