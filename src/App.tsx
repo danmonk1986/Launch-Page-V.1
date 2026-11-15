@@ -13,6 +13,8 @@ import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
 import { HeaderSearchContext, matchesSearch } from './lib/headerSearch';
+import { decisionStore, type Decision } from './lib/decisions';
+import { PlannerPanel } from './components/Planner';
 import { budgetStore, download as downloadText, linesToCsv, newBudgetLine, type BudgetLine } from './lib/budget';
 import { rateToCad, toCad } from './lib/currency';
 import { expenseFromLine, expenseStore, type Expense } from './lib/expenses';
@@ -168,6 +170,8 @@ export default function App() {
   const [launches, setLaunches] = useState<Launch[]>([]);
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  // V20-247 (Dan, Nov 14): Project Planner decisions.
+  const [decisions, setDecisions] = useState<Decision[]>([]);
   // V20-183: the app-wide Log the time? (for Done from the reminder, Missed pop-up, Time's up and rituals).
   const [timeAsk, setTimeAsk] = useState<{ l: Launch; minutes: number; q: string } | null>(null);
   // V20-214 (Dan, Nov 14): a launch saved for today after its time has passed asks once: started at the set
@@ -445,6 +449,11 @@ export default function App() {
     });
     loadBgImages(userId).then(setBgSlots);
   }, [userId]);
+  useEffect(() => {
+    if (supabase && !session) return;
+    decisionStore.load(userId).then((r) => setDecisions(r.items));
+    decisionStore.onNewer((id, newer) => setDecisions((l) => (newer ? l.map((x) => (x.id === id ? newer : x)) : l.filter((x) => x.id !== id))));
+  }, [userId, session]);
 
   useEffect(() => {
     if (supabase && !session) return;
@@ -743,6 +752,7 @@ export default function App() {
   }
   const eventOps = ops(eventStore, events, setEvents, (e) => e.title);
   const projectOps = ops(projectStore, projects, setProjects, (p) => p.name);
+  const decisionOps = ops(decisionStore, decisions, setDecisions, (d) => d.title || 'Decision');
   const taskOps = ops(taskStore, tasks, setTasks, (t) => taskName(t));
   const nonNegOps = ops(nonNegStore, nonnegs, setNonnegs, (n) => n.label);
   // Meditations save from the newest copy (several can change in one ritual save).
@@ -1918,6 +1928,7 @@ export default function App() {
                   }}
                 />
               }
+              planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} projects={projects} onSave={decisionOps.save} onRemove={decisionOps.remove} />}
               journal={!settings.modules.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!settings.modules.routine ? null : 
                 <TodayPanel
