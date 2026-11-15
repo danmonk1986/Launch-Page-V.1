@@ -3476,21 +3476,16 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 @media (max-width: 760px) { .font-yours-edit { grid-template-columns: 1fr 1fr; } }
 
 /* ==========================================================================
-   FIELDS v1 (Dan, Nov 14; V20-230). Z4PTOR underline: no box, a line under the field.
+   FIELDS v1 (Dan, Nov 14; V20-230/231). Z4PTOR underline: no box, a line under the field.
    Optional = Colour 1 line · required (*) = Colour 2 line · typing in it = a thicker Colour 2 line.
    Every form field (.field) in every form, pop-up, Settings and sign-in. The search bar keeps its pill.
+   The line's colour and weight come from --line / --line-w, so required and focus never lose to the base rule.
    ========================================================================== */
-.app:not(.is-kb) .field :is(input:not([type='radio']):not([type='color']):not([type='checkbox']):not([type='file']):not([type='range']), select, textarea),
-.app[data-tone='light']:not(.is-kb) .field :is(input:not([type='radio']):not([type='color']):not([type='checkbox']):not([type='file']):not([type='range']), select, textarea) {
-  border: 0; border-bottom: 2px solid var(--accent-purple); border-radius: 0; background-color: transparent;
+.app:not(.is-kb) .field :is(input:not([type='radio']):not([type='color']):not([type='checkbox']):not([type='file']):not([type='range']), select, textarea) {
+  border: 0; border-bottom: var(--line-w, 2px) solid var(--line, var(--accent-purple)); border-radius: 0; background-color: transparent;
   padding-left: 2px; padding-right: 28px; box-shadow: none; outline: none;
 }
 .app:not(.is-kb) .field input:not([type='radio']):not([type='color']):not([type='checkbox']):not([type='file']):not([type='range']):not([type='date']):not([type='time']) { padding-right: 2px; }
-.app:not(.is-kb) .field :is(input, select, textarea):is(:required, [data-must]),
-.app[data-tone='light']:not(.is-kb) .field :is(input, select, textarea):is(:required, [data-must]) { border-bottom-color: var(--accent-teal); }
-.app:not(.is-kb) .field :is(input, select, textarea):focus,
-.app:not(.is-kb) .field :is(input, select, textarea):focus-visible,
-.app[data-tone='light']:not(.is-kb) .field :is(input, select, textarea):focus-visible {
-  border-bottom: 3px solid var(--accent-teal); box-shadow: none; outline: none;
-}
+.app .field :is(input, select, textarea):is(:required, [data-must]) { --line: var(--accent-teal); }
+.app .field :is(input, select, textarea):is(:focus, :focus-visible) { --line: var(--accent-teal); --line-w: 3px; box-shadow: none; outline: none; }
 .app:not(.is-kb) .field textarea { padding-top: 8px; }
