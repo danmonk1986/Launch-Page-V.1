@@ -172,6 +172,10 @@ export default function App() {
   // V20-214 (Dan, Nov 14): a launch saved for today after its time has passed asks once: started at the set
   // time (the clock runs from then), already done (Log the time?), or not started (Missed, as before).
   const [pastAsk, setPastAsk] = useState<Launch | null>(null);
+  // V20-224: the font theme lives on <html>, so everything (body text, pop-ups) picks it up.
+  useEffect(() => {
+    document.documentElement.dataset.font = settings.fontTheme;
+  }, [settings.fontTheme]);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
   // 26 Days
   const [nonnegs, setNonnegs] = useState<NonNeg[]>([]);
@@ -1720,7 +1724,6 @@ export default function App() {
       style={shellStyle}
       data-bg={bgImage ? 'image' : shown.tile}
       data-tone={light || kb ? 'light' : 'dark'}
-      data-font={settings.fontTheme}
       data-scroll={scrollMode}
     >
       <div className="sky" aria-hidden="true">

@@ -3437,12 +3437,13 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 
 /* V20-222 (Dan, Nov 14): font themes (Settings › Appearance › Fonts). L4UNCH is the default (Space Grotesk);
    Z4PTOR is the style guide: Roboto Slab headings, Roboto body, Roboto Mono. */
-.app[data-font='zaptor'] {
+/* V20-224: set on <html>, so body text and pop-ups outside the app (they inherit from body) change too. */
+:root[data-font='zaptor'] {
   --font-head: 'Roboto Slab', Georgia, serif;
   --font-body: 'Roboto', system-ui, sans-serif;
   --font-mono: 'Roboto Mono', ui-monospace, monospace;
 }
-.app[data-font='zaptor'] :is(input, select, textarea, button) { font-family: inherit; }
+:root[data-font='zaptor'] :is(input, select, textarea, button) { font-family: inherit; }
 .font-themes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 14px; }
 @media (max-width: 560px) { .font-themes { grid-template-columns: 1fr; } }
 .font-theme { display: grid; gap: 6px; text-align: left; padding: 16px 18px; border-radius: 16px; border: 1.5px solid var(--edge-strong); background: transparent; color: var(--beige); cursor: pointer; }
