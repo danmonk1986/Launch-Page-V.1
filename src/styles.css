@@ -3456,3 +3456,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
    Z4PTOR): card and page titles, section headers, sheet / pop-up titles. */
 :is(.panel-title, .sheet-head h2, .timed-title, .card-h, .what-sub, .records-sub, .journal-sub, .invoice-sub,
   .d26-sec-name, .d26-tile-name, .d26-compare-title, .settings-section, .settings-head h2) { font-family: var(--font-head); }
+/* V20-226 (Dan, Nov 14): the header lines switch with the theme too. Goal: the heading font (Roboto Slab in Z4PTOR);
+   mantra: Roboto Mono in Z4PTOR. L4UNCH keeps Space Grotesk for both. */
+.motto { font-family: var(--font-head); }
+:root[data-font='zaptor'] .mantra { font-family: var(--font-mono); }
