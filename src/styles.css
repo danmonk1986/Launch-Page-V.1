@@ -3522,3 +3522,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.is-kb .topbar-slim .gear-btn:hover { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
 /* V20-238: every icon button is a circle, beating the older 8px-corner rules in card headers. */
 .app.app :is(.tool-btn, .quick-btn, .task-quick, .view-toggle):not(.is-asking):not(.budget-groupby) { border-radius: 50%; }
+/* V20-240 (Dan, Nov 14): chevrons made simple. Every chevron (⌄ beside ROCKETS / TASKS / THIS WEEK, the calendar ‹ ›,
+   the tab-row ⌄, Show more) is a Colour 2 icon with no box, ever; on hover the icon turns Colour 1. Nothing else. */
+.app.app :is(.rockets-toggle, .week-arrow, .timed-more, .tabs-more-btn),
+.app.app :is(.rockets-toggle, .week-arrow, .timed-more, .tabs-more-btn):focus { background: none; box-shadow: none; color: var(--accent-teal); }
+.app.app :is(.rockets-toggle, .week-arrow, .timed-more, .tabs-more-btn):hover { background: none; box-shadow: none; color: var(--accent-purple); }
