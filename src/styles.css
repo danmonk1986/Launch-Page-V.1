@@ -3454,7 +3454,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
    ========================================================================== */
 :is(.app:not(.is-kb), .signin) .btn {
   border: 2px solid var(--accent-teal); background: var(--accent-teal); color: var(--accent-purple);
-  border-radius: 999px; padding: 0 22px; min-height: 44px; filter: none; transition: background 0.15s, border-color 0.15s;
+  border-radius: 999px; padding: 0 18px; min-height: 36px; height: 36px; filter: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s, border-color 0.15s;
 }
 :is(.app:not(.is-kb), .signin) .btn:hover { border-color: var(--accent-purple); color: var(--accent-purple); background: var(--accent-teal); }
 :is(.app:not(.is-kb), .signin) .btn:disabled { opacity: 1; cursor: not-allowed; border-color: var(--accent-teal); }
@@ -3466,5 +3466,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 :is(.app:not(.is-kb), .signin) .btn.btn-quiet:disabled { color: color-mix(in srgb, var(--accent-purple) 45%, transparent); border-color: color-mix(in srgb, var(--accent-purple) 45%, transparent); }
 :is(.app:not(.is-kb), .signin) .btn.btn-danger { background: transparent; border: 2px solid #e2675c; color: #e2675c; }
 :is(.app:not(.is-kb), .signin) .btn.btn-danger:hover { background: rgb(226 103 92 / 0.12); }
-/* Square in Settings and on sign-in. */
+/* V20-228: word buttons are the same height as the icon buttons beside them (36px). Square in Settings and on sign-in. */
 :is(.sheet-settings, .sheet-password, .signin) .btn { border-radius: 10px; }
