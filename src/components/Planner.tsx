@@ -84,7 +84,7 @@ export function PlannerPanel(p: {
   };
   const add = () => {
     if (!plan) return;
-    const d = newDecision(pid, (p.decisions.reduce((m, x) => Math.max(m, x.sort), 0) || 0) + 1, plan.id);
+    const d = newDecision(pid, [...p.decisions, ...Object.values(open)].reduce((m, x) => Math.max(m, x.sort), 0) + 1, plan.id);
     setOpen((o) => ({ [d.id]: d, ...o }));
   };
   const fresh = Object.values(open).filter((d) => !p.decisions.some((x) => x.id === d.id) && !!plan && d.planId === plan.id);
@@ -208,7 +208,21 @@ export function PlannerPanel(p: {
                   <div className="pl-edit-main">
                     <label className="field">
                       <span>Decision</span>
-                      <input required value={o.title} onChange={(e) => edit(d.id, { title: e.target.value })} placeholder="What needs deciding" autoFocus={!o.title} />
+                      <input
+                        required
+                        value={o.title}
+                        onChange={(e) => edit(d.id, { title: e.target.value })}
+                        placeholder="What needs deciding"
+                        autoFocus={!o.title}
+                        enterKeyHint="next"
+                        onKeyDown={(e) => {
+                          // V20-254 (Dan, Nov 15): jotting it down. Enter saves; on a new one it opens the next new one.
+                          if (e.key !== 'Enter' || !o.title.trim()) return;
+                          e.preventDefault();
+                          const isNew = !p.decisions.some((x) => x.id === d.id);
+                          void save(d.id).then(() => isNew && add());
+                        }}
+                      />
                     </label>
                     <label className="field">
                       <span>Description</span>
