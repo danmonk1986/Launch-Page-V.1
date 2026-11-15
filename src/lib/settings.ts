@@ -63,7 +63,16 @@ export interface BrandSettings {
   modules: Modules;
   /** V20-210: the shared What list (null = the ten defaults). */
   whats: WhatItem[] | null;
+  /** V20-222 (Dan, Nov 14): the font theme. launch = Space Grotesk; zaptor = the Z4PTOR style guide (Roboto Slab,
+   *  Roboto, Roboto Mono). */
+  fontTheme: FontTheme;
 }
+
+export type FontTheme = 'launch' | 'zaptor';
+export const FONT_THEMES: { id: FontTheme; name: string; head: string; body: string; mono: string }[] = [
+  { id: 'launch', name: 'L4UNCH', head: 'Space Grotesk', body: 'Space Grotesk', mono: 'Roboto Mono' },
+  { id: 'zaptor', name: 'Z4PTOR', head: 'Roboto Slab', body: 'Roboto', mono: 'Roboto Mono' }
+];
 
 /** V20-158 (Dan, Nov 13): modules in sections. Launch Page essentials are on by default; everything from Personal
  *  Alchemy down is off by default. Some are still to be built (MODULE_SOON). */
@@ -164,7 +173,8 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   nightNeutral: '#f5f5dc',
   surfaces: DEFAULT_SURFACES,
   modules: DEFAULT_MODULES,
-  whats: null
+  whats: null,
+  fontTheme: 'launch'
 };
 
 /** V20-120: day mode = a light background. */
@@ -240,6 +250,7 @@ type Row = {
   modules?: Partial<Modules> | null;
   day_colour?: string | null;
   whats?: WhatItem[] | null;
+  font_theme?: string | null;
 };
 
 const toRow = (s: BrandSettings): Row => ({
@@ -268,7 +279,8 @@ const toRow = (s: BrandSettings): Row => ({
   night_neutral: s.nightNeutral,
   surfaces: s.surfaces,
   modules: s.modules,
-  whats: s.whats
+  whats: s.whats,
+  font_theme: s.fontTheme
 });
 
 const fromRow = (r: Row): BrandSettings => ({
@@ -302,7 +314,8 @@ const fromRow = (r: Row): BrandSettings => ({
     night: { ...DEFAULT_SURFACES.night, ...(r.surfaces?.night ?? {}) }
   },
   modules: { ...DEFAULT_MODULES, ...(r.modules ?? {}) },
-  whats: Array.isArray(r.whats) && r.whats.length ? r.whats : null
+  whats: Array.isArray(r.whats) && r.whats.length ? r.whats : null,
+  fontTheme: r.font_theme === 'zaptor' ? 'zaptor' : 'launch'
 });
 
 /** The remembered background for each mode; the current one fills its own side when nothing is saved yet. */

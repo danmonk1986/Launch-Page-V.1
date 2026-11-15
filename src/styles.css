@@ -3433,3 +3433,20 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app:not(.is-kb) .tool-btn.tool-btn-danger:hover { background: rgb(255 120 110 / 0.12); }
 .app:not(.is-kb) .tool-btn.tool-btn-danger.is-armed { background: #e2675c; border-color: #e2675c; color: #ffffff; }
 .app:not(.is-kb) .tool-btn.is-asking { border-radius: 999px; }
+
+/* V20-222 (Dan, Nov 14): font themes (Settings › Appearance › Fonts). L4UNCH is the default (Space Grotesk);
+   Z4PTOR is the style guide: Roboto Slab headings, Roboto body, Roboto Mono. */
+.app[data-font='zaptor'] {
+  --font-head: 'Roboto Slab', Georgia, serif;
+  --font-body: 'Roboto', system-ui, sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, monospace;
+}
+.app[data-font='zaptor'] :is(input, select, textarea, button) { font-family: inherit; }
+.font-themes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 14px; }
+@media (max-width: 560px) { .font-themes { grid-template-columns: 1fr; } }
+.font-theme { display: grid; gap: 6px; text-align: left; padding: 16px 18px; border-radius: 16px; border: 1.5px solid var(--edge-strong); background: transparent; color: var(--beige); cursor: pointer; }
+.font-theme:hover { border-color: var(--accent-purple); }
+.font-theme.is-on { border: 2px solid var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 10%, transparent); }
+.font-theme-name { font-size: 22px; font-weight: 700; line-height: 1.1; }
+.font-theme-body { font-size: 15px; color: var(--mist); }
+.font-theme-mono { font-size: 12px; letter-spacing: 0.12em; color: var(--accent-teal); }

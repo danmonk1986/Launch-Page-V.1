@@ -1720,6 +1720,7 @@ export default function App() {
       style={shellStyle}
       data-bg={bgImage ? 'image' : shown.tile}
       data-tone={light || kb ? 'light' : 'dark'}
+      data-font={settings.fontTheme}
       data-scroll={scrollMode}
     >
       <div className="sky" aria-hidden="true">
