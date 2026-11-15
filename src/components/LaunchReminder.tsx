@@ -158,8 +158,8 @@ export function TimeUpReminder({ launch, onDone, onMore, onTomorrow, titles = []
           </p>
           <p className="panel-empty">Did you finish? Check it off, take more time, or move it to tomorrow.</p>
           <div className="sheet-actions">
-            <button type="button" className="btn btn-quiet" onClick={() => onTomorrow(launch)}>
-              Move to tomorrow
+            <button type="button" className="btn btn-quiet" title="Move to tomorrow" aria-label="Move to tomorrow" onClick={() => onTomorrow(launch)}>
+              + Tomorrow
             </button>
             <button type="button" className="btn btn-quiet" onClick={() => setMore(true)}>
               More time
