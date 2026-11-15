@@ -1971,7 +1971,11 @@ export default function App() {
               expenses={expenses}
             />
           ) : page === 'planner' ? (
-            <PlannerPanel full decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToggle={() => setPage('launch')} />
+            <PlannerPanel full decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToggle={() => {
+              // V20-257 (Dan, Nov 15): ^ comes back to the Project Planner card, not the top of the page.
+              returnTo.current = 'h-planner';
+              setPage('launch');
+            }} />
           ) : page === 'journal' ? (
             <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} full onClose={() => setPage('launch')} />
           ) : page === 'days26' ? (
@@ -2046,7 +2050,10 @@ export default function App() {
               tasks={tasks}
               onApplyLinks={applyLinks}
               expenses={expenses}
-              onClose={() => setPage('launch')}
+              onClose={() => {
+                returnTo.current = 'h-budget-card';
+                setPage('launch');
+              }}
               onToCalendar={budgetToCalendar}
               onToLaunch={(l) => {
                 const now = new Date();

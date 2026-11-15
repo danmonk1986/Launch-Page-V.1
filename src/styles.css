@@ -3583,5 +3583,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .pl-pill .picker-caret svg { stroke-width: 2.8; }
 .app.app .pl-pill .picker-caret:disabled { opacity: 0.35; cursor: default; background: transparent; }
 .app.app .pl-head .pl-acts { display: flex; justify-content: center; }
-.app.app .pl-head .pl-add { grid-column: span 2; justify-content: flex-end; margin-right: -12px; } /* V20-254 (Dan): the + lines up under the key + at the top right. */
+.app.app .pl-head .pl-add { grid-column: span 2; justify-content: flex-end; margin-right: -4px; position: relative; top: -6px; } /* V20-254 (Dan): the + lines up under the key + at the top right. */
 .app.app .sheet:focus, .sheet:focus { outline: none; } /* V20-256: the box takes the focus when a pop-up opens. */
