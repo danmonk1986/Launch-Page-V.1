@@ -3377,7 +3377,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .log-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 560px) { .log-form-grid { grid-template-columns: 1fr 1fr; } }
 /* V20-217 (Dan, Nov 14): one focus look for typed fields: the border turns teal, no second ring around it. */
-.app :is(input, select, textarea):not([type='checkbox']):not([type='radio']):not([type='color']):not([type='range']):not(.field *):focus-visible {
+.app:not(.is-kb) :is(input, select, textarea):not([type='checkbox']):not([type='radio']):not([type='color']):not([type='range']):not(.field *):not(.search-pill *):focus-visible {
   outline: none;
   border-color: var(--accent-teal);
   box-shadow: 0 0 0 1px var(--accent-teal);
@@ -3489,3 +3489,22 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app .field :is(input, select, textarea):is(:required, [data-must]) { --line: var(--accent-teal); }
 .app .field :is(input, select, textarea):is(:focus, :focus-visible) { --line: var(--accent-teal); --line-w: 3px; box-shadow: none; outline: none; }
 .app:not(.is-kb) .field textarea { padding-top: 8px; }
+
+/* V20-233 (Dan, Nov 14): search pops out into the Z4PTOR pill: beige, bold 'Search', the round key button inside. */
+@keyframes search-pop { from { width: 36px; opacity: 0.4; } to { width: min(300px, 60vw); opacity: 1; } }
+.app .search-box.search-pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 40px; width: min(300px, 60vw); box-sizing: border-box;
+  padding: 0 2px 0 16px; border-radius: 999px; background: #f5f5dc; animation: search-pop 0.18s ease-out;
+}
+.app[data-tone='dark'] .search-box.search-pill { background: color-mix(in srgb, #f5f5dc 14%, transparent); }
+.app .search-box.search-pill input {
+  flex: 1; min-width: 0; width: auto; height: 100%; border: 0; border-radius: 0; background: transparent; padding: 0;
+  font-family: var(--font-body); font-size: 15px; font-weight: 700; color: var(--beige); box-shadow: none; outline: none;
+}
+.app[data-tone='light'] .search-box.search-pill input { color: #444242; }
+.app .search-box.search-pill input::placeholder { color: color-mix(in srgb, var(--beige) 55%, transparent); font-weight: 700; opacity: 1; }
+.app .search-box.search-pill input::-webkit-search-cancel-button { display: none; }
+
+/* V20-232 (Dan, Nov 14): KNOWLEDGE!B4SE keeps its own fonts whatever the font theme, and no focus box inside its search. */
+.app.is-kb { --font-head: 'Space Grotesk', system-ui, sans-serif; --font-body: 'Space Grotesk', system-ui, sans-serif; --font-mono: 'Roboto Mono', ui-monospace, monospace; font-family: var(--font-body); }
+.app.is-kb .kb-search input, .app.is-kb .kb-search input:focus, .app.is-kb .kb-search input:focus-visible { border: 0; box-shadow: none; outline: none; }

@@ -751,8 +751,14 @@ export function SearchToggle({ value, onChange, placeholder }: { value: string; 
         <Icon d={SEARCH} />
       </button>
     );
+  // V20-233 (Dan, Nov 14): the search pops out into the Z4PTOR pill (beige, bold "Search", the round key button).
+  // The round button clears and closes (it turns into × once something's typed); Esc does the same.
+  const close = () => {
+    onChange('');
+    setOpen(false);
+  };
   return (
-    <span className="search-box">
+    <span className="search-box search-pill">
       <input
         autoFocus
         type="search"
@@ -761,23 +767,11 @@ export function SearchToggle({ value, onChange, placeholder }: { value: string; 
         aria-label="Search"
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            onChange('');
-            setOpen(false);
-          }
+          if (e.key === 'Escape') close();
         }}
       />
-      <button
-        type="button"
-        className="icon-btn tool-btn"
-        aria-label="Close search"
-        title="Close search"
-        onClick={() => {
-          onChange('');
-          setOpen(false);
-        }}
-      >
-        <Icon d={CLOSE} />
+      <button type="button" className="icon-btn tool-btn is-key" aria-label="Close search" title="Close search" onClick={close}>
+        <Icon d={value ? CLOSE : SEARCH} />
       </button>
     </span>
   );
