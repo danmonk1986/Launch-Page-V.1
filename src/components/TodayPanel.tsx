@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { nowBlockIndex, toBlocks, type Routine, type Shift } from '../lib/routines';
+import { nowBlockIndex, shiftMinutes, toBlocks, type Routine, type Shift } from '../lib/routines';
 
 export function useNow(everyMs = 30_000) {
   const [now, setNow] = useState(() => new Date());
@@ -16,12 +16,32 @@ type Props = { routine: Routine | null; shift: Shift; onEdit: () => void; /** Ca
 export function TodayPanel({ routine, shift, onEdit, follow }: Props) {
   const now = useNow();
   const blocks = routine ? toBlocks(routine, shift) : [];
-  const current = nowBlockIndex(blocks, now);
-  const nowBlock = current >= 0 ? blocks[current] : null;
+  // V20-275 (Dan, Nov 16): the routine leads. Between Bed and Wake Up nothing is NOW, however the day is going
+  // (a rig move, no bed): the card waits on Wake Up as what's NEXT, and no step after Bed can take NOW.
+  const asleep = (() => {
+    if (!routine?.bed || !routine?.wake) return false;
+    const bed = shiftMinutes(routine.bed, shift, routine.flips);
+    const wake = shiftMinutes(routine.wake, shift, routine.flips);
+    const m = now.getHours() * 60 + now.getMinutes();
+    return bed <= wake ? m >= bed && m < wake : m >= bed || m < wake;
+  })();
+  const wakeIdx = (() => {
+    if (!routine?.wake) return 0;
+    const w = shiftMinutes(routine.wake, shift, routine.flips);
+    const i = blocks.findIndex((b) => b.minutes === w);
+    return i >= 0 ? i : 0;
+  })();
+  const current = asleep ? -1 : nowBlockIndex(blocks, now);
+  const nowBlock = current >= 0 ? blocks[current] : asleep && follow ? blocks[wakeIdx] ?? null : null;
   // V20-108: card by card, the list scrolls in its own box under the Now box.
   const list = useRef<HTMLOListElement>(null);
   // Card by card: NOW stays on top and the list starts at what's next; earlier steps follow, dimmed.
-  const order = follow && current >= 0 ? [...blocks.keys()].filter((i) => i > current).concat([...blocks.keys()].filter((i) => i < current)) : [...blocks.keys()];
+  const order =
+    follow && current >= 0
+      ? [...blocks.keys()].filter((i) => i > current).concat([...blocks.keys()].filter((i) => i < current))
+      : follow && asleep
+        ? [...blocks.keys()].filter((i) => i !== wakeIdx)
+        : [...blocks.keys()];
   useEffect(() => {
     if (follow) list.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [follow, current, routine?.id, shift]);
@@ -41,7 +61,7 @@ export function TodayPanel({ routine, shift, onEdit, follow }: Props) {
         {follow && nowBlock && (
           <div className="now-card" aria-label="Right now">
             <span className="tl-time">{nowBlock.time ?? ''}</span>
-            <span className="now-pill">NOW</span>
+            <span className="now-pill">{asleep ? 'NEXT' : 'NOW'}</span>
             <div className="tl-body">
               <span className="tl-label">{nowBlock.label}</span>
               {nowBlock.steps.length > 0 && <span className="tl-steps">{nowBlock.steps.join(' · ')}</span>}
