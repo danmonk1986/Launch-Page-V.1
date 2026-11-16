@@ -279,7 +279,7 @@ export function RocketsPanel(p: Props) {
     atTime?: string | null;
     /** V20-273 (Dan, Nov 16): Part done. The launch, and (when on) what got done and what's left. */
     l?: Launch;
-    part?: { done: string; left: string } | null;
+    part?: { done: string; left: string; ticked?: number[] } | null;
   };
   // "WHAT - PROJECT - description": a part keeps the first two pieces and swaps the description.
   const titleHead = (t: string) => {
@@ -319,7 +319,29 @@ export function RocketsPanel(p: Props) {
             onChange={(e) => setLogAsk((a) => (a ? { ...a, start: e.target.value || undefined } : a))}
           />
         </label>
-        {logAsk.part && (
+        {logAsk.part && !!logAsk.l?.steps?.length && (
+          <span className="logask-steps" role="group" aria-label="Steps that got done">
+            {logAsk.l.steps.map((x, i) => (
+              <label key={i} className="logask-step">
+                <input
+                  type="checkbox"
+                  checked={!!logAsk.part?.ticked?.includes(i)}
+                  onChange={(e) =>
+                    setLogAsk((a) => {
+                      if (!a || !a.part) return a;
+                      const t = new Set(a.part.ticked ?? []);
+                      if (e.target.checked) t.add(i);
+                      else t.delete(i);
+                      return { ...a, part: { ...a.part, ticked: [...t].sort((m, n) => m - n) } };
+                    })
+                  }
+                />
+                <span>{x}</span>
+              </label>
+            ))}
+          </span>
+        )}
+        {logAsk.part && !logAsk.l?.steps?.length && (
           <>
             <label className="logask-min logask-part">
               <span>Done</span>
@@ -344,13 +366,22 @@ export function RocketsPanel(p: Props) {
         <button
           type="button"
           className="btn btn-quiet"
-          disabled={!!logAsk.part && !logAsk.part.done.trim()}
+          disabled={!!logAsk.part && (logAsk.l?.steps?.length ? !logAsk.part.ticked?.length : !logAsk.part.done.trim())}
           onClick={async () => {
             const a = logAsk;
             setLogAsk(null);
             if (!a.part || !a.l) return a.onLog(a.minutes, startIso(askStart(a), a.minutes, a.day));
             // V20-273: the done part is its own log (like Stats › Add a log); the launch stays open, renamed to what's left.
             const head = titleHead(a.l.title);
+            // V20-277: with steps, the ticked ones are the part done (joined with +) and the rest stay on the launch.
+            const steps = a.l.steps ?? [];
+            if (steps.length) {
+              const ticked = a.part.ticked ?? [];
+              const doneText = ticked.map((i) => steps[i]).join(' + ');
+              await p.onAddLog?.({ title: `${a.l.title} - ${doneText}`, projectId: a.l.projectId ?? null, day: a.day ?? isoDate(p.today), start: askStart(a), minutes: a.minutes });
+              await p.onSaveLaunch({ ...a.l, steps: steps.filter((_, i) => !ticked.includes(i)), minutes: Math.max(5, a.l.minutes - a.minutes) });
+              return;
+            }
             await p.onAddLog?.({ title: [...head, a.part.done.trim()].join(' - '), projectId: a.l.projectId ?? null, day: a.day ?? isoDate(p.today), start: askStart(a), minutes: a.minutes });
             const left = a.part.left.trim();
             const title = left ? [...head, left].join(' - ') : a.l.title;
@@ -914,6 +945,13 @@ export function RocketsPanel(p: Props) {
                       {how === 'done' && ' · done today'}
                       {how === 'skipped' && (l.repeat === 'hourly' ? ' · skipped this hour' : ' · skipped, back tomorrow')}
                     </span>
+                    {!!l.steps?.length && (
+                      <span className="timed-steps">
+                        {l.steps.map((x, i) => (
+                          <span key={i}>{x}</span>
+                        ))}
+                      </span>
+                    )}
                   </button>
                   {later && runDay && xAsk === l.id && (
                     <div className="timed-quick timed-xask" role="group" aria-label={`Skip or remove ${l.title}`}>
@@ -1407,6 +1445,55 @@ function nextFree(l: Launch) {
   return isoDate(last);
 }
 
+/** V20-277 (Dan, Nov 16): the steps of a block. Type one, Enter (or +) adds it and the box is ready for the next; × takes one out. */
+function StepsField({ steps, onChange }: { steps: string[]; onChange: (v: string[]) => void }) {
+  const [draft, setDraft] = useState('');
+  const add = () => {
+    const x = draft.trim();
+    if (!x) return;
+    onChange([...steps, x]);
+    setDraft('');
+  };
+  return (
+    <div className="field steps-field">
+      <span>Steps</span>
+      {steps.length > 0 && (
+        <ol className="step-list">
+          {steps.map((x, i) => (
+            <li key={i}>
+              <input value={x} aria-label={`Step ${i + 1}`} onChange={(e) => onChange(steps.map((y, j) => (j === i ? e.target.value : y)))} onBlur={() => !steps[i].trim() && onChange(steps.filter((_, j) => j !== i))} />
+              <button type="button" className="quick-btn quick-skip" aria-label={`Remove step ${x}`} title="Remove this step" onClick={() => onChange(steps.filter((_, j) => j !== i))}>
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+      <div className="step-add">
+        <input
+          value={draft}
+          placeholder={steps.length ? 'Add the next step' : 'Add a step (Enter adds the next)'}
+          aria-label="Add a step"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              add();
+            }
+          }}
+        />
+        <button type="button" className="quick-btn quick-skip" aria-label="Add step" title="Add step" disabled={!draft.trim()} onClick={add}>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TimedForm({
   launch,
   today,
@@ -1630,6 +1717,7 @@ function TimedForm({
         <span>Description</span>
         <TitleCombo value={desc} titles={descriptions} required={false} placeholder="L4UNCH P4GE Construction" onChange={(v) => setWhat(cat, v)} list={launchListFor(cat)} />
       </label>
+      <StepsField steps={d.steps ?? []} onChange={(v) => set('steps', v)} />
 
       <div className="time-grid">
         <label className="field">

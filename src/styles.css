@@ -3660,3 +3660,16 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-273 (Dan, Nov 16): Part done fields in the card's Log the time? row. */
 .app.app .timed-logask .logask-part input { width: 180px; text-align: left; }
 .app.app .timed-logask .btn:disabled { opacity: .45; cursor: not-allowed; }
+/* V20-277 (Dan, Nov 16): steps in a timed launch: the form's list, the card's chips, Part's checkboxes. */
+.steps-field { display: grid; gap: 6px; }
+.steps-field .step-list { margin: 0; padding-left: 22px; display: grid; gap: 4px; }
+.steps-field .step-list li, .steps-field .step-add { display: flex; align-items: center; gap: 8px; }
+.steps-field .step-list input, .steps-field .step-add input { flex: 1; min-width: 0; height: 34px; padding: 0 2px; border: 0; border-bottom: 2px solid var(--accent-purple); background: transparent; color: inherit; font: inherit; }
+.steps-field .step-add input:focus, .steps-field .step-list input:focus { outline: none; border-bottom-color: var(--accent-teal); }
+.app.app .steps-field .quick-btn { width: 30px; height: 30px; min-width: 30px; }
+.timed-steps { grid-column: 2; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--mist); }
+.timed-steps > span::before { content: '○ '; color: var(--accent-teal); }
+@media (max-width: 760px) { .timed-steps { grid-column: 1; } }
+.logask-steps { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: flex-end; flex: 1 1 100%; }
+.logask-step { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+.logask-step input { width: 16px; height: 16px; accent-color: var(--accent-teal); }

@@ -26,6 +26,8 @@ export type LaunchLogKind = 'productivity' | 'activity' | 'rest' | 'food' | 'h2o
 export interface Launch {
   id: string;
   title: string;
+  /** V20-277 (Dan, Nov 16): the pieces of the block, names only (column from 0065). Part ticks the ones done. */
+  steps?: string[];
   atTime: string; // "HH:MM"
   repeat: Repeat;
   weekdays: number[]; // 0 = Sunday
@@ -293,6 +295,7 @@ type LaunchRow = {
   log_amount?: number | null;
   until_time?: string | null;
   more_dates?: string[] | null;
+  steps?: string[] | null;
   sort: number;
 };
 
@@ -337,6 +340,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     log_amount: l.logAmount ?? null,
     until_time: l.untilTime ?? null,
     more_dates: l.moreDates ?? [],
+    steps: l.steps ?? [],
     sort: l.sort
   }),
   fromRow: (r) => ({
@@ -362,6 +366,7 @@ export const launchStore = makeStore<Launch, LaunchRow>({
     ...(r.log_kind !== undefined ? { logKind: (r.log_kind as LaunchLogKind | null) ?? null, logAmount: r.log_amount == null ? null : Number(r.log_amount) } : {}),
     ...(r.until_time !== undefined ? { untilTime: r.until_time } : {}),
     ...(r.more_dates !== undefined ? { moreDates: r.more_dates ?? [] } : {}),
+    ...(r.steps !== undefined ? { steps: r.steps ?? [] } : {}),
     sort: r.sort
   })
 });
