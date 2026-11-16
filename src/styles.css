@@ -3652,3 +3652,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* SCHEDULE GUARDRAILS phase 1 (Nov 16): the Overlaps another block sheet. */
 .clash-list { margin: 8px 0 16px; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
 .clash-acts { flex-wrap: wrap; gap: 8px; }
+/* V20-272 (Dan, Nov 16): the card's Log the time? row drops under the name (the name kept its full width), and
+   its fields match the 30 px buttons. */
+.app.app .timed-item.is-logask { flex-wrap: wrap; row-gap: 6px; }
+.app.app .timed-item.is-logask > .timed-logask { flex: 1 0 100%; justify-content: flex-end; padding: 0 8px 6px; }
+.app.app .timed-logask .logask-min input { height: 30px !important; min-height: 0 !important; padding-top: 0; padding-bottom: 0; box-sizing: border-box; }
