@@ -38,7 +38,7 @@ import {
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
 import { useMobile } from '../lib/useMobile';
-import { defaultStart, leftRunningGuess, startIso } from '../lib/logStart';
+import { defaultStart, finishIso, leftRunningGuess, startIso } from '../lib/logStart';
 import { ackClash, clashesFor, hhmm12, isAcked, nextFree as nextOpenSlot, settledRuns, timingChanged, type Clash } from '../lib/schedule';
 import { ClashSheet } from './ClashSheet';
 import { OneMenu } from './OneMenu';
@@ -83,6 +83,8 @@ type Props = {
   onUndoRun?: (id: string) => void;
   /** V20-270 (Dan, Nov 16): fix a run on Complete: its date, start and minutes. */
   onEditRun?: (id: string, x: { day: string; start: string; minutes: number }) => void;
+  /** V20-282: an open run counts on from this moment (the end of a part just logged). */
+  onRunFrom?: (id: string, at: string) => void;
   /** V12-043: off days (a quiet card today; their runs aren't Missed). */
   offDays?: string[];
   offToday?: boolean;
@@ -390,6 +392,10 @@ export function RocketsPanel(p: Props) {
             if (!a.part || !a.l) return a.onLog(a.minutes, startIso(askStart(a), a.minutes, a.day));
             // V20-273: the done part is its own log (like Stats › Add a log); the launch stays open, renamed to what's left.
             const head = titleHead(a.l.title);
+            // V20-282: the open run picks up where this part ended.
+            const partStart = startIso(askStart(a), a.minutes, a.day);
+            const open = openRun(a.l);
+            if (open) p.onRunFrom?.(open.id, finishIso(partStart, a.minutes));
             // V20-277: with steps, the ticked ones are the part done (joined with +) and the rest stay on the launch.
             // V20-281: the description (after What and project) is step 1, so it can be ticked too.
             if (a.l.steps?.length) {

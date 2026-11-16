@@ -1567,6 +1567,19 @@ export default function App() {
     setStatus(`${g.title}: fixed to ${x.day}, ${x.start}, ${minutes} min.`);
   }
 
+  /** V20-282 (Dan, Nov 16): after a part log, the run still open counts on from where that part ended, so the
+   *  next Log the time? (or the clock) doesn't count the same minutes twice. */
+  function runFrom(id: string, at: string) {
+    const list = logRef.current;
+    const g = list.find((r) => r.id === id);
+    if (!g || g.finishedAt) return;
+    const item: LaunchLog = { ...g, launchedAt: at, pausedMin: 0, pausedAt: null };
+    const next = list.map((r) => (r.id === id ? item : r));
+    logRef.current = next;
+    setLaunchLog(next);
+    void launchLogStore.save(userId, item, next);
+  }
+
   /** V20-060 (Nov 11): undo a run from History. The log entry goes, so the run is back in Active
    * (today), Tomorrow, or Missed (a past day). Tasks it completed stay done. */
   function undoRun(id: string) {
@@ -1939,6 +1952,7 @@ export default function App() {
                   onAddLog={addManualLog}
                   onUndoRun={undoRun}
                   onEditRun={editRun}
+                  onRunFrom={runFrom}
                   offDays={d26Days.filter((d) => d.off).map((d) => d.day)}
                   baseline={d26Days
                     .filter((r) => r.day < d26Today && r.items.length && !r.off)
