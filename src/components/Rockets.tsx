@@ -1509,7 +1509,7 @@ function StepsField({ steps, onChange }: { steps: string[]; onChange: (v: string
     <div className="field steps-field">
       <span>Steps</span>
       {steps.length > 0 && (
-        <ol className="step-list">
+        <ol className="lstep-list">
           {steps.map((x, i) => (
             <li key={i}>
               <input value={x} aria-label={`Step ${i + 1}`} onChange={(e) => onChange(steps.map((y, j) => (j === i ? e.target.value : y)))} onBlur={() => !steps[i].trim() && onChange(steps.filter((_, j) => j !== i))} />
@@ -1522,7 +1522,7 @@ function StepsField({ steps, onChange }: { steps: string[]; onChange: (v: string
           ))}
         </ol>
       )}
-      <div className="step-add">
+      <div className="lstep-add">
         <input
           value={draft}
           placeholder={steps.length ? 'Add the next step' : 'Add a step (Enter adds the next)'}
