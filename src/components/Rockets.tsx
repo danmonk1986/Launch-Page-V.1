@@ -39,7 +39,7 @@ import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
 import { useMobile } from '../lib/useMobile';
 import { defaultStart, leftRunningGuess, startIso } from '../lib/logStart';
-import { ackClash, clashesFor, isAcked, type Clash } from '../lib/schedule';
+import { ackClash, clashesFor, hhmm12, isAcked, nextFree as nextOpenSlot, type Clash } from '../lib/schedule';
 import { ClashSheet } from './ClashSheet';
 import { OneMenu } from './OneMenu';
 import { FoldTabs } from './FoldTabs';
@@ -147,6 +147,21 @@ export function RocketsPanel(p: Props) {
   // V20-270: the Complete run being fixed (pencil on its row).
   // SCHEDULE GUARDRAILS phase 1 (Nov 16): the launch being saved and the blocks it overlaps.
   const [clash, setClash] = useState<{ l: Launch; with: Clash[] } | null>(null);
+  // V20-278 (Dan, Nov 16): after a part log, when the rest of it happens.
+  const [rest, setRest] = useState<Launch | null>(null);
+  // Today's open run of a launch (started, not finished): rescheduling the rest closes it, the part log holds the time.
+  const openRun = (l: Launch) => (p.log ?? []).find((g) => g.launchId === l.id && !g.finishedAt && g.outcome === 'launched');
+  async function moveRest(l: Launch, next: Launch | null) {
+    const run = openRun(l);
+    if (run) p.onUndoRun?.(run.id);
+    setRest(null);
+    if (next) {
+      await p.onSaveLaunch(next);
+    } else {
+      setTimed(l);
+      setTimedOpen(true);
+    }
+  }
   async function saveTimed(l: Launch) {
     await p.onSaveLaunch(l);
     if (!timed) fill?.onSaved?.(l);
@@ -379,14 +394,18 @@ export function RocketsPanel(p: Props) {
               const ticked = a.part.ticked ?? [];
               const doneText = ticked.map((i) => steps[i]).join(' + ');
               await p.onAddLog?.({ title: `${a.l.title} - ${doneText}`, projectId: a.l.projectId ?? null, day: a.day ?? isoDate(p.today), start: askStart(a), minutes: a.minutes });
-              await p.onSaveLaunch({ ...a.l, steps: steps.filter((_, i) => !ticked.includes(i)), minutes: Math.max(5, a.l.minutes - a.minutes) });
+              const restL = { ...a.l, steps: steps.filter((_, i) => !ticked.includes(i)), minutes: Math.max(5, a.l.minutes - a.minutes) };
+              await p.onSaveLaunch(restL);
+              setRest(restL);
               return;
             }
             await p.onAddLog?.({ title: [...head, a.part.done.trim()].join(' - '), projectId: a.l.projectId ?? null, day: a.day ?? isoDate(p.today), start: askStart(a), minutes: a.minutes });
             const left = a.part.left.trim();
             const title = left ? [...head, left].join(' - ') : a.l.title;
             const minutes = Math.max(5, a.l.minutes - a.minutes);
-            if (title !== a.l.title || minutes !== a.l.minutes) await p.onSaveLaunch({ ...a.l, title, minutes });
+            const restL = { ...a.l, title, minutes };
+            if (title !== a.l.title || minutes !== a.l.minutes) await p.onSaveLaunch(restL);
+            setRest(restL);
           }}
         >
           {logAsk.part ? 'Log part' : 'Log'}
@@ -1263,6 +1282,38 @@ export function RocketsPanel(p: Props) {
             setTimedOpen(false);
           }}
         />
+      </Sheet>
+      <Sheet open={!!rest} title="The rest of it" onClose={() => setRest(null)}>
+        {rest && (() => {
+          const today = isoDate(p.today);
+          const free = nextOpenSlot({ ...rest, atTime: `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}` }, today, p.launches);
+          const tomorrow = isoDate(new Date(p.today.getFullYear(), p.today.getMonth(), p.today.getDate() + 1, 12));
+          return (
+            <div className="clash">
+              <p className="logask-q">
+                Part logged. When does <b>{rest.title}</b> ({rest.minutes} min) happen?
+              </p>
+              <div className="sheet-actions clash-acts">
+                {free && (
+                  <button type="button" className="btn" title="The first open time from now, today" onClick={() => void moveRest(rest, { ...rest, atTime: free, onceTime: null, ...(rest.repeat === 'once' ? { onDate: today } : {}) })}>
+                    Next free time: {hhmm12(Number(free.slice(0, 2)) * 60 + Number(free.slice(3)))}
+                  </button>
+                )}
+                {rest.repeat === 'once' && (
+                  <button type="button" className="btn btn-quiet" title="Same time tomorrow" onClick={() => void moveRest(rest, { ...rest, onDate: tomorrow, onceTime: null })}>
+                    Tomorrow, same time
+                  </button>
+                )}
+                <button type="button" className="btn btn-quiet" title="Opens Edit timed launch to pick a date and time" onClick={() => void moveRest(rest, null)}>
+                  Pick a time…
+                </button>
+                <button type="button" className="btn btn-quiet" title="Leave it where it is (still running if it was)" onClick={() => setRest(null)}>
+                  Keep it here
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </Sheet>
       <ClashSheet
         clash={clash}
