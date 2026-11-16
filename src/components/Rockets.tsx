@@ -38,7 +38,7 @@ import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
 import { useMobile } from '../lib/useMobile';
 import { defaultStart, startIso } from '../lib/logStart';
-import { clashesFor, hhmm12, mergedTitle, nextFree, type Clash } from '../lib/schedule';
+import { clashesFor, hhmm12, mergedTitle, nextFree as nextOpenSlot, type Clash } from '../lib/schedule';
 import { OneMenu } from './OneMenu';
 import { FoldTabs } from './FoldTabs';
 
@@ -1167,7 +1167,7 @@ export function RocketsPanel(p: Props) {
       <Sheet open={!!clash} title="Overlaps another block" onClose={() => setClash(null)}>
         {clash && (() => {
           const c = clash.with[0];
-          const free = nextFree(clash.l, c.day, p.launches);
+          const free = nextOpenSlot(clash.l, c.day, p.launches);
           const day = new Date(`${c.day}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
           const canMerge = clash.l.repeat === 'once' && c.launch.repeat === 'once' && clash.with.length === 1;
           const existing = p.launches.some((x) => x.id === clash.l.id);
