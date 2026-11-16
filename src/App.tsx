@@ -1525,6 +1525,34 @@ export default function App() {
     setStatus(`${x.title}: ${minutes} min logged${logged ? `, ${logged}` : ''}.`);
   }
 
+  /** V20-270 (Dan, Nov 16): fix a run from Complete: its date, start and minutes. The run then reads
+   *  start → start + minutes; changed time counts as entered (typed, not clocked). */
+  function editRun(id: string, x: { day: string; start: string; minutes: number }) {
+    const list = logRef.current;
+    const g = list.find((r) => r.id === id);
+    if (!g) return;
+    const minutes = Math.max(1, Math.round(x.minutes));
+    const t0 = new Date(`${x.day}T${x.start}:00`);
+    const start = t0.toISOString();
+    const same = g.launchedAt === start && g.loggedMin === minutes && (g.routineDay ?? g.day) === x.day;
+    const item: LaunchLog = {
+      ...g,
+      // The run stays on its launch's day (one run per launch per day); the date it happened is its routine day (Stats).
+      routineDay: x.day,
+      launchedAt: start,
+      finishedAt: new Date(t0.getTime() + minutes * 60_000).toISOString(),
+      loggedMin: minutes,
+      timeSource: same ? g.timeSource : g.timeSource === 'manual' ? 'manual' : 'entered',
+      pausedMin: 0,
+      pausedAt: null
+    };
+    const next = list.map((r) => (r.id === id ? item : r));
+    logRef.current = next;
+    setLaunchLog(next);
+    void launchLogStore.save(userId, item, next);
+    setStatus(`${g.title}: fixed to ${x.day}, ${x.start}, ${minutes} min.`);
+  }
+
   /** V20-060 (Nov 11): undo a run from History. The log entry goes, so the run is back in Active
    * (today), Tomorrow, or Missed (a past day). Tasks it completed stay done. */
   function undoRun(id: string) {
@@ -1891,6 +1919,7 @@ export default function App() {
                   onSettleMissed={settleMissed}
                   onAddLog={addManualLog}
                   onUndoRun={undoRun}
+                  onEditRun={editRun}
                   offDays={d26Days.filter((d) => d.off).map((d) => d.day)}
                   baseline={d26Days
                     .filter((r) => r.day < d26Today && r.items.length && !r.off)

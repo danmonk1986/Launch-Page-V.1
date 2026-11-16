@@ -78,6 +78,8 @@ type Props = {
   onAddLog?: (x: { title: string; projectId: string | null; day: string; start: string; minutes: number }) => Promise<void>;
   /** V20-060: take a run out of the log (History → Undo). */
   onUndoRun?: (id: string) => void;
+  /** V20-270 (Dan, Nov 16): fix a run on Complete: its date, start and minutes. */
+  onEditRun?: (id: string, x: { day: string; start: string; minutes: number }) => void;
   /** V12-043: off days (a quiet card today; their runs aren't Missed). */
   offDays?: string[];
   offToday?: boolean;
@@ -139,6 +141,8 @@ export function RocketsPanel(p: Props) {
   const [timed, setTimed] = useState<Launch | null>(null);
   const [timedOpen, setTimedOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  // V20-270: the Complete run being fixed (pencil on its row).
+  const [runEdit, setRunEdit] = useState<{ id: string; title: string; day: string; start: string; minutes: number } | null>(null);
   const [fill, setFill] = useState<TimedPreset | null>(null);
   useEffect(() => {
     if (!p.preset) return;
@@ -346,9 +350,11 @@ export function RocketsPanel(p: Props) {
     const l = p.launches.find((x) => x.id === g.launchId);
     return l ? toMinutes(l.atTime) : null;
   };
+  // V20-270: Complete groups a run by the day it happened (its routine day), falling back to its launch's day.
+  const runDay = (g: (typeof history)[number]) => g.routineDay ?? g.day;
   const doneRuns = history
     .filter(isDone)
-    .sort((a, b) => b.day.localeCompare(a.day) || (runTime(a) ?? 0) - (runTime(b) ?? 0));
+    .sort((a, b) => runDay(b).localeCompare(runDay(a)) || (runTime(a) ?? 0) - (runTime(b) ?? 0));
   // V20-062 (revised): Missed = runs never settled, plus skipped runs (each can still be started, checked
   // off or removed). Cleared runs were taken out on purpose, so they stay out. A skipped run whose launch
   // was deleted gets a stand-in so it can still be checked off or removed (no start or edit).
@@ -396,12 +402,13 @@ export function RocketsPanel(p: Props) {
           ? Math.max(0, Math.round((new Date(g.finishedAt).getTime() - new Date(g.launchedAt).getTime()) / 60_000 - (g.pausedMin ?? 0)))
           : null;
     const t = runTime(g);
-    const showDay = i === 0 || arr[i - 1].day !== g.day;
+    const gDay = runDay(g);
+    const showDay = i === 0 || runDay(arr[i - 1]) !== gDay;
     return (
       <Fragment key={g.id}>
         {showDay && (
-          <li className="timed-day" aria-label={new Date(`${g.day}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}>
-            <span className="timed-day-date">{`${g.day.slice(5, 7)}/${g.day.slice(8, 10)}/${g.day.slice(2, 4)}`}</span>
+          <li className="timed-day" aria-label={new Date(`${gDay}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}>
+            <span className="timed-day-date">{`${gDay.slice(5, 7)}/${gDay.slice(8, 10)}/${gDay.slice(2, 4)}`}</span>
             <span className="timed-day-line" aria-hidden="true" />
           </li>
         )}
@@ -410,13 +417,30 @@ export function RocketsPanel(p: Props) {
             <span className="timed-time">{t === null ? '' : formatMinutes(t)}</span>
             <span className="timed-name">{g.title}</span>
             <span className="timed-meta">
-              {new Date(`${g.day}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} · {spent ?? g.planned + g.extra} min
+              {new Date(`${gDay}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} · {spent ?? g.planned + g.extra} min
               {spent === null ? ' planned' : ' spent'}
               {g.extra > 0 && ` · +${g.extra} added`}
               {!g.launchedAt && ' · checked off without starting'}
             </span>
           </div>
           <div className="timed-quick">
+            {p.onEditRun && (
+              <button
+                type="button"
+                className="quick-btn quick-skip"
+                aria-label={`Fix ${g.title}`}
+                title="Fix this run: date, start, minutes, or Not done (back to Missed)"
+                onClick={() => {
+                  const st = g.launchedAt ? new Date(g.launchedAt) : null;
+                  const at = st ? `${String(st.getHours()).padStart(2, '0')}:${String(st.getMinutes()).padStart(2, '0')}` : t === null ? '12:00' : `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+                  setRunEdit({ id: g.id, title: g.title, day: g.routineDay ?? g.day, start: at, minutes: spent ?? (g.loggedMin || g.planned + g.extra) });
+                }}
+              >
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" />
+                </svg>
+              </button>
+            )}
             <button
               type="button"
               className="quick-btn quick-again"
@@ -1033,6 +1057,55 @@ export function RocketsPanel(p: Props) {
         />
       </Sheet>
 
+      <Sheet open={!!runEdit} title="Fix this run" onClose={() => setRunEdit(null)}>
+        {runEdit && (
+          <form
+            className="log-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              p.onEditRun?.(runEdit.id, { day: runEdit.day, start: runEdit.start, minutes: runEdit.minutes });
+              setRunEdit(null);
+            }}
+          >
+            <p className="logask-q">{runEdit.title}</p>
+            <div className="time-grid log-form-grid">
+              <label className="field">
+                <span>Date</span>
+                <input type="date" required value={runEdit.day} max={isoDate(p.today)} onChange={(e) => setRunEdit((r) => (r ? { ...r, day: e.target.value || r.day } : r))} />
+              </label>
+              <label className="field">
+                <span>Start time</span>
+                <input type="time" required value={runEdit.start} onChange={(e) => setRunEdit((r) => (r ? { ...r, start: e.target.value || r.start } : r))} />
+              </label>
+              <label className="field">
+                <span>Minutes</span>
+                <input type="number" required min={1} max={720} value={runEdit.minutes} onChange={(e) => setRunEdit((r) => (r ? { ...r, minutes: Math.min(720, Math.max(1, Number(e.target.value) || 1)) } : r))} />
+              </label>
+            </div>
+            <div className="sheet-actions">
+              {p.onUndoRun && (
+                <button
+                  type="button"
+                  className="btn btn-quiet"
+                  title="It didn't happen: the run comes off Complete and goes back to Missed (or Active if it's today's)"
+                  onClick={() => {
+                    p.onUndoRun?.(runEdit.id);
+                    setRunEdit(null);
+                  }}
+                >
+                  Not done
+                </button>
+              )}
+              <button type="button" className="btn btn-quiet" onClick={() => setRunEdit(null)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn">
+                Save
+              </button>
+            </div>
+          </form>
+        )}
+      </Sheet>
       <Sheet open={logOpen} title="Add a log" onClose={() => setLogOpen(false)} wide>
         {logOpen && p.onAddLog && (
           <LogForm
