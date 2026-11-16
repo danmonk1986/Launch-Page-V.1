@@ -33,11 +33,12 @@ import {
   dayOrder,
   missedRuns,
   MONTH_WEEK,
+  runStart,
 } from '../lib/rockets';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
 import { useMobile } from '../lib/useMobile';
-import { defaultStart, startIso } from '../lib/logStart';
+import { defaultStart, leftRunningGuess, startIso } from '../lib/logStart';
 import { ackClash, clashesFor, isAcked, type Clash } from '../lib/schedule';
 import { ClashSheet } from './ClashSheet';
 import { OneMenu } from './OneMenu';
@@ -1036,7 +1037,10 @@ export function RocketsPanel(p: Props) {
                           const over = how === 'launched' && asksTime(l) ? p.overrun?.(l) ?? null : null;
                           if (over !== null) {
                             setXAsk(null);
-                            return setLogAsk({ key: `${l.id}:today`, minutes: Math.min(480, l.minutes), q: `On the clock ${Math.floor(over / 60)}h ${over % 60}m. Log the time?`, onLog: (m, st) => p.onFinish(l, 'done', m, st) });
+                            // V20-276: start and minutes guessed from the real block (its set time today, if later than when it auto-started); Part works here too.
+                            const run = (p.log ?? []).filter((g) => g.launchId === l.id && g.launchedAt && !g.finishedAt).sort((a, b) => (b.launchedAt ?? '').localeCompare(a.launchedAt ?? ''))[0];
+                            const guess = leftRunningGuess(run?.launchedAt ?? null, runStart(l, new Date()));
+                            return setLogAsk({ key: `${l.id}:today`, minutes: guess.minutes, start: guess.start, l, part: null, q: `On the clock ${Math.floor(over / 60)}h ${over % 60}m. Log the time?`, onLog: (m, st) => p.onFinish(l, 'done', m, st) });
                           }
                           return how === 'launched' ? p.onFinish(l, 'done') : askLog(`${l.id}:today`, l, (m, st) => p.onFinish(l, 'done', m, st));
                         }}

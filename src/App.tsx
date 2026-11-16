@@ -1,4 +1,4 @@
-import { defaultStart, finishIso, startIso } from './lib/logStart';
+import { defaultStart, finishIso, leftRunningGuess, startIso } from './lib/logStart';
 import { clashesFor, isAcked, type Clash } from './lib/schedule';
 import { ClashSheet } from './components/ClashSheet';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
@@ -104,6 +104,7 @@ import {
   launchDate,
   clock12,
   timeFor,
+  runStart,
   type Rocket
 } from './lib/rockets';
 import { eventStore, type CalEvent } from './lib/events';
@@ -1607,9 +1608,12 @@ export default function App() {
       const over = overrun(l);
       if (!r.launchedAt || over !== null) {
         if (reminder?.id === l.id) setReminder(null);
+        // V20-276: left running: guess the real block (set time today if later than the auto-start, up to now).
+        const guess = over !== null ? leftRunningGuess(r.launchedAt, runStart(l, new Date())) : null;
         setTimeAsk({
           l,
-          minutes: Math.min(480, (r.planned || l.minutes) + r.extra),
+          minutes: guess ? guess.minutes : Math.min(480, (r.planned || l.minutes) + r.extra),
+          start: guess?.start,
           q: over !== null ? `On the clock ${Math.floor(over / 60)}h ${over % 60}m. Log the time?` : 'Log the time?'
         });
         return;

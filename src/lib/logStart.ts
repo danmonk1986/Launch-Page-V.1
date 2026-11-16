@@ -26,3 +26,17 @@ export function startIso(start: string, minutes: number, day?: string | null, no
 
 /** The finish: start plus the minutes. */
 export const finishIso = (startAt: string, minutes: number) => new Date(new Date(startAt).getTime() + Math.max(1, minutes) * 60_000).toISOString();
+
+/**
+ * V20-276 (Dan, Nov 16): a run left running asks Log the time? with a best guess of the real block: from the later of
+ * when it was started and its set time today (a launch moved to 1:00 PM whose run auto-started at 1:00 AM starts at
+ * 1:00 PM), up to now. Never more than 8 hours.
+ */
+export function leftRunningGuess(launchedAt: string | null, setStart: Date | null, now = new Date()): { start: string; minutes: number } {
+  const la = launchedAt ? new Date(launchedAt) : null;
+  let st = la ?? setStart ?? now;
+  if (setStart && setStart.getTime() <= now.getTime() && (!la || setStart.getTime() > la.getTime())) st = setStart;
+  const minutes = Math.min(480, Math.max(1, Math.round((now.getTime() - st.getTime()) / 60_000)));
+  const s = new Date(now.getTime() - minutes * 60_000);
+  return { start: hhmm(s), minutes };
+}
