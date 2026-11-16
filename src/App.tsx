@@ -1,5 +1,5 @@
 import { defaultStart, finishIso, leftRunningGuess, startIso } from './lib/logStart';
-import { clashesFor, isAcked, type Clash } from './lib/schedule';
+import { clashesFor, isAcked, settledRuns, type Clash } from './lib/schedule';
 import { ClashSheet } from './components/ClashSheet';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
@@ -750,7 +750,7 @@ export default function App() {
   }
   function checkClash(l: Launch) {
     if (isAcked(l)) return;
-    const c = clashesFor(l, launches, new Date());
+    const c = clashesFor(l, launches, new Date(), settledRuns(logRef.current));
     if (c.length) setAppClash({ l, with: c });
   }
   function answerPast(how: 'started' | 'done' | 'not') {

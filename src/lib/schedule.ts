@@ -23,9 +23,14 @@ function datesOf(l: Launch, today: Date): string[] {
   return out;
 }
 
-/** Other launches this one would overlap (one entry per launch, its first clash). */
-export function clashesFor(l: Launch, all: Launch[], today: Date): Clash[] {
+/** Other launches this one would overlap (one entry per launch, its first clash).
+ *  V20-279: a block already finished that day (checked off, cleared, skipped: `settled` holds "launchId:day") or
+ *  already over (today, ended before now) isn't in the way any more. */
+export function clashesFor(l: Launch, all: Launch[], today: Date, settled?: Set<string>): Clash[] {
   if (!counts(l) || !l.active) return [];
+  const now = new Date();
+  const todayIso = isoDate(now);
+  const nowMin = now.getHours() * 60 + now.getMinutes();
   const out: Clash[] = [];
   for (const day of datesOf(l, today)) {
     const s = at(l, day);
@@ -33,8 +38,10 @@ export function clashesFor(l: Launch, all: Launch[], today: Date): Clash[] {
     for (const o of all) {
       if (o.id === l.id || !o.active || !counts(o) || out.some((c) => c.launch.id === o.id)) continue;
       if (!happensOn(o, noon(day))) continue;
+      if (settled?.has(`${o.id}:${day}`)) continue;
       const os = at(o, day);
       const oe = os + Math.max(1, o.minutes);
+      if (day === todayIso && oe <= nowMin) continue;
       if (s < oe && os < e) out.push({ launch: o, day, start: os, end: oe });
     }
   }
@@ -82,3 +89,20 @@ const acked = new Set<string>();
 const ackKey = (l: Launch) => `${l.id}|${l.onDate ?? ''}|${l.atTime}|${l.minutes}|${l.repeat}`;
 export const ackClash = (l: Launch) => void acked.add(ackKey(l));
 export const isAcked = (l: Launch) => acked.has(ackKey(l));
+
+/** "launchId:day" for every run already settled (done, cleared, skipped): those blocks don't clash. */
+export const settledRuns = (log: { launchId: string; day: string; outcome: string; finishedAt: string | null }[]) =>
+  new Set(log.filter((g) => g.outcome !== 'launched' || g.finishedAt).map((g) => `${g.launchId}:${g.day}`));
+
+/** Whether a save changes when a launch happens (new, or its date, time, length or pattern moved). */
+export const timingChanged = (old: Launch | null | undefined, l: Launch) =>
+  !old ||
+  old.atTime !== l.atTime ||
+  old.onDate !== l.onDate ||
+  old.minutes !== l.minutes ||
+  old.repeat !== l.repeat ||
+  JSON.stringify(old.weekdays) !== JSON.stringify(l.weekdays) ||
+  JSON.stringify(old.moreDates ?? []) !== JSON.stringify(l.moreDates ?? []) ||
+  JSON.stringify(old.onceTime ?? null) !== JSON.stringify(l.onceTime ?? null) ||
+  old.monthDay !== l.monthDay ||
+  old.active !== l.active;

@@ -39,7 +39,7 @@ import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
 import { useMobile } from '../lib/useMobile';
 import { defaultStart, leftRunningGuess, startIso } from '../lib/logStart';
-import { ackClash, clashesFor, hhmm12, isAcked, nextFree as nextOpenSlot, type Clash } from '../lib/schedule';
+import { ackClash, clashesFor, hhmm12, isAcked, nextFree as nextOpenSlot, settledRuns, timingChanged, type Clash } from '../lib/schedule';
 import { ClashSheet } from './ClashSheet';
 import { OneMenu } from './OneMenu';
 import { FoldTabs } from './FoldTabs';
@@ -1271,7 +1271,8 @@ export function RocketsPanel(p: Props) {
           nextSort={p.launches.length}
           onCancel={() => setTimedOpen(false)}
           onSave={async (l) => {
-            const c = isAcked(l) ? [] : clashesFor(l, p.launches, p.today);
+            // V20-279: only when its timing changed (adding steps isn't a move), and finished blocks don't count.
+            const c = isAcked(l) || !timingChanged(timed, l) ? [] : clashesFor(l, p.launches, p.today, settledRuns(p.log ?? []));
             if (c.length) return setClash({ l, with: c });
             // No clash (or already kept): the app's after-save check stays quiet for this one.
             ackClash(l);
@@ -1528,6 +1529,8 @@ function StepsField({ steps, onChange }: { steps: string[]; onChange: (v: string
           placeholder={steps.length ? 'Add the next step' : 'Add a step (Enter adds the next)'}
           aria-label="Add a step"
           onChange={(e) => setDraft(e.target.value)}
+          // V20-279: a step typed but not added yet is kept when you leave the box (or press Save).
+          onBlur={add}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
