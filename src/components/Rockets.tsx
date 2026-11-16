@@ -38,6 +38,7 @@ import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
 import { useMobile } from '../lib/useMobile';
 import { defaultStart, startIso } from '../lib/logStart';
+import { clashesFor, hhmm12, mergedTitle, nextFree, type Clash } from '../lib/schedule';
 import { OneMenu } from './OneMenu';
 import { FoldTabs } from './FoldTabs';
 
@@ -142,6 +143,15 @@ export function RocketsPanel(p: Props) {
   const [timedOpen, setTimedOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   // V20-270: the Complete run being fixed (pencil on its row).
+  // SCHEDULE GUARDRAILS phase 1 (Nov 16): the launch being saved and the blocks it overlaps.
+  const [clash, setClash] = useState<{ l: Launch; with: Clash[] } | null>(null);
+  async function saveTimed(l: Launch) {
+    await p.onSaveLaunch(l);
+    if (!timed) fill?.onSaved?.(l);
+    setFill(null);
+    setTimedOpen(false);
+    setClash(null);
+  }
   const [runEdit, setRunEdit] = useState<{ id: string; title: string; day: string; start: string; minutes: number } | null>(null);
   const [fill, setFill] = useState<TimedPreset | null>(null);
   useEffect(() => {
@@ -1144,16 +1154,64 @@ export function RocketsPanel(p: Props) {
           nextSort={p.launches.length}
           onCancel={() => setTimedOpen(false)}
           onSave={async (l) => {
-            await p.onSaveLaunch(l);
-            if (!timed) fill?.onSaved?.(l);
-            setFill(null);
-            setTimedOpen(false);
+            const c = clashesFor(l, p.launches, p.today);
+            if (c.length) return setClash({ l, with: c });
+            await saveTimed(l);
           }}
           onDelete={async (id) => {
             await p.onDeleteLaunch(id);
             setTimedOpen(false);
           }}
         />
+      </Sheet>
+      <Sheet open={!!clash} title="Overlaps another block" onClose={() => setClash(null)}>
+        {clash && (() => {
+          const c = clash.with[0];
+          const free = nextFree(clash.l, c.day, p.launches);
+          const day = new Date(`${c.day}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
+          const canMerge = clash.l.repeat === 'once' && c.launch.repeat === 'once' && clash.with.length === 1;
+          const existing = p.launches.some((x) => x.id === clash.l.id);
+          return (
+            <div className="clash">
+              <p className="logask-q">
+                <b>{clash.l.title}</b> overlaps:
+              </p>
+              <ul className="clash-list">
+                {clash.with.map((x) => (
+                  <li key={x.launch.id}>
+                    <b>{x.launch.title}</b> · {hhmm12(x.start)}–{hhmm12(x.end)} · {new Date(`${x.day}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}
+                  </li>
+                ))}
+              </ul>
+              <div className="sheet-actions clash-acts">
+                {free && (
+                  <button type="button" className="btn" title={`Move it to ${hhmm12(Number(free.slice(0, 2)) * 60 + Number(free.slice(3)))} on ${day}, the first open time after the clash`} onClick={() => void saveTimed({ ...clash.l, atTime: free, onceTime: null })}>
+                    Next free time: {hhmm12(Number(free.slice(0, 2)) * 60 + Number(free.slice(3)))}
+                  </button>
+                )}
+                {canMerge && (
+                  <button
+                    type="button"
+                    className="btn btn-quiet"
+                    title={`One block: ${c.launch.minutes + clash.l.minutes} min${existing ? '; this launch is removed' : ''}`}
+                    onClick={async () => {
+                      await p.onSaveLaunch({ ...c.launch, title: mergedTitle(c.launch.title, clash.l.title), minutes: c.launch.minutes + clash.l.minutes });
+                      if (existing) await p.onDeleteLaunch(clash.l.id);
+                      setFill(null);
+                      setTimedOpen(false);
+                      setClash(null);
+                    }}
+                  >
+                    Add to that block{existing ? ' (removes this one)' : ''}
+                  </button>
+                )}
+                <button type="button" className="btn btn-quiet" onClick={() => void saveTimed(clash.l)}>
+                  Keep both
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </Sheet>
     </section>
   );

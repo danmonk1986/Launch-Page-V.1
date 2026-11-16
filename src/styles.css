@@ -3649,3 +3649,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .bc-row-btn { width: 100%; font: inherit; color: inherit; text-align: left; background: transparent; border: 0; cursor: pointer; }
 .app.app .bc-row-btn.is-alt { background: color-mix(in srgb, var(--accent-purple) 7%, transparent); }
 .app.app .bc-row-btn:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: -2px; }
+/* SCHEDULE GUARDRAILS phase 1 (Nov 16): the Overlaps another block sheet. */
+.clash-list { margin: 8px 0 16px; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
+.clash-acts { flex-wrap: wrap; gap: 8px; }
