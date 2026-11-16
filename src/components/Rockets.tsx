@@ -37,6 +37,7 @@ import {
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
 import { useMobile } from '../lib/useMobile';
+import { defaultStart, startIso } from '../lib/logStart';
 import { OneMenu } from './OneMenu';
 import { FoldTabs } from './FoldTabs';
 
@@ -59,7 +60,7 @@ type Props = {
   handled: Record<string, HandledHow | true>;
   today: Date;
   /** V20-073: logMin = minutes from the Log the time? prompt (null = Don't log); left out = no prompt. */
-  onFinish: (l: Launch, how: 'done' | 'skipped', logMin?: number | null) => void;
+  onFinish: (l: Launch, how: 'done' | 'skipped', logMin?: number | null, startAt?: string | null) => void;
   /** Opens a timed launch's tabs and apps now, without waiting for its time. */
   onLaunchNow: (l: Launch) => void;
   /** Oct 25: pause / resume a launched run. */
@@ -72,7 +73,7 @@ type Props = {
   /** Runs of each launch: today's +10 minutes show on the row. */
   log?: LaunchLog[];
   /** Oct 29 · Missed tab: done without logging time, or cleared out of the counts. */
-  onSettleMissed?: (l: Launch, day: string, how: 'done' | 'cleared', logMin?: number | null) => void;
+  onSettleMissed?: (l: Launch, day: string, how: 'done' | 'cleared', logMin?: number | null, startAt?: string | null) => void;
   /** V20-216: Stats › + adds a log by hand (no launch). */
   onAddLog?: (x: { title: string; projectId: string | null; day: string; start: string; minutes: number }) => Promise<void>;
   /** V20-060: take a run out of the log (History → Undo). */
@@ -251,13 +252,16 @@ export function RocketsPanel(p: Props) {
   // V20-073 (Nov 12): checking off a run that never ran on the clock asks Log the time?
   // V20-183 (Dan, Nov 14): minutes only; Don't log is gone (no task takes 0 minutes).
   // Launches that log a fixed amount (H2O, Food, Vice) don't ask.
-  const [logAsk, setLogAsk] = useState<{ key: string; minutes: number; onLog: (m: number | null) => void; q?: string } | null>(null);
+  // V20-268 (Dan, Nov 15): it also asks the Start (now − minutes, or a past day's set time), so the run keeps when it happened.
+  type LogAsk = { key: string; minutes: number; onLog: (m: number | null, startAt?: string | null) => void; q?: string; start?: string; day?: string | null; atTime?: string | null };
+  const [logAsk, setLogAsk] = useState<LogAsk | null>(null);
   const asksTime = (l: Launch) => !['h2o', 'food', 'vices'].includes(l.logKind ?? '');
-  const askLog = (key: string, l: Launch, onLog: (m: number | null) => void) => {
+  const askLog = (key: string, l: Launch, onLog: (m: number | null, startAt?: string | null) => void, day?: string | null) => {
     if (!asksTime(l)) return onLog(undefined as unknown as null);
     setXAsk(null);
-    setLogAsk({ key, minutes: l.minutes, onLog });
+    setLogAsk({ key, minutes: l.minutes, onLog, day: day ?? null, atTime: l.atTime ?? null });
   };
+  const askStart = (a: LogAsk) => a.start ?? defaultStart(a.minutes, { day: a.day, atTime: a.atTime });
   const logAskUi = (key: string) =>
     logAsk?.key === key && (
       <div className="timed-quick timed-xask timed-logask" role="group" aria-label="Log the time?">
@@ -273,7 +277,16 @@ export function RocketsPanel(p: Props) {
           />
           <span>min</span>
         </label>
-        <button type="button" className="btn btn-quiet" onClick={() => { const a = logAsk; setLogAsk(null); a.onLog(a.minutes); }}>
+        <label className="logask-min logask-start">
+          <span>Start</span>
+          <input
+            type="time"
+            value={askStart(logAsk)}
+            aria-label="Start time"
+            onChange={(e) => setLogAsk((a) => (a ? { ...a, start: e.target.value || undefined } : a))}
+          />
+        </label>
+        <button type="button" className="btn btn-quiet" onClick={() => { const a = logAsk; setLogAsk(null); a.onLog(a.minutes, startIso(askStart(a), a.minutes, a.day)); }}>
           Log
         </button>
         {/* V20-196 (Dan, Nov 14): Cancel is an ×, like the card's ×. */}
@@ -709,7 +722,7 @@ export function RocketsPanel(p: Props) {
                       className="quick-btn quick-done"
                       aria-label={`${l.title}: done, don't log the time`}
                       title="Done, but don't log the time (nothing goes to 26 Days)"
-                      onClick={() => askLog(`${l.id}:${day}`, l, (m) => p.onSettleMissed?.(l, day, 'done', m))}
+                      onClick={() => askLog(`${l.id}:${day}`, l, (m, st) => p.onSettleMissed?.(l, day, 'done', m, st), day)}
                     >
                       <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M5 12l5 5 9-10" />
@@ -852,7 +865,7 @@ export function RocketsPanel(p: Props) {
                         className="quick-btn quick-done"
                         aria-label={`Check off ${l.title} early`}
                         title="Done early: this run is checked off (no time logged)"
-                        onClick={() => askLog(`${l.id}:${runDay}`, l, (m) => p.onSettleMissed?.(l, runDay, 'done', m))}
+                        onClick={() => askLog(`${l.id}:${runDay}`, l, (m, st) => p.onSettleMissed?.(l, runDay, 'done', m, st), runDay)}
                       >
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M5 12.5l4.5 4.5L19 7.5" />
@@ -933,9 +946,9 @@ export function RocketsPanel(p: Props) {
                           const over = how === 'launched' && asksTime(l) ? p.overrun?.(l) ?? null : null;
                           if (over !== null) {
                             setXAsk(null);
-                            return setLogAsk({ key: `${l.id}:today`, minutes: Math.min(480, l.minutes), q: `On the clock ${Math.floor(over / 60)}h ${over % 60}m. Log the time?`, onLog: (m) => p.onFinish(l, 'done', m) });
+                            return setLogAsk({ key: `${l.id}:today`, minutes: Math.min(480, l.minutes), q: `On the clock ${Math.floor(over / 60)}h ${over % 60}m. Log the time?`, onLog: (m, st) => p.onFinish(l, 'done', m, st) });
                           }
-                          return how === 'launched' ? p.onFinish(l, 'done') : askLog(`${l.id}:today`, l, (m) => p.onFinish(l, 'done', m));
+                          return how === 'launched' ? p.onFinish(l, 'done') : askLog(`${l.id}:today`, l, (m, st) => p.onFinish(l, 'done', m, st));
                         }}
                       >
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">

@@ -10,7 +10,7 @@ import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
 const CHEV = 'M6 9l6 6 6-6';
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-export function BudgetCard({ lines, today, onOpenAll }: { lines: BudgetLine[]; today: Date; onOpenAll: () => void }) {
+export function BudgetCard({ lines, today, onOpenAll, onOpenLine }: { lines: BudgetLine[]; today: Date; onOpenAll: () => void; onOpenLine?: (id: string) => void }) {
   const { q } = useHeaderSearch();
   const perProject = monthlyByCategory(lines, 'project');
   const monthly = Object.values(perProject).reduce((a, x) => a + x, 0);
@@ -65,13 +65,21 @@ export function BudgetCard({ lines, today, onOpenAll }: { lines: BudgetLine[]; t
       ) : (
         <div className="bc-table" role="table" aria-label="Due in the next 7 days">
           {due.map(({ l, next }, i) => (
-            <div key={l.id} className={`bc-row${i % 2 ? ' is-alt' : ''}`} role="row">
+            // V20-269 (Dan, Nov 15): a row opens its line's Edit line on the Budget page.
+            <button
+              type="button"
+              key={l.id}
+              className={`bc-row bc-row-btn${i % 2 ? ' is-alt' : ''}`}
+              role="row"
+              title={`Edit ${l.description}`}
+              onClick={() => (onOpenLine ? onOpenLine(l.id) : onOpenAll())}
+            >
               <span className="pl-mono pl-due">{day(next)}</span>
               <span className="pl-name bc-name">{l.description}</span>
               <span className="pl-desc">{l.project}</span>
               <span className="pl-desc">{l.method}</span>
               <span className="pl-mono bc-amt">{l.amount === null ? '—' : money(l.amount)}</span>
-            </div>
+            </button>
           ))}
         </div>
       )}

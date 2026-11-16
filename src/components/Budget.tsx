@@ -45,6 +45,9 @@ type Props = {
   onDelete: (id: string) => Promise<void>;
   onReplace: (lines: BudgetLine[]) => Promise<void>;
   onClose: () => void;
+  /** V20-269: a line picked on the Budget card opens straight into Edit line; closing it goes back to the card. */
+  openId?: string | null;
+  onOpened?: () => void;
   /** ⋯ on a line (Oct 20): the same as a task's, with Add a task in place of Add a step. */
   onToCalendar: (l: BudgetLine, projectId: string | null) => void;
   onToLaunch: (l: BudgetLine) => void;
@@ -127,6 +130,24 @@ export function BudgetPage(p: Props) {
   const { q } = useHeaderSearch();
   const [closed, setClosed] = useState<Record<string, boolean>>({});
   const [editing, setEditing] = useState<BudgetLine | null>(null);
+  // V20-269: opened from a Budget card row: Edit line opens at once, and closing it returns to the card.
+  const fromCard = useRef(false);
+  useEffect(() => {
+    if (!p.openId) return;
+    const l = p.lines.find((x) => x.id === p.openId);
+    p.onOpened?.();
+    if (!l) return;
+    fromCard.current = true;
+    setEditing(l);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.openId]);
+  const closeEdit = () => {
+    setEditing(null);
+    if (fromCard.current) {
+      fromCard.current = false;
+      p.onClose();
+    }
+  };
   const [incoming, setIncoming] = useState<{ name: string; lines: BudgetLine[] } | null>(null);
   const [importError, setImportError] = useState('');
   const file = useRef<HTMLInputElement>(null);
@@ -511,7 +532,7 @@ export function BudgetPage(p: Props) {
         </div>
       )}
 
-      <Sheet open={!!editing || adding} title={adding ? 'Add line' : 'Edit line'} onClose={() => (adding ? setAdding(false) : setEditing(null))} wide>
+      <Sheet open={!!editing || adding} title={adding ? 'Add line' : 'Edit line'} onClose={() => (adding ? setAdding(false) : closeEdit())} wide>
         {(adding || editing) && (() => {
           const line = adding ? newBudgetLine('planned', p.lines.reduce((m, l) => Math.max(m, l.sort + 1), 0)) : editing!;
           const hasTask = p.tasks.some((t) => t.budgetLineId === line.id && !t.deletedAt);
@@ -525,14 +546,14 @@ export function BudgetPage(p: Props) {
               onSave={async (l, withhold) => {
                 await saveLine(l, withhold);
                 if (adding) setAdding(false);
-                else setEditing(null);
+                else closeEdit();
               }}
               onDelete={
                 adding
                   ? undefined
                   : async () => {
                       await p.onDelete(line.id);
-                      setEditing(null);
+                      closeEdit();
                     }
               }
             />

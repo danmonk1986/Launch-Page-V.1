@@ -1,3 +1,4 @@
+import { defaultStart, finishIso, startIso } from './lib/logStart';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
 import type { Session } from '@supabase/supabase-js';
@@ -150,6 +151,8 @@ export default function App() {
   // Timed launches (it kept the old scroll, e.g. down at Personal Alchemy after a trip to Budget).
   // V20-097: the Tasks page's ^ goes back to the Tasks card itself, not the top.
   const returnTo = useRef<string | null>(null);
+  // V20-269: the budget line picked on the Budget card, opened in Edit line on the Budget page.
+  const [budgetOpen, setBudgetOpen] = useState<string | null>(null);
   useEffect(() => {
     const id = returnTo.current;
     returnTo.current = null;
@@ -176,7 +179,7 @@ export default function App() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   // V20-183: the app-wide Log the time? (for Done from the reminder, Missed pop-up, Time's up and rituals).
-  const [timeAsk, setTimeAsk] = useState<{ l: Launch; minutes: number; q: string } | null>(null);
+  const [timeAsk, setTimeAsk] = useState<{ l: Launch; minutes: number; q: string; start?: string } | null>(null);
   // V20-214 (Dan, Nov 14): a launch saved for today after its time has passed asks once: started at the set
   // time (the clock runs from then), already done (Log the time?), or not started (Missed, as before).
   const [pastAsk, setPastAsk] = useState<Launch | null>(null);
@@ -1452,7 +1455,7 @@ export default function App() {
    * Oct 29 · Missed tab: settle a past run. Done = checked off without logging time (nothing goes to
    * 26 Days); cleared = taken out of the counts, kept in the log as 'cleared'.
    */
-  function settleMissed(l: Launch, day: string, how: 'done' | 'cleared', logMin?: number | null) {
+  function settleMissed(l: Launch, day: string, how: 'done' | 'cleared', logMin?: number | null, startAt?: string | null) {
     const list = logRef.current;
     // V20-073: Done from Missed or early from Scheduled asks Log the time?; its answer is kept on the run.
     const entered = how === 'done' && typeof logMin === 'number' && logMin > 0 ? Math.round(logMin) : null;
@@ -1463,8 +1466,9 @@ export default function App() {
       title: l.title,
       projectId: l.projectId ?? null,
       outcome: how,
-      launchedAt: null,
-      finishedAt: at,
+      // V20-268: an entered time with a Start runs from Start to Start + minutes.
+      launchedAt: entered && startAt ? startAt : null,
+      finishedAt: entered && startAt ? finishIso(startAt, entered) : at,
       routineDay: day,
       ...(how === 'done' ? { loggedMin: entered, timeSource: entered ? 'entered' : 'none' } : { loggedMin: null, timeSource: null })
     } as LaunchLog;
@@ -1555,7 +1559,7 @@ export default function App() {
     return todo.map(taskName);
   }
 
-  async function finishLaunch(l: Launch, how: 'done' | 'skipped', logMin?: number | null) {
+  async function finishLaunch(l: Launch, how: 'done' | 'skipped', logMin?: number | null, startAt?: string | null) {
     // V20-183 (Dan, Nov 14): every Done has a time. A Done that comes without one (the reminder, the Missed
     // pop-up, Time's up, a ritual) asks Log the time? when the run never ran on the clock or was left running.
     if (how === 'done' && logMin == null && !['h2o', 'food', 'vices'].includes(l.logKind ?? '')) {
@@ -1594,11 +1598,14 @@ export default function App() {
     }
     // V12-003: a run checked off while paused closes its pause.
     const closed = pausedMin(l);
+    // V20-268: an entered time with a Start saves the run from Start to Start + minutes.
+    const span = source === 'entered' && mins && startAt ? { launchedAt: startAt, finishedAt: finishIso(startAt, mins), pausedMin: 0, pausedAt: null } : null;
     logLaunch(l, () => ({
       outcome: how,
       finishedAt: new Date().toISOString(),
       ...(run0.launchedAt ? { pausedMin: closed, pausedAt: null } : {}),
-      ...(how === 'done' ? { loggedMin: mins, timeSource: source } : {})
+      ...(how === 'done' ? { loggedMin: mins, timeSource: source } : {}),
+      ...(span ?? {})
     }));
     if (reminder?.id === l.id) setReminder(null);
     if (how === 'skipped') {
@@ -1946,7 +1953,7 @@ export default function App() {
                   }}
                 />
               }
-              budget={!settings.modules.budget ? null : <BudgetCard lines={budget} today={now} onOpenAll={() => setPage('budget')} />}
+              budget={!settings.modules.budget ? null : <BudgetCard lines={budget} today={now} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} />}
               planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
               journal={!settings.modules.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!settings.modules.routine ? null : 
@@ -2060,6 +2067,8 @@ export default function App() {
               tasks={tasks}
               onApplyLinks={applyLinks}
               expenses={expenses}
+              openId={budgetOpen}
+              onOpened={() => setBudgetOpen(null)}
               onClose={() => {
                 returnTo.current = 'h-budget-card';
                 setPage('launch');
@@ -2188,7 +2197,8 @@ export default function App() {
               e.preventDefault();
               const a = timeAsk;
               setTimeAsk(null);
-              void finishLaunch(a.l, 'done', Math.max(1, a.minutes));
+              const m = Math.max(1, a.minutes);
+              void finishLaunch(a.l, 'done', m, startIso(a.start ?? defaultStart(m), m));
             }}
           >
             <p className="logask-q">{timeAsk.q}</p>
@@ -2204,6 +2214,17 @@ export default function App() {
                 onChange={(e) => setTimeAsk((a) => (a ? { ...a, minutes: Math.min(480, Math.max(1, Number(e.target.value) || 1)) } : a))}
               />
               <span>min</span>
+            </label>
+            {/* V20-268: when the work started (now − minutes until changed). */}
+            <label className="logask-min logask-start">
+              <span>Start</span>
+              <input
+                type="time"
+                required
+                value={timeAsk.start ?? defaultStart(timeAsk.minutes)}
+                aria-label="Start time"
+                onChange={(e) => setTimeAsk((a) => (a ? { ...a, start: e.target.value || undefined } : a))}
+              />
             </label>
             <div className="sheet-actions">
               <button type="button" className="btn btn-quiet" onClick={() => setTimeAsk(null)}>
