@@ -949,7 +949,8 @@ export function RocketsPanel(p: Props) {
                     }}
                   >
                     <span className="timed-time">{formatMinutes(toMinutes(ahead ? timeFor(l, tomorrow) : timeFor(l, p.today)))}</span>
-                    <span className="timed-name">{l.title}</span>
+                    {/* V20-280: steps read as part of the name, dash-separated. */}
+                    <span className="timed-name">{[l.title, ...(l.steps ?? [])].join(' - ')}</span>
                     <span className="timed-meta">
                       {describeSchedule(l)} · {l.minutes} min
                       {(() => {
@@ -964,13 +965,6 @@ export function RocketsPanel(p: Props) {
                       {how === 'done' && ' · done today'}
                       {how === 'skipped' && (l.repeat === 'hourly' ? ' · skipped this hour' : ' · skipped, back tomorrow')}
                     </span>
-                    {!!l.steps?.length && (
-                      <span className="timed-steps">
-                        {l.steps.map((x, i) => (
-                          <span key={i}>{x}</span>
-                        ))}
-                      </span>
-                    )}
                   </button>
                   {later && runDay && xAsk === l.id && (
                     <div className="timed-quick timed-xask" role="group" aria-label={`Skip or remove ${l.title}`}>
@@ -1498,52 +1492,52 @@ function nextFree(l: Launch) {
 }
 
 /** V20-277 (Dan, Nov 16): the steps of a block. Type one, Enter (or +) adds it and the box is ready for the next; × takes one out. */
-function StepsField({ steps, onChange }: { steps: string[]; onChange: (v: string[]) => void }) {
-  const [draft, setDraft] = useState('');
+/** V20-277 / V20-280 (Dan, Nov 16): the steps of a block, one numbered list. The last line is the next step:
+ *  type it and it counts (Enter or + just starts the next line); a blank line never saves. × takes one out. */
+function StepsField({ steps, draft, onDraft, onChange }: { steps: string[]; draft: string; onDraft: (v: string) => void; onChange: (v: string[]) => void }) {
   const add = () => {
     const x = draft.trim();
     if (!x) return;
     onChange([...steps, x]);
-    setDraft('');
+    onDraft('');
   };
+  const X = (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
   return (
     <div className="field steps-field">
       <span>Steps</span>
-      {steps.length > 0 && (
-        <ol className="lstep-list">
-          {steps.map((x, i) => (
-            <li key={i}>
-              <input value={x} aria-label={`Step ${i + 1}`} onChange={(e) => onChange(steps.map((y, j) => (j === i ? e.target.value : y)))} onBlur={() => !steps[i].trim() && onChange(steps.filter((_, j) => j !== i))} />
-              <button type="button" className="quick-btn quick-skip" aria-label={`Remove step ${x}`} title="Remove this step" onClick={() => onChange(steps.filter((_, j) => j !== i))}>
-                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
-              </button>
-            </li>
-          ))}
-        </ol>
-      )}
-      <div className="lstep-add">
-        <input
-          value={draft}
-          placeholder={steps.length ? 'Add the next step' : 'Add a step (Enter adds the next)'}
-          aria-label="Add a step"
-          onChange={(e) => setDraft(e.target.value)}
-          // V20-279: a step typed but not added yet is kept when you leave the box (or press Save).
-          onBlur={add}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              add();
-            }
-          }}
-        />
-        <button type="button" className="quick-btn quick-skip" aria-label="Add step" title="Add step" disabled={!draft.trim()} onClick={add}>
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </button>
-      </div>
+      <ol className="lstep-list">
+        {steps.map((x, i) => (
+          <li key={i}>
+            <input value={x} aria-label={`Step ${i + 1}`} onChange={(e) => onChange(steps.map((y, j) => (j === i ? e.target.value : y)))} onBlur={() => !steps[i].trim() && onChange(steps.filter((_, j) => j !== i))} />
+            <button type="button" className="quick-btn quick-skip" aria-label={`Remove step ${x}`} title="Remove this step" onClick={() => onChange(steps.filter((_, j) => j !== i))}>
+              {X}
+            </button>
+          </li>
+        ))}
+        <li>
+          <input
+            value={draft}
+            placeholder={steps.length ? 'Next step' : 'A step (optional)'}
+            aria-label="Next step"
+            onChange={(e) => onDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                add();
+              }
+            }}
+          />
+          <button type="button" className="quick-btn quick-skip" aria-label="Add another step" title="Add another step" disabled={!draft.trim()} onClick={add}>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        </li>
+      </ol>
     </div>
   );
 }
@@ -1616,6 +1610,7 @@ function TimedForm({
     return w ? { cat: w, desc: t.desc } : { cat: '', desc: d.title.trim() };
   })();
   const [cat, setCat] = useState(start.cat);
+  const [stepDraft, setStepDraft] = useState('');
   const [desc, setDesc] = useState(start.desc);
   useEffect(() => {
     if (launch || !d.title.trim()) return;
@@ -1646,7 +1641,9 @@ function TimedForm({
         e.preventDefault();
         if (!d.title.trim()) return;
         const more = d.repeat === 'once' ? [...new Set((d.moreDates ?? []).filter((x) => x && x !== d.onDate))].sort() : [];
-        const next = { ...d, active: true, notify: false, title: d.title.trim(), urls: d.urls.filter((u) => u && !isBarePrefix(u)), ...(d.moreDates !== undefined || more.length ? { moreDates: more } : {}) };
+        // V20-280: the step being typed counts without Enter; blank steps never save.
+        const steps = [...(d.steps ?? []), stepDraft].map((x) => x.trim()).filter(Boolean);
+        const next = { ...d, steps, active: true, notify: false, title: d.title.trim(), urls: d.urls.filter((u) => u && !isBarePrefix(u)), ...(d.moreDates !== undefined || more.length ? { moreDates: more } : {}) };
         // A repeating launch whose time changed: ask whether it's just the next one or every time.
         if (launch && launch.repeat !== 'once' && launch.repeat !== 'hourly' && d.atTime !== launch.atTime && !scope) {
           setAsk(next);
@@ -1771,7 +1768,7 @@ function TimedForm({
         <span>Description</span>
         <TitleCombo value={desc} titles={descriptions} required={false} placeholder="L4UNCH P4GE Construction" onChange={(v) => setWhat(cat, v)} list={launchListFor(cat)} />
       </label>
-      <StepsField steps={d.steps ?? []} onChange={(v) => set('steps', v)} />
+      <StepsField steps={d.steps ?? []} draft={stepDraft} onDraft={setStepDraft} onChange={(v) => set('steps', v)} />
 
       <div className="time-grid">
         <label className="field">

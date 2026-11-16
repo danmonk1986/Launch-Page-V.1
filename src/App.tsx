@@ -318,7 +318,8 @@ export default function App() {
     const cur = logFor(list, l, new Date());
     // V20-074: each run carries the launch's project as it was when the run happened.
     const changed = patch(cur);
-    const item = { ...cur, ...changed, title: l.title, projectId: l.projectId ?? null };
+    // V20-280: a launch's steps are part of its name in the record (dash-separated).
+    const item = { ...cur, ...changed, title: [l.title, ...(l.steps ?? [])].join(' - '), projectId: l.projectId ?? null };
     // V20-178: a run finished now belongs to today's routine day (where its productivity block goes).
     if (changed.finishedAt) item.routineDay = d26TodayRef.current;
     const next = list.some((g) => g.id === item.id) ? list.map((g) => (g.id === item.id ? item : g)) : [...list, item];
