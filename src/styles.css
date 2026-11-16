@@ -3657,3 +3657,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .timed-item.is-logask { flex-wrap: wrap; row-gap: 6px; }
 .app.app .timed-item.is-logask > .timed-logask { flex: 1 0 100%; justify-content: flex-end; padding: 0 8px 6px; }
 .app.app .timed-logask .logask-min input { height: 30px !important; min-height: 0 !important; padding-top: 0; padding-bottom: 0; box-sizing: border-box; }
+/* V20-273 (Dan, Nov 16): Part done fields in the card's Log the time? row. */
+.app.app .timed-logask .logask-part input { width: 180px; text-align: left; }
+.app.app .timed-logask .btn:disabled { opacity: .45; cursor: not-allowed; }

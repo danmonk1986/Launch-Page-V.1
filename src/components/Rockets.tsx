@@ -267,13 +267,30 @@ export function RocketsPanel(p: Props) {
   // V20-183 (Dan, Nov 14): minutes only; Don't log is gone (no task takes 0 minutes).
   // Launches that log a fixed amount (H2O, Food, Vice) don't ask.
   // V20-268 (Dan, Nov 15): it also asks the Start (now − minutes, or a past day's set time), so the run keeps when it happened.
-  type LogAsk = { key: string; minutes: number; onLog: (m: number | null, startAt?: string | null) => void; q?: string; start?: string; day?: string | null; atTime?: string | null };
+  type LogAsk = {
+    key: string;
+    minutes: number;
+    onLog: (m: number | null, startAt?: string | null) => void;
+    q?: string;
+    start?: string;
+    day?: string | null;
+    atTime?: string | null;
+    /** V20-273 (Dan, Nov 16): Part done. The launch, and (when on) what got done and what's left. */
+    l?: Launch;
+    part?: { done: string; left: string } | null;
+  };
+  // "WHAT - PROJECT - description": a part keeps the first two pieces and swaps the description.
+  const titleHead = (t: string) => {
+    const parts = t.split(' - ');
+    return parts.length >= 3 ? parts.slice(0, 2) : parts.slice(0, Math.max(1, parts.length - 1));
+  };
+  const titleRest = (t: string) => t.split(' - ').slice(titleHead(t).length).join(' - ');
   const [logAsk, setLogAsk] = useState<LogAsk | null>(null);
   const asksTime = (l: Launch) => !['h2o', 'food', 'vices'].includes(l.logKind ?? '');
   const askLog = (key: string, l: Launch, onLog: (m: number | null, startAt?: string | null) => void, day?: string | null) => {
     if (!asksTime(l)) return onLog(undefined as unknown as null);
     setXAsk(null);
-    setLogAsk({ key, minutes: l.minutes, onLog, day: day ?? null, atTime: l.atTime ?? null });
+    setLogAsk({ key, minutes: l.minutes, onLog, day: day ?? null, atTime: l.atTime ?? null, l, part: null });
   };
   const askStart = (a: LogAsk) => a.start ?? defaultStart(a.minutes, { day: a.day, atTime: a.atTime });
   const logAskUi = (key: string) =>
@@ -300,8 +317,46 @@ export function RocketsPanel(p: Props) {
             onChange={(e) => setLogAsk((a) => (a ? { ...a, start: e.target.value || undefined } : a))}
           />
         </label>
-        <button type="button" className="btn btn-quiet" onClick={() => { const a = logAsk; setLogAsk(null); a.onLog(a.minutes, startIso(askStart(a), a.minutes, a.day)); }}>
-          Log
+        {logAsk.part && (
+          <>
+            <label className="logask-min logask-part">
+              <span>Done</span>
+              <input value={logAsk.part.done} placeholder="What got done" aria-label="What got done" onChange={(e) => setLogAsk((a) => (a && a.part ? { ...a, part: { ...a.part, done: e.target.value } } : a))} />
+            </label>
+            <label className="logask-min logask-part">
+              <span>Left</span>
+              <input value={logAsk.part.left} placeholder="What's left" aria-label="What's left" onChange={(e) => setLogAsk((a) => (a && a.part ? { ...a, part: { ...a.part, left: e.target.value } } : a))} />
+            </label>
+          </>
+        )}
+        {logAsk.l && p.onAddLog && !logAsk.part && (
+          <button
+            type="button"
+            className="btn btn-quiet"
+            title="Part done: log what got done; the launch stays open for what's left"
+            onClick={() => setLogAsk((a) => (a && a.l ? { ...a, part: { done: '', left: titleRest(a.l.title) } } : a))}
+          >
+            Part
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn btn-quiet"
+          disabled={!!logAsk.part && !logAsk.part.done.trim()}
+          onClick={async () => {
+            const a = logAsk;
+            setLogAsk(null);
+            if (!a.part || !a.l) return a.onLog(a.minutes, startIso(askStart(a), a.minutes, a.day));
+            // V20-273: the done part is its own log (like Stats › Add a log); the launch stays open, renamed to what's left.
+            const head = titleHead(a.l.title);
+            await p.onAddLog?.({ title: [...head, a.part.done.trim()].join(' - '), projectId: a.l.projectId ?? null, day: a.day ?? isoDate(p.today), start: askStart(a), minutes: a.minutes });
+            const left = a.part.left.trim();
+            const title = left ? [...head, left].join(' - ') : a.l.title;
+            const minutes = Math.max(5, a.l.minutes - a.minutes);
+            if (title !== a.l.title || minutes !== a.l.minutes) await p.onSaveLaunch({ ...a.l, title, minutes });
+          }}
+        >
+          {logAsk.part ? 'Log part' : 'Log'}
         </button>
         {/* V20-196 (Dan, Nov 14): Cancel is an ×, like the card's ×. */}
         <button type="button" className="quick-btn" aria-label="Cancel" title="Cancel" onClick={() => setLogAsk(null)}>
