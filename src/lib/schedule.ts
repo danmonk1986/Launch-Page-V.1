@@ -76,3 +76,9 @@ export const hhmm12 = (min: number) => {
   const h = Math.floor(min / 60) % 24;
   return `${h % 12 || 12}:${String(min % 60).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
 };
+
+/** Keep both: this launch at this date and time was seen and kept, so the app's after-save check stays quiet. */
+const acked = new Set<string>();
+const ackKey = (l: Launch) => `${l.id}|${l.onDate ?? ''}|${l.atTime}|${l.minutes}|${l.repeat}`;
+export const ackClash = (l: Launch) => void acked.add(ackKey(l));
+export const isAcked = (l: Launch) => acked.has(ackKey(l));

@@ -1,4 +1,6 @@
 import { defaultStart, finishIso, startIso } from './lib/logStart';
+import { clashesFor, isAcked, type Clash } from './lib/schedule';
+import { ClashSheet } from './components/ClashSheet';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
 import type { Session } from '@supabase/supabase-js';
@@ -151,6 +153,8 @@ export default function App() {
   // Timed launches (it kept the old scroll, e.g. down at Personal Alchemy after a trip to Budget).
   // V20-097: the Tasks page's ^ goes back to the Tasks card itself, not the top.
   const returnTo = useRef<string | null>(null);
+  // SCHEDULE GUARDRAILS: a launch just saved on top of another block (the after-save check).
+  const [appClash, setAppClash] = useState<{ l: Launch; with: Clash[] } | null>(null);
   // V20-269: the budget line picked on the Budget card, opened in Edit line on the Budget page.
   const [budgetOpen, setBudgetOpen] = useState<string | null>(null);
   useEffect(() => {
@@ -738,7 +742,15 @@ export default function App() {
       const start = new Date(`${isoDate(launchDate(l, n))}T${timeFor(l, n)}:00`).getTime();
       if (start <= n.getTime() && !logFor(logRef.current, l, n).launchedAt) setPastAsk(l);
     }
+    // SCHEDULE GUARDRAILS (Dan, Nov 16): any save that lands a launch on top of another block (a task's time,
+    // + Tomorrow, a push) asks after saving, unless the launch form already asked.
+    if (moved) checkClash(l);
     return launchOps.save(l);
+  }
+  function checkClash(l: Launch) {
+    if (isAcked(l)) return;
+    const c = clashesFor(l, launches, new Date());
+    if (c.length) setAppClash({ l, with: c });
   }
   function answerPast(how: 'started' | 'done' | 'not') {
     const l = pastAsk;
@@ -1639,7 +1651,9 @@ export default function App() {
     if (how === 'skipped') {
       if (l.repeat === 'hourly') return setStatus(`${l.title}: skipped this hour.`);
       // Skip today = same time tomorrow.
-      await launchOps.save(skipToTomorrow(l, new Date()));
+      const skipped = skipToTomorrow(l, new Date());
+      await launchOps.save(skipped);
+      checkClash(skipped);
       setStatus(`${l.title} moved to tomorrow, same time.`);
     } else {
       const ticked = tickNonNegsFor(l.title);
@@ -2202,6 +2216,16 @@ export default function App() {
         }}
         onSkip={(l) => finishLaunch(l, 'skipped')}
         onDone={(l) => finishLaunch(l, 'done')}
+      />
+      <ClashSheet
+        clash={appClash}
+        launches={launches}
+        saved
+        onSave={async (x) => {
+          await saveLaunchEdit(x);
+        }}
+        onDelete={(id) => deleteLaunch(id)}
+        onClose={() => setAppClash(null)}
       />
       <Sheet open={!!pastAsk} title={pastAsk?.title ?? 'Already started?'} onClose={() => answerPast('not')}>
         {pastAsk && (
