@@ -1,5 +1,6 @@
 import { Sheet } from './Sheet';
 import type { Launch } from '../lib/rockets';
+import { toMinutes } from '../lib/routines';
 import { ackClash, hhmm12, mergedTitle, nextFree, type Clash } from '../lib/schedule';
 
 /**
@@ -62,7 +63,10 @@ export function ClashSheet({
                 className="btn btn-quiet"
                 title={`One block: ${c.launch.minutes + clash.l.minutes} min${existing ? '; this launch is removed' : ''}`}
                 onClick={async () => {
-                  await onSave({ ...c.launch, title: mergedTitle(c.launch.title, clash.l.title), minutes: c.launch.minutes + clash.l.minutes });
+                  // V20-283 (Dan, Nov 16): the joined block starts at the earlier of the two (9:30 + 10:15 → 9:30), and runs both lengths.
+                  const mine = toMinutes(clash.l.atTime);
+                  const startAt = mine < c.start ? clash.l.atTime : c.launch.atTime;
+                  await onSave({ ...c.launch, atTime: startAt, onceTime: null, title: mergedTitle(c.launch.title, clash.l.title), minutes: c.launch.minutes + clash.l.minutes });
                   if (existing) await onDelete(clash.l.id);
                   onClose(true);
                 }}
