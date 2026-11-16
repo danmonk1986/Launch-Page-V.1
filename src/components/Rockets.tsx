@@ -302,6 +302,8 @@ export function RocketsPanel(p: Props) {
     return parts.length >= 3 ? parts.slice(0, 2) : parts.slice(0, Math.max(1, parts.length - 1));
   };
   const titleRest = (t: string) => t.split(' - ').slice(titleHead(t).length).join(' - ');
+  // V20-281: what Part can tick: the description (step 1), then the steps.
+  const partItems = (l: Launch) => [titleRest(l.title), ...(l.steps ?? [])].filter((x) => x.trim());
   const [logAsk, setLogAsk] = useState<LogAsk | null>(null);
   const asksTime = (l: Launch) => !['h2o', 'food', 'vices'].includes(l.logKind ?? '');
   const askLog = (key: string, l: Launch, onLog: (m: number | null, startAt?: string | null) => void, day?: string | null) => {
@@ -336,7 +338,7 @@ export function RocketsPanel(p: Props) {
         </label>
         {logAsk.part && !!logAsk.l?.steps?.length && (
           <span className="logask-steps" role="group" aria-label="Steps that got done">
-            {logAsk.l.steps.map((x, i) => (
+            {partItems(logAsk.l).map((x, i) => (
               <label key={i} className="logask-step">
                 <input
                   type="checkbox"
@@ -389,12 +391,22 @@ export function RocketsPanel(p: Props) {
             // V20-273: the done part is its own log (like Stats › Add a log); the launch stays open, renamed to what's left.
             const head = titleHead(a.l.title);
             // V20-277: with steps, the ticked ones are the part done (joined with +) and the rest stay on the launch.
-            const steps = a.l.steps ?? [];
-            if (steps.length) {
+            // V20-281: the description (after What and project) is step 1, so it can be ticked too.
+            if (a.l.steps?.length) {
+              const items = partItems(a.l);
               const ticked = a.part.ticked ?? [];
-              const doneText = ticked.map((i) => steps[i]).join(' + ');
-              await p.onAddLog?.({ title: `${a.l.title} - ${doneText}`, projectId: a.l.projectId ?? null, day: a.day ?? isoDate(p.today), start: askStart(a), minutes: a.minutes });
-              const restL = { ...a.l, steps: steps.filter((_, i) => !ticked.includes(i)), minutes: Math.max(5, a.l.minutes - a.minutes) };
+              const doneText = ticked.map((i) => items[i]).join(' + ');
+              await p.onAddLog?.({ title: [...head, doneText].join(' - '), projectId: a.l.projectId ?? null, day: a.day ?? isoDate(p.today), start: askStart(a), minutes: a.minutes });
+              const off = items.length - (a.l.steps?.length ?? 0); // 1 when the description is an item
+              const stepsLeft = (a.l.steps ?? []).filter((_, i) => !ticked.includes(i + off));
+              const descDone = off === 1 && ticked.includes(0);
+              // The description got done: the first step left takes its place.
+              const restL = {
+                ...a.l,
+                title: descDone && stepsLeft.length ? [...head, stepsLeft[0]].join(' - ') : a.l.title,
+                steps: descDone ? stepsLeft.slice(1) : stepsLeft,
+                minutes: Math.max(5, a.l.minutes - a.minutes)
+              };
               await p.onSaveLaunch(restL);
               setRest(restL);
               return;
