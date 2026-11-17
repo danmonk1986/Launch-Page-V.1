@@ -1842,7 +1842,8 @@ function TimedForm({
       <fieldset className="field">
         <legend>Repeats</legend>
         <div className="choice-row">
-          {(['weekly', 'monthly', 'once', 'hourly'] as Repeat[]).map((r) => (
+          {/* V20-299 (Dan, Nov 17): Once sits on the outside (last). */}
+          {(['weekly', 'monthly', 'hourly', 'once'] as Repeat[]).map((r) => (
             <label key={r} className="choice">
               <input
                 type="radio"
