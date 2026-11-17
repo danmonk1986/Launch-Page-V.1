@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 type State = 'closed' | 'open' | 'working' | 'sent' | 'error';
 
 /** "Request beta test" on the sign-in page. Saves to the beta_requests table. */
-export function BetaRequest({ startOpen = false }: { startOpen?: boolean } = {}) {
+export function BetaRequest({ startOpen = false, onCancel }: { startOpen?: boolean; onCancel?: () => void } = {}) {
   // V20-294: SIGN UP on Welcome opens the request straight away.
   const [state, setState] = useState<State>(startOpen ? 'open' : 'closed');
   const [name, setName] = useState('');
@@ -60,9 +60,12 @@ export function BetaRequest({ startOpen = false }: { startOpen?: boolean } = {})
         {state === 'working' ? 'Sending…' : 'Send request'}
       </button>
       {state === 'error' && <p className="signin-error">{message}</p>}
-      <button type="button" className="link-btn" onClick={() => setState('closed')}>
-        Cancel
-      </button>
+      {/* V20-297: on its own sign-up page the page's ← Back does this. */}
+      {!startOpen && (
+        <button type="button" className="link-btn" onClick={() => (onCancel ? onCancel() : setState('closed'))}>
+          Cancel
+        </button>
+      )}
     </form>
   );
 }

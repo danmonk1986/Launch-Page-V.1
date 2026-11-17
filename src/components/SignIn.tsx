@@ -5,7 +5,8 @@ import { BetaRequest } from './BetaRequest';
 type Mode = 'password' | 'link';
 type State = 'idle' | 'working' | 'sent' | 'error';
 
-/** V20-294: signUp = opened from Welcome's SIGN UP (the beta request open); onBack returns to Welcome. */
+/** V20-294: onBack returns to Welcome. V20-297 (Dan, Nov 17): sign in and sign up are two pages: signUp shows
+ *  only the beta request (the sign-up track for now), sign in shows only the sign-in form. */
 export function SignIn({ signUp = false, onBack }: { signUp?: boolean; onBack?: () => void } = {}) {
   const [mode, setMode] = useState<Mode>('password');
   const [email, setEmail] = useState('');
@@ -67,9 +68,23 @@ export function SignIn({ signUp = false, onBack }: { signUp?: boolean; onBack?: 
     setMessage('');
   }
 
+  if (signUp) {
+    return (
+      <main className="signin signin-light">
+        <img className="signin-logo" src="/launchpage-logo.png" alt="L4UNCH P4GE" />
+        <BetaRequest startOpen />
+        {onBack && (
+          <button type="button" className="link-btn signin-back" onClick={onBack}>
+            ← Back
+          </button>
+        )}
+      </main>
+    );
+  }
+
   return (
-    <main className="signin">
-      <img className="signin-logo" src="/launchpage-logo.png" alt="LaunchPage" />
+    <main className="signin signin-light">
+      <img className="signin-logo" src="/launchpage-logo.png" alt="L4UNCH P4GE" />
       {state === 'sent' ? (
         <p className="signin-note">{linkedSent ? `${email} is linked to your account, so the sign-in link went to your account's sign-in email. Open it on this device.` : `Check ${email} for a sign-in link. Open it on this device.`}</p>
       ) : (
@@ -111,7 +126,6 @@ export function SignIn({ signUp = false, onBack }: { signUp?: boolean; onBack?: 
           </button>
         </form>
       )}
-      <BetaRequest startOpen={signUp} />
       {onBack && (
         <button type="button" className="link-btn signin-back" onClick={onBack}>
           ← Back

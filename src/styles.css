@@ -3779,3 +3779,21 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .tour-dots { position: absolute; left: 0; right: 0; top: var(--dots); justify-content: center; }
 .tour-actions { position: absolute; left: 0; right: 0; top: calc(var(--dots) + 13px + var(--g)); justify-content: center; }
 .tour-skip { position: absolute; left: 50%; top: calc(var(--dots) + 13px + var(--g) + 36px + 18px); transform: translateX(-50%); }
+
+/* V20-297 (Dan, Nov 17): the sign-in and sign-up pages match Welcome: Roboto, logo colours, buttons fit their
+   text (36 px pills), links without underlines, and autofilled fields keep the underline design (no yellow). */
+.signin.signin-light { font-family: Roboto, system-ui, sans-serif; color: #444242; background: #ffffff; --accent-teal: #06f9c2; --accent-purple: #8869cb; }
+.signin.signin-light .field span { font-family: Roboto, system-ui, sans-serif; }
+.signin.signin-light .signin-form { display: flex; flex-direction: column; gap: 14px; }
+.signin.signin-light .signin-form .btn { width: auto; align-self: center; height: 36px; min-height: 36px; padding: 0 24px; border-radius: 999px; font-family: Roboto, system-ui, sans-serif; font-size: 13px; }
+.signin.signin-light .link-btn { width: auto; align-self: center; justify-self: center; min-height: 0; margin-top: 4px; padding: 6px 0; color: #8869cb; font: 700 15px Roboto, system-ui, sans-serif; text-decoration: none; }
+.signin.signin-light .link-btn:hover { color: #444242; }
+.signin.signin-light .beta-form { border-top: 0; padding-top: 0; }
+.signin.signin-light .beta-title { font-family: Roboto, system-ui, sans-serif; font-weight: 700; color: #8869cb; text-align: center; margin: 0 0 4px; }
+.signin.signin-light .beta-thanks { color: #8869cb; }
+.app.app .signin-light .field input:is(:-webkit-autofill, :-webkit-autofill:hover, :-webkit-autofill:focus) {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset; box-shadow: 0 0 0 1000px #ffffff inset;
+  -webkit-text-fill-color: #444242; caret-color: #444242; transition: background-color 600000s 0s;
+}
+/* The tour's and Welcome's text links: no underline. */
+.welcome-link { text-decoration: none; }
