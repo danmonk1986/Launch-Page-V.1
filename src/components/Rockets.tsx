@@ -140,9 +140,10 @@ const isBarePrefix = (v: string) => /^https?:\/\/(www\.)?$/i.test(v.trim());
 /** V20-301: a typed or pasted link made whole: a doubled start ("https://www.https://…") loses the extra, and a bare
  *  address ("app.claude.com") gets https://. App and card links pass as they are. */
 export const cleanLink = (v: string) => {
-  let u = v.trim().replace(/^https?:\/\/(www\.)?(?=[a-z][a-z0-9+.-]*:)/i, '');
+  let u = v.trim().replace(/^https?:\/\/(www\.)?(?=https?:\/\/)/i, '');
   if (!u || isBarePrefix(u)) return '';
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(u) && !u.startsWith('/')) u = `https://${u}`;
+  // Has its own scheme (https://, mailto:, an app link like notion://) or a card path: leave it; else add https://.
+  if (!/^[a-z][a-z0-9+.-]*:(\/\/|[^\d])/i.test(u) && !u.startsWith('/')) u = `https://${u}`;
   return u;
 };
 
