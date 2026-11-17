@@ -3,7 +3,8 @@ import { useState } from 'react';
 /**
  * V20-295 (Dan, Nov 17): the MVP tour, from the white setup canvas (board B). Welcome is slide 1; this is slides 2–6.
  * Each slide pairs a small picture of the real feature with a short headline. Dot 1 and BACK on the first slide go
- * back to Welcome; START LAUNCHING! and Skip go to sign up (the beta request). Light-mode colours only.
+ * back to Welcome; START LAUNCHING! and Skip go to sign up (the beta request). V20-296: logo colours; the dots sit
+ * in the same place as on Welcome, with the text above them.
  */
 const SLIDES = [
   { title: 'It comes to you.', body: 'At block time a timed launch pops up front and centre.\nStart it, snooze it to a real time, or skip it on purpose.' },
@@ -30,7 +31,7 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
               <p className="tour-mono">60 min · opens 4 tabs</p>
               <div className="tour-row-end">
                 <span className="tour-pill">Snooze</span>
-                <span className="tour-pill is-key">Start</span>
+                <span className="tour-pill is-go">Start</span>
               </div>
             </div>
           )}
@@ -74,15 +75,15 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
           )}
         </div>
       </div>
+      <div className="tour-copy">
+        <h2>{SLIDES[i].title}</h2>
+        <p>{SLIDES[i].body}</p>
+      </div>
       <div className="welcome-dots tour-dots" role="tablist" aria-label="Tour slides">
         <button type="button" aria-label="Slide 1: Welcome" onClick={onWelcome} />
         {SLIDES.map((s, n) => (
           <button key={n} type="button" aria-label={`Slide ${n + 2}: ${s.title}`} className={n === i ? 'is-on' : ''} onClick={() => setI(n)} />
         ))}
-      </div>
-      <div className="tour-copy">
-        <h2>{SLIDES[i].title}</h2>
-        <p>{SLIDES[i].body}</p>
       </div>
       <div className="tour-actions">
         <button type="button" className="welcome-btn" onClick={() => (i === 0 ? onWelcome() : setI(i - 1))}>
@@ -98,7 +99,7 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
           </button>
         )}
       </div>
-      <button type="button" className="welcome-link" onClick={onSignUp}>
+      <button type="button" className="welcome-link tour-skip" onClick={onSignUp}>
         Skip the tour
       </button>
     </main>

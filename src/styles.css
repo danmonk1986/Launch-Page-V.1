@@ -3680,7 +3680,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .task-row.is-earlier.is-paid > td { opacity: 0.5; }
 
 /* V20-294 (Dan, Nov 17): Welcome, the first signed-out screen (canvas board A). Light-mode colours only:
-   teal #4DAEAA, purple #8869CB, text #444242. Spacing: G = 6.3% of the height, logo → buttons → dots. */
+   teal #06F9C2, purple #8869CB, text #444242. Spacing: G = 6.3% of the height, logo → buttons → dots. */
 .welcome { --w: min(560px, 70vw); --g: 6.3dvh; position: relative; min-height: 100dvh; overflow: hidden; background: #ffffff; color: #444242; font-family: Roboto, system-ui, sans-serif; }
 .welcome-logo { position: absolute; left: 50%; top: 44%; width: var(--w); transform: translate(-50%, -50%); }
 .welcome-logo img { display: block; width: 100%; height: auto; }
@@ -3690,13 +3690,13 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .welcome-rise { animation: welcome-rise 0.5s ease-out 1.1s both; }
 .welcome-btn { height: 36px; padding: 0 24px; border-radius: 999px; border: 2px solid #8869cb; background: transparent; color: #8869cb; font: 700 13px/1 Roboto, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
 .welcome-btn:hover { background: rgb(136 105 203 / 0.08); }
-.welcome-btn.welcome-key { border-color: #4daeaa; background: #4daeaa; }
-.welcome-btn.welcome-key:hover { box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #8869cb; background: #4daeaa; }
+.welcome-btn.welcome-key { border-color: #06f9c2; background: #06f9c2; }
+.welcome-btn.welcome-key:hover { box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #8869cb; background: #06f9c2; }
 .welcome-dots { display: flex; gap: 8px; }
 .welcome-dots span { width: 13px; height: 13px; box-sizing: border-box; border-radius: 50%; border: 2px solid #8869cb; }
-.welcome-dots span.is-on { border-color: #4daeaa; background: #4daeaa; }
-.welcome-link { border: 0; background: none; padding: 0; color: #4daeaa; font: 700 15px Roboto, system-ui, sans-serif; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.welcome-link:hover { color: #8869cb; }
+.welcome-dots span.is-on { border-color: #06f9c2; background: #06f9c2; }
+.welcome-link { border: 0; background: none; padding: 0; color: #8869cb; font: 700 15px Roboto, system-ui, sans-serif; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.welcome-link:hover { color: #444242; }
 @keyframes welcome-slide { from { transform: translate(-40vw, -50%); opacity: 0; } to { transform: translate(0, -50%); opacity: 1; } }
 @keyframes welcome-rise { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .welcome-to, .welcome-rise { animation: none; } }
@@ -3718,23 +3718,23 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 @media (prefers-reduced-motion: reduce) { .tour-slide { animation: none; } }
 .tour p { margin: 0; }
 .tour-card { width: 520px; max-width: 100%; box-sizing: border-box; border: 2px solid #8869cb; border-radius: 20px; padding: 26px; box-shadow: 0 18px 48px rgb(68 66 66 / 0.14); display: flex; flex-direction: column; gap: 14px; }
-.tour-card.is-log { border-color: #4daeaa; background: #f5f5dc; box-shadow: none; gap: 12px; }
+.tour-card.is-log { border-color: #06f9c2; background: #f5f5dc; box-shadow: none; gap: 12px; }
 .tour-label { font: 700 13px 'Roboto Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: #8869cb; }
 .tour-big { font-size: 26px; font-weight: 700; }
-.tour-time { font-family: 'Roboto Mono', monospace; color: #4daeaa; font-weight: 700; }
+.tour-time { font-family: 'Roboto Mono', monospace; color: #8869cb; font-weight: 700; }
 .tour-mono { font: 14px 'Roboto Mono', monospace; color: #6f6c6c; }
 .tour-row-end { display: flex; gap: 10px; justify-content: flex-end; }
 .tour-pill { display: inline-flex; align-items: center; height: 36px; padding: 0 20px; border-radius: 999px; border: 2px solid #8869cb; color: #8869cb; font-weight: 700; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
-.tour-pill.is-key { border-color: #4daeaa; background: #4daeaa; }
+.tour-pill.is-go { border-color: #06f9c2; background: #06f9c2; }
 .tour-rockets { width: 560px; max-width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .tour-rockets > div { border: 2px solid #8869cb; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 6px; }
 .tour-rockets b { font-size: 18px; }
 .tour-rockets span { font: 13px 'Roboto Mono', monospace; color: #6f6c6c; }
-.tour-rockets .is-on { border-color: #4daeaa; background: #f5f5dc; }
+.tour-rockets .is-on { border-color: #06f9c2; background: #f5f5dc; }
 .tour-rockets .is-new { border: 2px dashed #dadada; align-items: center; justify-content: center; color: #6f6c6c; }
 .tour-day { width: 440px; max-width: 100%; display: flex; flex-direction: column; gap: 8px; }
-.tour-now { border: 2px solid #4daeaa; border-radius: 12px; padding: 14px; background: #f5f5dc; display: flex; gap: 12px; align-items: center; }
-.tour-now-tag { background: #4daeaa; color: #8869cb; border-radius: 999px; padding: 3px 10px; font: 700 12px 'Roboto Mono', monospace; }
+.tour-now { border: 2px solid #06f9c2; border-radius: 12px; padding: 14px; background: #f5f5dc; display: flex; gap: 12px; align-items: center; }
+.tour-now-tag { background: #06f9c2; color: #8869cb; border-radius: 999px; padding: 3px 10px; font: 700 12px 'Roboto Mono', monospace; }
 .tour-day > p { display: flex; gap: 14px; padding: 8px 4px; border-bottom: 1px solid #ece9f5; }
 .tour-day > p:last-child { border-bottom: 0; }
 .tour-day > p span { width: 84px; font: 500 14px 'Roboto Mono', monospace; color: #6f6c6c; }
@@ -3746,23 +3746,36 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .tour-when { font: 13px 'Roboto Mono', monospace; color: #6f6c6c; }
 .tour-task.is-late .tour-when { color: #e2675c; }
 .tour-box { flex: none; width: 18px; height: 18px; box-sizing: border-box; border: 2px solid #8869cb; border-radius: 4px; }
-.tour-box.is-done { border-color: #4daeaa; background: #4daeaa; }
+.tour-box.is-done { border-color: #06f9c2; background: #06f9c2; }
 .tour-week { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .tour-week span { border: 1px solid #dadada; border-radius: 8px; padding: 8px; font-size: 12px; }
-.tour-week span.is-on { border: 2px solid #4daeaa; }
+.tour-week span.is-on { border: 2px solid #06f9c2; }
 .tour-log { display: flex; gap: 18px; align-items: baseline; }
 .tour-log b { font: 700 22px 'Roboto Mono', monospace; }
 .tour-log span { font: 14px 'Roboto Mono', monospace; color: #6f6c6c; }
 .tour-check { display: flex; gap: 10px; align-items: center; }
 .tour-bars { display: flex; gap: 6px; align-items: flex-end; height: 70px; margin-top: 6px; }
-.tour-bars span { flex: 1; background: #4daeaa; border-radius: 6px 6px 0 0; }
+.tour-bars span { flex: 1; background: #06f9c2; border-radius: 6px 6px 0 0; }
 .tour-bars .is-purple { background: #8869cb; }
 .tour-bars .is-grey { background: #dadada; }
 .tour-dots button { width: 13px; height: 13px; box-sizing: border-box; border-radius: 50%; border: 2px solid #8869cb; background: transparent; padding: 0; cursor: pointer; }
-.tour-dots button.is-on { border-color: #4daeaa; background: #4daeaa; }
+.tour-dots button.is-on { border-color: #06f9c2; background: #06f9c2; }
 .tour-copy { width: 640px; max-width: 100%; min-height: 150px; text-align: center; display: flex; flex-direction: column; gap: 12px; }
 .tour-copy h2 { margin: 0; font-size: 26px; font-weight: 700; color: #8a8888; text-transform: none; letter-spacing: 0; }
 .tour-copy p { font-size: 18px; line-height: 1.55; white-space: pre-line; }
 .tour-actions { display: flex; gap: 14px; }
 /* Welcome's dots open the tour at that slide. */
 .welcome-dots button { width: 13px; height: 13px; box-sizing: border-box; border-radius: 50%; border: 2px solid #8869cb; background: transparent; padding: 0; cursor: pointer; }
+
+/* V20-296 (Dan, Nov 17): the dots sit in the same place on Welcome and every tour slide. Both pages share the
+   spacing (W = logo width, G = gap); the tour's text moves above the dots, the buttons below. */
+.welcome, .tour { --w: min(560px, 70vw); --g: 6.3dvh; --dots: calc(44% + var(--w) * 0.09 + var(--g) * 2 + 36px); }
+@media (max-width: 640px) { .welcome, .tour { --w: 86vw; } }
+.welcome-more { top: var(--dots); }
+.tour { position: relative; display: block; padding: 0; min-height: 100dvh; overflow: hidden; }
+.tour-logo { position: absolute; left: 24px; top: 24px; }
+.tour-stage { position: absolute; left: 50%; top: 84px; transform: translateX(-50%); height: calc(var(--dots) - 84px - 150px - 24px); min-height: 0; padding: 0 24px; box-sizing: border-box; }
+.tour-copy { position: absolute; left: 50%; top: calc(var(--dots) - 24px - 150px); transform: translateX(-50%); height: 150px; min-height: 0; justify-content: flex-end; padding: 0 24px; box-sizing: border-box; }
+.tour-dots { position: absolute; left: 0; right: 0; top: var(--dots); justify-content: center; }
+.tour-actions { position: absolute; left: 0; right: 0; top: calc(var(--dots) + 13px + var(--g)); justify-content: center; }
+.tour-skip { position: absolute; left: 50%; top: calc(var(--dots) + 13px + var(--g) + 36px + 18px); transform: translateX(-50%); }
