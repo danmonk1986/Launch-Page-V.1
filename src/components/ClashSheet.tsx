@@ -14,7 +14,8 @@ export function ClashSheet({
   saved,
   onSave,
   onDelete,
-  onClose
+  onClose,
+  onAddToBlock
 }: {
   clash: { l: Launch; with: Clash[] } | null;
   launches: Launch[];
@@ -22,11 +23,15 @@ export function ClashSheet({
   onSave: (l: Launch) => Promise<void> | void;
   onDelete: (id: string) => Promise<void> | void;
   onClose: (done: boolean) => void;
+  /** V20-288: a task (task:<id>) over a launch: add it to that block as a step. */
+  onAddToBlock?: (taskStandId: string, block: Launch) => Promise<void> | void;
 }) {
   const c = clash?.with[0];
   const free = clash && c ? nextFree(clash.l, c.day, launches) : null;
   const freeLabel = free ? hhmm12(Number(free.slice(0, 2)) * 60 + Number(free.slice(3))) : '';
-  const canMerge = !!clash && !!c && !clash.l.id.startsWith('task:') && clash.l.repeat === 'once' && c.launch.repeat === 'once' && clash.with.length === 1;
+  const isTask = !!clash && clash.l.id.startsWith('task:');
+  const block = isTask ? clash?.with.find((x) => !x.launch.id.startsWith('task:'))?.launch : undefined;
+  const canMerge = !!clash && !!c && !isTask && !c.launch.id.startsWith('task:') && clash.l.repeat === 'once' && c.launch.repeat === 'once' && clash.with.length === 1;
   const existing = !!clash && (saved || launches.some((x) => x.id === clash.l.id));
   const fmtDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
   return (
@@ -73,6 +78,19 @@ export function ClashSheet({
                 }}
               >
                 Add to that block{existing ? ' (removes this one)' : ''}
+              </button>
+            )}
+            {block && onAddToBlock && (
+              <button
+                type="button"
+                className="btn btn-quiet"
+                title={`Adds it as a step in ${block.title}; the task keeps its dates and gives up its own time`}
+                onClick={async () => {
+                  await onAddToBlock(clash.l.id, block);
+                  onClose(true);
+                }}
+              >
+                Add to that block
               </button>
             )}
             <button

@@ -751,7 +751,8 @@ export default function App() {
   }
   function checkClash(l: Launch) {
     if (isAcked(l)) return;
-    const c = clashesFor(l, launches, new Date(), settledRuns(logRef.current));
+    // V20-288: timed tasks count too.
+    const c = clashesFor(l, [...launches, ...taskStands()], new Date(), settledRuns(logRef.current));
     if (c.length) setAppClash({ l, with: c });
   }
   function answerPast(how: 'started' | 'done' | 'not') {
@@ -996,15 +997,28 @@ export default function App() {
     await lineFollowsTask(t);
     checkTaskClash(t, old);
   };
-  /** SCHEDULE GUARDRAILS (Dan, Nov 17, V20-287): a task only counts once it's scheduled at a time. It holds an hour
-   *  (same as Add to calendar) and is checked against timed launches. A task with a launch is checked as that launch;
-   *  one with no time, a repeat, or done / deleted never warns. */
+  /** SCHEDULE GUARDRAILS (Dan, Nov 17, V20-287): a task only counts once it's scheduled at a time, on its Date required.
+   *  It holds an hour (same as Add to calendar). A task with a launch is checked as that launch; one with no time,
+   *  a repeat, or done / deleted never counts. V20-288: timed tasks also count against each other and against launches. */
+  const timedTask = (t: Task) => !!t.atTime && !!(t.endDate ?? t.startDate) && !t.launchId && !t.done && !t.deletedAt && !isRecurring(t);
+  const taskStand = (t: Task) =>
+    ({ id: `task:${t.id}`, title: taskName(t), atTime: t.atTime, minutes: 60, urls: [], projectId: t.projectId, logKind: 'productivity', repeat: 'once', onDate: t.endDate ?? t.startDate, weekdays: [], active: true }) as unknown as Launch;
+  const taskStands = () => tasksRef.current.filter(timedTask).map(taskStand);
   function checkTaskClash(t: Task, old?: Task) {
-    const day = t.endDate ?? t.startDate;
-    if (!t.atTime || !day || t.launchId || t.done || t.deletedAt || isRecurring(t)) return;
-    if (old && old.atTime === t.atTime && (old.endDate ?? old.startDate) === day) return;
-    const stand = { id: `task:${t.id}`, title: taskName(t), atTime: t.atTime, minutes: 60, urls: [], projectId: t.projectId, logKind: 'productivity', repeat: 'once', onDate: day, weekdays: [], active: true } as unknown as Launch;
-    checkClash(stand);
+    if (!timedTask(t)) return;
+    if (old && timedTask(old) && old.atTime === t.atTime && (old.endDate ?? old.startDate) === (t.endDate ?? t.startDate)) return;
+    checkClash(taskStand(t));
+  }
+  /** V20-288 (Dan, Nov 17): Add to that block for a task: it becomes a step in that launch, and gives up its own time
+   *  (the block holds the time now), so the two can't double-book. Its dates stay. */
+  async function addTaskToBlock(standId: string, block: Launch) {
+    const t = tasksRef.current.find((y) => `task:${y.id}` === standId);
+    if (!t) return;
+    const name = taskName(t);
+    const steps = block.steps ?? [];
+    if (!steps.includes(name)) await launchOps.save({ ...block, steps: [...steps, name] });
+    await taskOps.save({ ...t, atTime: null });
+    setStatus(`${name} is now a step in ${block.title}.`);
   }
   const saveTasks = async (items: Task[]) => {
     launchFollowsTasks(items);
@@ -2250,7 +2264,8 @@ export default function App() {
       />
       <ClashSheet
         clash={appClash}
-        launches={launches}
+        launches={[...launches, ...taskStands()]}
+        onAddToBlock={addTaskToBlock}
         saved
         onSave={async (x) => {
           // V20-287: a task's stand-in (task:<id>) moves the task itself.
