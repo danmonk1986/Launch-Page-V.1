@@ -106,3 +106,31 @@ export const timingChanged = (old: Launch | null | undefined, l: Launch) =>
   JSON.stringify(old.onceTime ?? null) !== JSON.stringify(l.onceTime ?? null) ||
   old.monthDay !== l.monthDay ||
   old.active !== l.active;
+
+/** V20-293: the part of a launch title that reads as a step: "TEST - L4UNCH P4GE - Overlap Time Test" → "Overlap Time Test"
+ *  (the leading all-capitals parts are the What and the project). */
+export function stepName(title: string): string {
+  const parts = title.split(' - ');
+  let i = 0;
+  while (i < parts.length - 1 && !/[a-z]/.test(parts[i])) i++;
+  return parts.slice(i).join(' - ').trim();
+}
+
+const isWorkBlock = (l: Launch) => /^work block\b/i.test(l.title.trim());
+
+/**
+ * V20-293 (Dan, Nov 17): Add to that block keeps one block clean instead of growing the title. A WORK BLOCK takes
+ * precedence; otherwise the one that starts first (the existing block on a tie). That one keeps its title, project
+ * and kind; the other comes in as a step (its own steps follow), its links are added, and the block starts at the
+ * earlier time and runs the longer length (V20-283 / V20-285). Returns the launch to save; the other one is removed.
+ */
+export function mergeLaunches(existing: Launch, incoming: Launch, start: (l: Launch) => number): { keep: Launch; primary: Launch; other: Launch } {
+  const primary = isWorkBlock(existing) ? existing : isWorkBlock(incoming) ? incoming : start(incoming) < start(existing) ? incoming : existing;
+  const other = primary === existing ? incoming : existing;
+  const steps: string[] = [];
+  for (const x of [...(primary.steps ?? []), stepName(other.title), ...(other.steps ?? [])]) if (x && !steps.includes(x)) steps.push(x);
+  const urls = [...primary.urls, ...other.urls.filter((u) => !primary.urls.includes(u))];
+  const early = start(incoming) < start(existing) ? incoming : existing;
+  const keep: Launch = { ...primary, atTime: early.atTime, onceTime: null, minutes: Math.max(existing.minutes, incoming.minutes), steps, urls };
+  return { keep, primary, other };
+}

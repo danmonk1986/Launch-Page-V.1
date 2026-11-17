@@ -1,7 +1,7 @@
 import { Sheet } from './Sheet';
 import type { Launch } from '../lib/rockets';
 import { toMinutes } from '../lib/routines';
-import { ackClash, hhmm12, mergedTitle, nextFree, type Clash } from '../lib/schedule';
+import { ackClash, hhmm12, mergeLaunches, nextFree, type Clash } from '../lib/schedule';
 
 /**
  * SCHEDULE GUARDRAILS (Dan, Nov 16): Overlaps another block. Shown by the launch form before it saves, and by the
@@ -71,14 +71,20 @@ export function ClashSheet({
               <button
                 type="button"
                 className="btn btn-quiet"
-                title={`Joins ${into.launch.title}: one block, ${Math.max(into.launch.minutes, clash.l.minutes)} min${existing ? '; this launch is removed' : ''}`}
+                title={`One block with ${into.launch.title}: ${Math.max(into.launch.minutes, clash.l.minutes)} min; a WORK BLOCK keeps its name, the other comes in as a step`}
                 onClick={async () => {
                   // V20-283 (Dan, Nov 16): the joined block starts at the earlier of the two (9:30 + 10:15 → 9:30).
                   // V20-285 (Dan, Nov 17, guardrails decision): merging doesn't extend the time; the longer length wins. Edit the block after if it needs more.
-                  const mine = toMinutes(clash.l.atTime);
-                  const startAt = mine < into.start ? clash.l.atTime : into.launch.atTime;
-                  await onSave({ ...into.launch, atTime: startAt, onceTime: null, title: mergedTitle(into.launch.title, clash.l.title), minutes: Math.max(into.launch.minutes, clash.l.minutes) });
-                  if (existing) await onDelete(clash.l.id);
+                  // V20-293 (Dan, Nov 17): a WORK BLOCK takes precedence, else the one that starts first; the other comes in as a step.
+                  const startOf = (x: Launch) => (x.id === into.launch.id ? into.start : toMinutes(x.atTime));
+                  const { keep, primary, other } = mergeLaunches(into.launch, clash.l, startOf);
+                  if (primary === clash.l && existing) {
+                    await onSave(keep);
+                    await onDelete(other.id);
+                  } else {
+                    await onSave({ ...keep, id: into.launch.id });
+                    if (existing) await onDelete(clash.l.id);
+                  }
                   onClose(true);
                 }}
               >
