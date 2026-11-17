@@ -260,13 +260,14 @@ export function RoutineEditor({ open, routine, nextSort, onClose, onSave, onDele
                   onChange={(e) => setItem(i, { label: e.target.value })}
                   placeholder="Step"
                 />
-                <button type="button" className="icon-btn tool-btn" aria-label={`Add a step after step ${i + 1}`} title="Add a step below" onClick={() => addItem(i)}>
+                {/* V20-305 (Dan, Nov 17): in-card size, like the Steps / Links + and × in the other forms. */}
+                <button type="button" className="quick-btn quick-skip" aria-label={`Add a step after step ${i + 1}`} title="Add a step below" onClick={() => addItem(i)}>
                   <HeadIcon d="M12 5v14M5 12h14" />
                 </button>
                 <div className="step-menu-wrap">
                   <button
                     type="button"
-                    className="icon-btn tool-btn"
+                    className="quick-btn quick-skip"
                     aria-label={`More for step ${i + 1}`}
                     title="More"
                     aria-haspopup="menu"
