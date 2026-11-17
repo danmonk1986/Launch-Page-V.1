@@ -317,19 +317,34 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                 <div key={g.title} className="module-group">
                   {gi === 0 ? (
                     <SectionHead title={g.title} onRestore={() => saveNow((d) => ({ ...d, modules: DEFAULT_MODULES }))} />
+                  ) : g.master ? (
+                    // V20-311 (Dan, Nov 17): 26 Days and Records switch on / off as a whole, beside the section title.
+                    <div className="module-head settings-section-gap">
+                      <h3 className="timed-title settings-section">{g.title}</h3>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={draft.modules[g.master]}
+                        aria-label={g.title}
+                        className={`module-switch${draft.modules[g.master] ? ' is-on' : ''}`}
+                        onClick={() => saveNow((d) => ({ ...d, modules: { ...d.modules, [g.master!]: !d.modules[g.master!] } }))}
+                      >
+                        <span />
+                      </button>
+                    </div>
                   ) : (
                     <h3 className="timed-title settings-section settings-section-gap">{g.title}</h3>
                   )}
                   <div className="module-grid">
                     {g.items.map(([k, label, hint]) => {
                       const soon = MODULE_SOON.includes(k);
-                      // V20-310: the 26 Days sections only switch when 26 Days is on.
-                      const parentOff = k.startsWith('d26') && !draft.modules.days26;
+                      // V20-310 / V20-311: a section's switches only work when its section switch is on.
+                      const parentOff = !!g.master && !draft.modules[g.master];
                       return (
                         <ModuleSwitch
                           key={k}
                           label={label}
-                          hint={soon ? 'Coming soon.' : parentOff ? 'Turn on 26 Days first.' : hint}
+                          hint={soon ? 'Coming soon.' : parentOff ? `Turn on ${g.title} first.` : hint}
                           on={!soon && !parentOff && draft.modules[k]}
                           disabled={soon || parentOff}
                           onChange={(v) => saveNow((d) => ({ ...d, modules: { ...d.modules, [k]: v } }))}
@@ -911,7 +926,7 @@ function BgRow({ mode, current, colour, palette, slots, onPick, onColour, onImag
 
 /** V20-130: one colour as a tile: a swatch shaped like the background tiles (tap to pick), its name, and the hex code. */
 /** V20-158 (Dan, Nov 13): the module sections, two to a row. */
-const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }[] = [
+const MODULE_GROUPS: { title: string; master?: keyof Modules; items: [keyof Modules, string, string][] }[] = [
   {
     title: 'L4UNCH P4GE essentials',
     items: [
@@ -924,8 +939,8 @@ const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }
   {
     // V20-310 (Dan, Nov 17): the new layout. 26 Days is its own set: the page (quote + goal on top) and its sections.
     title: '26 Days',
+    master: 'days26',
     items: [
-      ['days26', '26 Days', 'The 26 Days page: your quote and goal on top, the sections below.'],
       ['d26Nonneg', 'Non-negotiables', 'The daily checklist.'],
       ['d26Logging', 'Logging', 'H2O, food, activity, rest and vices.'],
       ['d26Rituals', 'Rituals', 'Rise to Shine, Gratitude, Recover.'],
@@ -965,6 +980,7 @@ const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }
   },
   {
     title: 'Records',
+    master: 'records',
     items: [
       ['recExpenses', 'Expenses', 'What was actually paid.'],
       ['recIncome', 'Income', 'Money in, and the year by month.'],

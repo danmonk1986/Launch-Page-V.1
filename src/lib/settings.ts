@@ -121,16 +121,17 @@ export const DEFAULT_MODULES: Modules = {
   budget: false, trips: false,
   invoice: false, records: false, crm: false, marketing: false, planner: false, projects: false, kb: true,
   d26Nonneg: true, d26Logging: true, d26Rituals: true, d26Summary: true,
-  recExpenses: false, recIncome: false, recInvoices: false, recDraws: false
+  recExpenses: true, recIncome: true, recInvoices: false, recDraws: true
 };
-/** V20-310: an older account's Records switch carries over to Expenses, Income and Draws. */
+/** V20-310: an older account's Records switch carries over to Expenses, Income and Draws. V20-311: Records is the
+ *  section switch again; its views default on. */
 export const withModules = (m?: Partial<Modules> | null): Modules => {
   const x = { ...DEFAULT_MODULES, ...(m ?? {}) };
   if (m && m.recExpenses === undefined && m.records) Object.assign(x, { recExpenses: true, recIncome: true, recDraws: true });
   return x;
 };
 /** Any bookkeeping view on. */
-export const booksOn = (m: Modules) => m.recExpenses || m.recIncome || m.recDraws;
+export const booksOn = (m: Modules) => m.records && (m.recExpenses || m.recIncome || m.recDraws);
 /** Not built yet: shown greyed out with Coming soon. */
 export const MODULE_SOON: (keyof Modules)[] = ['goals', 'milestones', 'trips', 'crm', 'marketing', 'projects', 'recInvoices'];
 

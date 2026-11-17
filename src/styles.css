@@ -3860,3 +3860,16 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .setup .welcome-link.setup-add { align-self: flex-start; font-size: 15px; }
 .setup .setup-test { align-self: center; display: inline-flex; align-items: center; gap: 8px; }
 .setup .setup-test:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* V20-311 (Dan, Nov 17): every switch in the Z4PTOR style, Colour 1: an outlined pill with a solid knob (off: a ring
+   on the left; on: a filled knob on the right). Module boxes about 85% of their old height (~74 px → ~63 px). */
+.app .module-switch { width: 44px; height: 24px; border: 2px solid var(--accent-purple); background: transparent; }
+.app .module-switch > span { top: 2px; left: 2px; width: 16px; height: 16px; box-sizing: border-box; background: transparent; border: 2px solid var(--accent-purple); }
+.app .module-switch.is-on { background: transparent; border-color: var(--accent-purple); }
+.app .module-switch.is-on > span { transform: translateX(20px); background: var(--accent-purple); border-color: var(--accent-purple); }
+.app .module-switch:disabled { opacity: 0.45; }
+.module-row { padding: 10px 14px; align-items: center; }
+.module-row .module-name { font-size: 15px; }
+.module-row .field-hint { font-size: 13px; line-height: 1.35; }
+.module-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.module-head .settings-section { margin: 0; }
