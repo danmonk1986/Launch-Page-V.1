@@ -1851,7 +1851,17 @@ export default function App() {
   if (session && settingsLoaded && setupStepFor(settings.account)) {
     return (
       <div className="app app-light" style={theme}>
-        <Setup settings={settings} email={session.user.email ?? ''} onSave={handleSave} onSignOut={() => void signOutClean()} />
+        <Setup
+          settings={settings}
+          email={session.user.email ?? ''}
+          projects={projects}
+          onSave={handleSave}
+          onSignOut={() => void signOutClean()}
+          onSaveRoutine={handleSaveRoutine}
+          onSaveRocket={async (r) => void (await rocketOps.save(r))}
+          onSaveLaunch={async (l) => void (await launchOps.save(l))}
+          onTest={(l) => setReminder(l)}
+        />
       </div>
     );
   }
