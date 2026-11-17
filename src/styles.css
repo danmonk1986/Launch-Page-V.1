@@ -3808,10 +3808,10 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .choice.choice-hex input { width: 9ch; border: 0; background: transparent; font: 500 14px 'Roboto Mono', monospace; color: inherit; outline: none; padding: 0; text-transform: uppercase; }
 .tile-custom { color: #120d2a; }
 
-/* V20-305 (Dan, Nov 17): routine editor step buttons are in-card size (36 px), like Steps / Links. */
-.step-row { grid-template-columns: 150px minmax(0, 1fr) 36px 36px; }
-.step-rows.is-resort .step-row { grid-template-columns: 36px 150px minmax(0, 1fr) 36px 36px; }
-.step-row .quick-btn { width: 36px; height: 36px; }
+/* V20-305 / V20-306 (Dan, Nov 17): routine editor step buttons are in-card size: 30 px, the same as the ✓ ··· on task rows. */
+.step-row { grid-template-columns: 150px minmax(0, 1fr) 30px 30px; }
+.step-rows.is-resort .step-row { grid-template-columns: 36px 150px minmax(0, 1fr) 30px 30px; }
+.app .step-row .quick-btn { width: 30px; height: 30px; min-width: 30px; min-height: 30px; }
 @media (max-width: 520px) {
-  .step-row { grid-template-columns: 100px minmax(0, 1fr) 36px 36px; gap: 6px; }
+  .step-row { grid-template-columns: 100px minmax(0, 1fr) 30px 30px; gap: 6px; }
 }
