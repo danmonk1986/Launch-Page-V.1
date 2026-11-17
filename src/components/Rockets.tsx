@@ -1962,10 +1962,11 @@ function TimedForm({
       {/* V20-076 (Dan, Nov 12): Logs when checked off is gone; What says what kind of time it is. Every What
           logs Productivity; V20-183: the project's Log Productivity switch decides (PERSONAL included). Launches already set to H2O, Food, Vice,
           Activity or Break keep it. */}
+      {/* V20-315 (Dan, Nov 17): Rocket · Arcade · Marimba · None (Bell gone, no help text). Launches already on Bell keep it. */}
       <fieldset className="field">
         <legend>Alarm</legend>
         <div className="choice-row tone-row" role="radiogroup" aria-label="Alarm sound">
-          {TONES.map((t) => (
+          {TONES.filter((t) => t.id !== 'bell').map((t) => (
             <label key={t.id} className="choice">
               <input
                 type="radio"
@@ -1975,15 +1976,44 @@ function TimedForm({
                   setD((x) => ({ ...x, sound: true, tone: t.id }));
                   chime('start', t.id);
                 }}
-                // Tap the picked sound again to turn the alarm off (no None button).
-                onClick={() => d.sound && (isTone(d.tone) ? d.tone : 'marimba') === t.id && set('sound', false)}
               />
               <span>{t.label}</span>
             </label>
           ))}
+          <label className="choice">
+            <input type="radio" name="tone" checked={!d.sound} onChange={() => set('sound', false)} />
+            <span>None</span>
+          </label>
         </div>
-        <p className="field-hint">Tap a sound to hear it and pick it; tap it again for no sound. It plays at launch time, and twice when the time allotted runs out.</p>
       </fieldset>
+
+      {/* V20-315 (Dan, Nov 17): Date above Repeats. */}
+      {d.repeat === 'once' && (
+        <fieldset className="field">
+          <legend>Date</legend>
+          {/* Once on a few picked dates: + adds another (Oct 20). */}
+          <div className="once-dates">
+            <div className="once-date">
+              <input type="date" value={d.onDate ?? ''} onChange={(e) => set('onDate', e.target.value || null)} aria-label="Date" />
+              <button type="button" className="quick-btn quick-skip" aria-label="Add another date" title="Add another date" onClick={() => set('moreDates', [...(d.moreDates ?? []), nextFree(d)])}>
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+            </div>
+            {(d.moreDates ?? []).map((x, i) => (
+              <div key={i} className="once-date">
+                <input type="date" value={x} onChange={(e) => set('moreDates', (d.moreDates ?? []).map((y, j) => (j === i ? e.target.value : y)))} aria-label={`Date ${i + 2}`} />
+                <button type="button" className="quick-btn quick-skip" aria-label={`Remove date ${i + 2}`} title="Remove this date" onClick={() => set('moreDates', (d.moreDates ?? []).filter((_, j) => j !== i))}>
+                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </fieldset>
+      )}
 
       <fieldset className="field">
         <legend>Repeats</legend>
@@ -2058,33 +2088,6 @@ function TimedForm({
           </div>
         </fieldset>
       )}
-      {d.repeat === 'once' && (
-        <fieldset className="field">
-          <legend>Date</legend>
-          {/* Once on a few picked dates: + adds another (Oct 20). */}
-          <div className="once-dates">
-            <div className="once-date">
-              <input type="date" value={d.onDate ?? ''} onChange={(e) => set('onDate', e.target.value || null)} aria-label="Date" />
-              <button type="button" className="icon-btn tool-btn" aria-label="Add another date" title="Add another date" onClick={() => set('moreDates', [...(d.moreDates ?? []), nextFree(d)])}>
-                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-              </button>
-            </div>
-            {(d.moreDates ?? []).map((x, i) => (
-              <div key={i} className="once-date">
-                <input type="date" value={x} onChange={(e) => set('moreDates', (d.moreDates ?? []).map((y, j) => (j === i ? e.target.value : y)))} aria-label={`Date ${i + 2}`} />
-                <button type="button" className="icon-btn tool-btn" aria-label={`Remove date ${i + 2}`} title="Remove this date" onClick={() => set('moreDates', (d.moreDates ?? []).filter((_, j) => j !== i))}>
-                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-                    <path d="M6 6l12 12M18 6L6 18" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
-        </fieldset>
-      )}
-
       <fieldset className="field">
         <legend>Rockets to launch</legend>
         <RocketPicker options={rocketOptions(rockets)} picked={d.urls} onChange={(urls) => set('urls', urls)} onAddNew={onAddRocket} />
