@@ -317,37 +317,30 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                 <div key={g.title} className="module-group">
                   {gi === 0 ? (
                     <SectionHead title={g.title} onRestore={() => saveNow((d) => ({ ...d, modules: DEFAULT_MODULES }))} />
-                  ) : g.master ? (
-                    // V20-311 (Dan, Nov 17): 26 Days and Records switch on / off as a whole, beside the section title.
-                    <div className="module-head settings-section-gap">
-                      <h3 className="timed-title settings-section">{g.title}</h3>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={draft.modules[g.master]}
-                        aria-label={g.title}
-                        className={`module-switch${draft.modules[g.master] ? ' is-on' : ''}`}
-                        onClick={() => saveNow((d) => ({ ...d, modules: { ...d.modules, [g.master!]: !d.modules[g.master!] } }))}
-                      >
-                        <span />
-                      </button>
-                    </div>
                   ) : (
                     <h3 className="timed-title settings-section settings-section-gap">{g.title}</h3>
                   )}
                   <div className="module-grid">
                     {g.items.map(([k, label, hint]) => {
                       const soon = MODULE_SOON.includes(k);
-                      // V20-310 / V20-311: a section's switches only work when its section switch is on.
-                      const parentOff = !!g.master && !draft.modules[g.master];
+                      // V20-312 (Dan, Nov 17): no section switch. Turning on any box in 26 Days or Records turns the
+                      // section on (its page shows), with just that box on; turning the last one off turns it off.
                       return (
                         <ModuleSwitch
                           key={k}
                           label={label}
-                          hint={soon ? 'Coming soon.' : parentOff ? `Turn on ${g.title} first.` : hint}
-                          on={!soon && !parentOff && draft.modules[k]}
-                          disabled={soon || parentOff}
-                          onChange={(v) => saveNow((d) => ({ ...d, modules: { ...d.modules, [k]: v } }))}
+                          hint={soon ? 'Coming soon.' : hint}
+                          on={!soon && (!g.master || draft.modules[g.master]) && draft.modules[k]}
+                          disabled={soon}
+                          onChange={(v) =>
+                            saveNow((d) => {
+                              const m = { ...d.modules };
+                              if (g.master && v && !m[g.master]) for (const [x] of g.items) m[x] = false;
+                              m[k] = v;
+                              if (g.master) m[g.master] = g.items.some(([x]) => !MODULE_SOON.includes(x) && m[x]);
+                              return { ...d, modules: m };
+                            })
+                          }
                         />
                       );
                     })}
