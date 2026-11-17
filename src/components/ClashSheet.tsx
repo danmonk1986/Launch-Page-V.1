@@ -61,12 +61,13 @@ export function ClashSheet({
               <button
                 type="button"
                 className="btn btn-quiet"
-                title={`One block: ${c.launch.minutes + clash.l.minutes} min${existing ? '; this launch is removed' : ''}`}
+                title={`One block: ${Math.max(c.launch.minutes, clash.l.minutes)} min${existing ? '; this launch is removed' : ''}`}
                 onClick={async () => {
-                  // V20-283 (Dan, Nov 16): the joined block starts at the earlier of the two (9:30 + 10:15 → 9:30), and runs both lengths.
+                  // V20-283 (Dan, Nov 16): the joined block starts at the earlier of the two (9:30 + 10:15 → 9:30).
+                  // V20-285 (Dan, Nov 17, guardrails decision): merging doesn't extend the time; the longer length wins. Edit the block after if it needs more.
                   const mine = toMinutes(clash.l.atTime);
                   const startAt = mine < c.start ? clash.l.atTime : c.launch.atTime;
-                  await onSave({ ...c.launch, atTime: startAt, onceTime: null, title: mergedTitle(c.launch.title, clash.l.title), minutes: c.launch.minutes + clash.l.minutes });
+                  await onSave({ ...c.launch, atTime: startAt, onceTime: null, title: mergedTitle(c.launch.title, clash.l.title), minutes: Math.max(c.launch.minutes, clash.l.minutes) });
                   if (existing) await onDelete(clash.l.id);
                   onClose(true);
                 }}
