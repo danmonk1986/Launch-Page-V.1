@@ -1,7 +1,7 @@
 import { projectWhats, whatList } from '../lib/whats';
 import { StatsPanel } from './Stats';
 import type { Project } from '../lib/projects';
-import { Fragment, useContext, useEffect, useLayoutEffect, useState, useId, useRef } from 'react';
+import { Fragment, useContext, useEffect, useLayoutEffect, useState, useId, useMemo, useRef } from 'react';
 import { HiddenPicksContext, launchListFor, pickKey as hiddenKey } from '../lib/hiddenPicks';
 import { FormActions, Sheet } from './Sheet';
 import {
@@ -136,9 +136,15 @@ const EMPTY: Record<TimedView, string> = {
 };
 
 /** Typing a link starts from https://www. so you only add the rest. */
-const PREFIX = 'https://www.';
-const withPrefix = (v: string) => (v.trim() ? v : PREFIX);
 const isBarePrefix = (v: string) => /^https?:\/\/(www\.)?$/i.test(v.trim());
+/** V20-301: a typed or pasted link made whole: a doubled start ("https://www.https://…") loses the extra, and a bare
+ *  address ("app.claude.com") gets https://. App and card links pass as they are. */
+export const cleanLink = (v: string) => {
+  let u = v.trim().replace(/^https?:\/\/(www\.)?(?=[a-z][a-z0-9+.-]*:)/i, '');
+  if (!u || isBarePrefix(u)) return '';
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(u) && !u.startsWith('/')) u = `https://${u}`;
+  return u;
+};
 
 export const BLOCKED_HELP =
   'Your browser blocked some tabs. Allow pop-ups for this site, then launch again.';
@@ -1407,6 +1413,13 @@ function TileForm({
   // V20-300 (Dan, Nov 17): several links, added like steps (+); old rockets bring their one link.
   const [links0, setLinks] = useState<string[]>(() => rocketUrls(tile ?? { url: '' }));
   const [linkDraft, setLinkDraft] = useState('');
+  // V20-301: the links you already have, offered on every line.
+  const linkSuggestions = useMemo(() => {
+    const out: { url: string; name: string }[] = [];
+    for (const t of tiles) for (const u of rocketUrls(t)) if (u && !out.some((o) => o.url === u)) out.push({ url: u, name: t.name });
+    for (const o of [...ROCKET_PRESETS, ...APP_LINKS, ...CARD_LINKS]) if (o.url && !out.some((x) => x.url === o.url)) out.push({ url: o.url, name: o.name });
+    return out;
+  }, [tiles]);
   const [hexDraft, setHexDraft] = useState(() => (tile && isHexColor(tile.color) ? tile.color : ''));
   const formId = useId();
   return (
@@ -1415,7 +1428,7 @@ function TileForm({
         e.preventDefault();
         if (!d.name.trim()) return;
         // V20-300: every link; the one still being typed counts too.
-        const links = [...links0, linkDraft].map((u) => u.trim()).filter((u) => u && !isBarePrefix(u));
+        const links = [...links0, linkDraft].map(cleanLink).filter((u, i, all) => u && all.indexOf(u) === i);
         await onSave({ ...d, name: d.name.trim(), note: d.note.trim(), url: links[0] ?? '', urls: links, color: hexDraft && isHexColor(hexDraft) ? (hexDraft as TileColor) : d.color }, tile ? position : null);
       }}
     >
@@ -1445,7 +1458,7 @@ function TileForm({
           placeholder="New, or pick from the list"
         />
       </label>
-      <LinksField links={links0} draft={linkDraft} onDraft={setLinkDraft} onChange={setLinks} />
+      <LinksField links={links0} draft={linkDraft} onDraft={setLinkDraft} onChange={setLinks} suggest={linkSuggestions} />
       <label className="field">
         <span>
           Note under the name <span className="char-count">{d.note.length}/{NOTE_MAX}</span>
@@ -1495,7 +1508,7 @@ function TileForm({
       </fieldset>
       <label className="choice choice-wide">
         <input type="checkbox" checked={!!d.hidden} onChange={(e) => setD((x) => ({ ...x, hidden: e.target.checked }))} />
-        <span>Hide from L4UNCH P4GE (keeps it for timed launches and rituals; bring it back from + Add rocket)</span>
+        <span title="Keeps it for timed launches and rituals; bring it back from + Add rocket">Hide from list, but save for later</span>
       </label>
       <FormActions formId={formId} saveDisabled={!d.name.trim()} onDelete={tile ? () => onDelete(tile.id) : undefined} deleteLabel={tile?.name} />
     </form>
@@ -1540,10 +1553,13 @@ function nextFree(l: Launch) {
 /** V20-277 / V20-280 (Dan, Nov 16): the steps of a block, one numbered list. The last line is the next step:
  *  type it and it counts (Enter or + just starts the next line); a blank line never saves. × takes one out. */
 /** V20-300 (Dan, Nov 17): a rocket's links, added one under another with + (like steps). The one being typed saves too. */
-function LinksField({ links, draft, onDraft, onChange }: { links: string[]; draft: string; onDraft: (v: string) => void; onChange: (v: string[]) => void }) {
+function LinksField({ links, draft, onDraft, onChange, suggest }: { links: string[]; draft: string; onDraft: (v: string) => void; onChange: (v: string[]) => void; suggest: { url: string; name: string }[] }) {
+  // V20-301 (Dan, Nov 17): every line suggests the links you already have (pick one or keep typing); plain text
+  // fields, so the browser never blocks Save with "Please enter a URL"; each link is cleaned up as it's added.
+  const listId = useId();
   const add = () => {
-    const x = draft.trim();
-    if (!x || isBarePrefix(x)) return;
+    const x = cleanLink(draft);
+    if (!x) return;
     onChange([...links, x]);
     onDraft('');
   };
@@ -1553,7 +1569,7 @@ function LinksField({ links, draft, onDraft, onChange }: { links: string[]; draf
       <ol className="lstep-list">
         {links.map((x, i) => (
           <li key={i}>
-            <input type="url" inputMode="url" value={x} aria-label={`Link ${i + 1}`} onChange={(e) => onChange(links.map((y, j) => (j === i ? e.target.value : y)))} onBlur={() => !links[i].trim() && onChange(links.filter((_, j) => j !== i))} />
+            <input type="text" inputMode="url" list={listId} value={x} aria-label={`Link ${i + 1}`} onChange={(e) => onChange(links.map((y, j) => (j === i ? e.target.value : y)))} onBlur={() => (cleanLink(links[i]) ? onChange(links.map((y, j) => (j === i ? cleanLink(y) : y))) : onChange(links.filter((_, j) => j !== i)))} />
             <button type="button" className="quick-btn quick-skip" aria-label={`Remove link ${i + 1}`} title="Remove this link" onClick={() => onChange(links.filter((_, j) => j !== i))}>
               <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                 <path d="M6 6l12 12M18 6L6 18" />
@@ -1563,13 +1579,12 @@ function LinksField({ links, draft, onDraft, onChange }: { links: string[]; draf
         ))}
         <li>
           <input
-            type="url"
+            type="text"
             inputMode="url"
+            list={listId}
             value={draft}
             placeholder={links.length ? 'Next link' : 'https://www.example.com'}
             aria-label="Next link"
-            onFocus={() => onDraft(withPrefix(draft))}
-            onBlur={() => isBarePrefix(draft) && onDraft('')}
             onChange={(e) => onDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -1578,13 +1593,18 @@ function LinksField({ links, draft, onDraft, onChange }: { links: string[]; draf
               }
             }}
           />
-          <button type="button" className="quick-btn quick-skip" aria-label="Add another link" title="Add another link" disabled={!draft.trim() || isBarePrefix(draft)} onClick={add}>
+          <button type="button" className="quick-btn quick-skip" aria-label="Add another link" title="Add another link" disabled={!cleanLink(draft)} onClick={add}>
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
               <path d="M12 5v14M5 12h14" />
             </svg>
           </button>
         </li>
       </ol>
+      <datalist id={listId}>
+        {suggest.filter((o) => !links.includes(o.url)).map((o) => (
+          <option key={o.url} value={o.url} label={o.name} />
+        ))}
+      </datalist>
     </div>
   );
 }
