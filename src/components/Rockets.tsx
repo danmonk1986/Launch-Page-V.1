@@ -1667,6 +1667,20 @@ function StepsField({ steps, draft, onDraft, onChange }: { steps: string[]; draf
   );
 }
 
+/** V20-314: the next half hour from now ("HH:MM"); 23:30 at the latest. */
+function nextHalfHour(now = new Date()) {
+  const m = Math.min(23 * 60 + 30, Math.ceil((now.getHours() * 60 + now.getMinutes() + 1) / 30) * 30);
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
+/** V20-314: a one-time launch set for today (or earlier) at a time that's already gone. */
+function passedToday(l: Launch, now = new Date()) {
+  const today = isoDate(now);
+  if (!l.onDate || l.onDate > today) return false;
+  if (l.onDate < today) return true;
+  const [h, m] = l.atTime.split(':').map(Number);
+  return h * 60 + m <= now.getHours() * 60 + now.getMinutes();
+}
+
 function TimedForm({
   launch,
   today,
@@ -1703,7 +1717,8 @@ function TimedForm({
       (launch && launch.repeat === 'once' ? { ...launch, onDate: onceDate(launch.onDate) } : launch) ?? {
         id: crypto.randomUUID(),
         title: '',
-        atTime: '10:00',
+        // V20-314 (Dan, Nov 17): a new launch starts at the next half hour, never at a time that's already gone.
+        atTime: nextHalfHour(),
         // V20-179 (Nov 13): a new launch is Once, today, by default.
         repeat: 'once',
         weekdays: [1, 2, 3, 4, 5],
@@ -1722,6 +1737,7 @@ function TimedForm({
       }
   );
   const set = <K extends keyof Launch>(k: K, v: Launch[K]) => setD((x) => ({ ...x, [k]: v }));
+  const [pastErr, setPastErr] = useState(false);
   // What = a category (Work Block #1…, or any you type, which joins the list once saved) and a
   // description. Saved as one title, "Category - Description", so lists read the same (Oct 20).
   // V20-078 (Nov 12): a NEW launch that starts filled in (from a task, a routine step, rocket + in Complete)
@@ -1765,6 +1781,12 @@ function TimedForm({
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.title.trim()) return;
+        // V20-314 (Dan, Nov 17): a NEW one-time launch can't be set to a time that's already passed today (it would
+        // go straight to Missed / "has passed"). Editing an old one still asks Started then / Log instead.
+        if (!launch && d.repeat === 'once' && passedToday(d)) {
+          setPastErr(true);
+          return;
+        }
         const more = d.repeat === 'once' ? [...new Set((d.moreDates ?? []).filter((x) => x && x !== d.onDate))].sort() : [];
         // V20-280: the step being typed counts without Enter; blank steps never save.
         const steps = [...(d.steps ?? []), stepDraft].map((x) => x.trim()).filter(Boolean);
@@ -1898,7 +1920,25 @@ function TimedForm({
       <div className="time-grid">
         <label className="field">
           <span>{d.repeat === 'hourly' ? 'From' : 'Time'}</span>
-          <input type="time" required value={d.atTime} onChange={(e) => set('atTime', e.target.value || '10:00')} />
+          <input
+            type="time"
+            required
+            value={d.atTime}
+            aria-invalid={pastErr && passedToday(d)}
+            onChange={(e) => {
+              setPastErr(false);
+              set('atTime', e.target.value || nextHalfHour());
+            }}
+          />
+          {pastErr && passedToday(d) && (
+            <span className="field-error" role="alert">
+              {formatMinutes(toMinutes(d.atTime))} has passed today. Pick a later time, or{' '}
+              <button type="button" className="link-btn" onClick={() => { setPastErr(false); set('onDate', isoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1))); }}>
+                tomorrow
+              </button>
+              .
+            </span>
+          )}
         </label>
         <label className="field">
           <span>Time allotted (minutes)</span>

@@ -105,10 +105,12 @@ export function Setup({
   const [repeat, setRepeat] = useState<'once' | 'weekly'>('once');
   const [onDate, setOnDate] = useState(isoDate(new Date()));
 
+  // V20-314: a one-time launch can't start at a time that's already gone today.
+  const passed = repeat === 'once' && onDate <= isoDate(new Date()) && (onDate < isoDate(new Date()) || hm(atTime) <= new Date().getHours() * 60 + new Date().getMinutes());
   const allLinks = () => [...links, linkDraft].map(cleanLink).filter((u, i, all) => u && all.indexOf(u) === i);
   const okBlocks = blocks.filter((b) => b.label.trim());
   const ready =
-    step === 1 ? !!name.trim() && age !== null : step === 2 ? !!rName.trim() && !!wake && !!bed : step === 3 ? !!kName.trim() && allLinks().length > 0 : !!what.trim() && !!atTime && !!onDate;
+    step === 1 ? !!name.trim() && age !== null : step === 2 ? !!rName.trim() && !!wake && !!bed : step === 3 ? !!kName.trim() && allLinks().length > 0 : !!what.trim() && !!atTime && !!onDate && !passed;
 
   const launchOf = (): Launch => ({
     id: launchId,
@@ -427,6 +429,11 @@ export function Setup({
                       <input required type="date" value={onDate} onChange={(e) => setOnDate(e.target.value)} />
                     </label>
                   </div>
+                  {passed && (
+                    <p className="field-error" role="alert">
+                      That time has passed today. Pick a later time or another date.
+                    </p>
+                  )}
                   <p className="setup-fine">Rocket: {kName.trim() || 'your rocket'} · {allLinks().length} link{allLinks().length === 1 ? '' : 's'}</p>
                   <button
                     type="button"

@@ -3884,3 +3884,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .setup { padding-bottom: 200px; }
   .setup .setup-actions { bottom: 96px; }
 }
+
+/* V20-314: a field's problem, said under it (Colour 1 box style to come with V20-302). */
+.field-error { display: block; margin-top: 4px; font-size: 13px; font-weight: 600; color: #e2675c; }
+.field-error .link-btn { padding: 0; min-height: 0; font: inherit; color: inherit; text-decoration: underline; }
