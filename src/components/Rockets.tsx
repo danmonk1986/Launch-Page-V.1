@@ -22,6 +22,10 @@ import {
   timeFor,
   type LaunchLog,
   openTabs,
+  isHexColor,
+  rocketUrls,
+  tileClass,
+  tileStyle,
   type Launch,
   type Rocket,
   type Repeat,
@@ -627,7 +631,7 @@ export function RocketsPanel(p: Props) {
   }, [view, showAllTimed]);
 
   function launchAll() {
-    const urls = p.rockets.filter((l) => !l.hidden).map((l) => l.url).filter(Boolean);
+    const urls = p.rockets.filter((l) => !l.hidden).flatMap((l) => rocketUrls(l)).filter(Boolean);
     if (!urls.length) return p.onStatus('Add links to your tiles first.');
     const blocked = openTabs(urls);
     setLaunched({ count: urls.length, blocked });
@@ -758,7 +762,7 @@ export function RocketsPanel(p: Props) {
                   setTileOpen(true);
                 }}
               >
-                <span className={`tile-badge tile-${l.color}`} aria-hidden="true">
+                <span className={`tile-badge ${tileClass(l.color)}`} style={tileStyle(l.color)} aria-hidden="true">
                   {l.name.charAt(0)}
                 </span>
                 <span className="tile-words">
@@ -774,10 +778,17 @@ export function RocketsPanel(p: Props) {
                 rel="noopener noreferrer"
                 onClick={(e) => {
                   // Card rockets open a LaunchPage page here, not a new tab.
-                  if (openCard(l.url)) e.preventDefault();
+                  if (openCard(l.url)) return e.preventDefault();
+                  // V20-300: a rocket with several links opens them all.
+                  const all = rocketUrls(l);
+                  if (all.length > 1) {
+                    e.preventDefault();
+                    const blocked = openTabs(all);
+                    if (blocked) p.onStatus(BLOCKED_HELP);
+                  }
                 }}
               >
-                <span className={`tile-badge tile-${l.color}`} aria-hidden="true">
+                <span className={`tile-badge ${tileClass(l.color)}`} style={tileStyle(l.color)} aria-hidden="true">
                   {l.name.charAt(0)}
                 </span>
                 <span className="tile-words">
@@ -1393,13 +1404,19 @@ function TileForm({
   const [position, setPosition] = useState(from);
   const set = <K extends keyof Rocket>(k: K, v: Rocket[K]) => setD((x) => ({ ...x, [k]: v }));
 
+  // V20-300 (Dan, Nov 17): several links, added like steps (+); old rockets bring their one link.
+  const [links0, setLinks] = useState<string[]>(() => rocketUrls(tile ?? { url: '' }));
+  const [linkDraft, setLinkDraft] = useState('');
+  const [hexDraft, setHexDraft] = useState(() => (tile && isHexColor(tile.color) ? tile.color : ''));
   const formId = useId();
   return (
     <form id={formId}
       onSubmit={async (e) => {
         e.preventDefault();
         if (!d.name.trim()) return;
-        await onSave({ ...d, name: d.name.trim(), note: d.note.trim(), url: isBarePrefix(d.url) ? '' : d.url.trim() }, tile ? position : null);
+        // V20-300: every link; the one still being typed counts too.
+        const links = [...links0, linkDraft].map((u) => u.trim()).filter((u) => u && !isBarePrefix(u));
+        await onSave({ ...d, name: d.name.trim(), note: d.note.trim(), url: links[0] ?? '', urls: links, color: hexDraft && isHexColor(hexDraft) ? (hexDraft as TileColor) : d.color }, tile ? position : null);
       }}
     >
       <label className="field">
@@ -1418,24 +1435,17 @@ function TileForm({
           onType={(name) => setD((x) => ({ ...x, name }))}
           onPick={(o) => {
             const back = o.id ? tiles.find((t) => t.id === o.id) : undefined;
-            if (back) return setD({ ...back, hidden: false });
+            if (back) {
+              setLinks(rocketUrls(back));
+              return setD({ ...back, hidden: false });
+            }
+            setLinks(o.url ? [o.url] : []);
             setD((x) => ({ ...x, name: o.name, note: o.note, url: o.url, color: o.color }));
           }}
           placeholder="New, or pick from the list"
         />
       </label>
-      <label className="field">
-        <span>Link</span>
-        <input
-          type="url"
-          inputMode="url"
-          value={d.url}
-          onFocus={() => set('url', withPrefix(d.url))}
-          onBlur={() => isBarePrefix(d.url) && set('url', '')}
-          onChange={(e) => set('url', e.target.value)}
-          placeholder="https://www.example.com"
-        />
-      </label>
+      <LinksField links={links0} draft={linkDraft} onDraft={setLinkDraft} onChange={setLinks} />
       <label className="field">
         <span>
           Note under the name <span className="char-count">{d.note.length}/{NOTE_MAX}</span>
@@ -1458,13 +1468,29 @@ function TileForm({
       <fieldset className="field">
         <legend>Colour</legend>
         <div className="choice-row">
+          {/* V20-300 (Dan, Nov 17): just the colours, no names, plus a hex code of your own. */}
           {COLORS.map((c) => (
-            <label key={c} className="choice">
-              <input type="radio" name="tile-color" checked={d.color === c} onChange={() => set('color', c)} />
+            <label key={c} className="choice choice-swatch" title={c === 'teal' ? 'Teal' : c === 'purple' ? 'Purple' : c === 'green' ? 'Green' : 'Pink'}>
+              <input type="radio" name="tile-color" checked={d.color === c && !isHexColor(hexDraft)} onChange={() => { setHexDraft(''); set('color', c); }} />
               <span className={`swatch-dot tile-${c}`} aria-hidden="true" />
-              <span>{c === 'teal' ? 'Teal' : c === 'purple' ? 'Purple' : c === 'green' ? 'Green' : 'Pink'}</span>
             </label>
           ))}
+          <label className="choice choice-hex">
+            <span className="swatch-dot" style={{ background: isHexColor(hexDraft) ? hexDraft : 'transparent', border: isHexColor(hexDraft) ? 0 : '2px dashed var(--accent-purple)' }} aria-hidden="true" />
+            <input
+              value={hexDraft}
+              maxLength={7}
+              placeholder="#RRGGBB"
+              aria-label="Hex code"
+              spellCheck={false}
+              onChange={(e) => {
+                const v = e.target.value.trim();
+                const h = v && !v.startsWith('#') ? `#${v}` : v;
+                setHexDraft(h);
+                if (isHexColor(h)) set('color', h as TileColor);
+              }}
+            />
+          </label>
         </div>
       </fieldset>
       <label className="choice choice-wide">
@@ -1513,6 +1539,56 @@ function nextFree(l: Launch) {
 /** V20-277 (Dan, Nov 16): the steps of a block. Type one, Enter (or +) adds it and the box is ready for the next; × takes one out. */
 /** V20-277 / V20-280 (Dan, Nov 16): the steps of a block, one numbered list. The last line is the next step:
  *  type it and it counts (Enter or + just starts the next line); a blank line never saves. × takes one out. */
+/** V20-300 (Dan, Nov 17): a rocket's links, added one under another with + (like steps). The one being typed saves too. */
+function LinksField({ links, draft, onDraft, onChange }: { links: string[]; draft: string; onDraft: (v: string) => void; onChange: (v: string[]) => void }) {
+  const add = () => {
+    const x = draft.trim();
+    if (!x || isBarePrefix(x)) return;
+    onChange([...links, x]);
+    onDraft('');
+  };
+  return (
+    <div className="field steps-field links-field">
+      <span>Links</span>
+      <ol className="lstep-list">
+        {links.map((x, i) => (
+          <li key={i}>
+            <input type="url" inputMode="url" value={x} aria-label={`Link ${i + 1}`} onChange={(e) => onChange(links.map((y, j) => (j === i ? e.target.value : y)))} onBlur={() => !links[i].trim() && onChange(links.filter((_, j) => j !== i))} />
+            <button type="button" className="quick-btn quick-skip" aria-label={`Remove link ${i + 1}`} title="Remove this link" onClick={() => onChange(links.filter((_, j) => j !== i))}>
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          </li>
+        ))}
+        <li>
+          <input
+            type="url"
+            inputMode="url"
+            value={draft}
+            placeholder={links.length ? 'Next link' : 'https://www.example.com'}
+            aria-label="Next link"
+            onFocus={() => onDraft(withPrefix(draft))}
+            onBlur={() => isBarePrefix(draft) && onDraft('')}
+            onChange={(e) => onDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                add();
+              }
+            }}
+          />
+          <button type="button" className="quick-btn quick-skip" aria-label="Add another link" title="Add another link" disabled={!draft.trim() || isBarePrefix(draft)} onClick={add}>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        </li>
+      </ol>
+    </div>
+  );
+}
+
 function StepsField({ steps, draft, onDraft, onChange }: { steps: string[]; draft: string; onDraft: (v: string) => void; onChange: (v: string[]) => void }) {
   const add = () => {
     const x = draft.trim();
@@ -2260,7 +2336,7 @@ function NameCombo({ value, options, onType, onPick, placeholder, required = tru
           {shown.map((o, i) => (
             <li key={`${o.kind}-${o.name}`} role="option" aria-selected={i === hi}>
               <button type="button" className={`combo-opt ${i === hi ? 'is-hi' : ''}`} onMouseEnter={() => setHi(i)} onClick={() => pick(o)}>
-                <span className={`combo-dot tile-${o.color}`} aria-hidden="true" />
+                <span className={`combo-dot ${tileClass(o.color)}`} style={tileStyle(o.color)} aria-hidden="true" />
                 <span className="combo-name">{o.name}</span>
                 <span className="combo-note">{o.note === o.kind ? '' : o.note}</span>
                 <span className="combo-kind">{o.kind}</span>

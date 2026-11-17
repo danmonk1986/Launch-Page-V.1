@@ -3801,3 +3801,9 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-298: Welcome's footer: Request beta test. */
 .welcome-foot { position: absolute; left: 0; right: 0; bottom: 24px; display: flex; justify-content: center; }
 .welcome-foot .welcome-link { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* V20-300 (Dan, Nov 17): rocket colours are just the dots (no names) plus a hex code; links list like steps. */
+.choice.choice-swatch { gap: 0; padding-right: 14px; }
+.choice.choice-hex { gap: 10px; }
+.choice.choice-hex input { width: 9ch; border: 0; background: transparent; font: 500 14px 'Roboto Mono', monospace; color: inherit; outline: none; padding: 0; text-transform: uppercase; }
+.tile-custom { color: #120d2a; }

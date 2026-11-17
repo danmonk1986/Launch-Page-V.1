@@ -2,13 +2,22 @@ import { isTone, type Tone } from './alerts';
 import { makeStore } from './store';
 import { toMinutes } from './routines';
 
-export type TileColor = 'teal' | 'purple' | 'green' | 'pink';
+export type TileColor = 'teal' | 'purple' | 'green' | 'pink' | `#${string}`;
+
+/** V20-300: a rocket's colour is one of the four, or your own hex code. */
+export const isHexColor = (c: string) => /^#[0-9a-f]{6}$/i.test(c);
+export const tileClass = (c: string) => (isHexColor(c) ? 'tile-custom' : `tile-${c}`);
+export const tileStyle = (c: string) => (isHexColor(c) ? { background: c } : undefined);
+/** V20-300: every link a rocket opens (old rockets have just url). */
+export const rocketUrls = (r: { url: string; urls?: string[] }) => (r.urls?.length ? r.urls : r.url ? [r.url] : []);
 
 export interface Rocket {
   id: string;
   name: string;
   note: string;
   url: string;
+  /** V20-300 (Dan, Nov 17): every link one block needs; one tap opens them all. url = the first one. Column from 0066. */
+  urls?: string[];
   color: TileColor;
   /** null = every routine. Linking tiles to routines comes later. */
   routineIds: string[] | null;
@@ -266,6 +275,7 @@ type RocketRow = {
   name: string;
   note: string;
   url: string;
+  urls?: string[] | null;
   color: TileColor;
   routine_ids: string[] | null;
   sort: number;
@@ -306,8 +316,8 @@ export const rocketStore = makeStore<Rocket, RocketRow>({
   orderBy: 'sort',
   script: 'supabase/migrations/0056_rename_launchers_to_rockets.sql',
   seed: seedRockets,
-  toRow: (l) => ({ id: l.id, name: l.name, note: l.note, url: l.url, color: l.color, routine_ids: l.routineIds, sort: l.sort, hidden: !!l.hidden }),
-  fromRow: (r) => ({ id: r.id, name: r.name, note: r.note, url: r.url, color: r.color, routineIds: r.routine_ids, sort: r.sort, hidden: !!r.hidden })
+  toRow: (l) => ({ id: l.id, name: l.name, note: l.note, url: rocketUrls(l)[0] ?? '', urls: rocketUrls(l), color: l.color, routine_ids: l.routineIds, sort: l.sort, hidden: !!l.hidden }),
+  fromRow: (r) => ({ id: r.id, name: r.name, note: r.note, url: r.url, urls: r.urls?.length ? r.urls : r.url ? [r.url] : [], color: r.color, routineIds: r.routine_ids, sort: r.sort, hidden: !!r.hidden })
 });
 
 export const launchStore = makeStore<Launch, LaunchRow>({

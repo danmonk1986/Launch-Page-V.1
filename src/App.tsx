@@ -1969,7 +1969,7 @@ export default function App() {
                   rituals={routines.filter((r) => r.kind === 'ritual').map((r) => ({ id: r.id, name: r.name }))}
                   projects={projects}
                   routineName={activeRoutine ? routineLabel(activeRoutine, shift) : null}
-                  rockets={rocketsFor(rockets, activeRoutine?.id ?? null).filter((r) => matchesSearch(headerQ, r.name, r.url))}
+                  rockets={rocketsFor(rockets, activeRoutine?.id ?? null).filter((r) => matchesSearch(headerQ, r.name, ...(r.urls?.length ? r.urls : [r.url])))}
                   routineId={activeRoutine?.id ?? null}
                   launches={headerQ ? launches.filter((l) => matchesSearch(headerQ, l.title)) : launches}
                   onSaveRocket={rocketOps.save}
