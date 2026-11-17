@@ -235,14 +235,17 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                   <input value={draft.displayName} autoComplete="name" onChange={(e) => set('displayName', e.target.value)} />
                 </label>
                 <div className="field">
-                  <label className="field-label" htmlFor="acct-alias">
-                    Alias
-                  </label>
+                  {/* V20-307 (Dan, Nov 17): the checkbox sits up on the label line, so every row is the same height. */}
+                  <div className="field-label-row">
+                    <label className="field-label" htmlFor="acct-alias">
+                      Alias
+                    </label>
+                    <label className="check-line">
+                      <input type="checkbox" checked={acct.hideRealName} onChange={(e) => setAcct('hideRealName', e.target.checked)} />
+                      <span>Hide my real name (show the alias instead)</span>
+                    </label>
+                  </div>
                   <input id="acct-alias" value={acct.alias} onChange={(e) => setAcct('alias', e.target.value)} />
-                  <label className="check-line">
-                    <input type="checkbox" checked={acct.hideRealName} onChange={(e) => setAcct('hideRealName', e.target.checked)} />
-                    <span>Hide my real name (show the alias instead)</span>
-                  </label>
                 </div>
                 <label className="field">
                   <span>Business name</span>
@@ -260,15 +263,17 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                   <input value={email ?? 'Not signed in'} readOnly aria-readonly="true" className="is-readonly" />
                 </label>
                 <div className="field">
-                  <label className="field-label" htmlFor="acct-backup">
-                    Backup email
-                  </label>
+                  {/* V20-118 (Dan, Nov 12): both emails sign in (and count for anything email-related later). V20-307: on the label line. */}
+                  <div className="field-label-row">
+                    <label className="field-label" htmlFor="acct-backup">
+                      Backup email
+                    </label>
+                    <label className="check-line">
+                      <input type="checkbox" checked={acct.linkEmails} disabled={!acct.backupEmail.trim()} onChange={(e) => setAcct('linkEmails', e.target.checked)} />
+                      <span>Sync both emails (sign in with either)</span>
+                    </label>
+                  </div>
                   <input id="acct-backup" type="email" value={acct.backupEmail} autoComplete="email" onChange={(e) => setAcct('backupEmail', e.target.value)} />
-                  {/* V20-118 (Dan, Nov 12): both emails sign in (and count for anything email-related later). */}
-                  <label className="check-line">
-                    <input type="checkbox" checked={acct.linkEmails} disabled={!acct.backupEmail.trim()} onChange={(e) => setAcct('linkEmails', e.target.checked)} />
-                    <span>Sync both emails (sign in with either)</span>
-                  </label>
                 </div>
                 <label className="field">
                   <span>Birthday</span>

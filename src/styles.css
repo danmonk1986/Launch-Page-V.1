@@ -3815,3 +3815,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 @media (max-width: 520px) {
   .step-row { grid-template-columns: 100px minmax(0, 1fr) 30px 30px; gap: 6px; }
 }
+
+/* V20-307 (Dan, Nov 17): Account Information: a field's checkbox sits on its label line (right side), so rows match. */
+.field-label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.field-label-row .check-line { margin: 0; font-size: 13px; }
+.field-label-row .check-line input { width: 16px; height: 16px; }
