@@ -31,7 +31,10 @@ export function ClashSheet({
   const freeLabel = free ? hhmm12(Number(free.slice(0, 2)) * 60 + Number(free.slice(3))) : '';
   const isTask = !!clash && clash.l.id.startsWith('task:');
   const block = isTask ? clash?.with.find((x) => !x.launch.id.startsWith('task:'))?.launch : undefined;
-  const canMerge = !!clash && !!c && !isTask && !c.launch.id.startsWith('task:') && clash.l.repeat === 'once' && c.launch.repeat === 'once' && clash.with.length === 1;
+  // V20-292 (Dan, Nov 17): with two or more overlaps, Add to that block joins the first one-time launch it hits
+  // (it used to need exactly one overlap). The label stays short; hover says this launch is removed.
+  const into = !isTask && clash?.l.repeat === 'once' ? clash.with.find((x) => !x.launch.id.startsWith('task:') && x.launch.repeat === 'once') : undefined;
+  const canMerge = !!clash && !!into;
   const existing = !!clash && (saved || launches.some((x) => x.id === clash.l.id));
   const fmtDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
   return (
@@ -64,22 +67,22 @@ export function ClashSheet({
                 {freeLabel}
               </button>
             )}
-            {canMerge && (
+            {canMerge && into && (
               <button
                 type="button"
                 className="btn btn-quiet"
-                title={`One block: ${Math.max(c.launch.minutes, clash.l.minutes)} min${existing ? '; this launch is removed' : ''}`}
+                title={`Joins ${into.launch.title}: one block, ${Math.max(into.launch.minutes, clash.l.minutes)} min${existing ? '; this launch is removed' : ''}`}
                 onClick={async () => {
                   // V20-283 (Dan, Nov 16): the joined block starts at the earlier of the two (9:30 + 10:15 → 9:30).
                   // V20-285 (Dan, Nov 17, guardrails decision): merging doesn't extend the time; the longer length wins. Edit the block after if it needs more.
                   const mine = toMinutes(clash.l.atTime);
-                  const startAt = mine < c.start ? clash.l.atTime : c.launch.atTime;
-                  await onSave({ ...c.launch, atTime: startAt, onceTime: null, title: mergedTitle(c.launch.title, clash.l.title), minutes: Math.max(c.launch.minutes, clash.l.minutes) });
+                  const startAt = mine < into.start ? clash.l.atTime : into.launch.atTime;
+                  await onSave({ ...into.launch, atTime: startAt, onceTime: null, title: mergedTitle(into.launch.title, clash.l.title), minutes: Math.max(into.launch.minutes, clash.l.minutes) });
                   if (existing) await onDelete(clash.l.id);
                   onClose(true);
                 }}
               >
-                Add to that block{existing ? ' (removes this one)' : ''}
+                Add to that block
               </button>
             )}
             {block && onAddToBlock && (
