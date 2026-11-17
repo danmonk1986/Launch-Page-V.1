@@ -6,6 +6,7 @@ import { repeatOf, repeatsOn, type Task } from '../lib/tasks';
 import { shortOf, type Project } from '../lib/projects';
 import { dayLabel, monthLabel } from './Expenses';
 import { InfoLink } from './Tasks';
+import { rollFromToday } from '../lib/roll';
 
 type Row = { task: Task; dates: string[] };
 
@@ -35,7 +36,10 @@ export function TasksMonth(p: {
   /** Done ✓ and ⋯, the same as List view. */
   actions: (t: Task) => ReactNode;
 }) {
-  const rows = useMemo(() => tasksInMonth(p.tasks, p.month).filter((r) => p.search(r.task)), [p.tasks, p.month, p.search]);
+  // V20-289: this month starts at today; earlier days follow below.
+  const rolled = useMemo(() => rollFromToday(tasksInMonth(p.tasks, p.month).filter((r) => p.search(r.task)), (r) => r.dates, p.month), [p.tasks, p.month, p.search]);
+  const rows = rolled.map((x) => x.row);
+  const rollClass = (i: number) => (rolled[i].earlier ? ' is-earlier' : '') + (rolled[i].firstEarlier ? ' is-first-earlier' : '');
   const statusOf = (t: Task) => {
     if (t.budgetLineId) return paidIn(p.expenses, t.budgetLineId, p.month).length ? 'PAID' : 'DUE';
     if (repeatOf(t).kind === 'none') return t.done ? 'DONE' : 'DUE';
@@ -43,7 +47,7 @@ export function TasksMonth(p: {
   };
   // V20-109: Month view splits at the ✓ ⋯ like List view (phones keep one table).
   const mobile = useMobile();
-  const rowClass = (i: number, st: string) => `task-row${i % 2 ? ' is-alt' : ''}${st === 'PAID' || st === 'DONE' ? ' is-paid' : ''}`;
+  const rowClass = (i: number, st: string) => `task-row${i % 2 ? ' is-alt' : ''}${st === 'PAID' || st === 'DONE' ? ' is-paid' : ''}${rollClass(i)}`;
   return (
     <div className="budget-month tasks-month">
       {rows.length === 0 ? (

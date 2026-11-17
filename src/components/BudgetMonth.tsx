@@ -1,3 +1,4 @@
+import { rollFromToday } from '../lib/roll';
 import { useMemo, type ReactNode } from 'react';
 import { money, type BudgetLine, type BudgetSection } from '../lib/budget';
 import { originalLabel } from '../lib/currency';
@@ -89,7 +90,9 @@ export function BudgetMonth(p: {
               </tr>
             </thead>
             {GROUPS.map((g) => {
-              const list = rows.filter((m) => groupOf(m) === g.id);
+              // V20-289: this month starts at today in each group; earlier days follow below.
+              const rolled = rollFromToday(rows.filter((m) => groupOf(m) === g.id), (m) => m.dates, p.month);
+              const list = rolled.map((x) => x.row);
               if (!list.length) return null;
               return (
                 <tbody key={g.id}>
@@ -108,7 +111,7 @@ export function BudgetMonth(p: {
                     const diff = m.due - m.spent;
                     const paid = m.line.section !== 'variable' && m.due > 0 && m.spent >= m.due;
                     return (
-                      <tr key={m.line.id} className={`task-row${i % 2 ? ' is-alt' : ''}${paid ? ' is-paid' : ''}`}>
+                      <tr key={m.line.id} className={`task-row${i % 2 ? ' is-alt' : ''}${paid ? ' is-paid' : ''}${rolled[i].earlier ? ' is-earlier' : ''}${rolled[i].firstEarlier ? ' is-first-earlier' : ''}`}>
                         <td className="col-date">{m.dates.length ? m.dates.map(dayLabel).join(', ') : '—'}</td>
                         <td className="col-task">
                           {p.name(m.line)}

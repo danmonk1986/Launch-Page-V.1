@@ -3673,3 +3673,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .logask-steps { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: flex-end; flex: 1 1 100%; }
 .logask-step { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
 .logask-step input { width: 16px; height: 16px; accent-color: var(--accent-teal); }
+
+/* V20-289 (Dan, Nov 17): Tasks and Budget · Month roll from today like the routine; earlier days follow
+   below a dashed line. Earlier rows that are done or paid fade; earlier ones still due stay full strength. */
+.task-row.is-first-earlier > td { border-top: 2px dashed var(--edge-strong); }
+.task-row.is-earlier.is-paid > td { opacity: 0.5; }
