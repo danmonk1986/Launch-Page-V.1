@@ -2287,8 +2287,9 @@ export default function App() {
               <button type="button" className="btn btn-quiet" onClick={() => answerPast('done')}>
                 Log
               </button>
-              <button type="button" className="btn" onClick={() => answerPast('started')}>
-                {`Started at ${clock12(timeFor(pastAsk, new Date()))}`}
+              {/* V20-291 (Dan, Nov 17): a button with a time shows just the time. */}
+              <button type="button" className="btn" title={`Started at ${clock12(timeFor(pastAsk, new Date()))}`} onClick={() => answerPast('started')}>
+                {clock12(timeFor(pastAsk, new Date()))}
               </button>
             </div>
           </div>

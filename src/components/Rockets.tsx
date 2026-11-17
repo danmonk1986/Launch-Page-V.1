@@ -1308,13 +1308,14 @@ export function RocketsPanel(p: Props) {
               </p>
               <div className="sheet-actions clash-acts">
                 {free && (
-                  <button type="button" className="btn" title="The first open time from now, today" onClick={() => void moveRest(rest, { ...rest, atTime: free, onceTime: null, ...(rest.repeat === 'once' ? { onDate: today } : {}) })}>
-                    Next free time: {hhmm12(Number(free.slice(0, 2)) * 60 + Number(free.slice(3)))}
+                  <button type="button" className="btn" title={`Next free time: ${hhmm12(Number(free.slice(0, 2)) * 60 + Number(free.slice(3)))}, the first open time from now, today`} onClick={() => void moveRest(rest, { ...rest, atTime: free, onceTime: null, ...(rest.repeat === 'once' ? { onDate: today } : {}) })}>
+                    {/* V20-291 (Dan, Nov 17): a button with a time shows just the time. */}
+                    {hhmm12(Number(free.slice(0, 2)) * 60 + Number(free.slice(3)))}
                   </button>
                 )}
                 {rest.repeat === 'once' && (
-                  <button type="button" className="btn btn-quiet" title="Same time tomorrow" onClick={() => void moveRest(rest, { ...rest, onDate: tomorrow, onceTime: null })}>
-                    Tomorrow, same time
+                  <button type="button" className="btn btn-quiet" title="Tomorrow, same time" onClick={() => void moveRest(rest, { ...rest, onDate: tomorrow, onceTime: null })}>
+                    Tomorrow
                   </button>
                 )}
                 <button type="button" className="btn btn-quiet" title="Opens Edit timed launch to pick a date and time" onClick={() => void moveRest(rest, null)}>
