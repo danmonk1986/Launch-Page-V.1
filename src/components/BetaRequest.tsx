@@ -46,7 +46,7 @@ export function BetaRequest({ startOpen = false, onCancel }: { startOpen?: boole
       <p className="beta-title">Request beta test</p>
       <label className="field">
         <span>Name</span>
-        <input type="text" autoComplete="name" maxLength={120} value={name} onChange={(e) => setName(e.target.value)} />
+        <input type="text" required autoComplete="name" maxLength={120} value={name} onChange={(e) => setName(e.target.value)} />
       </label>
       <label className="field">
         <span>Email</span>
