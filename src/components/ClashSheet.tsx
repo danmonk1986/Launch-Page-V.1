@@ -53,13 +53,15 @@ export function ClashSheet({
               <button
                 type="button"
                 className="btn"
-                title={`Move it to ${freeLabel} on ${fmtDay(c.day)}, the first open time after the clash`}
+                title={`Next free time: move it to ${freeLabel} on ${fmtDay(c.day)}`}
+                aria-label={`Next free time: move it to ${freeLabel}`}
                 onClick={async () => {
                   await onSave({ ...clash.l, atTime: free, onceTime: null });
                   onClose(true);
                 }}
               >
-                Next free time: {freeLabel}
+                {/* V20-290 (Dan, Nov 17): just the time, so the buttons fit on one row. */}
+                {freeLabel}
               </button>
             )}
             {canMerge && (
