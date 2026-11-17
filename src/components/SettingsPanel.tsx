@@ -929,7 +929,7 @@ const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }
     title: 'Projects',
     items: [
       ['projects', 'Projects', ''],
-      ['planner', 'Project Planner', 'Decisions for a project: options, costs, dates.']
+      ['planner', 'Planner', 'Decisions for a project: options, costs, dates.']
     ]
   },
   {

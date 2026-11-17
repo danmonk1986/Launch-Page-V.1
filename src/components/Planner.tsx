@@ -99,13 +99,13 @@ export function PlannerPanel(p: {
       <div className="panel-head">
         <div className="rockets-title pl-title">
           <h2 id="h-planner" className="panel-title">
-            Project Planner
+            Planner
           </h2>
           {p.onToggle && (
             <button
               type="button"
               className={`rockets-toggle${p.full ? ' is-open' : ''}`}
-              aria-label={p.full ? 'Back to the Project Planner card' : 'Open the full Project Planner'}
+              aria-label={p.full ? 'Back to the Planner card' : 'Open the full Planner'}
               title={p.full ? 'Back to the card' : 'Open full screen'}
               onClick={p.onToggle}
             >
