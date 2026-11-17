@@ -989,11 +989,23 @@ export default function App() {
     }
   }
   const saveTask = async (t: Task) => {
+    const old = tasksRef.current.find((x) => x.id === t.id);
     launchFollowsTasks([t]);
     await taskOps.save(t);
     await payFor([t]);
     await lineFollowsTask(t);
+    checkTaskClash(t, old);
   };
+  /** SCHEDULE GUARDRAILS (Dan, Nov 17, V20-287): a task only counts once it's scheduled at a time. It holds an hour
+   *  (same as Add to calendar) and is checked against timed launches. A task with a launch is checked as that launch;
+   *  one with no time, a repeat, or done / deleted never warns. */
+  function checkTaskClash(t: Task, old?: Task) {
+    const day = t.endDate ?? t.startDate;
+    if (!t.atTime || !day || t.launchId || t.done || t.deletedAt || isRecurring(t)) return;
+    if (old && old.atTime === t.atTime && (old.endDate ?? old.startDate) === day) return;
+    const stand = { id: `task:${t.id}`, title: taskName(t), atTime: t.atTime, minutes: 60, urls: [], projectId: t.projectId, logKind: 'productivity', repeat: 'once', onDate: day, weekdays: [], active: true } as unknown as Launch;
+    checkClash(stand);
+  }
   const saveTasks = async (items: Task[]) => {
     launchFollowsTasks(items);
     await taskOps.saveMany(items);
@@ -2241,6 +2253,12 @@ export default function App() {
         launches={launches}
         saved
         onSave={async (x) => {
+          // V20-287: a task's stand-in (task:<id>) moves the task itself.
+          if (x.id.startsWith('task:')) {
+            const t = tasksRef.current.find((y) => `task:${y.id}` === x.id);
+            if (t) await taskOps.save({ ...t, atTime: x.atTime });
+            return;
+          }
           await saveLaunchEdit(x);
         }}
         onDelete={(id) => deleteLaunch(id)}

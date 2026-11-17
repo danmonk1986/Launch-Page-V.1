@@ -26,7 +26,7 @@ export function ClashSheet({
   const c = clash?.with[0];
   const free = clash && c ? nextFree(clash.l, c.day, launches) : null;
   const freeLabel = free ? hhmm12(Number(free.slice(0, 2)) * 60 + Number(free.slice(3))) : '';
-  const canMerge = !!clash && !!c && clash.l.repeat === 'once' && c.launch.repeat === 'once' && clash.with.length === 1;
+  const canMerge = !!clash && !!c && !clash.l.id.startsWith('task:') && clash.l.repeat === 'once' && c.launch.repeat === 'once' && clash.with.length === 1;
   const existing = !!clash && (saved || launches.some((x) => x.id === clash.l.id));
   const fmtDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
   return (
