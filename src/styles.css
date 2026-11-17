@@ -3797,3 +3797,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 }
 /* The tour's and Welcome's text links: no underline. */
 .welcome-link { text-decoration: none; }
+
+/* V20-298: Welcome's footer: Request beta test. */
+.welcome-foot { position: absolute; left: 0; right: 0; bottom: 24px; display: flex; justify-content: center; }
+.welcome-foot .welcome-link { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }

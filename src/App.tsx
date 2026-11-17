@@ -1836,7 +1836,7 @@ export default function App() {
       <div className="app app-light" style={theme}>
         {/* V20-294 (Dan, Nov 17): Welcome first; SIGN IN / SIGN UP open the sign-in page. */}
         {signedOut === 'welcome' ? (
-          <Welcome onSignIn={() => setSignedOut('signin')} onTour={(n) => { setTourAt(n); setSignedOut('tour'); }} />
+          <Welcome onSignIn={() => setSignedOut('signin')} onTour={(n) => { setTourAt(n); setSignedOut('tour'); }} onRequest={() => setSignedOut('signup')} />
         ) : signedOut === 'tour' ? (
           <Tour start={tourAt} onWelcome={() => setSignedOut('welcome')} onSignUp={() => setSignedOut('signup')} />
         ) : (

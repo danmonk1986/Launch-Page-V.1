@@ -5,7 +5,7 @@
  * the tour dots + Check it out sit one more gap below. Light-mode colours only. The tour isn't built yet, so the
  * dots are a picture for now and Check it out goes to sign up (the beta request).
  */
-export function Welcome({ onSignIn, onTour }: { onSignIn: () => void; onTour: (slide: number) => void }) {
+export function Welcome({ onSignIn, onTour, onRequest }: { onSignIn: () => void; onTour: (slide: number) => void; onRequest: () => void }) {
   return (
     <main className="welcome">
       <div className="welcome-logo">
@@ -31,6 +31,12 @@ export function Welcome({ onSignIn, onTour }: { onSignIn: () => void; onTour: (s
           → Check it out
         </button>
       </div>
+      {/* V20-298 (Dan, Nov 17): Request beta test in the footer, straight to the request page. */}
+      <footer className="welcome-foot">
+        <button type="button" className="welcome-link" onClick={onRequest}>
+          Request beta test
+        </button>
+      </footer>
     </main>
   );
 }
