@@ -1587,6 +1587,14 @@ function LinksField({ links, draft, onDraft, onChange, suggest }: { links: strin
             placeholder={links.length ? 'Next link' : 'https://www.example.com'}
             aria-label="Next link"
             onChange={(e) => onDraft(e.target.value)}
+            onPaste={(e) => {
+              // V20-303 (Dan, Nov 17): paste a whole list of links (one per line, or spaces between) and each becomes a line.
+              const many = e.clipboardData.getData('text').split(/[\s,]+/).map(cleanLink).filter((u) => u && /[./]/.test(u));
+              if (many.length < 2) return;
+              e.preventDefault();
+              onChange([...links, ...many.filter((u, i) => !links.includes(u) && many.indexOf(u) === i)]);
+              onDraft('');
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
