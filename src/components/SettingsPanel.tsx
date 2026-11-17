@@ -323,13 +323,15 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
                   <div className="module-grid">
                     {g.items.map(([k, label, hint]) => {
                       const soon = MODULE_SOON.includes(k);
+                      // V20-310: the 26 Days sections only switch when 26 Days is on.
+                      const parentOff = k.startsWith('d26') && !draft.modules.days26;
                       return (
                         <ModuleSwitch
                           key={k}
                           label={label}
-                          hint={soon ? 'Coming soon.' : hint}
-                          on={!soon && draft.modules[k]}
-                          disabled={soon}
+                          hint={soon ? 'Coming soon.' : parentOff ? 'Turn on 26 Days first.' : hint}
+                          on={!soon && !parentOff && draft.modules[k]}
+                          disabled={soon || parentOff}
                           onChange={(v) => saveNow((d) => ({ ...d, modules: { ...d.modules, [k]: v } }))}
                         />
                       );
@@ -920,17 +922,27 @@ const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }
     ]
   },
   {
-    title: 'Growth',
+    // V20-310 (Dan, Nov 17): the new layout. 26 Days is its own set: the page (quote + goal on top) and its sections.
+    title: '26 Days',
     items: [
-      ['journal', 'Personal Alchemy', 'Your journal and check-ins.'],
-      ['days26', '26 Days', 'The 26 Days page.'],
-      ['kb', 'Knowledge B4SE', 'Course decks and cheat sheets.'],
-      ['goals', 'Goals', ''],
-      ['milestones', 'Milestones', '']
+      ['days26', '26 Days', 'The 26 Days page: your quote and goal on top, the sections below.'],
+      ['d26Nonneg', 'Non-negotiables', 'The daily checklist.'],
+      ['d26Logging', 'Logging', 'H2O, food, activity, rest and vices.'],
+      ['d26Rituals', 'Rituals', 'Rise to Shine, Gratitude, Recover.'],
+      ['d26Summary', 'Tracking summary', 'The 26 days at a glance.']
     ]
   },
   {
-    // V20-220 (Dan, Nov 14): its own section; Projects will be a Launch Page card (coming soon).
+    title: 'Growth',
+    items: [
+      ['journal', 'Personal Alchemy', 'Your journal and check-ins.'],
+      ['goals', 'Goals', ''],
+      ['milestones', 'Milestones', ''],
+      ['kb', 'Knowledge B4SE', 'Course decks and cheat sheets.']
+    ]
+  },
+  {
+    // V20-220: Projects will be a Launch Page card, like Projects in Settings and the Planner.
     title: 'Projects',
     items: [
       ['projects', 'Projects', ''],
@@ -945,12 +957,19 @@ const MODULE_GROUPS: { title: string; items: [keyof Modules, string, string][] }
     ]
   },
   {
-    title: 'Business',
+    title: 'Sales',
     items: [
-      ['invoice', 'Invoice', 'Invoices, in Records.'],
-      ['records', 'Records', 'Bookkeeping activity.'],
-      ['crm', 'CRM', ''],
-      ['marketing', 'Marketing', '']
+      ['invoice', 'Invoicing', 'Make and send invoices.'],
+      ['crm', 'CRM', '']
+    ]
+  },
+  {
+    title: 'Records',
+    items: [
+      ['recExpenses', 'Expenses', 'What was actually paid.'],
+      ['recIncome', 'Income', 'Money in, and the year by month.'],
+      ['recInvoices', 'Invoices', ''],
+      ['recDraws', 'DRWs', 'Business withdrawals and e-transfers to you.']
     ]
   }
 ];

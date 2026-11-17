@@ -97,6 +97,8 @@ function withTime(refIso: string, t: string) {
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
 type Props = {
+  /** V20-310 (Dan, Nov 17): Settings › Modules › 26 Days: which sections show (all, unless switched off). */
+  show?: { nonneg: boolean; logging: boolean; rituals: boolean; summary: boolean };
   now: Date;
   displayName: string;
   routine: Routine | null;
@@ -254,6 +256,7 @@ export function Days26Page(p: Props) {
         <GoalCard goal={p.goal} onGoal={p.onGoal} />
       </div>
 
+      {p.show?.nonneg !== false && (
       <NonNegCard
         items={viewItems}
         rec={viewRec}
@@ -291,7 +294,9 @@ export function Days26Page(p: Props) {
         onEdit={() => setEditList(true)}
         onSetOff={p.onSetOff}
       />
+      )}
 
+      {p.show?.logging !== false && (
       <LoggingCard
         logs={logsOn(logs, viewDay)}
         dayLabel={isPast ? new Date(`${viewDay}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' }) : null}
@@ -301,7 +306,9 @@ export function Days26Page(p: Props) {
         onNew={(k) => setLog({ entry: newLog(k, undefined, viewDay), isNew: true })}
         onOpen={(e) => setLog({ entry: e, isNew: false })}
       />
+      )}
 
+      {p.show?.rituals !== false && (
       <section ref={ritualCard} className="panel d26-rituals" aria-labelledby="h-rituals">
         <div className="panel-head">
           <h2 id="h-rituals" className="panel-title">
@@ -372,8 +379,10 @@ export function Days26Page(p: Props) {
           <p className="panel-empty">No rituals yet. A ritual has steps but no set time: Rise to Shine, Gratitude, Recover. Add one from the menu at the top right.</p>
         )}
       </section>
+      )}
 
 
+      {p.show?.summary !== false && (
       <SummaryCard
         displayName={p.displayName}
         records={records}
@@ -384,6 +393,7 @@ export function Days26Page(p: Props) {
         rec={rec}
         mode={mode}
       />
+      )}
 
       <Sheet open={!!log} title={log ? `${log.isNew ? 'Log' : 'Edit'} ${kindLabel(log.entry.kind)}` : 'Log'} onClose={() => setLog(null)}>
         {log && (

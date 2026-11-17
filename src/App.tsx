@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
 import type { Session } from '@supabase/supabase-js';
 import { checkPassword, supabase } from './lib/supabase';
-import { DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettingsPatch, fontStack, fontWeights, applySettingsPatch, shownName, syncLinkedEmail, loadBgImages, saveBgImage, resolveBackground, EMPTY_SLOTS, type BgSlots, type BrandSettings } from './lib/settings';
+import { booksOn, DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettingsPatch, fontStack, fontWeights, applySettingsPatch, shownName, syncLinkedEmail, loadBgImages, saveBgImage, resolveBackground, EMPTY_SLOTS, type BgSlots, type BrandSettings } from './lib/settings';
 import { downloadLaunchSheet } from './lib/launchSheet';
 import { downloadRecords } from './lib/recordsSheet';
 import { setWhatList, whatList } from './lib/whats';
@@ -577,7 +577,7 @@ export default function App() {
   const exportBrand = () =>
     ((settings.account.businessName || '').trim() || shownName(settings).trim() || 'L4UNCH!P4GE').toUpperCase().replace(/[^A-Za-z0-9!_-]+/g, '-').replace(/^-|-$/g, '') || 'LAUNCH-SHEET';
   // V20-158: pages switched off in Settings › Modules leave the menu (and send you to the Launch Page).
-  const hiddenPages = ([['days26', settings.modules.days26], ['budget', settings.modules.budget], ['invoices', settings.modules.records || settings.modules.invoice], ['kb', settings.modules.kb !== false], ['tasks', settings.modules.tasks], ['planner', settings.modules.planner]] as const)
+  const hiddenPages = ([['days26', settings.modules.days26], ['budget', settings.modules.budget], ['invoices', booksOn(settings.modules) || settings.modules.invoice], ['kb', settings.modules.kb !== false], ['tasks', settings.modules.tasks], ['planner', settings.modules.planner]] as const)
     .filter(([, on]) => !on)
     .map(([id]) => id) as PageId[];
   const hiddenPagesKey = hiddenPages.join(',');
@@ -2117,6 +2117,7 @@ export default function App() {
             <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} full onClose={() => setPage('launch')} />
           ) : page === 'days26' ? (
             <Days26Page
+              show={{ nonneg: settings.modules.d26Nonneg, logging: settings.modules.d26Logging, rituals: settings.modules.d26Rituals, summary: settings.modules.d26Summary }}
               now={now}
               displayName={shownName(settings)}
               routine={activeRoutine}
@@ -2151,7 +2152,8 @@ export default function App() {
           ) : page === 'invoices' ? (
             <RecordsPage
               showInvoices={settings.modules.invoice}
-              showBooks={settings.modules.records}
+              showBooks={booksOn(settings.modules)}
+              showViews={{ expenses: settings.modules.recExpenses, income: settings.modules.recIncome, draws: settings.modules.recDraws }}
               expenses={expenses}
               lines={budget}
               onSaveExpense={editExpense}
@@ -2476,7 +2478,7 @@ export default function App() {
               setStatus(`Launch Sheet exported: ${counts.length + 1} tabs, ${counts.reduce((a, c) => a + c.rows, 0)} rows.`);
             }
           },
-          ...(settings.modules.records || settings.modules.invoice
+          ...(booksOn(settings.modules) || settings.modules.invoice
             ? [
                 {
                   group: 'Export',
@@ -2531,7 +2533,7 @@ export default function App() {
                 }
               ]
             : []),
-          ...(settings.modules.records
+          ...(booksOn(settings.modules)
             ? [
                 {
                   group: 'Import',

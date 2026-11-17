@@ -110,15 +110,29 @@ export interface Modules {
   invoice: boolean; records: boolean; crm: boolean; marketing: boolean; planner: boolean; projects: boolean;
   /** V20-249: KNOWLEDGE B4SE in the menu. */
   kb: boolean;
+  /** V20-310 (Dan, Nov 17): 26 Days sections (only when 26 Days is on). */
+  d26Nonneg: boolean; d26Logging: boolean; d26Rituals: boolean; d26Summary: boolean;
+  /** V20-310: Records views. Invoices in Records is still to be built (Sales › Invoicing is the invoices page). */
+  recExpenses: boolean; recIncome: boolean; recInvoices: boolean; recDraws: boolean;
 }
 export const DEFAULT_MODULES: Modules = {
   rockets: true, routine: true, tasks: true, week: true,
   journal: false, days26: false, goals: false, milestones: false,
   budget: false, trips: false,
-  invoice: false, records: false, crm: false, marketing: false, planner: false, projects: false, kb: true
+  invoice: false, records: false, crm: false, marketing: false, planner: false, projects: false, kb: true,
+  d26Nonneg: true, d26Logging: true, d26Rituals: true, d26Summary: true,
+  recExpenses: false, recIncome: false, recInvoices: false, recDraws: false
 };
+/** V20-310: an older account's Records switch carries over to Expenses, Income and Draws. */
+export const withModules = (m?: Partial<Modules> | null): Modules => {
+  const x = { ...DEFAULT_MODULES, ...(m ?? {}) };
+  if (m && m.recExpenses === undefined && m.records) Object.assign(x, { recExpenses: true, recIncome: true, recDraws: true });
+  return x;
+};
+/** Any bookkeeping view on. */
+export const booksOn = (m: Modules) => m.recExpenses || m.recIncome || m.recDraws;
 /** Not built yet: shown greyed out with Coming soon. */
-export const MODULE_SOON: (keyof Modules)[] = ['goals', 'milestones', 'trips', 'crm', 'marketing', 'projects'];
+export const MODULE_SOON: (keyof Modules)[] = ['goals', 'milestones', 'trips', 'crm', 'marketing', 'projects', 'recInvoices'];
 
 export interface Surface { header: string; headerSolid: number; card: string; cardSolid: number }
 export interface Surfaces { day: Surface; night: Surface }
@@ -240,7 +254,7 @@ function readLocal(): BrandSettings {
     const raw = localStorage.getItem(LOCAL_KEY);
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw);
-    const s = upgradePalette({ ...DEFAULT_SETTINGS, ...parsed, account: { ...EMPTY_ACCOUNT, ...(parsed.account ?? {}) }, modules: { ...DEFAULT_MODULES, ...(parsed.modules ?? {}) } });
+    const s = upgradePalette({ ...DEFAULT_SETTINGS, ...parsed, account: { ...EMPTY_ACCOUNT, ...(parsed.account ?? {}) }, modules: withModules(parsed.modules) });
     const bg = normalizeBackground(s.background);
     return { ...s, background: bg, ...modeBackgrounds(bg, s.dayBackground, s.nightBackground) };
   } catch {
@@ -348,7 +362,7 @@ const fromRow = (r: Row): BrandSettings => ({
     day: { ...DEFAULT_SURFACES.day, ...(r.surfaces?.day ?? {}) },
     night: { ...DEFAULT_SURFACES.night, ...(r.surfaces?.night ?? {}) }
   },
-  modules: { ...DEFAULT_MODULES, ...(r.modules ?? {}) },
+  modules: withModules(r.modules),
   whats: Array.isArray(r.whats) && r.whats.length ? r.whats : null,
   fontTheme: r.font_theme === 'robot' || r.font_theme === 'zaptor' ? 'robot' : r.font_theme === 'yours' ? 'yours' : 'space',
   fontCustom: { ...DEFAULT_FONT_CUSTOM, ...(r.font_custom ?? {}) }
