@@ -3678,3 +3678,33 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
    below a dashed line. Earlier rows that are done or paid fade; earlier ones still due stay full strength. */
 .task-row.is-first-earlier > td { border-top: 2px dashed var(--edge-strong); }
 .task-row.is-earlier.is-paid > td { opacity: 0.5; }
+
+/* V20-294 (Dan, Nov 17): Welcome, the first signed-out screen (canvas board A). Light-mode colours only:
+   teal #4DAEAA, purple #8869CB, text #444242. Spacing: G = 6.3% of the height, logo → buttons → dots. */
+.welcome { --w: min(560px, 70vw); --g: 6.3dvh; position: relative; min-height: 100dvh; overflow: hidden; background: #ffffff; color: #444242; font-family: Roboto, system-ui, sans-serif; }
+.welcome-logo { position: absolute; left: 50%; top: 44%; width: var(--w); transform: translate(-50%, -50%); }
+.welcome-logo img { display: block; width: 100%; height: auto; }
+.welcome-to { position: absolute; right: calc(100% + 22px); top: 75%; transform: translate(0, -50%); white-space: nowrap; font-size: 22px; font-weight: 700; color: #444242; animation: welcome-slide 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both; }
+.welcome-btns { position: absolute; left: 0; right: 0; top: calc(44% + var(--w) * 0.09 + var(--g)); display: flex; justify-content: center; gap: 14px; }
+.welcome-more { position: absolute; left: 0; right: 0; top: calc(44% + var(--w) * 0.09 + var(--g) * 2 + 36px); display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.welcome-rise { animation: welcome-rise 0.5s ease-out 1.1s both; }
+.welcome-btn { height: 36px; padding: 0 24px; border-radius: 999px; border: 2px solid #8869cb; background: transparent; color: #8869cb; font: 700 13px/1 Roboto, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+.welcome-btn:hover { background: rgb(136 105 203 / 0.08); }
+.welcome-btn.is-key { border-color: #4daeaa; background: #4daeaa; }
+.welcome-btn.is-key:hover { box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #8869cb; background: #4daeaa; }
+.welcome-dots { display: flex; gap: 8px; }
+.welcome-dots span { width: 13px; height: 13px; box-sizing: border-box; border-radius: 50%; border: 2px solid #8869cb; }
+.welcome-dots span.is-on { border-color: #4daeaa; background: #4daeaa; }
+.welcome-link { border: 0; background: none; padding: 0; color: #4daeaa; font: 700 15px Roboto, system-ui, sans-serif; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.welcome-link:hover { color: #8869cb; }
+@keyframes welcome-slide { from { transform: translate(-40vw, -50%); opacity: 0; } to { transform: translate(0, -50%); opacity: 1; } }
+@keyframes welcome-rise { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .welcome-to, .welcome-rise { animation: none; } }
+/* Phones: "Welcome to" sits above the logo instead of beside it. */
+@media (max-width: 640px) {
+  .welcome { --w: 86vw; }
+  .welcome-to { right: auto; left: 0; top: auto; bottom: calc(100% + 10px); transform: none; font-size: 18px; animation-name: welcome-slide-up; }
+}
+@keyframes welcome-slide-up { from { transform: translateX(-60vw); opacity: 0; } to { transform: none; opacity: 1; } }
+/* Sign in / sign up: a way back to Welcome. */
+.signin-back { justify-self: center; }

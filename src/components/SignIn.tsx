@@ -5,7 +5,8 @@ import { BetaRequest } from './BetaRequest';
 type Mode = 'password' | 'link';
 type State = 'idle' | 'working' | 'sent' | 'error';
 
-export function SignIn() {
+/** V20-294: signUp = opened from Welcome's SIGN UP (the beta request open); onBack returns to Welcome. */
+export function SignIn({ signUp = false, onBack }: { signUp?: boolean; onBack?: () => void } = {}) {
   const [mode, setMode] = useState<Mode>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -110,7 +111,12 @@ export function SignIn() {
           </button>
         </form>
       )}
-      <BetaRequest />
+      <BetaRequest startOpen={signUp} />
+      {onBack && (
+        <button type="button" className="link-btn signin-back" onClick={onBack}>
+          ← Back
+        </button>
+      )}
     </main>
   );
 }

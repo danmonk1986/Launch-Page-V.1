@@ -4,8 +4,9 @@ import { supabase } from '../lib/supabase';
 type State = 'closed' | 'open' | 'working' | 'sent' | 'error';
 
 /** "Request beta test" on the sign-in page. Saves to the beta_requests table. */
-export function BetaRequest() {
-  const [state, setState] = useState<State>('closed');
+export function BetaRequest({ startOpen = false }: { startOpen?: boolean } = {}) {
+  // V20-294: SIGN UP on Welcome opens the request straight away.
+  const [state, setState] = useState<State>(startOpen ? 'open' : 'closed');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [note, setNote] = useState('');

@@ -123,6 +123,7 @@ import {
 } from './lib/routines';
 import { SettingsPanel, type SettingsTab } from './components/SettingsPanel';
 import { SignIn } from './components/SignIn';
+import { Welcome } from './components/Welcome';
 import { KnowledgeBasePage } from './components/KnowledgeBase';
 
 export default function App() {
@@ -156,6 +157,8 @@ export default function App() {
   const returnTo = useRef<string | null>(null);
   // SCHEDULE GUARDRAILS: a launch just saved on top of another block (the after-save check).
   const [appClash, setAppClash] = useState<{ l: Launch; with: Clash[] } | null>(null);
+  // V20-294: signed out, Welcome comes first.
+  const [signedOut, setSignedOut] = useState<'welcome' | 'signin' | 'signup'>('welcome');
   // V20-269: the budget line picked on the Budget card, opened in Edit line on the Budget page.
   const [budgetOpen, setBudgetOpen] = useState<string | null>(null);
   useEffect(() => {
@@ -1829,7 +1832,12 @@ export default function App() {
   if (supabase && !session) {
     return (
       <div className="app app-light" style={theme}>
-        <SignIn />
+        {/* V20-294 (Dan, Nov 17): Welcome first; SIGN IN / SIGN UP open the sign-in page. */}
+        {signedOut === 'welcome' ? (
+          <Welcome onSignIn={() => setSignedOut('signin')} onSignUp={() => setSignedOut('signup')} />
+        ) : (
+          <SignIn key={signedOut} signUp={signedOut === 'signup'} onBack={() => setSignedOut('welcome')} />
+        )}
       </div>
     );
   }
