@@ -3820,3 +3820,36 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .field-label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .field-label-row .check-line { margin: 0; font-size: 13px; }
 .field-label-row .check-line input { width: 16px; height: 16px; }
+
+/* V20-308 (Dan, Nov 17): first-run setup (canvas row C). White page, logo colours, the app header style,
+   one card per step, NEXT under it and the progress under that. */
+.setup { min-height: 100dvh; box-sizing: border-box; background: #ffffff; color: #444242; font-family: Roboto, system-ui, sans-serif; padding: 24px 24px 32px; --accent-teal: #06f9c2; --accent-purple: #8869cb; }
+.setup-head { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; border-bottom: 2px solid #8869cb; padding-bottom: 18px; }
+.setup-head img { height: 54px; width: auto; }
+.setup-head h1 { margin: 0; font-family: 'Roboto Slab', Georgia, serif; font-weight: 700; font-size: 21px; letter-spacing: 0.14em; text-transform: uppercase; color: #444242; }
+.setup-beta { margin-left: auto; border: 2px solid #8869cb; border-radius: 999px; padding: 7px 16px; font: 700 14px 'Roboto Mono', monospace; color: #8869cb; white-space: nowrap; }
+.setup-main { margin-top: 56px; display: flex; flex-direction: column; align-items: center; gap: 48px; }
+.setup-card { width: 560px; max-width: 100%; box-sizing: border-box; border: 2px solid #8869cb; border-radius: 20px; padding: 28px; display: flex; flex-direction: column; gap: 18px; box-shadow: 0 18px 48px rgb(68 66 66 / 0.1); background: #ffffff; }
+.setup-card > p { margin: 0; font-size: 16px; }
+.setup-card-head { display: flex; justify-content: space-between; align-items: baseline; }
+.setup-card-head h2, .setup-stop h2 { margin: 0; font: 700 15px 'Roboto Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; color: #8869cb; }
+.setup-card-head span { font: 700 12px 'Roboto Mono', monospace; text-transform: uppercase; color: #8869cb; }
+.setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 20px; }
+.setup .setup-card > p.setup-fine { font-size: 13px; color: #6f6c6c; }
+.setup-actions { display: flex; gap: 14px; margin-top: -8px; }
+.setup-actions .welcome-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.setup-progress { margin-top: -16px; width: 760px; max-width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; border-top: 1px solid #ece9f5; padding-top: 18px; }
+.setup-progress ol { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 22px; }
+.setup-progress li { display: flex; gap: 8px; align-items: center; font-size: 14px; color: #6f6c6c; }
+.setup-progress li b { width: 24px; height: 24px; border-radius: 50%; box-sizing: border-box; border: 2px solid #8869cb; color: #8869cb; font: 700 12px/20px 'Roboto Mono', monospace; text-align: center; }
+.setup-progress li.is-on { color: #444242; font-weight: 700; }
+.setup-progress li.is-on b { background: #06f9c2; border-color: #06f9c2; }
+.setup-progress li.is-done b { background: #8869cb; color: #ffffff; }
+.setup-progress > span { font: 500 13px 'Roboto Mono', monospace; color: #6f6c6c; }
+.setup-stop { align-items: center; text-align: center; }
+.setup-stop p { margin: 0; font-size: 16px; line-height: 1.55; }
+@media (max-width: 640px) {
+  .setup-grid { grid-template-columns: 1fr; }
+  .setup-beta { margin-left: 0; }
+  .setup-main { margin-top: 28px; gap: 32px; }
+}

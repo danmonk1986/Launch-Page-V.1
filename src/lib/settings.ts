@@ -151,6 +151,9 @@ export interface AccountInfo {
   region: string;
   postalCode: string;
   country: string;
+  /** V20-308: first-run setup. 'done', or the step to resume (1–4). Unset on older accounts (they skip it when a
+   *  birthday is on file). */
+  setup?: 'done' | number;
 }
 
 export const EMPTY_ACCOUNT: AccountInfo = {

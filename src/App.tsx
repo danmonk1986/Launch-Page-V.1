@@ -125,6 +125,7 @@ import { SettingsPanel, type SettingsTab } from './components/SettingsPanel';
 import { SignIn } from './components/SignIn';
 import { Welcome } from './components/Welcome';
 import { Tour } from './components/Tour';
+import { Setup, setupStepFor } from './components/Setup';
 import { KnowledgeBasePage } from './components/KnowledgeBase';
 
 export default function App() {
@@ -1846,6 +1847,15 @@ export default function App() {
     );
   }
 
+  // V20-308 (Dan, Nov 17): first-run setup before the Launch Page, once settings have loaded.
+  if (session && settingsLoaded && setupStepFor(settings.account)) {
+    return (
+      <div className="app app-light" style={theme}>
+        <Setup settings={settings} email={session.user.email ?? ''} onSave={handleSave} onSignOut={() => void signOutClean()} />
+      </div>
+    );
+  }
+
   // ⚙ menu (and the hidden Import tasks picker): in the full header, and alone in KNOWLEDGE!B4SE's slim bar.
   const gear = (
     <>
@@ -2535,6 +2545,16 @@ export default function App() {
               setSettingsOpen(false);
               setPage('kb');
               setTimeout(() => window.dispatchEvent(new Event('kb:import')), 250);
+            }
+          },
+          {
+            group: 'Setup',
+            label: 'Run setup again',
+            hint: 'Walk through first-run setup (About you, then Routine, Rocket and Timed launch as they arrive). What you save there is added to your account.',
+            button: 'Run setup',
+            onClick: () => {
+              setSettingsOpen(false);
+              void handleSave({ account: { setup: 1 } as BrandSettings['account'] });
             }
           },
           // V20-200 (Dan, Nov 14): Disconnect Google Calendar left out of Data Management for now; how the beta
