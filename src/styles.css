@@ -3888,3 +3888,9 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-314: a field's problem, said under it (Colour 1 box style to come with V20-302). */
 .field-error { display: block; margin-top: 4px; font-size: 13px; font-weight: 600; color: #e2675c; }
 .field-error .link-btn { padding: 0; min-height: 0; font: inherit; color: inherit; text-decoration: underline; }
+
+/* V20-316: Rockets to launch as one list, like Steps. */
+.launch-rockets .launch-rocket-row { display: grid; grid-template-columns: minmax(0, 1fr) 30px; gap: 12px; align-items: center; }
+.launch-rocket-name { padding: 6px 2px; border-bottom: 2px solid var(--accent-purple); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.launch-rocket-add { grid-column: 1 / -1; }
+.launch-rockets .launch-rocket-next { display: grid; grid-template-columns: minmax(0, 1fr) 30px; gap: 12px; align-items: center; }

@@ -2090,7 +2090,7 @@ function TimedForm({
       )}
       <fieldset className="field">
         <legend>Rockets to launch</legend>
-        <RocketPicker options={rocketOptions(rockets)} picked={d.urls} onChange={(urls) => set('urls', urls)} onAddNew={onAddRocket} />
+        <LaunchRocketsField rockets={rockets} picked={d.urls} onChange={(urls) => set('urls', urls)} onAddNew={onAddRocket} />
         <p className="field-hint">Apps: the first time, your browser asks to open the app. Tick “Always allow” and it opens straight away after that.</p>
       </fieldset>
 
@@ -2252,6 +2252,113 @@ export function rocketOptions(tiles: Rocket[]): RocketOption[] {
 }
 
 /**
+ * V20-316 (Dan, Nov 17): Rockets to launch, one field like Steps. Pick one of YOUR rockets (in their order on the
+ * page; hidden ones last) or paste a new link, then + for the next. Each line has ×. A pasted link that isn't one
+ * of your rockets gets an "Add as a rocket" tick under it. Picking a rocket brings all its links.
+ */
+function LaunchRocketsField({ rockets, picked, onChange, onAddNew }: { rockets: Rocket[]; picked: string[]; onChange: (urls: string[]) => void; onAddNew: (url: string) => Promise<void> }) {
+  const [q, setQ] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+  const mine = [...rockets].sort((a, b) => Number(!!a.hidden) - Number(!!b.hidden) || a.sort - b.sort);
+  type Row = { key: string; name: string; urls: string[]; isNew: boolean };
+  const rows: Row[] = [];
+  const used = new Set<string>();
+  for (const x of picked) {
+    if (used.has(x)) continue;
+    const owner = mine.find((r) => rocketUrls(r).includes(x));
+    const all = owner ? rocketUrls(owner) : [];
+    if (owner && all.every((u) => picked.includes(u))) {
+      all.forEach((u) => used.add(u));
+      rows.push({ key: owner.id, name: all.length > 1 ? `${owner.name} · ${all.length} links` : owner.name, urls: all, isNew: false });
+    } else {
+      used.add(x);
+      rows.push({ key: x, name: owner ? `${owner.name} · ${nameFromUrl(x)}` : x, urls: [x], isNew: !owner });
+    }
+  }
+  const options: ComboOption[] = mine
+    .filter((r) => rocketUrls(r).length && !rocketUrls(r).every((u) => picked.includes(u)))
+    .map((r) => ({ name: r.name, note: r.hidden ? 'Saved for later' : `${rocketUrls(r).length} link${rocketUrls(r).length === 1 ? '' : 's'}`, url: rocketUrls(r)[0], color: r.color, kind: 'Rocket', id: r.id }));
+  const addUrls = (urls: string[]) => onChange([...picked, ...urls.filter((u) => !picked.includes(u))]);
+  const addTyped = () => {
+    const t = q.trim();
+    if (!t) return;
+    const r = mine.find((x) => x.name.toLowerCase() === t.toLowerCase());
+    if (r) addUrls(rocketUrls(r));
+    else {
+      const u = cleanLink(t);
+      if (!u) return;
+      addUrls([u]);
+    }
+    setQ('');
+  };
+  return (
+    <div className="steps-field launch-rockets">
+      <ol className="lstep-list">
+        {rows.map((r) => (
+          <li key={r.key} className="launch-rocket-row">
+            <span className="launch-rocket-name" title={r.urls.join('\n')}>
+              {r.name}
+            </span>
+            <button type="button" className="quick-btn quick-skip" aria-label={`Remove ${r.name}`} title="Remove" onClick={() => onChange(picked.filter((u) => !r.urls.includes(u)))}>
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+            {r.isNew && (
+              <label className="check-line launch-rocket-add">
+                <input
+                  type="checkbox"
+                  checked={busy === r.key}
+                  disabled={!!busy}
+                  onChange={async () => {
+                    setBusy(r.key);
+                    try {
+                      await onAddNew(r.urls[0]);
+                    } finally {
+                      setBusy(null);
+                    }
+                  }}
+                />
+                <span>Add as a rocket</span>
+              </label>
+            )}
+          </li>
+        ))}
+        <li className="launch-rocket-next">
+          <div
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && q.trim()) {
+                e.preventDefault();
+                addTyped();
+              }
+            }}
+          >
+            <NameCombo
+              value={q}
+              options={options}
+              required={false}
+              maxLength={2000}
+              onType={setQ}
+              onPick={(o) => {
+                const r = mine.find((x) => x.id === o.id);
+                if (r) addUrls(rocketUrls(r));
+                setQ('');
+              }}
+              placeholder={rows.length ? 'Next rocket or link' : 'Pick a rocket, or paste a link'}
+            />
+          </div>
+          <button type="button" className="quick-btn quick-skip" aria-label="Add" title="Add" disabled={!q.trim()} onClick={addTyped}>
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        </li>
+      </ol>
+    </div>
+  );
+}
+
+/**
  * Pick rockets from the list; each one picked sits underneath as a ticked box, and unticking
  * sends it back to the list. "Add new rocket" takes one link and makes it a rocket (Oct 20).
  * single: a ritual step opens one rocket.
@@ -2327,7 +2434,7 @@ export function RocketPicker({ options, picked, onChange, onAddNew, single }: { 
 }
 
 /** Type a new name, or open the list with the ⌄ (or by typing) and pick an original or an app. */
-function NameCombo({ value, options, onType, onPick, placeholder, required = true }: { value: string; options: ComboOption[]; onType: (v: string) => void; onPick: (o: ComboOption) => void; placeholder: string; required?: boolean }) {
+function NameCombo({ value, options, onType, onPick, placeholder, required = true, maxLength = NAME_MAX }: { value: string; options: ComboOption[]; onType: (v: string) => void; onPick: (o: ComboOption) => void; placeholder: string; required?: boolean; maxLength?: number }) {
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(0);
   const [filtering, setFiltering] = useState(false);
@@ -2351,7 +2458,7 @@ function NameCombo({ value, options, onType, onPick, placeholder, required = tru
     >
       <input
         required={required}
-        maxLength={NAME_MAX}
+        maxLength={maxLength}
         autoComplete="off"
         role="combobox"
         aria-expanded={open && shown.length > 0}
