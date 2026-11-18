@@ -3907,3 +3907,10 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .setup .setup-progress { position: static; margin: 20px 0 0; padding: 18px 0 0; width: 760px; max-width: 100%; background: none; box-shadow: none; }
 .setup .setup-progress::before { content: none; }
 @media (max-width: 640px) { .setup { padding-bottom: 32px; } .setup .setup-actions { margin-top: 28px; } }
+
+/* V20-318 (Dan, Nov 17): setup cards tighter: one even 14 px step between fields (was the card's 18 px gap plus
+   each field's own 14 px bottom margin), so step 4 fits with the buttons where steps 1–3 put them. */
+.setup-card { gap: 14px; padding: 26px 28px; }
+.setup-card .field { margin: 0; }
+.setup-card .setup-grid { gap: 14px 20px; }
+.setup-card .steps-field .lstep-list { gap: 6px; }
