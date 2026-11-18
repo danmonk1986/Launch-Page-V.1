@@ -3935,3 +3935,10 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* The fade sits inside the card's border (the border stays whole). */
 .setup-stage > .setup-card.is-scroll::after { content: ''; position: sticky; bottom: 0; flex: none; display: block; height: 72px; margin: -40px -28px 0; background: linear-gradient(to bottom, rgb(255 255 255 / 0), #ffffff 80%); pointer-events: none; }
 .setup-stage > .setup-card.is-scroll::-webkit-scrollbar { display: none; }
+
+/* V20-323 (Dan, Nov 17): step 4's TEST was squashed by the scroll (flex items shrinking) and sat under the fade;
+   nothing in a setup card shrinks now, and the fade only covers the empty space after the last item.
+   Step 3's TEST sits centred in the space between the last link and the bottom of the card. */
+.setup-card > * { flex-shrink: 0; }
+.setup-stage > .setup-card.is-scroll::after { height: 48px; margin: 0 -28px; }
+.setup-card .setup-test { margin-block: auto; }
