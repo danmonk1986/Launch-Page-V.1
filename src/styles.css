@@ -3914,3 +3914,18 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .setup-card .field { margin: 0; }
 .setup-card .setup-grid { gap: 14px 20px; }
 .setup-card .steps-field .lstep-list { gap: 6px; }
+
+/* V20-321 (Dan, Nov 17): step 4 (Timed launch) keeps the same card size as steps 1–3 and scrolls inside, so BACK /
+   FINISH and the progress never move. The progress is a connected stepper: a line runs between the circles,
+   purple up to where you are. */
+.setup-stage { position: relative; }
+.setup-stage > .setup-card.is-scroll { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; }
+.setup .setup-progress { border-top: 0; padding-top: 0; }
+.setup .setup-progress ol { gap: 0; flex-wrap: nowrap; }
+.setup .setup-progress li { position: relative; flex-direction: column; gap: 6px; width: 120px; font-size: 13px; text-align: center; }
+.setup .setup-progress li b { position: relative; z-index: 1; background: #ffffff; }
+.setup .setup-progress li + li::before { content: ''; position: absolute; top: 11px; right: calc(50% + 12px); width: calc(100% - 24px); height: 2px; background: #d9cff0; }
+.setup .setup-progress li.is-done + li::before { background: #8869cb; }
+.setup .setup-progress li.is-done b { background: #8869cb; }
+.setup .setup-progress li.is-on b { background: #06f9c2; }
+@media (max-width: 520px) { .setup .setup-progress li { width: 80px; font-size: 12px; } }

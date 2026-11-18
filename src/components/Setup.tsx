@@ -487,7 +487,7 @@ export function Setup({
                   </fieldset>
                 ))}
             <form
-              className="setup-card"
+              className={`setup-card${step === 4 ? ' is-scroll' : ''}`}
               onSubmit={(e) => {
                 e.preventDefault();
                 void next();
