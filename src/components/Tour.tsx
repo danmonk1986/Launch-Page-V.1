@@ -107,10 +107,11 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
                 <span className="tp-plus">+</span>
               </div>
               {[
-                // Nov 18 (CP-009): real adulting tasks.
+                // Nov 18 (CP-009): real adulting tasks, matching the words: one due today + three key tasks.
                 ['Today', 'PAY', 'Rent', 'Due'],
                 ['Today', 'BOOK', 'Dentist appointment', 'Key'],
-                ['Fri', 'RENEW', 'Car insurance', 'Key']
+                ['Today', 'RENEW', 'Car insurance', 'Key'],
+                ['Today', 'BUY', 'Groceries', 'Key']
               ].map(([d, t, x, st]) => (
                 <div key={x} className="tp-task">
                   <span className="tp-date">{d}</span>
