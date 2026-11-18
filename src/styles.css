@@ -3965,3 +3965,43 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* CP-013: Sign in's two buttons side by side. */
 .signin.signin-light .signin-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
 .signin.signin-light .signin-actions .btn { width: auto; height: 36px; min-height: 36px; padding: 0 22px; border-radius: 999px; font: 700 13px Roboto, system-ui, sans-serif; letter-spacing: 0.08em; }
+
+/* V20-327 (Dan, Nov 18): the tour's pictures are small copies of the real Launch Page cards (canvas D1). */
+.tp { width: 600px; max-width: 100%; box-sizing: border-box; background: #ffffff; border: 1px solid #e4def3; border-radius: 20px; padding: 20px 22px; box-shadow: 0 6px 24px rgb(68 66 66 / 0.08); display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.tp.tp-narrow { width: 380px; }
+.tp-head { display: flex; align-items: center; gap: 16px; margin-bottom: 4px; }
+.tp-title { font: 700 20px 'Roboto Slab', Georgia, serif; letter-spacing: 0.1em; text-transform: uppercase; color: #444242; }
+.tp-sub { font: 700 15px 'Roboto Slab', Georgia, serif; letter-spacing: 0.1em; text-transform: uppercase; color: #06f9c2; }
+.tp-tab { font: 700 11px 'Roboto Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; color: #444242; padding-bottom: 3px; }
+.tp-tab.is-on { color: #8869cb; border-bottom: 2px solid #8869cb; }
+.tp-plus { margin-left: auto; width: 32px; height: 32px; box-sizing: border-box; border-radius: 50%; border: 2px solid #8869cb; color: #8869cb; display: inline-flex; align-items: center; justify-content: center; font: 700 16px Roboto, sans-serif; }
+.tp-plus + .tp-plus { margin-left: 0; }
+.tp-plus.is-key { background: #06f9c2; border-color: #06f9c2; font-size: 14px; }
+.tp-launch { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; }
+.tp-launch.is-next { border: 2px solid #06f9c2; background: rgb(6 249 194 / 0.06); }
+.tp-time { flex: none; width: 82px; font: 700 14px 'Roboto Mono', monospace; color: #8869cb; }
+.tp-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.tp-main b { font-size: 15px; }
+.tp-main span { font-size: 12px; color: #6f6c6c; }
+.tp-q { flex: none; width: 28px; height: 28px; box-sizing: border-box; border-radius: 50%; border: 2px solid #8869cb; color: #8869cb; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+.tp-q.is-key { background: #06f9c2; border-color: #06f9c2; }
+.tp-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tp-tile { display: flex; gap: 10px; align-items: center; border: 1px dashed #e4def3; border-radius: 12px; padding: 10px; }
+.tp-tile b { display: block; font-size: 13px; }
+.tp-tile span:not(.tp-badge) { font-size: 12px; color: #6f6c6c; }
+.tp-tile.is-new { justify-content: center; color: #8869cb; font-weight: 700; font-size: 13px; }
+.tp-badge { flex: none; width: 34px; height: 34px; border-radius: 9px; background: #06f9c2; color: #120d2a; display: inline-flex; align-items: center; justify-content: center; font: 700 15px Roboto, sans-serif; }
+.tp-badge.is-purple { background: #8869cb; color: #ffffff; }
+.tp-rt { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 10px; font-size: 14px; }
+.tp-rt.is-done { opacity: 0.6; }
+.tp-rt.is-now { border: 2px solid #06f9c2; background: rgb(6 249 194 / 0.06); }
+.tp-rt b { flex: 1; }
+.tp-rt span:not(.tp-time):not(.tp-tag) { flex: 1; color: #6f6c6c; }
+.tp-tag { font: 700 10px 'Roboto Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #8869cb; background: rgb(136 105 203 / 0.1); border-radius: 999px; padding: 3px 8px; }
+.tp-tag.is-key { background: #06f9c2; }
+.tp-task { display: flex; align-items: center; gap: 12px; padding: 9px 6px; border-bottom: 1px solid #f0ecf8; font-size: 14px; }
+.tp-task:last-child { border-bottom: 0; }
+.tp-date { flex: none; width: 46px; font: 500 12px 'Roboto Mono', monospace; color: #6f6c6c; }
+.tp-task .tp-main { flex-direction: row; display: block; }
+.tp-pill { flex: none; font: 700 10px 'Roboto Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #6f6c6c; background: #ededed; border-radius: 6px; padding: 4px 10px; }
+@media (max-width: 640px) { .tp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tp-tab { display: none; } .tp-tab.is-on { display: inline; } }

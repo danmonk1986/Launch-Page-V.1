@@ -18,55 +18,130 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
       <img className="tour-logo" src="/launchpage-logo.png" alt="L4UNCH P4GE" />
       <div className="tour-stage">
         <div className="tour-slide" key={i}>
+          {/* V20-327 (Dan, Nov 18): each slide's picture is a small copy of the real Launch Page card (first-time
+              dashboard, canvas D1), so the tour looks like what you'll use. */}
           {i === 0 && (
-            <div className="tour-card">
-              <p className="tour-label">Launch time</p>
-              <p className="tour-big">
-                <span className="tour-time">11:30 AM</span> Admin &amp; email
-              </p>
-              <p className="tour-mono">60 min · opens 4 tabs</p>
-              <div className="tour-row-end">
-                <span className="tour-pill">Snooze</span>
-                <span className="tour-pill is-go">Start</span>
+            <div className="tp">
+              <div className="tp-head">
+                <span className="tp-sub">Timed launches</span>
+                <span className="tp-tab is-on">Active 1</span>
+                <span className="tp-tab">Tomorrow 0</span>
+                <span className="tp-tab">Complete 0</span>
+                <span className="tp-plus">+</span>
+              </div>
+              <div className="tp-launch is-next">
+                <span className="tp-time">9:00 AM</span>
+                <div className="tp-main">
+                  <b>WORK BLOCK - Deep work</b>
+                  <span>Today · 90 min · opens 3 links · NEXT</span>
+                </div>
+                <span className="tp-q is-key">▶</span>
+                <span className="tp-q">✓</span>
+                <span className="tp-q">✕</span>
               </div>
             </div>
           )}
           {i === 1 && (
-            <div className="tour-rockets">
-              <div><b>Deep work</b><span>notion · figma · playlist</span></div>
-              <div className="is-on"><b>Admin &amp; email</b><span>inbox · calendar · chat · invoices</span></div>
-              <div><b>Client work</b><span>drive · figma · tracker</span></div>
-              <div className="is-new">+ New rocket</div>
-            </div>
-          )}
-          {i === 2 && (
-            <div className="tour-day">
-              <div className="tour-now"><span className="tour-time">9:00 AM</span><span className="tour-now-tag">NOW</span><b>Deep work</b></div>
-              {[['11:30 AM', 'Admin & email'], ['12:30 PM', 'Lunch & walk'], ['2:00 PM', 'Client work'], ['10:00 PM', 'Bed']].map(([t, n]) => (
-                <p key={t}><span>{t}</span>{n}</p>
-              ))}
-            </div>
-          )}
-          {i === 3 && (
-            <div className="tour-tasks">
-              <p className="tour-head">Due today · 2</p>
-              <p className="tour-task"><span className="tour-box" /><span>Send homepage revisions</span><span className="tour-when">Today</span></p>
-              <p className="tour-task is-late"><span className="tour-box" /><span>Pay hosting invoice</span><span className="tour-when">Yesterday</span></p>
-              <p className="tour-head">This week</p>
-              <div className="tour-week">
-                {[['MON', 'Deep work'], ['TUE', 'Client call'], ['WED', 'Deep work'], ['THU', 'Proposal'], ['FRI', 'Q4 plan']].map(([d, n], k) => (
-                  <span key={d} className={k === 1 ? 'is-on' : ''}>{d}<br /><b>{n}</b></span>
-                ))}
+            <div className="tp">
+              <div className="tp-head">
+                <span className="tp-title">Rockets</span>
+                <span className="tp-plus is-key">🚀</span>
+                <span className="tp-plus">+</span>
+              </div>
+              <div className="tp-tiles">
+                <div className="tp-tile">
+                  <span className="tp-badge">D</span>
+                  <div>
+                    <b>DEEP WORK</b>
+                    <span>3 links</span>
+                  </div>
+                </div>
+                <div className="tp-tile">
+                  <span className="tp-badge is-purple">A</span>
+                  <div>
+                    <b>ADMIN</b>
+                    <span>4 links</span>
+                  </div>
+                </div>
+                <div className="tp-tile is-new">+ New rocket</div>
               </div>
             </div>
           )}
+          {i === 2 && (
+            <div className="tp tp-narrow">
+              <div className="tp-head">
+                <span className="tp-title">Workday</span>
+              </div>
+              <div className="tp-rt is-done">
+                <span className="tp-time">7:00 AM</span>
+                <b>Wake Up</b>
+                <span className="tp-tag">Done</span>
+              </div>
+              <div className="tp-rt is-now">
+                <span className="tp-time">9:00 AM</span>
+                <b>Deep work</b>
+                <span className="tp-tag is-key">Now</span>
+              </div>
+              <div className="tp-rt">
+                <span className="tp-time">11:30 AM</span>
+                <span>Admin &amp; email</span>
+              </div>
+              <div className="tp-rt">
+                <span className="tp-time">2:00 PM</span>
+                <span>Client work</span>
+              </div>
+              <div className="tp-rt">
+                <span className="tp-time">11:00 PM</span>
+                <span>Bed</span>
+              </div>
+            </div>
+          )}
+          {i === 3 && (
+            <div className="tp">
+              <div className="tp-head">
+                <span className="tp-title">Tasks</span>
+                <span className="tp-plus">+</span>
+              </div>
+              {[
+                ['Today', 'SEND', 'Homepage revisions', 'Due'],
+                ['Today', 'PAY', 'Hosting invoice', 'Due'],
+                ['Fri', 'PLAN', 'Q4 launch', 'Key']
+              ].map(([d, t, x, st]) => (
+                <div key={x} className="tp-task">
+                  <span className="tp-date">{d}</span>
+                  <span className="tp-main">
+                    <b>{t}</b> · {x}
+                  </span>
+                  <span className="tp-pill">{st}</span>
+                  <span className="tp-q">✓</span>
+                  <span className="tp-q">···</span>
+                </div>
+              ))}
+            </div>
+          )}
           {i === 4 && (
-            <div className="tour-card is-log">
-              <p className="tour-label">Log the time?</p>
-              <p className="tour-log"><b>45 min</b><span>from 11:45 AM</span></p>
-              <p className="tour-check"><span className="tour-box is-done" />Admin &amp; email</p>
-              <p className="tour-check"><span className="tour-box" />Reply to Nova</p>
-              <div className="tour-bars"><span style={{ height: '80%' }} /><span style={{ height: '60%' }} /><span className="is-purple" style={{ height: '95%' }} /><span className="is-grey" style={{ height: '20%' }} /><span className="is-grey" style={{ height: '20%' }} /></div>
+            <div className="tp">
+              <div className="tp-head">
+                <span className="tp-sub">Timed launches</span>
+                <span className="tp-tab">Active 0</span>
+                <span className="tp-tab is-on">Complete 2</span>
+              </div>
+              <div className="tp-launch">
+                <span className="tp-time">9:00 AM</span>
+                <div className="tp-main">
+                  <b>WORK BLOCK - Deep work</b>
+                  <span>Today · 85 min spent</span>
+                </div>
+                <span className="tp-q">✎</span>
+              </div>
+              <div className="tp-launch">
+                <span className="tp-time">11:30 AM</span>
+                <div className="tp-main">
+                  <b>ADMIN - Admin &amp; email</b>
+                  <span>Today · 45 min spent</span>
+                </div>
+                <span className="tp-q">✎</span>
+              </div>
             </div>
           )}
         </div>
