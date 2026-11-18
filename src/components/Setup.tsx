@@ -218,36 +218,10 @@ export function Setup({
     </div>
   );
 
-  return (
-    <main className="setup">
-      <header className="setup-head">
-        <img src="/launchpage-logo.png" alt="L4UNCH P4GE" />
-        <h1>Set up your first launch</h1>
-        <span className="setup-beta">BETA · about 10 min</span>
-      </header>
-      <div className="setup-main">
-        {under ? (
-          <section className="setup-card setup-stop">
-            <h2>The beta is 18+ for now</h2>
-            <p>
-              Thanks for checking out L4UNCH P4GE. The beta is for people 18 and over, so we can't set up your account yet.
-              <br />
-              We'll be in touch at {email} when it opens up.
-            </p>
-            <button type="button" className="welcome-btn" onClick={onSignOut}>
-              Back to start
-            </button>
-          </section>
-        ) : (
-          <>
-            <form
-              className="setup-card"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void next();
-              }}
-            >
-              {step === 1 && (
+  // V20-317: each step's card contents, so steps 1–3 can stack in one spot (the tallest sets the height).
+  const stepBody = (n: SetupStep) => (
+    <>
+              {n === 1 && (
                 <>
                   {head(1, 'About you')}
                   <p>Who's launching? A minute here, then we build your day.</p>
@@ -287,7 +261,7 @@ export function Setup({
                   <p className="setup-fine">The beta is for 18 and over. The rest of your account (alias, address, backup email) lives in ⚙ › Account Information whenever you want it.</p>
                 </>
               )}
-              {step === 2 && (
+              {n === 2 && (
                 <>
                   {head(2, 'Your routine')}
                   <p>How does a normal day run? Start with three blocks.</p>
@@ -324,7 +298,7 @@ export function Setup({
                   </button>
                 </>
               )}
-              {step === 3 && (
+              {n === 3 && (
                 <>
                   {head(3, 'Your first rocket')}
                   <p>Everything one block needs, opened with one tap.</p>
@@ -359,7 +333,7 @@ export function Setup({
                   </button>
                 </>
               )}
-              {step === 4 && (
+              {n === 4 && (
                 <>
                   {head(4, 'Attach it to a time')}
                   <p>At block time, L4UNCH P4GE pops up and launches the rocket.</p>
@@ -447,7 +421,51 @@ export function Setup({
                   </button>
                 </>
               )}
+    </>
+  );
+
+  return (
+    <main className="setup">
+      <header className="setup-head">
+        <img src="/launchpage-logo.png" alt="L4UNCH P4GE" />
+        <h1>Set up your first launch</h1>
+        <span className="setup-beta">BETA · about 10 min</span>
+      </header>
+      <div className="setup-main">
+        {under ? (
+          <section className="setup-card setup-stop">
+            <h2>The beta is 18+ for now</h2>
+            <p>
+              Thanks for checking out L4UNCH P4GE. The beta is for people 18 and over, so we can't set up your account yet.
+              <br />
+              We'll be in touch at {email} when it opens up.
+            </p>
+            <button type="button" className="welcome-btn" onClick={onSignOut}>
+              Back to start
+            </button>
+          </section>
+        ) : (
+          <>
+            {/* V20-317 (Dan, Nov 17): the buttons sit at the same spot on every step: steps 1–3 stack in one cell, so the
+                card is always as tall as the tallest of them (step 4 to be tightened to fit). */}
+            <div className="setup-stage">
+              {([1, 2, 3] as SetupStep[])
+                .filter((x) => x !== step)
+                .map((x) => (
+                  <fieldset key={x} className="setup-card setup-ghost" disabled aria-hidden="true" tabIndex={-1}>
+                    {stepBody(x)}
+                  </fieldset>
+                ))}
+            <form
+              className="setup-card"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void next();
+              }}
+            >
+              {stepBody(step)}
             </form>
+            </div>
             <div className="setup-actions">
               {step > 1 && (
                 <button type="button" className="welcome-btn" onClick={() => setStep((step - 1) as SetupStep)}>
