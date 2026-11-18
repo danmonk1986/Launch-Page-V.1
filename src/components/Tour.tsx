@@ -166,8 +166,8 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
           Back
         </button>
         {last ? (
-          <button type="button" className="welcome-btn welcome-key" onClick={onSignUp}>
-            Start launching!
+          <button type="button" className="welcome-btn welcome-key welcome-start" onClick={onSignUp}>
+            Start <RocketIcon size={16} />
           </button>
         ) : (
           <button type="button" className="welcome-btn welcome-key" onClick={() => setI(i + 1)}>
