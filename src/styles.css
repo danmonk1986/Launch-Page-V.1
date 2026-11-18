@@ -4015,3 +4015,4 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .card-explain { gap: 8px; }
 .card-explain-title { letter-spacing: 0.04em; }
 .tp-rt.is-next-day { opacity: 0.6; border-top: 1px dashed #dadada; }
+.card-explain-body { white-space: pre-line; }
