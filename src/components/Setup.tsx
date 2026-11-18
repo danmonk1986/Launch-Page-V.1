@@ -250,7 +250,7 @@ export function Setup({
     <>
               {n === 1 && (
                 <>
-                  {head(1, 'About you')}
+                  {head(1, 'Tell us about yourself')}
                   <p>Who's launching? A minute here, then we build your day.</p>
                   <div className="setup-grid">
                     <label className="field">
@@ -362,7 +362,7 @@ export function Setup({
               )}
               {n === 4 && (
                 <>
-                  {head(4, 'Attach it to a time')}
+                  {head(4, 'Create a timed launch')}
                   <p>At block time, L4UNCH P4GE pops up and launches the rocket.</p>
                   <div className="setup-grid">
                     <label className="field">
