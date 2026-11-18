@@ -485,7 +485,6 @@ export function Setup({
                   </li>
                 ))}
               </ol>
-              <span>About 10 minutes, start to first launch</span>
             </footer>
           </>
         )}
