@@ -3,11 +3,12 @@
  * hover its card's title on the Launch Page (the hover swaps the card's contents for these words).
  */
 export type FeatureKey = 'timed' | 'rockets' | 'routine' | 'tasks' | 'week' | 'logging';
+// Nov 18: Dan's own words (COPY tab, rewritten by hand). Headlines in caps, as he wrote them.
 export const FEATURE_COPY: Record<FeatureKey, { title: string; body: string }> = {
-  timed: { title: "Focus on what's right in front of you.", body: 'Your tasks launch on time, with a pop-up that opens the tools you need. Start it, snooze it, or skip it intentionally.' },
-  rockets: { title: 'Stop hunting for tabs.', body: 'One tap opens every link a block needs, so you start working, not searching.' },
-  routine: { title: 'Every day has a shape.', body: "What's happening NOW sits on top, the rest of the day below. Days, nights or shifts, it flips with you." },
-  tasks: { title: 'Know what matters today.', body: 'Due today and key tasks stay on top. Everything else waits its turn.' },
-  week: { title: "See what's coming before it hits.", body: 'Every launch and task for the week, day by day.' },
-  logging: { title: 'Proof, not feelings.', body: "Log how long each block really took, and your week shows if you're sticking to the plan." }
+  timed: { title: "FOCUS ON WHAT'S RIGHT IN FRONT OF YOU", body: 'Set up your day. Launch your tasks on time with a pop-up that opens all the tools you need. Start it, snooze it, or skip it.' },
+  rockets: { title: 'LIKE BOOKMARKS, BUT WAY BETTER', body: 'Rockets launch everything you need for a session with one simple tap. Start working on time, with no distractions.' },
+  routine: { title: 'MAKE A PLAN, STICK TO IT!', body: "Schedule your day around your wake and sleep times. What's happening now sits at the top, so you focus on now." },
+  tasks: { title: 'ONE TASK AT A TIME', body: "Don't let your to-do list help you procrastinate. Set three key tasks and see what's due today." },
+  week: { title: "SEE WHAT'S COMING BEFORE IT HITS", body: 'Every launch and task for the week, day by day.' },
+  logging: { title: 'BIG GOALS FROM SMALL VICTORIES', body: 'Log your progress, billable hours and milestones. Sticking to your plan? Prove it.' }
 };

@@ -4005,3 +4005,17 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .tp-task .tp-main { flex-direction: row; display: block; }
 .tp-pill { flex: none; font: 700 10px 'Roboto Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #6f6c6c; background: #ededed; border-radius: 6px; padding: 4px 10px; }
 @media (max-width: 640px) { .tp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tp-tab { display: none; } .tp-tab.is-on { display: inline; } }
+
+/* Nov 18 (Dan's copy, CP-006 to 011 + 034): START with a rocket on Welcome; caps headlines sit closer to their
+   words on the tour and the card hovers; the rockets slide is one big rocket; the routine slide's tomorrow row. */
+.welcome-start { display: inline-flex; align-items: center; gap: 8px; }
+.welcome-start span { font-size: 16px; line-height: 1; }
+.tour-copy { gap: 8px; }
+.tour-copy h2 { font-size: 24px; letter-spacing: 0.04em; color: #8869cb; }
+.tour-copy p { max-width: 520px; margin: 0 auto; }
+.card-explain { gap: 8px; }
+.card-explain-title { letter-spacing: 0.04em; }
+.tp-rocket { font-size: 140px; line-height: 1; animation: tp-rocket-in 0.6s ease-out both; }
+@keyframes tp-rocket-in { from { transform: translate(-30px, 30px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .tp-rocket { animation: none; } }
+.tp-rt.is-next-day { opacity: 0.6; border-top: 1px dashed #dadada; }

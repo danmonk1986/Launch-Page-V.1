@@ -41,41 +41,17 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
               </div>
             </div>
           )}
+          {/* Nov 18 (CP-007): the rockets slide is just the rocket. */}
           {i === 1 && (
-            <div className="tp">
-              <div className="tp-head">
-                <span className="tp-title">Rockets</span>
-                <span className="tp-plus is-key">🚀</span>
-                <span className="tp-plus">+</span>
-              </div>
-              <div className="tp-tiles">
-                <div className="tp-tile">
-                  <span className="tp-badge">D</span>
-                  <div>
-                    <b>DEEP WORK</b>
-                    <span>3 links</span>
-                  </div>
-                </div>
-                <div className="tp-tile">
-                  <span className="tp-badge is-purple">A</span>
-                  <div>
-                    <b>ADMIN</b>
-                    <span>4 links</span>
-                  </div>
-                </div>
-                <div className="tp-tile is-new">+ New rocket</div>
-              </div>
+            <div className="tp-rocket" aria-hidden="true">
+              🚀
             </div>
           )}
+          {/* Nov 18 (CP-008): the routine rolls from now: NOW on top, the rest of the day below, then tomorrow. */}
           {i === 2 && (
             <div className="tp tp-narrow">
               <div className="tp-head">
                 <span className="tp-title">Workday</span>
-              </div>
-              <div className="tp-rt is-done">
-                <span className="tp-time">7:00 AM</span>
-                <b>Wake Up</b>
-                <span className="tp-tag">Done</span>
               </div>
               <div className="tp-rt is-now">
                 <span className="tp-time">9:00 AM</span>
@@ -94,6 +70,11 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
                 <span className="tp-time">11:00 PM</span>
                 <span>Bed</span>
               </div>
+              <div className="tp-rt is-next-day">
+                <span className="tp-time">7:00 AM</span>
+                <span>Wake up</span>
+                <span className="tp-tag">Tomorrow</span>
+              </div>
             </div>
           )}
           {i === 3 && (
@@ -103,9 +84,10 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
                 <span className="tp-plus">+</span>
               </div>
               {[
-                ['Today', 'SEND', 'Homepage revisions', 'Due'],
-                ['Today', 'PAY', 'Hosting invoice', 'Due'],
-                ['Fri', 'PLAN', 'Q4 launch', 'Key']
+                // Nov 18 (CP-009): real adulting tasks.
+                ['Today', 'PAY', 'Rent', 'Due'],
+                ['Today', 'BOOK', 'Dentist appointment', 'Key'],
+                ['Fri', 'RENEW', 'Car insurance', 'Key']
               ].map(([d, t, x, st]) => (
                 <div key={x} className="tp-task">
                   <span className="tp-date">{d}</span>
