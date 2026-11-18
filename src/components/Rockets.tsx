@@ -1678,7 +1678,8 @@ function passedToday(l: Launch, now = new Date()) {
   if (!l.onDate || l.onDate > today) return false;
   if (l.onDate < today) return true;
   const [h, m] = l.atTime.split(':').map(Number);
-  return h * 60 + m <= now.getHours() * 60 + now.getMinutes();
+  // CP-035: this minute counts as now (START NOW), so only earlier minutes have passed.
+  return h * 60 + m < now.getHours() * 60 + now.getMinutes();
 }
 
 function TimedForm({
@@ -1931,12 +1932,20 @@ function TimedForm({
             }}
           />
           {pastErr && passedToday(d) && (
+            // CP-035 (Dan, Nov 18): one line: "[time] has already passed. START NOW" (START NOW = right now).
             <span className="field-error" role="alert">
-              {formatMinutes(toMinutes(d.atTime))} has passed today. Pick a later time, or{' '}
-              <button type="button" className="link-btn" onClick={() => { setPastErr(false); set('onDate', isoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1))); }}>
-                tomorrow
+              {formatMinutes(toMinutes(d.atTime))} has already passed.{' '}
+              <button
+                type="button"
+                className="field-error-action"
+                onClick={() => {
+                  const n = new Date();
+                  setPastErr(false);
+                  setD((x) => ({ ...x, onDate: isoDate(n), atTime: `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}` }));
+                }}
+              >
+                Start now
               </button>
-              .
             </span>
           )}
         </label>

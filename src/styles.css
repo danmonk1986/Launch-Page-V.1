@@ -3942,3 +3942,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .setup-card > * { flex-shrink: 0; }
 .setup-stage > .setup-card.is-scroll::after { height: 48px; margin: 0 -28px; }
 .setup-card .setup-test { margin-block: auto; }
+
+/* CP-035 (Nov 18): "[time] has already passed. START NOW" on one line. */
+.app .field-error .field-error-action { all: unset; display: inline; cursor: pointer; font: 700 13px Roboto, system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: #8869cb; text-decoration: underline; text-underline-offset: 3px; }
+.app .field-error .field-error-action:hover { color: #444242; }

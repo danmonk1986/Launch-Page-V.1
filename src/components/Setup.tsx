@@ -133,7 +133,7 @@ export function Setup({
   const [onDate, setOnDate] = useState(isoDate(new Date()));
 
   // V20-314: a one-time launch can't start at a time that's already gone today.
-  const passed = repeat === 'once' && onDate <= isoDate(new Date()) && (onDate < isoDate(new Date()) || hm(atTime) <= new Date().getHours() * 60 + new Date().getMinutes());
+  const passed = repeat === 'once' && onDate <= isoDate(new Date()) && (onDate < isoDate(new Date()) || hm(atTime) < new Date().getHours() * 60 + new Date().getMinutes());
   const allLinks = () => [...links, linkDraft].map(cleanLink).filter((u, i, all) => u && all.indexOf(u) === i);
   const okBlocks = blocks.filter((b) => b.label.trim());
   const ready =

@@ -748,7 +748,8 @@ export default function App() {
     const n = new Date();
     if (!fromTask && moved && l.active && l.repeat !== 'hourly' && happensToday(l, n) && !handled[runKey(l, n)]) {
       const start = new Date(`${isoDate(launchDate(l, n))}T${timeFor(l, n)}:00`).getTime();
-      if (start <= n.getTime() && !logFor(logRef.current, l, n).launchedAt) setPastAsk(l);
+      // CP-035: a launch set to this very minute (START NOW in the form) isn't 'passed'; its pop-up fires as normal.
+      if (start <= n.getTime() - 60000 && !logFor(logRef.current, l, n).launchedAt) setPastAsk(l);
     }
     // SCHEDULE GUARDRAILS (Dan, Nov 16): any save that lands a launch on top of another block (a task's time,
     // + Tomorrow, a push) asks after saving, unless the launch form already asked.
@@ -761,7 +762,7 @@ export default function App() {
     const c = clashesFor(l, [...launches, ...taskStands()], new Date(), settledRuns(logRef.current));
     if (c.length) setAppClash({ l, with: c });
   }
-  function answerPast(how: 'started' | 'done' | 'not') {
+  function answerPast(how: 'started' | 'now' | 'done' | 'not') {
     const l = pastAsk;
     setPastAsk(null);
     if (!l) return;
@@ -771,7 +772,8 @@ export default function App() {
       setHandled(markHandled(l, n, 'launched'));
       logLaunch(l, () => ({ outcome: 'launched', launchedAt: at, planned: l.minutes }));
       setStatus(`${l.title}: on the clock since ${clock12(timeFor(l, n))}.`);
-    } else if (how === 'done') void finishLaunch(l, 'done');
+    } else if (how === 'now') launchNow(l);
+    else if (how === 'done') void finishLaunch(l, 'done');
   }
   /** V20-201: deleting a launch keeps its task, unlinked. */
   async function deleteLaunch(id: string) {
@@ -2316,14 +2318,14 @@ export default function App() {
       <Sheet open={!!pastAsk} title={pastAsk?.title ?? 'Already started?'} onClose={() => answerPast('not')}>
         {pastAsk && (
           <div className="timed-logask-sheet">
-            <p className="logask-q">{`${clock12(timeFor(pastAsk, new Date()))} has passed. Started then, or log the time?`}</p>
+            {/* CP-036 (Dan, Nov 18): "[time] has passed." with LOG and START NOW (starts the block now, opens its rockets). */}
+            <p className="logask-q">{`${clock12(timeFor(pastAsk, new Date()))} has passed.`}</p>
             <div className="sheet-actions">
               <button type="button" className="btn btn-quiet" onClick={() => answerPast('done')}>
                 Log
               </button>
-              {/* V20-291 (Dan, Nov 17): a button with a time shows just the time. */}
-              <button type="button" className="btn" title={`Started at ${clock12(timeFor(pastAsk, new Date()))}`} onClick={() => answerPast('started')}>
-                {clock12(timeFor(pastAsk, new Date()))}
+              <button type="button" className="btn" onClick={() => answerPast('now')}>
+                Start now
               </button>
             </div>
           </div>
