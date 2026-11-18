@@ -456,9 +456,9 @@ export function Setup({
       <header className="setup-head">
         <img src="/launchpage-logo.png" alt="L4UNCH P4GE" />
         <h1>Set up your first launch</h1>
-        {/* V20-320 (Dan, Nov 17): "About 10 minutes" until you start, then a real countdown from 10:00. */}
+        {/* V20-320 / V20-324 (Dan, Nov 17): "BETA Setup ~10 minutes" until you start, then "BETA Setup · 09:53" counting down. */}
         <span className="setup-beta" aria-live="off">
-          {left === null ? 'About 10 minutes' : `${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')}`}
+          {left === null ? 'BETA Setup ~10 minutes' : `BETA Setup · ${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')}`}
         </span>
       </header>
       <div className="setup-main">
