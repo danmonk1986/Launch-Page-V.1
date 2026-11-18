@@ -4023,3 +4023,9 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* Nov 18 (Dan): the ··· (More) menu buttons' dots were always too small: bigger, bolder dots, app-wide + tour. */
 .app.app .task-quick[aria-haspopup='menu'] svg { width: 20px; height: 20px; stroke-width: 3.4; }
 .tp-q.is-more { font-size: 15px; font-weight: 900; letter-spacing: -0.5px; }
+
+/* V20-339 (Dan, Nov 18): setup's routine blocks, tighter. The time column is wide enough for "a.m." beside the
+   clock (Firefox cut it to "a.r"), the rows sit closer, and the time and name sit a little closer together. */
+.setup-blocks { gap: 2px; }
+.setup-blocks li { grid-template-columns: 156px minmax(0, 1fr) 30px; column-gap: 12px; }
+.setup-blocks input[type='time'] { min-width: 0; width: 100%; padding-right: 4px; font-variant-numeric: tabular-nums; }
