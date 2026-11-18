@@ -107,20 +107,20 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
                 <span className="tp-plus">+</span>
               </div>
               {[
-                // Nov 18 (CP-009): real adulting tasks, matching the words: one due today + three key tasks.
-                ['Today', 'PAY', 'Rent', 'Due'],
-                ['Today', 'BOOK', 'Dentist appointment', 'Key'],
-                ['Today', 'RENEW', 'Car insurance', 'Key'],
-                ['Today', 'BUY', 'Groceries', 'Key']
+                // Nov 18 (Dan): his real key tasks sit on top (THREE), then one task due today, coloured like the app.
+                ['Today', 'FIND', 'New shop', 'Three'],
+                ['Today', 'BETA WK 2', 'Launch Page', 'Three'],
+                ['Today', 'CREATE', 'System optimization strategy', 'Three'],
+                ['Today', 'PAY', 'Rent', 'Due']
               ].map(([d, t, x, st]) => (
                 <div key={x} className="tp-task">
                   <span className="tp-date">{d}</span>
                   <span className="tp-main">
                     <b>{t}</b> · {x}
                   </span>
-                  <span className="tp-pill">{st}</span>
+                  <span className={`tp-pill is-${st.toLowerCase()}`}>{st}</span>
                   <span className="tp-q">✓</span>
-                  <span className="tp-q">···</span>
+                  <span className="tp-q is-more">···</span>
                 </div>
               ))}
             </div>

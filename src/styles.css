@@ -4016,3 +4016,10 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .card-explain-title { letter-spacing: 0.04em; }
 .tp-rt.is-next-day { opacity: 0.6; border-top: 1px dashed #dadada; }
 .card-explain-body { white-space: pre-line; }
+
+/* Nov 18 (Dan): the tour's task pills are coloured like the real ones (DUE teal, THREE purple). */
+.tp-pill.is-due { color: #14102b; background: #06f9c2; }
+.tp-pill.is-three { color: #8869cb; background: rgb(136 105 203 / 0.16); }
+/* Nov 18 (Dan): the ··· (More) menu buttons' dots were always too small: bigger, bolder dots, app-wide + tour. */
+.app.app .task-quick[aria-haspopup='menu'] svg { width: 20px; height: 20px; stroke-width: 3.4; }
+.tp-q.is-more { font-size: 15px; font-weight: 900; letter-spacing: -0.5px; }
