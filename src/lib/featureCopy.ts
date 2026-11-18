@@ -10,5 +10,5 @@ export const FEATURE_COPY: Record<FeatureKey, { title: string; body: string }> =
   routine: { title: 'MAKE A PLAN, STICK TO IT!', body: "Schedule your day around your wake and sleep times. What's happening now sits at the top, so you focus on now." },
   tasks: { title: 'ONE TASK AT A TIME', body: "Don't let your to-do list help you procrastinate.\nSet three key tasks and see what's due today." },
   week: { title: "SEE WHAT'S COMING BEFORE IT HITS", body: 'Every launch and task for the week, day by day.' },
-  logging: { title: 'BIG GOALS FROM SMALL VICTORIES', body: 'Log your progress, billable hours and milestones. Sticking to your plan? Prove it.' }
+  logging: { title: 'BIG GOALS FROM SMALL VICTORIES', body: 'Log your progress, billable hours and milestones.\nSticking to your plan? Prove it.' }
 };
