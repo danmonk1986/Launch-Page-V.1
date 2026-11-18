@@ -2,45 +2,53 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { BetaRequest } from './BetaRequest';
 
-type Mode = 'password' | 'link';
-type State = 'idle' | 'working' | 'sent' | 'error';
+type State = 'idle' | 'signing' | 'sending' | 'sent' | 'error';
 
 /** V20-294: onBack returns to Welcome. V20-297 (Dan, Nov 17): sign in and sign up are two pages: signUp shows
- *  only the beta request (the sign-up track for now), sign in shows only the sign-in form. */
+ *  only the beta request (the sign-up track for now), sign in shows only the sign-in form.
+ *  V20-326 (COPY CP-013 to 015, Nov 18): one form, no toggles: Email · Password · SIGN IN · EMAIL ME A SIGN-IN LINK
+ *  (the link goes to the email typed above). */
 export function SignIn({ signUp = false, onBack }: { signUp?: boolean; onBack?: () => void } = {}) {
-  const [mode, setMode] = useState<Mode>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [state, setState] = useState<State>('idle');
   const [message, setMessage] = useState('');
   const [linkedSent, setLinkedSent] = useState(false);
+  const busy = state === 'signing' || state === 'sending';
 
-  async function submit(e: React.FormEvent) {
+  async function signIn(e: React.FormEvent) {
     e.preventDefault();
-    if (!supabase) return;
-    setState('working');
-    if (mode === 'password') {
-      const { error: direct } = await supabase.auth.signInWithPassword({ email, password });
-      // V20-118: not the sign-in email? It may be the account's linked email: sign in through that.
-      let error = direct;
-      if (direct?.message === 'Invalid login credentials') {
-        const { data } = await supabase.functions.invoke('email-sign-in', { body: { email, password } }).catch(() => ({ data: null }));
-        if (data?.access_token) {
-          const { error: set } = await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
-          error = set;
-        }
+    if (!supabase || busy) return;
+    setState('signing');
+    const { error: direct } = await supabase.auth.signInWithPassword({ email, password });
+    // V20-118: not the sign-in email? It may be the account's linked email: sign in through that.
+    let error = direct;
+    if (direct?.message === 'Invalid login credentials') {
+      const { data } = await supabase.functions.invoke('email-sign-in', { body: { email, password } }).catch(() => ({ data: null }));
+      if (data?.access_token) {
+        const { error: set } = await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+        error = set;
       }
-      if (error) {
-        setState('error');
-        setMessage(
-          error.message === 'Invalid login credentials'
-            ? 'Email or password is wrong. No password yet? Sign in with an email link, then set one in Settings › Account Information.'
-            : error.message
-        );
-      }
-      // On success the auth listener in App swaps this screen for the dashboard.
+    }
+    if (error) {
+      setState('error');
+      setMessage(
+        error.message === 'Invalid login credentials'
+          ? "That email or password doesn't match. No password yet? Tap EMAIL ME A SIGN-IN LINK, then set one in ⚙ › Account Information."
+          : error.message
+      );
+    }
+    // On success the auth listener in App swaps this screen for the dashboard.
+  }
+
+  async function sendLink() {
+    if (!supabase || busy) return;
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setState('error');
+      setMessage('Type your email above first.');
       return;
     }
+    setState('sending');
     // V20-118: a linked email gets its link sent to the account's sign-in email.
     const { data: linked } = await supabase.functions
       .invoke('email-sign-in', { body: { mode: 'link', email, redirectTo: window.location.origin } })
@@ -50,22 +58,11 @@ export function SignIn({ signUp = false, onBack }: { signUp?: boolean; onBack?: 
       setState('sent');
       return;
     }
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin }
-    });
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
     if (error) {
       setState('error');
       setMessage(`Sign-in link not sent: ${error.message}`);
-    } else {
-      setState('sent');
-    }
-  }
-
-  function switchMode(next: Mode) {
-    setMode(next);
-    setState('idle');
-    setMessage('');
+    } else setState('sent');
   }
 
   if (signUp) {
@@ -88,42 +85,24 @@ export function SignIn({ signUp = false, onBack }: { signUp?: boolean; onBack?: 
       {state === 'sent' ? (
         <p className="signin-note">{linkedSent ? `${email} is linked to your account, so the sign-in link went to your account's sign-in email. Open it on this device.` : `Check ${email} for a sign-in link. Open it on this device.`}</p>
       ) : (
-        <form onSubmit={submit} className="signin-form">
+        <form onSubmit={signIn} className="signin-form">
           <label className="field">
             <span>Email</span>
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </label>
-          {mode === 'password' && (
-            <label className="field">
-              <span>Password</span>
-              <input
-                type="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </label>
-          )}
-          <button className="btn" type="submit" disabled={state === 'working'}>
-            {mode === 'password'
-              ? state === 'working' ? 'Signing in…' : 'Sign in'
-              : state === 'working' ? 'Sending link…' : 'Email me a sign-in link'}
-          </button>
+          <label className="field">
+            <span>Password</span>
+            <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </label>
+          <div className="signin-actions">
+            <button className="btn" type="submit" disabled={busy}>
+              {state === 'signing' ? 'Signing in…' : 'Sign in'}
+            </button>
+            <button className="btn btn-quiet" type="button" disabled={busy} onClick={() => void sendLink()}>
+              {state === 'sending' ? 'Sending your link…' : 'Email me a sign-in link'}
+            </button>
+          </div>
           {state === 'error' && <p className="signin-error">{message}</p>}
-          <button
-            type="button"
-            className="link-btn"
-            onClick={() => switchMode(mode === 'password' ? 'link' : 'password')}
-          >
-            {mode === 'password' ? 'Use an email link instead' : 'Use a password instead'}
-          </button>
         </form>
       )}
       {onBack && (

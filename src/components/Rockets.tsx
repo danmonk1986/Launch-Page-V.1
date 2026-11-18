@@ -41,6 +41,7 @@ import {
 } from '../lib/rockets';
 import { formatMinutes, toMinutes } from '../lib/routines';
 import { chime, isTone, TONES } from '../lib/alerts';
+import { CardExplain } from './CardExplain';
 import { useMobile } from '../lib/useMobile';
 import { defaultStart, finishIso, leftRunningGuess, startIso } from '../lib/logStart';
 import { ackClash, clashesFor, hhmm12, isAcked, nextFree as nextOpenSlot, settledRuns, timingChanged, type Clash } from '../lib/schedule';
@@ -648,9 +649,12 @@ export function RocketsPanel(p: Props) {
 
   return (
     <section className={`panel panel-rockets${showTiles ? '' : ' tiles-hidden'}`} aria-labelledby="h-rockets">
+      <CardExplain k="rockets" />
+      <CardExplain k="timed" />
+      <CardExplain k="logging" />
       <div className="panel-head">
         <div className="rockets-title">
-          <h2 id="h-rockets" className="panel-title">
+          <h2 id="h-rockets" className="panel-title hover-title" data-k="rockets">
             Rockets
           </h2>
           <button
@@ -812,7 +816,7 @@ export function RocketsPanel(p: Props) {
       <div className="timed">
         <div className="timed-head">
           <div className="timed-title-row">
-            <h3 className="timed-title">Timed launches</h3>
+            <h3 className="timed-title hover-title" data-k="timed">Timed launches</h3>
             {mobile ? (
               <OneMenu
                 label="Timed launches"
@@ -827,7 +831,7 @@ export function RocketsPanel(p: Props) {
             ) : (
             <FoldTabs
               label="Timed launches"
-              items={TIMED_VIEWS.map(([id, label]) => ({ id, label, count: countOf(id) }))}
+              items={TIMED_VIEWS.map(([id, label]) => ({ id, label, count: countOf(id), hoverKey: id === 'complete' ? 'logging' : undefined }))}
               value={view}
               onPick={(id) => {
                 setView(id);

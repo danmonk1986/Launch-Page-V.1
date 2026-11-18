@@ -11,7 +11,7 @@ export function FoldTabs<T extends string>({
   onPick
 }: {
   label: string;
-  items: { id: T; label: string; count?: number }[];
+  items: { id: T; label: string; count?: number; hoverKey?: string }[];
   value: T;
   onPick: (id: T) => void;
 }) {
@@ -61,7 +61,7 @@ export function FoldTabs<T extends string>({
         ))}
       </div>
       {shown.map((i) => (
-        <button key={i.id} type="button" role="tab" aria-selected={value === i.id} className="timed-tab" onClick={() => onPick(i.id)}>
+        <button key={i.id} type="button" role="tab" aria-selected={value === i.id} className={`timed-tab${i.hoverKey ? ' hover-title' : ''}`} data-k={i.hoverKey} onClick={() => onPick(i.id)}>
           {tab(i)}
         </button>
       ))}

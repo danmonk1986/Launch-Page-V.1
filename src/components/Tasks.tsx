@@ -1,4 +1,5 @@
 import { useHeaderSearch } from '../lib/headerSearch';
+import { CardExplain } from './CardExplain';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { FormActions, Sheet } from './Sheet';
@@ -716,11 +717,12 @@ export function TasksPanel(
   const grouped = groupTasks(p.tasks, p.today);
   return (
     <section className="panel panel-tasks" aria-labelledby="h-tasks">
+      <CardExplain k="tasks" />
       <div className="panel-head">
         {/* V20-097 (Dan, Nov 12): one control, the classic chevron. V opens the full Tasks view (the page today;
             in the beta it may be a pop-out window), and ^ on the page brings you back to this card. */}
         <div className="rockets-title">
-          <h2 id="h-tasks" className="panel-title">
+          <h2 id="h-tasks" className="panel-title hover-title" data-k="tasks">
             Tasks
           </h2>
           <button type="button" className="rockets-toggle" aria-label="Open the full Tasks view" title="Open the full Tasks view" onClick={p.onOpenAll}>

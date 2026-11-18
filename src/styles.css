@@ -3946,3 +3946,22 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* CP-035 (Nov 18): "[time] has already passed. START NOW" on one line. */
 .app .field-error .field-error-action { all: unset; display: inline; cursor: pointer; font: 700 13px Roboto, system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: #8869cb; text-decoration: underline; text-underline-offset: 3px; }
 .app .field-error .field-error-action:hover { color: #444242; }
+
+/* V20-326 (COPY Nov 18): hovering a card's title swaps the card's contents for its feature words (same as the tour). */
+.panel { position: relative; }
+.card-explain { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 28px 40px; border-radius: inherit; background: var(--surface); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.15s ease, visibility 0.15s; text-align: center; }
+.card-explain-title { margin: 0; font: 700 22px 'Roboto Slab', Georgia, serif; color: var(--accent-purple); }
+.card-explain-body { margin: 0 auto; max-width: 560px; font-size: 16px; line-height: 1.55; color: var(--beige); }
+.hover-title { position: relative; z-index: 7; cursor: help; }
+.panel:has(.hover-title[data-k='rockets']:hover) > .card-explain[data-k='rockets'],
+.panel:has(.hover-title[data-k='timed']:hover) > .card-explain[data-k='timed'],
+.panel:has(.hover-title[data-k='logging']:hover) > .card-explain[data-k='logging'],
+.panel:has(.hover-title[data-k='tasks']:hover) > .card-explain[data-k='tasks'],
+.panel:has(.hover-title[data-k='week']:hover) > .card-explain[data-k='week'] { opacity: 1; visibility: visible; }
+@media (hover: none) { .card-explain { display: none; } }
+/* CP-034: the line under Welcome's logo. */
+.welcome-tag { position: absolute; left: -40%; right: -40%; top: calc(100% + 14px); text-align: center; margin: 0; white-space: nowrap; font: 500 17px Roboto, system-ui, sans-serif; color: #444242; animation: welcome-rise 0.5s ease-out 0.9s both; }
+@media (max-width: 640px) { .welcome-tag { white-space: normal; width: 100%; text-align: center; font-size: 15px; } }
+/* CP-013: Sign in's two buttons side by side. */
+.signin.signin-light .signin-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.signin.signin-light .signin-actions .btn { width: auto; height: 36px; min-height: 36px; padding: 0 22px; border-radius: 999px; font: 700 13px Roboto, system-ui, sans-serif; letter-spacing: 0.08em; }

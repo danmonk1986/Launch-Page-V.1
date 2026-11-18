@@ -11,13 +11,15 @@ export function Welcome({ onSignIn, onTour, onRequest }: { onSignIn: () => void;
       <div className="welcome-logo">
         <span className="welcome-to">Welcome to</span>
         <img src="/launchpage-logo.png" alt="L4UNCH P4GE" />
+        {/* CP-034 (Nov 18): what the app is, under the logo. */}
+        <p className="welcome-tag">Make a plan. Stick to it. One block at a time.</p>
       </div>
       <div className="welcome-btns welcome-rise">
         <button type="button" className="welcome-btn welcome-key" onClick={onSignIn}>
           Sign in
         </button>
         <button type="button" className="welcome-btn" onClick={() => onTour(0)}>
-          Sign up
+          Get started
         </button>
       </div>
       <div className="welcome-more welcome-rise">
@@ -28,13 +30,13 @@ export function Welcome({ onSignIn, onTour, onRequest }: { onSignIn: () => void;
           ))}
         </div>
         <button type="button" className="welcome-link" onClick={() => onTour(0)}>
-          → Check it out
+          → See how it works
         </button>
       </div>
       {/* V20-298 (Dan, Nov 17): Request beta test in the footer, straight to the request page. */}
       <footer className="welcome-foot">
         <button type="button" className="welcome-link" onClick={onRequest}>
-          Request beta test
+          Request an invite
         </button>
       </footer>
     </main>

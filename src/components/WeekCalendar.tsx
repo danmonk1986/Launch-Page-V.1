@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useId } from 'react';
 import { FormActions, Sheet } from './Sheet';
+import { CardExplain } from './CardExplain';
 import { addDays, layoutWeek, weekStart, type CalEvent, type EventColor } from '../lib/events';
 import { isoDate } from '../lib/rockets';
 import { useMobile, useSwipe } from '../lib/useMobile';
@@ -264,8 +265,9 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
 
   return (
     <section className="panel panel-week" aria-labelledby="h-week">
+      <CardExplain k="week" />
       <div className="panel-head">
-        <h2 id="h-week" className="panel-title" title={range}>
+        <h2 id="h-week" className="panel-title hover-title" data-k="week" title={range}>
           {rowsShown === 4 ? (
             offset === 0 ? (
               '28 days'

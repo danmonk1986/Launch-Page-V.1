@@ -26,24 +26,24 @@ export function BetaRequest({ startOpen = false, onCancel }: { startOpen?: boole
       return;
     }
     setState('error');
-    setMessage('Request not sent. Please try again in a moment.');
+    setMessage("That didn't send. Try again in a minute.");
   }
 
   if (state === 'closed') {
     return (
       <button type="button" className="link-btn beta-open" onClick={() => setState('open')}>
-        Request beta test
+        Request an invite
       </button>
     );
   }
 
   if (state === 'sent') {
-    return <p className="signin-note beta-thanks">Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. You're on the beta list, and I'll be in touch.</p>;
+    return <p className="signin-note beta-thanks">Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. You're on the list. I'll be in touch soon.</p>;
   }
 
   return (
-    <form onSubmit={submit} className="signin-form beta-form" aria-label="Request beta test">
-      <p className="beta-title">Request beta test</p>
+    <form onSubmit={submit} className="signin-form beta-form" aria-label="Request an invite">
+      <p className="beta-title">Request an invite</p>
       <label className="field">
         <span>Name</span>
         <input type="text" required autoComplete="name" maxLength={120} value={name} onChange={(e) => setName(e.target.value)} />

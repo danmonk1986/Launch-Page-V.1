@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FEATURE_COPY, type FeatureKey } from '../lib/featureCopy';
 
 /**
  * V20-295 (Dan, Nov 17): the MVP tour, from the white setup canvas (board B). Welcome is slide 1; this is slides 2–6.
@@ -6,13 +7,8 @@ import { useState } from 'react';
  * back to Welcome; START LAUNCHING! and Skip go to sign up (the beta request). V20-296: logo colours; the dots sit
  * in the same place as on Welcome, with the text above them.
  */
-const SLIDES = [
-  { title: 'It comes to you.', body: 'At block time a timed launch pops up front and centre.\nStart it, snooze it to a real time, or skip it on purpose.' },
-  { title: 'Everything opens at once.', body: 'A rocket is every link one block needs.\nOne tap on START opens them all.' },
-  { title: 'The routine leads the day.', body: 'What is happening NOW sits on top, the rest of the day below.\nDays, nights or shift work: it flips with you.' },
-  { title: 'Tasks that sort themselves.', body: 'Due today and your key tasks stay current,\nand the week shows what is coming.' },
-  { title: 'Proof, not feelings.', body: 'Each block asks how long it really took. Log it all, or just the part that got done,\nand the week shows whether you are sticking to the plan.' }
-];
+// V20-326: the slides' words come from the shared feature copy (the same words show on each card's title hover).
+const SLIDES = (['timed', 'rockets', 'routine', 'tasks', 'logging'] as FeatureKey[]).map((k) => FEATURE_COPY[k]);
 
 export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWelcome: () => void; onSignUp: () => void }) {
   const [i, setI] = useState(Math.max(0, Math.min(SLIDES.length - 1, start)));
