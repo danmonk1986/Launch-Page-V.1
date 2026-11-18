@@ -132,7 +132,11 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(!supabase);
   const [settings, setSettings] = useState<BrandSettings>(DEFAULT_SETTINGS);
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  // V20-337 (Dan, Nov 18): settings count as loaded only for the account they belong to. Signed out, the defaults
+  // load for "no one"; without this, signing in briefly showed setup (defaults have no birthday) until your real
+  // settings arrived.
+  const [settingsFor, setSettingsFor] = useState<string | null | undefined>(undefined);
+  const settingsLoaded = settingsFor === (session?.user.id ?? null);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
   const [settingsOpen, setSettingsOpen] = useState<false | SettingsTab>(false);
@@ -461,11 +465,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    let live = true;
     loadSettings(userId).then((x) => {
+      if (!live) return;
       setSettings(x);
-      setSettingsLoaded(true);
+      setSettingsFor(userId);
     });
     loadBgImages(userId).then(setBgSlots);
+    return () => {
+      live = false;
+    };
   }, [userId]);
   useEffect(() => {
     if (supabase && !session) return;
