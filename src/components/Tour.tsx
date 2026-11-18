@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { RocketIcon } from './RocketIcon';
 import { FEATURE_COPY, type FeatureKey } from '../lib/featureCopy';
 
 /**
@@ -41,10 +42,32 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
               </div>
             </div>
           )}
-          {/* Nov 18 (CP-007): the rockets slide is just the rocket. */}
           {i === 1 && (
-            <div className="tp-rocket" aria-hidden="true">
-              🚀
+            <div className="tp">
+              <div className="tp-head">
+                <span className="tp-title">Rockets</span>
+                <span className="tp-plus is-key">
+                  <RocketIcon size={14} />
+                </span>
+                <span className="tp-plus">+</span>
+              </div>
+              <div className="tp-tiles">
+                <div className="tp-tile">
+                  <span className="tp-badge">D</span>
+                  <div>
+                    <b>DEEP WORK</b>
+                    <span>3 links</span>
+                  </div>
+                </div>
+                <div className="tp-tile">
+                  <span className="tp-badge is-purple">A</span>
+                  <div>
+                    <b>ADMIN</b>
+                    <span>4 links</span>
+                  </div>
+                </div>
+                <div className="tp-tile is-new">+ New rocket</div>
+              </div>
             </div>
           )}
           {/* Nov 18 (CP-008): the routine rolls from now: NOW on top, the rest of the day below, then tomorrow. */}

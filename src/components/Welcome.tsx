@@ -1,3 +1,5 @@
+import { RocketIcon } from './RocketIcon';
+
 /**
  * V20-294 (Dan, Nov 17): the first screen when signed out, from the white setup canvas (board A · Welcome).
  * The logo sits still a little above the middle; "Welcome to" slides in from the left and lands beside it,
@@ -18,7 +20,7 @@ export function Welcome({ onSignIn, onTour, onRequest }: { onSignIn: () => void;
         </button>
         {/* Nov 18 (Dan): GET STARTED becomes START with a rocket. */}
         <button type="button" className="welcome-btn welcome-start" onClick={() => onTour(0)}>
-          Start <span aria-hidden="true">🚀</span>
+          Start <RocketIcon size={16} />
         </button>
       </div>
       <div className="welcome-more welcome-rise">
