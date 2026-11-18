@@ -107,11 +107,11 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
                 <span className="tp-plus">+</span>
               </div>
               {[
-                // Nov 18 (Dan): his real key tasks sit on top (THREE), then one task due today, coloured like the app.
-                ['Today', 'FIND', 'New shop', 'Three'],
-                ['Today', 'BETA WK 2', 'Launch Page', 'Three'],
-                ['Today', 'CREATE', 'System optimization strategy', 'Three'],
-                ['Today', 'PAY', 'Rent', 'Due']
+                // Nov 18 (Dan): one task due today on top, then his real key tasks (THREE) on later dates.
+                ['Today', 'PAY', 'Rent', 'Due'],
+                ['Fri', 'FIND', 'New shop', 'Three'],
+                ['Mon', 'BETA WK 2', 'Launch Page', 'Three'],
+                ['Wed', 'CREATE', 'System optimization strategy', 'Three']
               ].map(([d, t, x, st]) => (
                 <div key={x} className="tp-task">
                   <span className="tp-date">{d}</span>
