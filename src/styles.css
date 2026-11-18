@@ -3929,3 +3929,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .setup .setup-progress li.is-done b { background: #8869cb; }
 .setup .setup-progress li.is-on b { background: #06f9c2; }
 @media (max-width: 520px) { .setup .setup-progress li { width: 80px; font-size: 12px; } }
+
+/* V20-322 (Dan, Nov 17): step 4's scroll has no scrollbar; the bottom of the card fades out instead. */
+.setup-stage > .setup-card.is-scroll { scrollbar-width: none; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent calc(100% - 8px)); mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent calc(100% - 8px)); padding-bottom: 72px; }
+.setup-stage > .setup-card.is-scroll::-webkit-scrollbar { display: none; }
