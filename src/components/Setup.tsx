@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DEFAULT_SETTINGS, INDUSTRIES, type AccountInfo, type BrandSettings } from '../lib/settings';
 import { isoDate, openTabs, type Launch, type Rocket } from '../lib/rockets';
 import type { Routine } from '../lib/routines';
@@ -63,6 +63,33 @@ export function Setup({
   const a = settings.account;
   const [step, setStep] = useState<SetupStep>(setupStepFor(a) ?? 1);
   const [busy, setBusy] = useState(false);
+  // V20-320: the 10-minute clock starts at your first tap or keystroke in setup (kept through a reload).
+  const [startedAt, setStartedAt] = useState<number | null>(() => {
+    try {
+      const v = Number(sessionStorage.getItem('lp.setupStart'));
+      return v > 0 ? v : null;
+    } catch {
+      return null;
+    }
+  });
+  const [tick, setTick] = useState(Date.now());
+  useEffect(() => {
+    if (startedAt === null) return;
+    const t = setInterval(() => setTick(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [startedAt]);
+  const left = startedAt === null ? null : Math.max(0, 600 - Math.floor((tick - startedAt) / 1000));
+  const startClock = () => {
+    if (startedAt !== null) return;
+    const now = Date.now();
+    setStartedAt(now);
+    setTick(now);
+    try {
+      sessionStorage.setItem('lp.setupStart', String(now));
+    } catch {
+      /* no storage: the clock still runs */
+    }
+  };
   // 1 · About you. A new account still carries the starter name; start it blank.
   const [name, setName] = useState(settings.displayName === DEFAULT_SETTINGS.displayName ? '' : settings.displayName);
   const [business, setBusiness] = useState(a.businessName);
@@ -425,11 +452,14 @@ export function Setup({
   );
 
   return (
-    <main className="setup">
+    <main className="setup" onPointerDown={startClock} onKeyDown={startClock}>
       <header className="setup-head">
         <img src="/launchpage-logo.png" alt="L4UNCH P4GE" />
         <h1>Set up your first launch</h1>
-        <span className="setup-beta">BETA · about 10 min</span>
+        {/* V20-320 (Dan, Nov 17): "About 10 minutes" until you start, then a real countdown from 10:00. */}
+        <span className="setup-beta" aria-live="off">
+          {left === null ? 'About 10 minutes' : `${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')}`}
+        </span>
       </header>
       <div className="setup-main">
         {under ? (
