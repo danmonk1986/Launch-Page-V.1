@@ -2038,6 +2038,13 @@ export default function App() {
           onSaveLaunch={async (l) => void (await launchOps.save(l))}
           onSaveProject={async (p) => void (await projectOps.save(p))}
           onTest={(l) => setReminder(l)}
+          onCancel={() => {
+            // V20-376: set up before (or age checked) = close setup, back to the Launch Page; a brand-new account
+            // that hasn't passed step 1 signs out and resumes here next time.
+            const a = settings.account;
+            if (a.setupDoneAt || a.birthday.trim()) void handleSave({ account: { ...a, setup: 'done' } as BrandSettings['account'] });
+            else void signOutClean();
+          }}
         />
       </div>
       </BetaContext.Provider>

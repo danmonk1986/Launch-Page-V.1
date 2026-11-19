@@ -51,7 +51,8 @@ export function Setup({
   onSaveRocket,
   onSaveLaunch,
   onSaveProject,
-  onTest
+  onTest,
+  onCancel
 }: {
   settings: BrandSettings;
   email: string;
@@ -65,6 +66,8 @@ export function Setup({
   onSaveProject?: (p: Project) => Promise<void>;
   /** Finish setup and open the launch pop-up for this launch. */
   onTest: (l: Launch) => void;
+  /** V20-376 (Dan, Nov 19): × leaves setup. Set up before = back to the Launch Page; a first run signs out (progress kept). */
+  onCancel?: () => void;
 }) {
   const a = settings.account;
   const [step, setStep] = useState<SetupStep>(setupStepFor(a) ?? 1);
@@ -481,6 +484,17 @@ export function Setup({
         </span>
       </header>
       <div className="setup-main">
+        {onCancel && (
+          <button
+            type="button"
+            className="setup-close"
+            aria-label={a.setupDoneAt || a.birthday.trim() ? 'Close setup' : 'Leave setup (your progress is saved)'}
+            title={a.setupDoneAt || a.birthday.trim() ? 'Close setup: back to your Launch Page. What you saved stays.' : 'Leave setup: you’ll pick up here next time you sign in.'}
+            onClick={onCancel}
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+          </button>
+        )}
         {under ? (
           <section className="setup-card setup-stop">
             <h2>The beta is 18+ for now</h2>
