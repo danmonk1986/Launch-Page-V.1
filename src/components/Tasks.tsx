@@ -991,7 +991,8 @@ function TaskForm({
   const [d, setD] = useState<Task>(task);
   const pushRocket = useRef(false);
   const [steps, setSteps] = useState<StepDraft[]>(initialSteps ?? []);
-  // V20-362: beta mode has no Budget, so no Budget expense field.
+  // V20-363 (Dan, Nov 19): beta mode has no Budget page, but the expense field stays as a simple interim budget:
+  // called Expense, kept on the task (nothing goes to Budget).
   const beta = useBeta();
   const [openStep, setOpenStep] = useState<number | null>(null);
   const setStep = (i: number, patch: Partial<StepDraft>) => setSteps((list) => list.map((x, j) => (j === i ? { ...x, ...patch } : x)));
@@ -1206,9 +1207,9 @@ function TaskForm({
         </label>
         {/* V20-091 (Dan, Nov 12): the money has its own field. Fill in Budget expense and saving puts it in Budget
             (it replaces the Push to Budget box and amounts typed into Notes). The task list can be sorted by it. */}
-        {!isStep && !beta && (
+        {!isStep && (
           <label className="field budget-expense">
-            <span>{linked ? 'Budget expense · in Budget' : 'Budget expense'}</span>
+            <span>{beta ? 'Expense' : linked ? 'Budget expense · in Budget' : 'Budget expense'}</span>
             <input
               value={d.expense}
               onChange={(e) => set('expense', e.target.value)}
@@ -1218,7 +1219,7 @@ function TaskForm({
             />
             {!linked && (
               <small id={`${formId}-exp`} className="field-hint">
-                Filled in = it goes to Budget when you save.
+                {beta ? 'What this will cost. Sort your tasks by it to see what’s coming up.' : 'Filled in = it goes to Budget when you save.'}
               </small>
             )}
           </label>
