@@ -4115,9 +4115,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
    (This week, Rockets…): same size and colour as .panel-empty, not the small table text. */
 .app td.task-empty { font-size: 16px; line-height: 1.5; padding-top: 10px; }
 
-/* V20-376 (Dan, Nov 19): × to leave setup, top right under the BETA pill (same round outline as the app's close). */
+/* V20-376 (Dan, Nov 19): × to leave setup, top right under the BETA pill. V20-376b: the very same button as the
+   Settings × (icon-btn tool-btn in .sheet-tools), so size and look match exactly; only its spot is set here. */
 .setup .setup-main { position: relative; }
-.setup-close { position: absolute; top: -36px; right: 0; width: 44px; height: 44px; border-radius: 50%; border: 2px solid #8869cb; background: #ffffff; color: #8869cb; display: grid; place-items: center; cursor: pointer; padding: 0; }
-.setup-close:hover { background: #8869cb; color: #ffffff; }
-.setup-close:focus-visible { outline: 2px solid #06f9c2; outline-offset: 2px; }
-@media (max-width: 640px) { .setup-close { top: -20px; width: 40px; height: 40px; } }
+.setup-close { position: absolute; top: -36px; right: 0; }
+@media (max-width: 640px) { .setup-close { top: -20px; } }

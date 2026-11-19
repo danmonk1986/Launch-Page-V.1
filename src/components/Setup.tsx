@@ -5,6 +5,7 @@ import type { Routine } from '../lib/routines';
 import type { Project } from '../lib/projects';
 import { whatList } from '../lib/whats';
 import { cleanLink, joinTitle } from './Rockets';
+import { CLOSE_ICON, HeadIcon } from './Sheet';
 
 /** V20-371: shown above TEST in setup (rocket and timed launch). */
 const POPUP_NOTE = 'Rockets open several tabs at once. The first time, your browser may block them as pop-ups: choose Always allow for this site, then test again.';
@@ -485,15 +486,17 @@ export function Setup({
       </header>
       <div className="setup-main">
         {onCancel && (
+          <div className="sheet-tools setup-close">
           <button
             type="button"
-            className="setup-close"
+            className="icon-btn tool-btn"
             aria-label={a.setupDoneAt || a.birthday.trim() ? 'Close setup' : 'Leave setup (your progress is saved)'}
             title={a.setupDoneAt || a.birthday.trim() ? 'Close setup: back to your Launch Page. What you saved stays.' : 'Leave setup: you’ll pick up here next time you sign in.'}
             onClick={onCancel}
           >
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+            <HeadIcon d={CLOSE_ICON} />
           </button>
+          </div>
         )}
         {under ? (
           <section className="setup-card setup-stop">
