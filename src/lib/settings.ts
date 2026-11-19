@@ -399,7 +399,9 @@ export async function loadSettings(userId: string | null): Promise<BrandSettings
       return s;
     }
     if (!error && !data) {
-      const seed = readLocal();
+      // V20-369 (Nov 19): a brand-new account starts from the defaults, never from this browser's copy.
+      const seed = DEFAULT_SETTINGS;
+      writeLocal(seed);
       await supabase.from('settings').insert({ user_id: userId, ...toRow(seed) });
       return seed;
     }

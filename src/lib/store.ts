@@ -174,7 +174,9 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
           // V20-147 (Dan, Nov 12): an empty table is not a reason to bring back what this device has on file. Anything
           // that was in the cloud before (its version is known) was deleted there, so it stays deleted; only records
           // never synced (a first sign-in, or the starter seed) go up.
-          const seed = (readLocal() ?? opts.seed()).filter((x) => !versions[x.id]);
+          // V20-369 (Nov 19): an empty account only ever gets the starter seed (now empty), never this browser's copy:
+          // the copy may be another account's. Changes still waiting to sync went up above (pending).
+          const seed = opts.seed().filter((x) => !versions[x.id]);
           if (seed.length) {
             const { error: insertError } = await supabase.from(opts.table).insert(seed.map(opts.toRow));
             writeLocal(seed);

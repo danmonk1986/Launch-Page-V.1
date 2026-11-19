@@ -70,13 +70,17 @@ export function claimDevice(userId: string): 'same' | 'adopted' | 'wiped' {
     return 'same';
   }
   if (owner === userId) return 'same';
-  if (owner) wipeLocalData();
+  // V20-369 (Nov 19): a copy with no owner is no longer adopted. A new tester's first sign-in on Dan's browser
+  // took his copy (projects, rockets, routines, account details) into the new account. Any copy that isn't
+  // this account's is cleared, owner or not.
+  const hadData = keys().some((k) => !isDeviceKey(k));
+  wipeLocalData();
   try {
     localStorage.setItem(OWNER_KEY, userId);
   } catch {
     /* ignore */
   }
-  return owner ? 'wiped' : 'adopted';
+  return owner || hadData ? 'wiped' : 'adopted';
 }
 
 /** Sign out clears this browser's copy, so the next account can't pick it up. */

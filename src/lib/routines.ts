@@ -288,11 +288,9 @@ export async function loadRoutines(userId: string | null): Promise<LoadResult> {
         writeLocal(list);
         return { routines: list, problem: null };
       }
-      // V20-364: a new account starts with no routine (setup makes its first one).
-      const seed = readLocal() ?? [];
-      const { error: insertError } = await supabase.from('routines').insert(seed.map(toRow));
-      writeLocal(seed);
-      return { routines: seed, problem: insertError ? insertError.message : null };
+      // V20-364: a new account starts with no routine (setup makes its first one). V20-369: never this browser's copy.
+      writeLocal([]);
+      return { routines: [], problem: null };
     }
     const fallback = readLocal() ?? [];
     return {
