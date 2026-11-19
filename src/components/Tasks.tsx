@@ -1049,15 +1049,11 @@ function TaskForm({
                 <option value="" disabled>
                   Pick a project
                 </option>
-                {tree.map(({ area, children }) => (
-                  <optgroup key={area.id} label={area.name}>
-                    <option value={area.id}>{projectPick(projects, area)}</option>
-                    {children.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {projectPick(projects, c)}
-                      </option>
-                    ))}
-                  </optgroup>
+                {/* V20-370 (Nov 19): flat list. The group headings repeated every project name (grey heading + pick). */}
+                {tree.flatMap(({ area, children }) => [area, ...children]).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {projectPick(projects, p)}
+                  </option>
                 ))}
               </select>
             </label>
