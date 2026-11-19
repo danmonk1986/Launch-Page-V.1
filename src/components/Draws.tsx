@@ -76,7 +76,7 @@ export function DrawsView(p: { draws: Draw[]; fy: number; fyEnd: string; search:
         <p className="panel-empty">No draws in FY{fy} yet. Import a business account statement (Import CSV) and its e-transfers to you land here.</p>
       ) : (
         <div className="task-scroll">
-          <table className="task-table budget-table expenses-table">
+          <table className="task-table budget-table expenses-table draws-table">
             <thead>
               <tr>
                 <th className="col-project">Division</th>

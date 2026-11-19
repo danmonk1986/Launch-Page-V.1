@@ -78,7 +78,7 @@ export function RecordsPage(
   const VIEWS: { id: View; label: string; hint: string }[] = [
     { id: 'expenses', label: 'Expenses', hint: 'What was actually paid' },
     { id: 'income', label: 'Income', hint: 'Money in: client payments and interest, and the year by month' },
-    { id: 'draws', label: 'DRWs', hint: 'Business withdrawals and e-transfers to you' },
+    { id: 'draws', label: 'Draws', hint: 'Business withdrawals and e-transfers to you' },
     { id: 'invoices', label: 'Invoices', hint: 'STARDVST invoices' }
   ];
   const shownViews = VIEWS.filter((v) => (v.id === 'invoices' ? p.showInvoices !== false : p.showBooks !== false && (!p.showViews || p.showViews[v.id as 'expenses' | 'income' | 'draws'] !== false)));

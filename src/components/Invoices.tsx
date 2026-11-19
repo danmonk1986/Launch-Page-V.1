@@ -122,7 +122,7 @@ export function InvoicesPage(p: Props) {
       )}
 
       <div className="task-scroll">
-        <table className="task-table budget-table">
+        <table className="task-table budget-table invoices-table">
           <thead>
             <tr>
               <th>Invoice #</th>

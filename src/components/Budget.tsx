@@ -443,7 +443,7 @@ export function BudgetPage(p: Props) {
         </div>
       ) : (
         <div className="task-scroll">
-          <table className="task-table budget-table">
+          <table className="task-table budget-table budget-lines">
             <thead>
               <tr>
                 <th className="col-project">Project</th>

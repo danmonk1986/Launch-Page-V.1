@@ -171,7 +171,7 @@ export function ExpensesView(p: Props) {
         </p>
       ) : (
         <div className="task-scroll">
-          <table className="task-table budget-table expenses-table">
+          <table className="task-table budget-table expenses-table exp-lines">
             <thead>
               <tr>
                 <th className="col-project">Division</th>
