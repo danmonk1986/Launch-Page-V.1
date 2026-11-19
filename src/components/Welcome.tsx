@@ -15,11 +15,12 @@ export function Welcome({ onSignIn, onTour, onRequest }: { onSignIn: () => void;
         <img src="/launchpage-logo.png" alt="L4UNCH P4GE" />
       </div>
       <div className="welcome-btns welcome-rise">
-        <button type="button" className="welcome-btn welcome-key" onClick={onSignIn}>
+        {/* V20-405 (Dan, Nov 19): START is the teal call to action; SIGN IN is the outline. */}
+        <button type="button" className="welcome-btn" onClick={onSignIn}>
           Sign in
         </button>
         {/* Nov 18 (Dan): GET STARTED becomes START with a rocket. */}
-        <button type="button" className="welcome-btn welcome-start" onClick={() => onTour(0)}>
+        <button type="button" className="welcome-btn welcome-key welcome-start" onClick={() => onTour(0)}>
           Start <RocketIcon size={16} />
         </button>
       </div>
