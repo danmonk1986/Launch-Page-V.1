@@ -1084,11 +1084,32 @@ function ColourTile({ label, value, onChange }: { label: string; value: string; 
  * took, days opened) and the invite requests. Numbers only: the database answers just the admin (0069).
  */
 type TesterRow = { email: string; joined: string; last_sign_in: string | null; setup: string; setup_seconds: number | null; days_opened: number; days_7: number; last_open: string | null };
-type InviteRow = { id: string; name: string; email: string; note: string | null; created_at: string };
+type InviteRow = { id: string; name: string; email: string; note: string | null; created_at: string; invited_at?: string | null };
 function BetaTesters() {
   const [rows, setRows] = useState<TesterRow[] | null>(null);
   const [invites, setInvites] = useState<InviteRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  // V20-361: INVITE sends the request's person a sign-up email (server function, admin only).
+  const [sending, setSending] = useState<string | null>(null);
+  const [inviteMsg, setInviteMsg] = useState<Record<string, string>>({});
+  const invite = async (i: InviteRow) => {
+    if (!supabase || sending) return;
+    setSending(i.id);
+    const { data, error } = await supabase.functions.invoke('invite-tester', { body: { requestId: i.id } });
+    setSending(null);
+    let msg = '';
+    if (error) {
+      try {
+        msg = ((await (error as { context?: Response }).context?.json()) as { error?: string })?.error ?? error.message;
+      } catch {
+        msg = error.message;
+      }
+    }
+    if (msg) return setInviteMsg((m) => ({ ...m, [i.id]: msg }));
+    const at = (data as { invited_at?: string })?.invited_at ?? new Date().toISOString();
+    setInvites((list) => list.map((x) => (x.id === i.id ? { ...x, invited_at: at } : x)));
+    setInviteMsg((m) => ({ ...m, [i.id]: `Invite sent to ${i.email}.` }));
+  };
   const load = async () => {
     if (!supabase) return setErr('No database connection.');
     setErr(null);
@@ -1161,9 +1182,19 @@ function BetaTesters() {
       ) : (
         <ul className="beta-admin-invites">
           {invites.map((i) => (
-            <li key={i.id}>
-              <b>{i.name}</b> · <a href={`mailto:${i.email}`}>{i.email}</a> · {day(i.created_at)}
-              {i.note ? <span className="field-hint"> — {i.note}</span> : null}
+            <li key={i.id} className="beta-invite-row">
+              <span>
+                <b>{i.name}</b> · <a href={`mailto:${i.email}`}>{i.email}</a> · {day(i.created_at)}
+                {i.note ? <span className="field-hint"> — {i.note}</span> : null}
+                {inviteMsg[i.id] && <span className="field-hint beta-invite-msg"> {inviteMsg[i.id]}</span>}
+              </span>
+              {i.invited_at ? (
+                <span className="beta-invited">Invited {day(i.invited_at)}</span>
+              ) : (
+                <button type="button" className="btn" disabled={sending === i.id} onClick={() => void invite(i)}>
+                  {sending === i.id ? 'Sending…' : 'Invite'}
+                </button>
+              )}
             </li>
           ))}
         </ul>
