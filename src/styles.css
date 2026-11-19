@@ -4069,3 +4069,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .beta-admin-table td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line, #ececec); white-space: nowrap; }
 .beta-admin-table td.is-over { color: #e2675c; font-weight: 600; }
 .beta-admin-invites { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 14px; }
+/* V20-360: MAIN / BETA switch beside Refresh (placeholder until the scale-back). */
+.beta-admin-tools { display: flex; align-items: center; gap: 16px; }
+.beta-mode { display: inline-flex; align-items: center; gap: 8px; opacity: 0.55; cursor: not-allowed; }
+.beta-mode-label { font: 600 12px 'Roboto Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.beta-mode-label.is-on { color: var(--accent-teal); }

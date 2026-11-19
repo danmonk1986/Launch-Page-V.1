@@ -1107,9 +1107,20 @@ function BetaTesters() {
     <div className="beta-admin">
       <div className="beta-admin-head">
         <h3 className="timed-title settings-section">Beta testers</h3>
-        <button type="button" className="btn btn-quiet" onClick={() => void load()}>
-          Refresh
-        </button>
+        <div className="beta-admin-tools">
+          {/* V20-360 (Dan, Nov 19): MAIN / BETA switch for the Launch Page itself (main's full page vs the lean beta
+              version testers get). A placeholder until the scale-back is built; then it flips the page. */}
+          <span className="beta-mode" title="Coming with the scale-back: flips your Launch Page to the lean beta version testers see">
+            <span className="beta-mode-label is-on">Main</span>
+            <button type="button" role="switch" aria-checked={false} aria-label="Launch Page: Main or Beta (coming soon)" disabled className="module-switch">
+              <span />
+            </button>
+            <span className="beta-mode-label">Beta</span>
+          </span>
+          <button type="button" className="btn btn-quiet" onClick={() => void load()}>
+            Refresh
+          </button>
+        </div>
       </div>
       <p className="field-hint">Only you see this. Numbers only: never what's in anyone's tasks. Setup goal: under 10 minutes.</p>
       {err && <p className="field-error">{err}</p>}
