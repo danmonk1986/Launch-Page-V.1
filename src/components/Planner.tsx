@@ -19,10 +19,11 @@ const UP = 'M6 15l6-6 6 6';
 const PLUS = 'M12 5v14M5 12h14';
 const CHECK = 'M5 12.5l4.5 4.5L19 7.5';
 const X = 'M6 6l12 12M18 6L6 18';
-// One plan = one task (V20-340) is built but parked: the button is hidden until we revisit it.
-const SEND_TO_TASKS = false;
+// Nov 19 (Dan): back as Add task: opens the Add task form filled in from the plan, to review before it saves.
+const SEND_TO_TASKS = true;
 // A checklist: the plan as one task with steps.
-const TASKS = 'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2';
+// Dan's pick: the list with a + (as on Stats' Add a log).
+const TASKS = 'M4 6h13M4 11h13M4 16h7M18 14v7M14.5 17.5h7';
 const SAVE = 'M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6';
 const TRASH = 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3';
 const STATUS_COLOR: Record<DecisionStatus, string> = {
@@ -132,13 +133,13 @@ export function PlannerPanel(p: {
           </div>
         </div>
         <div className="panel-actions">
-          {/* Nov 19 (Dan): parked until we revisit how a plan's dated steps read in Tasks (V20-341). */}
+          {/* Nov 19 (Dan): Add task (reviewed in the form first). */}
           {SEND_TO_TASKS && plan && p.onPlanToTasks && (
             <button
               type="button"
               className="icon-btn tool-btn"
-              aria-label={plan.taskId ? `${plan.name} is in Tasks: open Tasks` : `Send ${plan.name} to Tasks`}
-              title={plan.taskId ? 'In Tasks: open it' : 'Send to Tasks: one task, the decisions as its steps'}
+              aria-label={plan.taskId ? `${plan.name} is in Tasks: open Tasks` : `Add ${plan.name} as a task`}
+              title={plan.taskId ? 'In Tasks: open it' : 'Add task: the plan as one task, its open decisions as steps (review before saving)'}
               aria-pressed={!!plan.taskId}
               onClick={() => p.onPlanToTasks?.(plan)}
             >

@@ -66,7 +66,7 @@ import { BLOCKED_HELP, RocketsPanel, nameFromUrl, rocketOptions, type TimedPrese
 import { LaunchReminder, MissedLaunches, TimeUpReminder } from './components/LaunchReminder';
 import { chime, unlockAudioOnFirstGesture } from './lib/alerts';
 import { WeekCalendar } from './components/WeekCalendar';
-import { TasksPage, TasksPanel } from './components/Tasks';
+import { TasksPage, TasksPanel, type TaskSeed } from './components/Tasks';
 import { ProjectsManager } from './components/Projects';
 import { logsProductivity, matchCalendar, projectStore, type Project } from './lib/projects';
 import { buildJournalImport, byNewest, checkinsOf, journalStore, mergeJournal, newEntry, withCheckins, type JournalEntry } from './lib/journal';
@@ -255,7 +255,7 @@ export default function App() {
   // V20-210: a task to open for editing on the Tasks page (from a project's What list).
   const [editTask, setEditTask] = useState<string | null>(null);
   // V20-083: a new calendar event with Add a task too opens Add task filled in.
-  const [taskPreset, setTaskPreset] = useState<{ fill: Partial<Task>; n: number } | null>(null);
+  const [taskPreset, setTaskPreset] = useState<{ fill: Partial<Task>; n: number; seed?: TaskSeed } | null>(null);
   // V20-126 (Dan, Nov 12): card by card is the only way the page scrolls (the Free / Card by card setting is gone).
   // The routine following the time beside the cards comes back as a switch in Settings › Modules.
   const scrollMode = 'cards' as const;
@@ -1063,36 +1063,45 @@ export default function App() {
       ...base,
       parentId: parent.id,
       task: d.title.trim() || base.task,
-      description: existing ? base.description : '',
-      endDate: d.decideBy ?? base.endDate,
+      // Steps take the task's dates (Nov 19): a decision's decide-by stays in the Planner.
+      description: existing ? base.description : parent.description,
+      startDate: existing ? base.startDate : parent.startDate,
+      endDate: existing ? base.endDate : parent.endDate,
       done,
       doneAt: done ? base.doneAt ?? new Date().toISOString() : null,
       notes: ownNotes ? base.notes : picked ? `Picked: ${picked.name}` : ''
     };
   }
   const sameTask = (a: Task, b: Task) => JSON.stringify(a) === JSON.stringify(b);
-  async function planToTasks(plan: Plan) {
+  /** Planner › Add task (Dan, Nov 19): opens Add task filled in from the plan (its open decisions as steps) so you
+   *  review it before it saves. On Save the plan and its decisions link to the new task and steps. Steps take the
+   *  task's dates. A plan already in Tasks opens Tasks instead of making a second copy. */
+  function planToTasks(plan: Plan) {
     const already = liveTask(plan.taskId);
     if (already) {
       setPage('tasks');
       setStatus(`${plan.name} is already in Tasks (${taskName(already)}).`);
       return;
     }
-    let sort = nextTaskSort();
-    const parent: Task = {
-      ...newTask(sort++, plan.projectId),
-      task: plan.name.trim() || 'Plan',
-      description: plan.description.trim(),
-      startDate: plan.startDate ?? isoDate(new Date()),
-      endDate: plan.decideBy
-    };
-    const decs = decisions.filter((d) => d.planId === plan.id).sort(byDate);
-    const steps = decs.map((d) => stepFor(d, parent, liveTask(d.taskId), sort++));
-    await taskOps.saveMany([parent, ...steps]);
-    await planOps.save({ ...plan, taskId: parent.id });
-    const relinked = decs.map((d, i) => ({ ...d, taskId: steps[i].id })).filter((d, i) => d.taskId !== decs[i].taskId);
-    if (relinked.length) await decisionOps.saveMany(relinked);
-    setStatus(`${plan.name} is in Tasks: one task, ${steps.length} step${steps.length === 1 ? '' : 's'}.`);
+    const decs = decisions.filter((d) => d.planId === plan.id && d.status !== 'done').sort(byDate);
+    setPage('launch');
+    setTaskPreset({
+      fill: { task: plan.name.trim(), description: plan.description.trim(), projectId: plan.projectId, startDate: plan.startDate ?? isoDate(new Date()), endDate: plan.decideBy },
+      n: Date.now(),
+      seed: {
+        steps: decs.map((d) => d.title.trim()).filter(Boolean),
+        onSaved: (t, kids) => {
+          void planOps.save({ ...plan, taskId: t.id });
+          const key = (x: string) => x.trim().toLowerCase();
+          const linked = decs.flatMap((d) => {
+            const k = kids.find((s) => key(s.task) === key(d.title));
+            return k ? [{ ...d, taskId: k.id }] : [];
+          });
+          if (linked.length) void decisionOps.saveMany(linked);
+          setStatus(`${plan.name} is in Tasks: ${kids.length} step${kids.length === 1 ? '' : 's'}.`);
+        }
+      }
+    });
   }
   /** A decision saved in the Planner: its step follows (a new decision in a plan that's in Tasks gets a step). */
   async function saveDecision(d: Decision) {
@@ -1124,7 +1133,6 @@ export default function App() {
         let n = d;
         if (t.done !== old.done) n = { ...n, status: t.done ? 'done' : d.options.some((o) => o.picked) ? 'decided' : 'open' };
         if (t.task.trim() && t.task !== old.task) n = { ...n, title: t.task.trim() };
-        if ((t.endDate ?? null) !== (old.endDate ?? null)) n = { ...n, decideBy: t.endDate };
         if (n !== d) changedDecisions.push(n);
       }
       const plan = plans.find((p) => p.taskId === t.id);

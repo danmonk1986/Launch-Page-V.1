@@ -570,8 +570,10 @@ export function TaskSheet(p: { task: Task | null; title: string; tasks: Task[]; 
   );
 }
 
+export type TaskSeed = { steps?: string[]; onSaved?: (t: Task, steps: Task[]) => void };
 function useTaskEditor(p: EditorProps) {
   const [editing, setEditing] = useState<Task | null>(null);
+  const [seed, setSeed] = useState<TaskSeed | null>(null);
   const [open, setOpen] = useState(false);
   // Checking off a task that still has open steps asks first.
   const [ask, setAsk] = useState<{ task: Task; open: Task[] } | null>(null);
@@ -630,12 +632,15 @@ function useTaskEditor(p: EditorProps) {
           projects={p.projects}
           onCancel={() => setOpen(false)}
           onPushRocket={p.onCreateLaunch}
+          initialSteps={isNew ? seed?.steps : undefined}
           onSave={async (t, newSteps, push) => {
             const base = p.tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0);
             const kids = newSteps.filter((s) => s.trim()).map((s, i) => newStep(t, s, base + i));
             if (kids.length) await p.onSaveMany([t, ...kids]);
             else await p.onSave(t);
             if (push) await p.onPushToBudget?.(t);
+            if (isNew) seed?.onSaved?.(t, kids);
+            setSeed(null);
             setOpen(false);
           }}
           onDelete={async (id) => {
@@ -655,8 +660,9 @@ function useTaskEditor(p: EditorProps) {
       setEditing(t);
       setOpen(true);
     },
-    add: (fill?: Partial<Task>) => {
+    add: (fill?: Partial<Task>, withSeed?: TaskSeed) => {
       setEditing({ ...newTask(p.tasks.length), ...fill });
+      setSeed(withSeed ?? null);
       setOpen(true);
     },
     addStep: (picked: Task) => {
@@ -702,14 +708,14 @@ export function TasksPanel(
     onOpenAll: () => void;
     onOpenTask: (t: Task) => void;
     /** V20-083: opens Add task filled in (from a new calendar event's Add a task too). */
-    addPreset?: { fill: Partial<Task>; n: number } | null;
+    addPreset?: { fill: Partial<Task>; n: number; seed?: TaskSeed } | null;
     onAddPresetUsed?: () => void;
   }
 ) {
   const editor = useTaskEditor(p);
   useEffect(() => {
     if (!p.addPreset) return;
-    editor.add(p.addPreset.fill);
+    editor.add(p.addPreset.fill, p.addPreset.seed);
     p.onAddPresetUsed?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.addPreset?.n]);
@@ -939,9 +945,12 @@ function TaskForm({
   projects,
   onSave,
   onDelete,
-  onPushRocket
+  onPushRocket,
+  initialSteps
 }: {
   task: Task;
+  /** Planner › Add task (Nov 19): the plan's decisions come in as steps to review. */
+  initialSteps?: string[];
   isNew: boolean;
   isStep: boolean;
   existingSteps: Task[];
@@ -956,7 +965,7 @@ function TaskForm({
 }) {
   const [d, setD] = useState<Task>(task);
   const pushRocket = useRef(false);
-  const [steps, setSteps] = useState<string[]>([]);
+  const [steps, setSteps] = useState<string[]>(initialSteps ?? []);
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setD((x) => ({ ...x, [k]: v }));
   const [rep, setRep] = useState(() => repeatOf(task));
   const recurring = rep.kind !== 'none';
