@@ -4045,3 +4045,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .steps-list .step-have { display: grid; grid-template-columns: minmax(0, 1fr) auto 64px; gap: 10px; align-items: center; }
 .step-have-link { color: var(--accent-purple); display: inline-flex; }
 .step-draft .rockets-toggle.step-open { justify-self: center; }
+/* V20-345: the link button is gone from step rows; the ⌄ opens Link · Date · Time · Notes. A set link shows a mark. */
+.step-draft .step-input { grid-template-columns: 16px minmax(0, 1fr) 64px 18px 30px; }
+.step-link-mark { display: inline-flex; justify-content: center; color: var(--accent-teal); }

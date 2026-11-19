@@ -1106,9 +1106,10 @@ function TaskForm({
                       placeholder="Next step"
                     />
                     <span className={`step-date${st.endDate ? '' : ' is-dim'}`}>{st.endDate ? shortDay(st.endDate) : 'task date'}</span>
-                    <button type="button" className={`quick-btn task-quick${st.link.trim() ? ' is-key' : ''}`} aria-label={st.link.trim() ? `Link: ${st.link}` : 'Add a link'} title={st.link.trim() ? st.link : 'Add a link'} onClick={() => setOpenStep(i)}>
-                      <Icon d={LINK_ICON} size={14} />
-                    </button>
+                    {/* V20-345 (Dan): only the ⌄ opens the fields; a link shows as a small mark once set. */}
+                    <span className="step-link-mark" title={st.link.trim() || undefined} aria-label={st.link.trim() ? `Link: ${st.link}` : undefined}>
+                      {st.link.trim() && <Icon d={LINK_ICON} size={14} />}
+                    </span>
                     <button type="button" className="rockets-toggle step-open" aria-expanded={open} aria-label={open ? 'Close step details' : 'Step details: date, link, time, notes'} title={open ? 'Close' : 'Date, link, time, notes'} onClick={() => setOpenStep(open ? null : i)}>
                       <Icon d={open ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} />
                     </button>
