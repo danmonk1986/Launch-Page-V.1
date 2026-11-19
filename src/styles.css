@@ -4140,3 +4140,11 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .setup-card-head h2 { white-space: nowrap; font-size: min(15px, calc((100vw - 108px) / 18.4)); }
   .setup-card-head > span { display: none; }
 }
+
+/* V20-381 (Dan, Nov 19, iPhone): the ⌄ on folded tab rows did nothing on phones. The phone rule that lets tab rows
+   scroll sideways (M-001) also clipped the ⌄ list, so it opened out of sight. Folding rows never need to scroll
+   (what doesn't fit is in the ⌄), so they show their list again. */
+@media (max-width: 600px) {
+  .timed-tabs.fold-tabs { overflow: visible; }
+  .fold-list { z-index: 30; }
+}
