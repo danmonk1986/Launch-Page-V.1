@@ -6,6 +6,9 @@ import type { Project } from '../lib/projects';
 import { whatList } from '../lib/whats';
 import { cleanLink, joinTitle } from './Rockets';
 
+/** V20-371: shown above TEST in setup (rocket and timed launch). */
+const POPUP_NOTE = 'Rockets open several tabs at once. The first time, your browser may block them as pop-ups: choose Always allow for this site, then test again.';
+
 /**
  * V20-308 (Dan, Nov 17): first-run setup, one step per page, from the white setup canvas (row C). Part 1: the page
  * frame (header, card, BACK / NEXT, progress) and step 1 · About you, with the 18+ stop. V20-309: steps 2–4
@@ -367,6 +370,8 @@ export function Setup({
                       )}
                     </ol>
                   </div>
+                  {/* V20-371 (Dan, Nov 19): the first multi-tab launch is blocked as pop-ups until the site is allowed. */}
+                  <p className="setup-fine">{POPUP_NOTE}</p>
                   <button type="button" className="welcome-btn setup-test" onClick={() => openTabs(allLinks())} disabled={!allLinks().length}>
                     Test {ROCKET}
                   </button>
@@ -448,6 +453,8 @@ export function Setup({
                     </p>
                   )}
                   <p className="setup-fine">Rocket: {kName.trim() || 'your rocket'} · {allLinks().length} link{allLinks().length === 1 ? '' : 's'}</p>
+                  {/* V20-371 (Dan, Nov 19): the first multi-tab launch is blocked as pop-ups until the site is allowed. */}
+                  <p className="setup-fine">{POPUP_NOTE}</p>
                   <button
                     type="button"
                     className="welcome-btn welcome-key setup-test"

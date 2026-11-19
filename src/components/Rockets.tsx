@@ -2198,7 +2198,7 @@ function TimedForm({
       <fieldset className="field">
         <legend>Rockets to launch</legend>
         <LaunchRocketsField rockets={rockets} picked={d.urls} onChange={(urls) => set('urls', urls)} asRocket={asRocket} onAsRocket={setAsRocket} />
-        <p className="field-hint">Apps: the first time, your browser asks to open the app. Tick “Always allow” and it opens straight away after that.</p>
+        <p className="field-hint">Apps: the first time, your browser asks to open the app. Tick “Always allow” and it opens straight away after that. More than one link? Your browser may block the extra tabs as pop-ups the first time: choose Always allow for this site.</p>
       </fieldset>
 
       {/* V20-088: Save waits until What is picked too (the ⊘ cursor instead of the browser's fill-in bubble). */}
