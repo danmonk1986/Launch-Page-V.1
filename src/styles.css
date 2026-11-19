@@ -4260,3 +4260,10 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-390 (10): Restore default is always two short lines, small and right-aligned, everywhere. */
 .app .restore-btn { display: inline-grid; justify-items: end; font-size: 11px; line-height: 1.15; letter-spacing: 0.08em; text-align: right; flex: none; }
 .settings-section-head { align-items: center; }
+/* V20-385b: row 4 spans the whole width (page menu on the left, routine pill on the right), so the pill's width
+   can't stretch the search / ⚙ columns above it. */
+@media (max-width: 640px) {
+  .app:not(.is-kb) .topbar .tabs-one { grid-area: auto; grid-row: 4; grid-column: 1 / -1; justify-self: start; }
+  .app:not(.is-kb) .topbar .picker { grid-area: auto; grid-row: 4; grid-column: 1 / -1; justify-self: end; max-width: 62%; }
+  .app:not(.is-kb) .topbar:not(:has(.tabs-one)) .picker { max-width: 100%; }
+}
