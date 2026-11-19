@@ -546,7 +546,7 @@ export function SettingsPanel({ admin = false, beta = false, lpMode = 'main', on
           <div className="privacy">
             {/* V20-366: STARDVST LTD, admin read-out, backups, leaked-password check, beta list (no Calendar). V20-352 (Dan, Nov 19): contact email, delete by email (30 days), beta tracking line, US storage, Resend,
                 invite requests, rockets and the 18+ birthday check. Still a draft until a qualified check. */}
-            <p className="privacy-draft">Draft for review · updated Nov 19, 2026</p>
+            <p className="privacy-draft">Last updated Nov 19, 2026</p>
             <h3 className="timed-title settings-section">Privacy statement</h3>
             <p>L4UNCH P4GE is a personal planner made by STARDVST LTD. This is what it keeps, where, and what you can do about it.</p>
             <h4>What we keep</h4>
