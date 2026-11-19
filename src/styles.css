@@ -4120,3 +4120,11 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .setup .setup-main { position: relative; }
 .setup-close { position: absolute; top: -36px; right: 0; }
 @media (max-width: 640px) { .setup-close { top: -20px; } }
+
+/* V20-378 (Dan, Nov 19, iPhone): Welcome's logo sat low on phones (54%); it now sits at the sign-in page's height
+   (about 40%). The tour follows (its dots still line up with Welcome's) and its pictures draw a touch smaller (75%)
+   so they keep clear of the headline. */
+@media (max-width: 640px) {
+  .welcome, .tour { --mid: 40%; }
+  .tour-stage .tour-slide > * { zoom: 0.75; }
+}
