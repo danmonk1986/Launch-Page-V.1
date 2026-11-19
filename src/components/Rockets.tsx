@@ -1797,6 +1797,8 @@ function TimedForm({
   const set = <K extends keyof Launch>(k: K, v: Launch[K]) => setD((x) => ({ ...x, [k]: v }));
   const [asRocket, setAsRocket] = useState(false);
   const [pastErr, setPastErr] = useState(false);
+  // V20-351 (Dan, Nov 19): STARTED AT: save this new launch at its passed time, on the clock since then.
+  const startedThen = useRef(false);
   // What = a category (Work Block #1…, or any you type, which joins the list once saved) and a
   // description. Saved as one title, "Category - Description", so lists read the same (Oct 20).
   // V20-078 (Nov 12): a NEW launch that starts filled in (from a task, a routine step, rocket + in Complete)
@@ -1842,7 +1844,9 @@ function TimedForm({
         if (!d.title.trim()) return;
         // V20-314 (Dan, Nov 17): a NEW one-time launch can't be set to a time that's already passed today (it would
         // go straight to Missed / "has passed"). Editing an old one still asks Started then / Log instead.
-        if (!launch && d.repeat === 'once' && passedToday(d)) {
+        const since = startedThen.current;
+        startedThen.current = false;
+        if (!launch && d.repeat === 'once' && passedToday(d) && !(since && d.onDate === isoDate(new Date()))) {
           setPastErr(true);
           return;
         }
@@ -1860,7 +1864,7 @@ function TimedForm({
           const fresh = next.urls.filter((u) => !rockets.some((r) => rocketUrls(r).includes(u)));
           if (fresh.length) await onAddRocket(fresh);
         }
-        await onSave(next);
+        await onSave(since && !launch ? { ...next, startedThen: true } : next);
       }}
     >
       {ask && launch && (
@@ -2020,6 +2024,22 @@ function TimedForm({
               >
                 Start now
               </button>
+              {d.onDate === isoDate(new Date()) && (
+                <>
+                  {' · '}
+                  <button
+                    type="button"
+                    className="field-error-action"
+                    onClick={(e) => {
+                      startedThen.current = true;
+                      setPastErr(false);
+                      e.currentTarget.form?.requestSubmit();
+                    }}
+                  >
+                    Started at {formatMinutes(toMinutes(d.atTime))}
+                  </button>
+                </>
+              )}
             </span>
           )}
         </label>

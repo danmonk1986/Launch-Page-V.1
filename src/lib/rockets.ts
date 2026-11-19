@@ -33,6 +33,9 @@ export type LaunchLogKind = 'productivity' | 'activity' | 'rest' | 'food' | 'h2o
 
 /** A timed launch: at its time a reminder pops up and one tap opens every tab. */
 export interface Launch {
+  /** V20-351: set by the form's STARTED AT button for this one save only (never stored): the block has been on the
+   *  clock since its set time today. */
+  startedThen?: boolean;
   id: string;
   title: string;
   /** V20-277 (Dan, Nov 16): the pieces of the block, names only (column from 0065). Part ticks the ones done. */

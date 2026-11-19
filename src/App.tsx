@@ -738,7 +738,9 @@ export default function App() {
   const launchOps = ops(launchStore, launches, setLaunches, (l) => l.title);
   // Oct 25: a launch saved with a new time drops its snooze, so it pops up at the new time
   // (Snooze → Edit snoozes 10 minutes, which hid an edit to 3 minutes from now).
-  function saveLaunchEdit(l: Launch, fromTask = false) {
+  function saveLaunchEdit(input: Launch, fromTask = false) {
+    // V20-351: STARTED AT (new launch, time already gone today): on the clock since its set time, no pop-up.
+    const { startedThen, ...l } = input;
     const old = launches.find((x) => x.id === l.id);
     const moved = !old || old.atTime !== l.atTime || old.onDate !== l.onDate || JSON.stringify(old.onceTime) !== JSON.stringify(l.onceTime) || old.repeat !== l.repeat;
     if (moved && snoozed[l.id]) {
@@ -758,7 +760,21 @@ export default function App() {
     if (!fromTask && moved && l.active && l.repeat !== 'hourly' && happensToday(l, n) && !handled[runKey(l, n)]) {
       const start = new Date(`${isoDate(launchDate(l, n))}T${timeFor(l, n)}:00`).getTime();
       // CP-035: a launch set to this very minute (START NOW in the form) isn't 'passed'; its pop-up fires as normal.
-      if (start <= n.getTime() - 60000 && !logFor(logRef.current, l, n).launchedAt) setPastAsk(l);
+      const run = logFor(logRef.current, l, n);
+      if (startedThen && !run.launchedAt) {
+        setHandled(markHandled(l, n, 'launched'));
+        logLaunch(l, () => ({ outcome: 'launched', launchedAt: new Date(start).toISOString(), planned: l.minutes }));
+        setStatus(`${l.title}: on the clock since ${clock12(timeFor(l, n))}.`);
+      } else if (start <= n.getTime() - 60000 && !run.launchedAt) setPastAsk(l);
+    }
+    // V20-351 (Dan, Nov 19): a block already running, moved to an earlier time today: its run starts at the new time.
+    if (!fromTask && old && moved && l.repeat !== 'hourly' && happensToday(l, n)) {
+      const run = logFor(logRef.current, l, n);
+      const start = new Date(`${isoDate(launchDate(l, n))}T${timeFor(l, n)}:00`).getTime();
+      if (run.launchedAt && !run.finishedAt && start < new Date(run.launchedAt).getTime()) {
+        logLaunch(l, () => ({ launchedAt: new Date(start).toISOString() }));
+        setStatus(`${l.title}: on the clock since ${clock12(timeFor(l, n))}.`);
+      }
     }
     // SCHEDULE GUARDRAILS (Dan, Nov 16): any save that lands a launch on top of another block (a task's time,
     // + Tomorrow, a push) asks after saving, unless the launch form already asked.
