@@ -4110,3 +4110,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
    Starts down), and a missing name shows the app's message, not the browser bubble. */
 .time-grid.event-dates { align-items: start; }
 .time-grid.event-dates > .field { align-self: start; }
+
+/* V20-374 (Dan, Nov 19): Tasks' empty line ("Set a task to THREE…") matches the other panels' empty lines
+   (This week, Rockets…): same size and colour as .panel-empty, not the small table text. */
+.app td.task-empty { font-size: 16px; line-height: 1.5; padding-top: 10px; }
