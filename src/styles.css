@@ -4128,3 +4128,15 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .welcome, .tour { --mid: 40%; }
   .tour-stage .tour-slide > * { zoom: 0.75; }
 }
+
+/* V20-380 (Dan, Nov 19, iPhone): setup header on phones: the logo at 85% of the width, SET UP YOUR FIRST LAUNCH on
+   one line sized to the screen width, the BETA Setup pill on the right. Step titles sized so the longest
+   ("1 · Tell us about yourself") fits on one line; ✓ DONE is hidden on phones. */
+@media (max-width: 640px) {
+  .setup-head { gap: 14px; }
+  .setup-head img { width: 85%; height: auto; }
+  .setup-head h1 { flex: 1 0 100%; white-space: nowrap; font-size: min(21px, calc((100vw - 48px) / 19.6)); }
+  .setup-head .setup-beta { margin-left: auto; }
+  .setup-card-head h2 { white-space: nowrap; font-size: min(15px, calc((100vw - 108px) / 18.4)); }
+  .setup-card-head > span { display: none; }
+}
