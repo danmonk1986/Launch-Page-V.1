@@ -4079,3 +4079,19 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .beta-invited { font: 600 12px 'Roboto Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-teal); white-space: nowrap; }
 /* V20-362: the MAIN / BETA switch is live. */
 .beta-mode.is-live { opacity: 1; cursor: default; }
+
+/* V20-368 (Nov 19, phone pass of the beta): on a phone the tour pictures (slides 2, 4, 5) were taller than their
+   room and ran into the headline and the logo. Phones only: the shared middle line moves down (Welcome's logo and
+   buttons and every slide's dots move together, so the dots still don't jump), the words get a taller box, and the
+   pictures draw at 80% (laid out wider, so the cards don't wrap word by word). Desktop unchanged. */
+.welcome, .tour { --mid: 44%; --dots: calc(var(--mid) + var(--w) * 0.09 + var(--g) * 2 + 36px); }
+.welcome-logo { top: var(--mid); }
+.welcome-btns { top: calc(var(--mid) + var(--w) * 0.09 + var(--g)); }
+@media (max-width: 640px) {
+  .welcome, .tour { --mid: 54%; }
+  .tour-stage { height: calc(var(--dots) - 84px - 196px - 16px); }
+  .tour-copy { top: calc(var(--dots) - 16px - 196px); height: 196px; }
+  .tour-copy h2 { font-size: 20px; }
+  .tour-copy p { font-size: 16px; line-height: 1.5; }
+  .tour-stage .tour-slide > * { zoom: 0.8; }
+}
