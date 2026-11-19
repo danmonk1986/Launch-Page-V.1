@@ -19,6 +19,15 @@ const POPUP_NOTE = 'Rockets open several tabs at once. The first time, your brow
 export type SetupStep = 1 | 2 | 3 | 4;
 
 /** Should setup show for this account? */
+/** V20-377 (Dan, Nov 19): each setup run gets its own 10-minute clock (finish, ×, or Run setup again resets it). */
+export function resetSetupClock() {
+  try {
+    sessionStorage.removeItem('lp.setupStart');
+  } catch {
+    /* ignore */
+  }
+}
+
 export function setupStepFor(a: AccountInfo): SetupStep | null {
   if (a.setup === 'done') return null;
   if (typeof a.setup === 'number') return a.setup as SetupStep;
@@ -199,6 +208,7 @@ export function Setup({
         const done = Date.now();
         const timing = startedAt ? { setupStartedAt: new Date(startedAt).toISOString(), setupDoneAt: new Date(done).toISOString(), setupSeconds: Math.round((done - startedAt) / 1000) } : { setupDoneAt: new Date(done).toISOString() };
         await onSave({ account: { setup: 'done', ...timing } as AccountInfo });
+        resetSetupClock();
       }
       return true;
     } finally {

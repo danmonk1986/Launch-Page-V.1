@@ -125,7 +125,7 @@ import { SettingsPanel, type SettingsTab } from './components/SettingsPanel';
 import { SignIn } from './components/SignIn';
 import { Welcome } from './components/Welcome';
 import { Tour } from './components/Tour';
-import { Setup, setupStepFor } from './components/Setup';
+import { Setup, resetSetupClock, setupStepFor } from './components/Setup';
 import { BETA_MODULES, BetaContext, readLpMode, writeLpMode } from './lib/beta';
 import { KnowledgeBasePage } from './components/KnowledgeBase';
 
@@ -2042,6 +2042,7 @@ export default function App() {
             // V20-376: set up before (or age checked) = close setup, back to the Launch Page; a brand-new account
             // that hasn't passed step 1 signs out and resumes here next time.
             const a = settings.account;
+            resetSetupClock();
             if (a.setupDoneAt || a.birthday.trim()) void handleSave({ account: { ...a, setup: 'done' } as BrandSettings['account'] });
             else void signOutClean();
           }}
@@ -2756,6 +2757,7 @@ export default function App() {
             button: 'Run setup',
             onClick: () => {
               setSettingsOpen(false);
+              resetSetupClock();
               void handleSave({ account: { setup: 1 } as BrandSettings['account'] });
             }
           },
