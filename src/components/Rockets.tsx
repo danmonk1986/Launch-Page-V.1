@@ -1,3 +1,4 @@
+import { useBeta } from '../lib/beta';
 import { projectWhats, whatList } from '../lib/whats';
 import { StatsPanel } from './Stats';
 import type { Project } from '../lib/projects';
@@ -7,6 +8,7 @@ import { FormActions, Sheet } from './Sheet';
 import {
   describeSchedule,
   ROCKET_PRESETS,
+  BETA_CARD_PAGES,
   happensOn,
   happensToday,
   launchDate,
@@ -1425,6 +1427,7 @@ function TileForm({
       }
   );
   const open = ROCKET_PRESETS.filter((p) => !taken.includes(p.name));
+  const beta = useBeta();
   const from = tile ? tiles.findIndex((t) => t.id === tile.id) : -1;
   const [position, setPosition] = useState(from);
   const set = <K extends keyof Rocket>(k: K, v: Rocket[K]) => setD((x) => ({ ...x, [k]: v }));
@@ -1436,9 +1439,10 @@ function TileForm({
   const linkSuggestions = useMemo(() => {
     const out: { url: string; name: string }[] = [];
     for (const t of tiles) for (const u of rocketUrls(t)) if (u && !out.some((o) => o.url === u)) out.push({ url: u, name: t.name });
-    for (const o of [...ROCKET_PRESETS, ...APP_LINKS, ...CARD_LINKS]) if (o.url && !out.some((x) => x.url === o.url)) out.push({ url: o.url, name: o.name });
+    const cards = beta ? CARD_LINKS.filter((c) => BETA_CARD_PAGES.includes(c.page)) : CARD_LINKS;
+    for (const o of [...ROCKET_PRESETS, ...APP_LINKS, ...cards]) if (o.url && !out.some((x) => x.url === o.url)) out.push({ url: o.url, name: o.name });
     return out;
-  }, [tiles]);
+  }, [tiles, beta]);
   const [hexDraft, setHexDraft] = useState(() => (tile && isHexColor(tile.color) ? tile.color : ''));
   const formId = useId();
   return (
@@ -2342,7 +2346,7 @@ export function nameFromUrl(url: string) {
 }
 
 /** Everything a launch or a ritual step can open: your rockets, then the originals and apps you don't have yet. */
-export function rocketOptions(tiles: Rocket[]): RocketOption[] {
+export function rocketOptions(tiles: Rocket[], beta = false): RocketOption[] {
   const out: RocketOption[] = [];
   const add = (o: RocketOption) => {
     if (o.url && !out.some((x) => x.url === o.url)) out.push(o);
@@ -2350,7 +2354,7 @@ export function rocketOptions(tiles: Rocket[]): RocketOption[] {
   for (const t of tiles) add({ name: t.name, note: t.note, url: t.url, color: t.color, kind: 'Rocket' });
   for (const p of ROCKET_PRESETS) add({ name: p.name, note: p.note, url: p.url, color: p.color, kind: 'Original' });
   for (const a of APP_LINKS) add({ name: a.name, note: 'App', url: a.url, color: 'purple', kind: 'App' });
-  for (const c of CARD_LINKS) add({ name: c.name, note: 'LaunchPage card', url: c.url, color: 'green', kind: 'Card' });
+  for (const c of CARD_LINKS) if (!beta || BETA_CARD_PAGES.includes(c.page)) add({ name: c.name, note: 'LaunchPage card', url: c.url, color: 'green', kind: 'Card' });
   return out;
 }
 

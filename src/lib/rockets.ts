@@ -168,7 +168,6 @@ export function nextDate(l: Launch, from: Date): string | null {
   return null;
 }
 
-const LAUNCH_SHEET = 'https://docs.google.com/spreadsheets/d/1rH_8_qYR592YNtbU0oEeByxpmkLm6R4bgVltUr8KABw/edit';
 
 /** The eight tiles from the LAUNCH PAGE tab of the Launch Sheet. */
 export interface RocketPreset {
@@ -184,7 +183,7 @@ export const ROCKET_PRESETS: RocketPreset[] = [
   { name: 'Gemini', note: 'AI research', url: 'https://gemini.google.com', color: 'purple' },
   { name: 'Calendar', note: 'Schedule', url: 'https://calendar.google.com', color: 'teal' },
   { name: 'Notes', note: 'Notes', url: '', color: 'green' },
-  { name: 'LaunchPage', note: 'Launch Sheet', url: LAUNCH_SHEET, color: 'purple' },
+  // V20-365: the LaunchPage preset linked Dan's own Launch Sheet; removed so testers never see it suggested.
   { name: 'Instagram', note: 'Social', url: 'https://www.instagram.com', color: 'teal' },
   { name: 'Figma', note: 'Design', url: 'https://www.figma.com/files', color: 'pink' },
   { name: 'SoundCloud', note: 'Music', url: 'https://soundcloud.com', color: 'green' }
@@ -517,6 +516,8 @@ export const APP_LINKS: { name: string; url: string }[] = [
  * Card rockets (Oct 20): open one of LaunchPage's own pages instead of a site.
  * Stored like a link ("launchpage:journal"); App says how to open them (setCardOpener).
  */
+/** V20-365: the app pages a beta tester has (rocket / link suggestions leave out the hidden ones). */
+export const BETA_CARD_PAGES = ['launch', 'tasks'];
 export const CARD_LINKS: { name: string; url: string; page: string }[] = [
   { name: 'L4UNCH P4GE', url: 'launchpage:launch', page: 'launch' },
   { name: 'Personal Alchemy', url: 'launchpage:journal', page: 'journal' },

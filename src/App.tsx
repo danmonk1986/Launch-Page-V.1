@@ -2318,7 +2318,7 @@ export default function App() {
               onSaveConfig={saveD26Config}
               onSaveRitual={saveRitual}
               onDeleteRitual={handleDeleteRoutine}
-              rockets={rocketOptions(rockets)}
+              rockets={rocketOptions(rockets, beta)}
               onAddRocket={async (url) => {
                 await rocketOps.save({ id: crypto.randomUUID(), name: nameFromUrl(url), note: '', url, color: 'teal', routineIds: activeRoutine ? [activeRoutine.id] : null, sort: rockets.length });
               }}
