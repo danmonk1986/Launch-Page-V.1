@@ -4059,3 +4059,13 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
    the gap between them sat left of the dots. Paired buttons are now the same width, so the gap is dead centre. */
 .welcome-btns .welcome-btn,
 .tour-actions .welcome-btn { min-width: 128px; justify-content: center; }
+
+/* V20-359: ⚙ › Beta Testers (admin only). */
+.beta-admin { display: grid; gap: 12px; }
+.beta-admin-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.beta-admin-scroll { overflow-x: auto; }
+.beta-admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.beta-admin-table th { text-align: left; font: 600 11px 'Roboto Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line, #dadada); white-space: nowrap; }
+.beta-admin-table td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line, #ececec); white-space: nowrap; }
+.beta-admin-table td.is-over { color: #e2675c; font-weight: 600; }
+.beta-admin-invites { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 14px; }

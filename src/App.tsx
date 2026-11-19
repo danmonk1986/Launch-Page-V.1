@@ -2589,6 +2589,7 @@ export default function App() {
         }}
       />
       <SettingsPanel
+        admin={session?.user.app_metadata?.role === 'admin'}
         open={!!settingsOpen}
         bgSlots={bgSlots}
         onBgImage={async (mode, slot, image) => {

@@ -3,11 +3,12 @@ import { shrinkImage } from '../lib/images';
 import { settingsPatch, BG_NAME, DEFAULT_MODULES, MODULE_SOON, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, FONT_THEMES, FONT_CHOICES, DEFAULT_FONT_CUSTOM, fontStack, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, TRASH_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
+import { supabase } from '../lib/supabase';
 import { PROJECT_FORM_ID, ProjectHeadContext, type ProjectHead } from './Projects';
 
 
 /** V20-111 (Dan, Nov 12): Settings is a wide pop-out window with tabs across the top (like Timed launches and Tasks). */
-export type SettingsTab = 'account' | 'appearance' | 'modules' | 'projects' | 'data' | 'privacy' | 'signout';
+export type SettingsTab = 'account' | 'appearance' | 'modules' | 'projects' | 'data' | 'privacy' | 'beta' | 'signout';
 export const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
   { id: 'account', label: 'Account Information' },
   { id: 'appearance', label: 'Appearance' },
@@ -15,6 +16,7 @@ export const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
   { id: 'projects', label: 'Projects' },
   { id: 'data', label: 'Data Management' },
   { id: 'privacy', label: 'Privacy Statement' },
+  { id: 'beta', label: 'Beta Testers' },
   { id: 'signout', label: 'Sign Out' }
 ];
 
@@ -22,6 +24,8 @@ export const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
 export type DataAction = { label: string; hint: string; button: string; onClick: () => void; /** V20-198: section heading (Export, Import, Connections). */ group?: string };
 
 type Props = {
+  /** V20-359: the admin (Dan) sees ⚙ › Beta Testers. */
+  admin?: boolean;
   open: boolean;
   tab: SettingsTab;
   onTab: (t: SettingsTab) => void;
@@ -46,7 +50,7 @@ type Props = {
   onSignOut?: () => void;
 };
 
-export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onSetPassword, onCheckPassword, onSendReset, email, projects, data, onSignOut, bgSlots, onBgImage }: Props) {
+export function SettingsPanel({ admin = false, open, tab, onTab, settings, onClose, onSave, onSetPassword, onCheckPassword, onSendReset, email, projects, data, onSignOut, bgSlots, onBgImage }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState(settings);
   const [pwOpen, setPwOpen] = useState(false);
@@ -140,7 +144,8 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
   }, [tab]);
   // Account Information and Appearance share one draft and one Save.
   const saves = !projectHead && (tab === 'account' || tab === 'appearance' || tab === 'modules');
-  const current = SETTINGS_TABS.find((t) => t.id === tab)!;
+  const tabs = admin ? SETTINGS_TABS : SETTINGS_TABS.filter((t) => t.id !== 'beta');
+  const current = tabs.find((t) => t.id === tab) ?? tabs[0];
 
   return (
     <dialog ref={ref} tabIndex={-1} className="sheet sheet-settings" onClose={onClose} aria-labelledby="settings-title" {...clickOff}>
@@ -222,7 +227,7 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
         </div>
         )}
       </div>
-      {!projectHead && <FoldTabs label="Settings" items={SETTINGS_TABS} value={tab} onPick={onTab} />}
+      {!projectHead && <FoldTabs label="Settings" items={tabs} value={current.id} onPick={onTab} />}
 
       <div className="settings-body" role="tabpanel" aria-label={current.label}>
         <form id="settings-form" onSubmit={submit} hidden={!saves}>
@@ -569,6 +574,8 @@ export function SettingsPanel({ open, tab, onTab, settings, onClose, onSave, onS
             <p className="field-hint">Questions: hello@l4unchp4ge.com. If this statement changes, we'll tell you in the app.</p>
           </div>
         )}
+
+        {admin && tab === 'beta' && <BetaTesters />}
 
         {tab === 'signout' && (
           <div className="settings-action">
@@ -1071,3 +1078,85 @@ function ColourTile({ label, value, onChange }: { label: string; value: string; 
 }
 
 
+
+/**
+ * V20-359 (Dan, Nov 19): ⚙ › Beta Testers, the admin's read-out. One row per account (joined, setup, how long setup
+ * took, days opened) and the invite requests. Numbers only: the database answers just the admin (0069).
+ */
+type TesterRow = { email: string; joined: string; last_sign_in: string | null; setup: string; setup_seconds: number | null; days_opened: number; days_7: number; last_open: string | null };
+type InviteRow = { id: string; name: string; email: string; note: string | null; created_at: string };
+function BetaTesters() {
+  const [rows, setRows] = useState<TesterRow[] | null>(null);
+  const [invites, setInvites] = useState<InviteRow[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const load = async () => {
+    if (!supabase) return setErr('No database connection.');
+    setErr(null);
+    const [a, b] = await Promise.all([supabase.rpc('admin_beta_overview'), supabase.rpc('admin_invite_requests')]);
+    if (a.error || b.error) return setErr((a.error ?? b.error)!.message);
+    setRows((a.data ?? []) as TesterRow[]);
+    setInvites((b.data ?? []) as InviteRow[]);
+  };
+  useEffect(() => {
+    void load();
+  }, []);
+  const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '—');
+  const mins = (s: number | null) => (s == null ? '—' : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`);
+  const setupLabel = (r: TesterRow) => (r.setup === 'done' ? 'Done' : r.setup === 'not started' ? 'Not started' : `Step ${r.setup} of 4`);
+  return (
+    <div className="beta-admin">
+      <div className="beta-admin-head">
+        <h3 className="timed-title settings-section">Beta testers</h3>
+        <button type="button" className="btn btn-quiet" onClick={() => void load()}>
+          Refresh
+        </button>
+      </div>
+      <p className="field-hint">Only you see this. Numbers only: never what's in anyone's tasks. Setup goal: under 10 minutes.</p>
+      {err && <p className="field-error">{err}</p>}
+      {!rows && !err && <p className="field-hint">Loading…</p>}
+      {rows && (
+        <div className="beta-admin-scroll">
+          <table className="beta-admin-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Joined</th>
+                <th>Setup</th>
+                <th>Setup time</th>
+                <th>Days opened</th>
+                <th>Last 7 days</th>
+                <th>Last in</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.email}>
+                  <td>{r.email}</td>
+                  <td>{day(r.joined)}</td>
+                  <td>{setupLabel(r)}</td>
+                  <td className={r.setup_seconds != null && r.setup_seconds > 600 ? 'is-over' : undefined}>{mins(r.setup_seconds)}</td>
+                  <td>{r.days_opened}</td>
+                  <td>{r.days_7}</td>
+                  <td>{day(r.last_open ?? r.last_sign_in)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <h3 className="timed-title settings-section">Invite requests ({invites.length})</h3>
+      {invites.length === 0 ? (
+        <p className="field-hint">None yet.</p>
+      ) : (
+        <ul className="beta-admin-invites">
+          {invites.map((i) => (
+            <li key={i.id}>
+              <b>{i.name}</b> · <a href={`mailto:${i.email}`}>{i.email}</a> · {day(i.created_at)}
+              {i.note ? <span className="field-hint"> — {i.note}</span> : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
