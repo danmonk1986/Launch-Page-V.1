@@ -318,7 +318,8 @@ export const rocketStore = makeStore<Rocket, RocketRow>({
   localKey: 'launchpage.launchers.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0056_rename_launchers_to_rockets.sql',
-  seed: seedRockets,
+  // V20-364: a new account starts with no rockets (setup makes its first one).
+  seed: () => [],
   toRow: (l) => ({ id: l.id, name: l.name, note: l.note, url: rocketUrls(l)[0] ?? '', urls: rocketUrls(l), color: l.color, routine_ids: l.routineIds, sort: l.sort, hidden: !!l.hidden }),
   fromRow: (r) => ({ id: r.id, name: r.name, note: r.note, url: r.url, urls: r.urls?.length ? r.urls : r.url ? [r.url] : [], color: r.color, routineIds: r.routine_ids, sort: r.sort, hidden: !!r.hidden })
 });
@@ -328,7 +329,8 @@ export const launchStore = makeStore<Launch, LaunchRow>({
   localKey: 'launchpage.launches.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0056_rename_launchers_to_rockets.sql',
-  seed: seedLaunches,
+  // V20-364: no sample launch (setup makes the first one).
+  seed: () => [],
   toRow: (l) => ({
     id: l.id,
     title: l.title,

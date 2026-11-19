@@ -398,7 +398,8 @@ export const nonNegStore = makeStore<NonNeg, NonNegRow>({
   localKey: 'launchpage.d26.nonnegs.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0018_26_days.sql',
-  seed: seedNonNegs,
+  // V20-364: no starter non-negotiables (they were Dan's own list).
+  seed: () => [],
   toRow: (n) => ({
     id: n.id,
     label: n.label,

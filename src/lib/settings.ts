@@ -195,12 +195,14 @@ export const shownName = (s: BrandSettings) => (s.account.hideRealName && s.acco
 
 /** First user's brand. Every field is editable in Settings. */
 export const DEFAULT_SETTINGS: BrandSettings = {
-  displayName: 'Dan',
-  logoText: 'Dan Monk',
+  // V20-364 (Dan, Nov 19 · EMPTY + CLEAN): a new account starts blank: no name, the L4UNCH!P4GE logo, the headline
+  // MAKE A PLAN. STICK TO IT. until the user changes it, and no mantra (the header shows business / name · role).
+  // Dan's own account keeps its saved values (defaults only fill blanks).
+  displayName: '',
+  logoText: '',
   logoUrl: null,
-  // V20-150 (Dan, Nov 12): the brand default is the L4UNCH!P4GE logo (no logo set), Undeniable in 2026, search. create. evolve.
-  goal: 'Undeniable in 2026',
-  mantra: 'search. create. evolve.',
+  goal: 'MAKE A PLAN. STICK TO IT.',
+  mantra: '',
   // V20-151 (Dan, Nov 12): default backgrounds Damascus (day) and Synthwave (night); the colour tiles default to darker
   // beige and navy (V20-143).
   background: 'synthwave',

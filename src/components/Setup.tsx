@@ -47,6 +47,7 @@ export function Setup({
   onSaveRoutine,
   onSaveRocket,
   onSaveLaunch,
+  onSaveProject,
   onTest
 }: {
   settings: BrandSettings;
@@ -57,6 +58,8 @@ export function Setup({
   onSaveRoutine: (r: Routine) => Promise<void>;
   onSaveRocket: (r: Rocket) => Promise<void>;
   onSaveLaunch: (l: Launch) => Promise<void>;
+  /** V20-364: a new account has no projects; step 1 makes the first one (tasks and launches need a project). */
+  onSaveProject?: (p: Project) => Promise<void>;
   /** Finish setup and open the launch pop-up for this launch. */
   onTest: (l: Launch) => void;
 }) {
@@ -168,6 +171,12 @@ export function Setup({
     setBusy(true);
     try {
       if (step === 1) {
+        // V20-364 (Dan, Nov 19): the first project, named after the business (or Personal). Rename or add more in ⚙ › Projects.
+        if (!projects.length && onSaveProject) {
+          const first: Project = { id: crypto.randomUUID(), name: business.trim() || 'Personal', color: '#06F9C2', parentId: null, calendarId: null, sort: 0, kind: business.trim() ? 'business' : 'personal' };
+          await onSaveProject(first);
+          setProjectId(first.id);
+        }
         await onSave({ displayName: name.trim(), account: { businessName: business.trim(), role: role.trim(), industry, birthday, setup: 2 } as AccountInfo });
       } else if (step === 2) {
         const items = [{ time: wake, label: 'Wake Up' }, ...okBlocks.map((b) => ({ time: b.time || null, label: b.label.trim() })), { time: bed, label: 'Bed' }];

@@ -288,12 +288,13 @@ export async function loadRoutines(userId: string | null): Promise<LoadResult> {
         writeLocal(list);
         return { routines: list, problem: null };
       }
-      const seed = readLocal() ?? seedRoutines();
+      // V20-364: a new account starts with no routine (setup makes its first one).
+      const seed = readLocal() ?? [];
       const { error: insertError } = await supabase.from('routines').insert(seed.map(toRow));
       writeLocal(seed);
       return { routines: seed, problem: insertError ? insertError.message : null };
     }
-    const fallback = readLocal() ?? seedRoutines();
+    const fallback = readLocal() ?? [];
     return {
       routines: fallback,
       problem: 'Routines are saving on this device only. Run supabase/migrations/0002_routines.sql in Supabase to sync them.'

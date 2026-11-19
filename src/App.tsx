@@ -2036,6 +2036,7 @@ export default function App() {
           onSaveRoutine={handleSaveRoutine}
           onSaveRocket={async (r) => void (await rocketOps.save(r))}
           onSaveLaunch={async (l) => void (await launchOps.save(l))}
+          onSaveProject={async (p) => void (await projectOps.save(p))}
           onTest={(l) => setReminder(l)}
         />
       </div>

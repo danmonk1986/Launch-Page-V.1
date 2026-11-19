@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import type { BrandSettings } from '../lib/settings';
+import { shownName, type BrandSettings } from '../lib/settings';
 import { useMobile } from '../lib/useMobile';
 import { OneMenu } from './OneMenu';
 
@@ -50,7 +50,8 @@ export function Header({ settings, slim, page, onPage, right, hidden = [] }: Pro
       ) : (
         <img className="topbar-logo" src={settings.logoUrl || '/launchpage-logo.png'} alt={settings.logoUrl ? settings.logoText || 'Logo' : 'LaunchPage'} />
       )}
-      <HeaderWords goal={settings.goal} mantra={settings.mantra} />
+      {/* V20-364 (canvas D1): no mantra yet = business (else alias / name) · role under the headline. */}
+      <HeaderWords goal={settings.goal} mantra={settings.mantra.trim() || [settings.account.businessName.trim() || shownName(settings), settings.account.role.trim()].filter(Boolean).join(' · ')} />
       {right && <div className="topbar-right">{right}</div>}
       <TabBar pages={pages} page={page} onPage={onPage} />
     </header>

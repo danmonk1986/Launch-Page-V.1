@@ -70,7 +70,8 @@ export const projectStore = makeStore<Project, Row>({
   localKey: 'launchpage.projects.v1',
   orderBy: 'sort',
   script: 'supabase/migrations/0008_projects_tasks.sql',
-  seed: seedProjects,
+  // V20-364: a new account starts with no projects (setup makes its first one).
+  seed: () => [],
   toRow: (p) => ({
     id: p.id, name: p.name, color: p.color, parent_id: p.parentId, calendar_id: p.calendarId, sort: p.sort,
     kind: p.kind ?? 'personal', description: p.description ?? '', short_name: p.shortName ?? '', status: p.status ?? 'active', link: p.link ?? '',
