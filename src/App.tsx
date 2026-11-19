@@ -1063,10 +1063,10 @@ export default function App() {
       ...base,
       parentId: parent.id,
       task: d.title.trim() || base.task,
-      // Steps take the task's dates (Nov 19): a decision's decide-by stays in the Planner.
+      // V20-344: the step's date is its decision's decide-by (none: the task's date); it starts with the task.
       description: existing ? base.description : parent.description,
       startDate: existing ? base.startDate : parent.startDate,
-      endDate: existing ? base.endDate : parent.endDate,
+      endDate: d.decideBy ?? (existing ? base.endDate : parent.endDate),
       done,
       doneAt: done ? base.doneAt ?? new Date().toISOString() : null,
       notes: ownNotes ? base.notes : picked ? `Picked: ${picked.name}` : ''
@@ -1083,13 +1083,22 @@ export default function App() {
       setStatus(`${plan.name} is already in Tasks (${taskName(already)}).`);
       return;
     }
-    const decs = decisions.filter((d) => d.planId === plan.id && d.status !== 'done').sort(byDate);
+    const decs = decisions.filter((d) => d.planId === plan.id && d.status !== 'done' && d.title.trim()).sort(byDate);
+    // V20-344: each step brings its decision's date, description (as notes) and the picked option's link.
+    const lastDate = decs.map((d) => d.decideBy).filter((x): x is string => !!x).sort().pop() ?? null;
+    const today = isoDate(new Date());
     setPage('launch');
     setTaskPreset({
-      fill: { task: plan.name.trim(), description: plan.description.trim(), projectId: plan.projectId, startDate: plan.startDate ?? isoDate(new Date()), endDate: plan.decideBy },
+      fill: { task: plan.name.trim(), description: plan.description.trim(), projectId: plan.projectId, startDate: plan.startDate ?? today, endDate: plan.decideBy ?? lastDate },
       n: Date.now(),
       seed: {
-        steps: decs.map((d) => d.title.trim()).filter(Boolean),
+        steps: decs.map((d) => ({
+          task: d.title.trim(),
+          endDate: d.decideBy,
+          link: d.options.find((o) => o.picked)?.link ?? '',
+          atTime: null,
+          notes: d.description.trim()
+        })),
         onSaved: (t, kids) => {
           void planOps.save({ ...plan, taskId: t.id });
           const key = (x: string) => x.trim().toLowerCase();
@@ -1133,6 +1142,7 @@ export default function App() {
         let n = d;
         if (t.done !== old.done) n = { ...n, status: t.done ? 'done' : d.options.some((o) => o.picked) ? 'decided' : 'open' };
         if (t.task.trim() && t.task !== old.task) n = { ...n, title: t.task.trim() };
+        if ((t.endDate ?? null) !== (old.endDate ?? null)) n = { ...n, decideBy: t.endDate };
         if (n !== d) changedDecisions.push(n);
       }
       const plan = plans.find((p) => p.taskId === t.id);

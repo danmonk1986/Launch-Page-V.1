@@ -70,6 +70,9 @@ export function Icon({ d, size = 16 }: { d: string; size?: number }) {
 }
 
 const PLUS = 'M12 5v14M5 12h14';
+const LINK_ICON = 'M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1';
+/** "2026-11-18" → "Nov 18". */
+const shortDay = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 const CLOSE = 'M6 6l12 12M18 6L6 18';
 /** The Launch Page shows tasks without their steps. */
 const FOLDER = 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z';
@@ -553,7 +556,7 @@ export function TaskSheet(p: { task: Task | null; title: string; tasks: Task[]; 
           onCancel={p.onClose}
           onSave={async (next, newSteps, push) => {
             const base = p.tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0);
-            const kids = newSteps.filter((x) => x.trim()).map((x, i) => newStep(next, x, base + i));
+            const kids = newSteps.filter((x) => x.task.trim()).map((x, i) => draftToStep(next, x, base + i));
             if (kids.length) await p.onSaveMany([next, ...kids]);
             else await p.onSave(next);
             if (push) await p.onPushToBudget?.(next);
@@ -570,7 +573,25 @@ export function TaskSheet(p: { task: Task | null; title: string; tasks: Task[]; 
   );
 }
 
-export type TaskSeed = { steps?: string[]; onSaved?: (t: Task, steps: Task[]) => void };
+/** V20-344 (Dan, Nov 19, canvas E1 option A): a step typed in the Add / Edit task form. Name and date on the row; link,
+ *  time and notes behind its ⌄. A blank date means the task's date. */
+export type StepDraft = { task: string; endDate: string | null; link: string; atTime: string | null; notes: string };
+export const blankStep = (task = ''): StepDraft => ({ task, endDate: null, link: '', atTime: null, notes: '' });
+/** A drafted step becomes a step task under its parent (newStep), with its own date / link / time / notes. */
+export function draftToStep(parent: Task, s: StepDraft, sort: number): Task {
+  const base = newStep(parent, s.task, sort);
+  const endDate = s.endDate ?? base.endDate;
+  return {
+    ...base,
+    endDate,
+    // A step dated before the task starts starts on its own date.
+    startDate: base.startDate && endDate && endDate < base.startDate ? endDate : base.startDate,
+    link: s.link.trim() ? normalizeUrl(s.link.trim()) : '',
+    atTime: s.atTime || null,
+    notes: s.notes.trim()
+  };
+}
+export type TaskSeed = { steps?: StepDraft[]; onSaved?: (t: Task, steps: Task[]) => void };
 function useTaskEditor(p: EditorProps) {
   const [editing, setEditing] = useState<Task | null>(null);
   const [seed, setSeed] = useState<TaskSeed | null>(null);
@@ -635,7 +656,7 @@ function useTaskEditor(p: EditorProps) {
           initialSteps={isNew ? seed?.steps : undefined}
           onSave={async (t, newSteps, push) => {
             const base = p.tasks.reduce((m, x) => Math.max(m, x.sort + 1), 0);
-            const kids = newSteps.filter((s) => s.trim()).map((s, i) => newStep(t, s, base + i));
+            const kids = newSteps.filter((x) => x.task.trim()).map((x, i) => draftToStep(t, x, base + i));
             if (kids.length) await p.onSaveMany([t, ...kids]);
             else await p.onSave(t);
             if (push) await p.onPushToBudget?.(t);
@@ -950,7 +971,7 @@ function TaskForm({
 }: {
   task: Task;
   /** Planner › Add task (Nov 19): the plan's decisions come in as steps to review. */
-  initialSteps?: string[];
+  initialSteps?: StepDraft[];
   isNew: boolean;
   isStep: boolean;
   existingSteps: Task[];
@@ -958,14 +979,20 @@ function TaskForm({
   projects: Project[];
   onCancel?: () => void;
   /** newSteps: names typed into the Steps list, created underneath on save. push: also put it in Budget. */
-  onSave: (t: Task, newSteps: string[], push: boolean) => Promise<void>;
+  onSave: (t: Task, newSteps: StepDraft[], push: boolean) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   /** V20-090: rocket + beside Save: save, then open Add timed launch filled in from the task. */
   onPushRocket?: (t: Task) => void;
 }) {
   const [d, setD] = useState<Task>(task);
   const pushRocket = useRef(false);
-  const [steps, setSteps] = useState<string[]>(initialSteps ?? []);
+  const [steps, setSteps] = useState<StepDraft[]>(initialSteps ?? []);
+  const [openStep, setOpenStep] = useState<number | null>(null);
+  const setStep = (i: number, patch: Partial<StepDraft>) => setSteps((list) => list.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const addStep = () => {
+    setSteps((list) => [...list, blankStep()]);
+    setOpenStep(null);
+  };
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setD((x) => ({ ...x, [k]: v }));
   const [rep, setRep] = useState(() => repeatOf(task));
   const recurring = rep.kind !== 'none';
@@ -985,7 +1012,10 @@ function TaskForm({
       onSubmit={async (e) => {
         e.preventDefault();
         if (!named) return;
-        const endDate = d.endDate && d.startDate && d.endDate < d.startDate ? d.startDate : d.endDate;
+        // V20-344: no Date required yet: the last step's date (so a task with dated steps never sits undated).
+        const lastStep = steps.filter((x) => x.task.trim() && x.endDate).map((x) => x.endDate as string).sort().pop() ?? null;
+        const want = d.endDate ?? (recurring ? null : lastStep);
+        const endDate = want && d.startDate && want < d.startDate ? d.startDate : want;
         const repeatRule = writeRepeat(rep);
         // Status is automatic now; only THREE (a key task) is kept.
         const status = d.status === 'THREE' ? 'THREE' : 'PENDING';
@@ -1048,31 +1078,77 @@ function TaskForm({
             {existingSteps.length > 0 && (
               <ul className="steps-list">
                 {existingSteps.map((st) => (
-                  <li key={st.id} className={st.done ? 'is-done' : ''}>
-                    ↳ {st.task}
+                  <li key={st.id} className={`step-have${st.done ? ' is-done' : ''}`}>
+                    <span>↳ {st.task}</span>
+                    {st.link && <span className="step-have-link" title={st.link}><Icon d={LINK_ICON} size={14} /></span>}
+                    <span className="step-date">{st.endDate ? shortDay(st.endDate) : ''}</span>
                   </li>
                 ))}
               </ul>
             )}
-            {steps.map((text, i) => (
-              <div key={i} className="step-input">
-                <span aria-hidden="true">↳</span>
-                <input
-                  aria-label={`Step ${existingSteps.length + i + 1}`}
-                  value={text}
-                  autoFocus={i === steps.length - 1}
-                  onChange={(e) => setSteps((list) => list.map((x, j) => (j === i ? e.target.value : x)))}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      setSteps((list) => [...list, '']);
-                    }
-                  }}
-                  placeholder="Next step"
-                />
-              </div>
-            ))}
-            <button type="button" className="link-btn link-btn-inline step-more" onClick={() => setSteps((list) => [...list, ''])}>
+            {steps.map((st, i) => {
+              const open = openStep === i;
+              return (
+                <div key={i} className={`step-draft${open ? ' is-open' : ''}`}>
+                  <div className="step-input">
+                    <span aria-hidden="true">↳</span>
+                    <input
+                      aria-label={`Step ${existingSteps.length + i + 1}`}
+                      value={st.task}
+                      autoFocus={i === steps.length - 1 && !st.task}
+                      onChange={(e) => setStep(i, { task: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addStep();
+                        }
+                      }}
+                      placeholder="Next step"
+                    />
+                    <span className={`step-date${st.endDate ? '' : ' is-dim'}`}>{st.endDate ? shortDay(st.endDate) : 'task date'}</span>
+                    <button type="button" className={`quick-btn task-quick${st.link.trim() ? ' is-key' : ''}`} aria-label={st.link.trim() ? `Link: ${st.link}` : 'Add a link'} title={st.link.trim() ? st.link : 'Add a link'} onClick={() => setOpenStep(i)}>
+                      <Icon d={LINK_ICON} size={14} />
+                    </button>
+                    <button type="button" className="rockets-toggle step-open" aria-expanded={open} aria-label={open ? 'Close step details' : 'Step details: date, link, time, notes'} title={open ? 'Close' : 'Date, link, time, notes'} onClick={() => setOpenStep(open ? null : i)}>
+                      <Icon d={open ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} />
+                    </button>
+                  </div>
+                  {open && (
+                    <div className="step-more-fields">
+                      <label className="field">
+                        <span>Link</span>
+                        <input type="url" inputMode="url" value={st.link} onChange={(e) => setStep(i, { link: e.target.value })} placeholder="https://" />
+                      </label>
+                      <div className="time-grid">
+                        <label className="field">
+                          <span>Date</span>
+                          <input type="date" value={st.endDate ?? ''} onChange={(e) => setStep(i, { endDate: e.target.value || null })} />
+                        </label>
+                        <label className="field">
+                          <span>Time</span>
+                          <input type="time" value={st.atTime ?? ''} onChange={(e) => setStep(i, { atTime: e.target.value || null })} />
+                        </label>
+                      </div>
+                      <label className="field">
+                        <span>Notes</span>
+                        <input value={st.notes} onChange={(e) => setStep(i, { notes: e.target.value })} />
+                      </label>
+                      <button
+                        type="button"
+                        className="link-btn link-btn-inline step-remove"
+                        onClick={() => {
+                          setSteps((list) => list.filter((_, j) => j !== i));
+                          setOpenStep(null);
+                        }}
+                      >
+                        Remove step
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <button type="button" className="link-btn link-btn-inline step-more" onClick={addStep}>
               + Add a step
             </button>
           </div>
