@@ -1309,8 +1309,10 @@ export function RocketsPanel(p: Props) {
           fill={timed ? null : fill?.fill ?? null}
           stepPicks={timed ? undefined : fill?.stepPicks}
           rockets={p.rockets}
-          onAddRocket={async (url) => {
-            await p.onSaveRocket({ id: crypto.randomUUID(), name: nameFromUrl(url), note: '', url, color: 'teal', routineIds: p.routineId ? [p.routineId] : null, sort: p.rockets.length });
+          onAddRocket={async (urls) => {
+            // V20-350: one rocket holding every new link, named from the first (rename it on the Rockets card).
+            if (!urls.length) return;
+            await p.onSaveRocket({ id: crypto.randomUUID(), name: nameFromUrl(urls[0]), note: '', url: urls[0], urls, color: 'teal', routineIds: p.routineId ? [p.routineId] : null, sort: p.rockets.length });
           }}
           projects={p.projects ?? []}
           titles={[...new Set(p.launches.map((l) => l.title.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
@@ -1753,7 +1755,8 @@ function TimedForm({
   stepPicks?: StepPick[];
   rockets: Rocket[];
   /** Add new rocket: saves a pasted link as a rocket tile. */
-  onAddRocket: (url: string) => Promise<void>;
+  /** V20-350: makes ONE rocket from these links. */
+  onAddRocket: (urls: string[]) => Promise<void>;
   projects: { id: string; name: string; parentId: string | null; sort: number; status?: string; shortName?: string }[];
   /** Names already used, so the same task keeps the same name. */
   titles: string[];
@@ -1792,6 +1795,7 @@ function TimedForm({
       }
   );
   const set = <K extends keyof Launch>(k: K, v: Launch[K]) => setD((x) => ({ ...x, [k]: v }));
+  const [asRocket, setAsRocket] = useState(false);
   const [pastErr, setPastErr] = useState(false);
   // What = a category (Work Block #1…, or any you type, which joins the list once saved) and a
   // description. Saved as one title, "Category - Description", so lists read the same (Oct 20).
@@ -1850,6 +1854,11 @@ function TimedForm({
         if (launch && launch.repeat !== 'once' && launch.repeat !== 'hourly' && d.atTime !== launch.atTime && !scope) {
           setAsk(next);
           return;
+        }
+        // V20-350 (Dan, Nov 19): "Add (all) as a rocket" ticked: the launch's new links become one rocket on Save.
+        if (asRocket) {
+          const fresh = next.urls.filter((u) => !rockets.some((r) => rocketUrls(r).includes(u)));
+          if (fresh.length) await onAddRocket(fresh);
         }
         await onSave(next);
       }}
@@ -2164,7 +2173,7 @@ function TimedForm({
       )}
       <fieldset className="field">
         <legend>Rockets to launch</legend>
-        <LaunchRocketsField rockets={rockets} picked={d.urls} onChange={(urls) => set('urls', urls)} onAddNew={onAddRocket} />
+        <LaunchRocketsField rockets={rockets} picked={d.urls} onChange={(urls) => set('urls', urls)} asRocket={asRocket} onAsRocket={setAsRocket} />
         <p className="field-hint">Apps: the first time, your browser asks to open the app. Tick “Always allow” and it opens straight away after that.</p>
       </fieldset>
 
@@ -2330,11 +2339,21 @@ export function rocketOptions(tiles: Rocket[]): RocketOption[] {
  * page; hidden ones last) or paste a new link, then + for the next. Each line has ×. A pasted link that isn't one
  * of your rockets gets an "Add as a rocket" tick under it. Picking a rocket brings all its links.
  */
-function LaunchRocketsField({ rockets, picked, onChange, onAddNew }: { rockets: Rocket[]; picked: string[]; onChange: (urls: string[]) => void; onAddNew: (url: string) => Promise<void> }) {
+function LaunchRocketsField({
+  rockets,
+  picked,
+  onChange,
+  asRocket,
+  onAsRocket
+}: {
+  rockets: Rocket[];
+  picked: string[];
+  onChange: (urls: string[]) => void;
+  /** V20-350: one box, beside the last line: ticked, the new links become one rocket when the launch saves. */
+  asRocket: boolean;
+  onAsRocket: (v: boolean) => void;
+}) {
   const [q, setQ] = useState('');
-  const [busy, setBusy] = useState<string | null>(null);
-  // V20-349 (Dan, Nov 19): "Add as a rocket" sits beside the box from the start; ticked, new links become rockets.
-  const [asRocket, setAsRocket] = useState(false);
   const mine = [...rockets].sort((a, b) => Number(!!a.hidden) - Number(!!b.hidden) || a.sort - b.sort);
   type Row = { key: string; name: string; urls: string[]; isNew: boolean };
   const rows: Row[] = [];
@@ -2351,14 +2370,11 @@ function LaunchRocketsField({ rockets, picked, onChange, onAddNew }: { rockets: 
       rows.push({ key: x, name: owner ? `${owner.name} · ${nameFromUrl(x)}` : x, urls: [x], isNew: !owner });
     }
   }
+  const newCount = rows.filter((r) => r.isNew).length;
   const options: ComboOption[] = mine
     .filter((r) => rocketUrls(r).length && !rocketUrls(r).every((u) => picked.includes(u)))
     .map((r) => ({ name: r.name, note: r.hidden ? 'Saved for later' : `${rocketUrls(r).length} link${rocketUrls(r).length === 1 ? '' : 's'}`, url: rocketUrls(r)[0], color: r.color, kind: 'Rocket', id: r.id }));
-  const addUrls = (urls: string[]) => {
-    const fresh = urls.filter((u) => !picked.includes(u));
-    onChange([...picked, ...fresh]);
-    if (asRocket) for (const u of fresh) if (!mine.some((r) => rocketUrls(r).includes(u))) void onAddNew(u);
-  };
+  const addUrls = (urls: string[]) => onChange([...picked, ...urls.filter((u) => !picked.includes(u))]);
   const addTyped = () => {
     const t = q.trim();
     if (!t) return;
@@ -2384,24 +2400,6 @@ function LaunchRocketsField({ rockets, picked, onChange, onAddNew }: { rockets: 
                 <path d="M6 6l12 12M18 6L6 18" />
               </svg>
             </button>
-            {r.isNew && (
-              <label className="check-line launch-rocket-add">
-                <input
-                  type="checkbox"
-                  checked={busy === r.key}
-                  disabled={!!busy}
-                  onChange={async () => {
-                    setBusy(r.key);
-                    try {
-                      await onAddNew(r.urls[0]);
-                    } finally {
-                      setBusy(null);
-                    }
-                  }}
-                />
-                <span>Add as a rocket</span>
-              </label>
-            )}
           </li>
         ))}
         <li className="launch-rocket-next">
@@ -2445,9 +2443,9 @@ function LaunchRocketsField({ rockets, picked, onChange, onAddNew }: { rockets: 
               <path d="M12 5v14M5 12h14" />
             </svg>
           </button>
-          <label className="check-line launch-rocket-add">
-            <input type="checkbox" checked={asRocket} onChange={(e) => setAsRocket(e.target.checked)} />
-            <span>Add as a rocket</span>
+          <label className="check-line launch-rocket-add" title="Makes one rocket from this launch's new links when you save">
+            <input type="checkbox" checked={asRocket} onChange={(e) => onAsRocket(e.target.checked)} />
+            <span>{newCount > 1 ? `Add all as a rocket (${newCount})` : 'Add as a rocket'}</span>
           </label>
         </li>
       </ol>

@@ -4052,3 +4052,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-349: "Add as a rocket" beside the empty box from the start (ticked: new links become rockets). */
 .launch-rockets .launch-rocket-next { grid-template-columns: minmax(0, 1fr) 30px auto; }
 .launch-rockets .launch-rocket-next .launch-rocket-add { grid-column: auto; white-space: nowrap; }
+/* V20-350: the one "Add (all) as a rocket" box rides the last line (the box you type in). */
+.launch-rockets .launch-rocket-row { grid-template-columns: minmax(0, 1fr) 30px; }
