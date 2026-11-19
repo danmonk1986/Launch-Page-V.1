@@ -4049,3 +4049,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .step-draft .step-input { grid-template-columns: 16px minmax(0, 1fr) 64px 18px 30px; }
 .step-link-mark { display: inline-flex; justify-content: center; color: var(--accent-teal); }
 .lstep-pick { margin-bottom: 6px; }
+/* V20-349: "Add as a rocket" beside the empty box from the start (ticked: new links become rockets). */
+.launch-rockets .launch-rocket-next { grid-template-columns: minmax(0, 1fr) 30px auto; }
+.launch-rockets .launch-rocket-next .launch-rocket-add { grid-column: auto; white-space: nowrap; }

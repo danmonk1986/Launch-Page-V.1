@@ -2333,6 +2333,8 @@ export function rocketOptions(tiles: Rocket[]): RocketOption[] {
 function LaunchRocketsField({ rockets, picked, onChange, onAddNew }: { rockets: Rocket[]; picked: string[]; onChange: (urls: string[]) => void; onAddNew: (url: string) => Promise<void> }) {
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  // V20-349 (Dan, Nov 19): "Add as a rocket" sits beside the box from the start; ticked, new links become rockets.
+  const [asRocket, setAsRocket] = useState(false);
   const mine = [...rockets].sort((a, b) => Number(!!a.hidden) - Number(!!b.hidden) || a.sort - b.sort);
   type Row = { key: string; name: string; urls: string[]; isNew: boolean };
   const rows: Row[] = [];
@@ -2352,7 +2354,11 @@ function LaunchRocketsField({ rockets, picked, onChange, onAddNew }: { rockets: 
   const options: ComboOption[] = mine
     .filter((r) => rocketUrls(r).length && !rocketUrls(r).every((u) => picked.includes(u)))
     .map((r) => ({ name: r.name, note: r.hidden ? 'Saved for later' : `${rocketUrls(r).length} link${rocketUrls(r).length === 1 ? '' : 's'}`, url: rocketUrls(r)[0], color: r.color, kind: 'Rocket', id: r.id }));
-  const addUrls = (urls: string[]) => onChange([...picked, ...urls.filter((u) => !picked.includes(u))]);
+  const addUrls = (urls: string[]) => {
+    const fresh = urls.filter((u) => !picked.includes(u));
+    onChange([...picked, ...fresh]);
+    if (asRocket) for (const u of fresh) if (!mine.some((r) => rocketUrls(r).includes(u))) void onAddNew(u);
+  };
   const addTyped = () => {
     const t = q.trim();
     if (!t) return;
@@ -2439,6 +2445,10 @@ function LaunchRocketsField({ rockets, picked, onChange, onAddNew }: { rockets: 
               <path d="M12 5v14M5 12h14" />
             </svg>
           </button>
+          <label className="check-line launch-rocket-add">
+            <input type="checkbox" checked={asRocket} onChange={(e) => setAsRocket(e.target.checked)} />
+            <span>Add as a rocket</span>
+          </label>
         </li>
       </ol>
     </div>
