@@ -4465,3 +4465,12 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .tour .tour-copy { bottom: 204px; }
   .tour .tour-stage { bottom: 356px; }
 }
+
+/* V20-408 (Dan, Nov 19): now that every picture is about the same height, the words, dots and BACK / NEXT move up
+   a little more on phones (Skip the tour stays on the REQUEST AN INVITE line). */
+@media (max-width: 640px) {
+  .tour .tour-actions { bottom: 110px; }
+  .tour .tour-dots { bottom: 186px; }
+  .tour .tour-copy { bottom: 228px; }
+  .tour .tour-stage { bottom: 380px; }
+}
