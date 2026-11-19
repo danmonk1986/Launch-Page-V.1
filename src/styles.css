@@ -4267,3 +4267,10 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .app:not(.is-kb) .topbar .picker { grid-area: auto; grid-row: 4; grid-column: 1 / -1; justify-self: end; max-width: 62%; }
   .app:not(.is-kb) .topbar:not(:has(.tabs-one)) .picker { max-width: 100%; }
 }
+
+/* V20-391 (9, Dan's padding scan): phone gutters. The cards sat 32 px in from the edge (the header 16 px) and then
+   padded 24 px inside, leaving ~260 px for content. Phones: cards line up with the header at 16 px and pad 18 px. */
+@media (max-width: 640px) {
+  .app:not(.is-kb) .frame { padding-left: 16px; padding-right: 16px; }
+  .app:not(.is-kb) .home .panel { padding-left: 18px; padding-right: 18px; }
+}
