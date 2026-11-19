@@ -4441,3 +4441,14 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-404: a line break only phones use (the tour's first headline breaks after WHAT'S). */
 .phone-br { display: none; }
 @media (max-width: 640px) { .phone-br { display: inline; } }
+
+/* V20-406 (Dan, Nov 19): phone tour spacing, take 2 (all slides but Welcome). Skip the tour stays on Welcome's
+   REQUEST AN INVITE line; BACK / NEXT, the dots and the words move up with roomier, even gaps between them; the
+   Tasks picture shows three rows (the last THREE task hides on phones) so every picture sits easily in its space. */
+@media (max-width: 640px) {
+  .tour .tour-actions { bottom: 84px; }
+  .tour .tour-dots { bottom: 152px; }
+  .tour .tour-copy { bottom: 190px; gap: 12px; }
+  .tour .tour-stage { bottom: 346px; }
+  .tour .tp-task:last-child { display: none; }
+}
