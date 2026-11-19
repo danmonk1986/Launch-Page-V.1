@@ -156,6 +156,9 @@ export const cleanLink = (v: string) => {
   return u;
 };
 
+/** V20-348: one word that reads as an address (has a dot or a scheme), not a rocket's name. */
+const looksLikeLink = (v: string) => !!v && !/\s/.test(v) && (/:\/\//.test(v) || /\.[a-z]{2,}/i.test(v));
+
 export const BLOCKED_HELP =
   'Your browser blocked some tabs. Allow pop-ups for this site, then launch again.';
 
@@ -2402,6 +2405,19 @@ function LaunchRocketsField({ rockets, picked, onChange, onAddNew }: { rockets: 
                 e.preventDefault();
                 addTyped();
               }
+            }}
+            // V20-348 (Dan, Nov 19): a pasted or typed link goes on the list straight away (no + needed), so
+            // "Add as a rocket" shows next to it, and a link left in the box isn't lost on Save.
+            onPaste={(e) => {
+              const parts = e.clipboardData.getData('text').split(/[\s,]+/).filter(Boolean);
+              if (!parts.length || !parts.every(looksLikeLink)) return;
+              e.preventDefault();
+              addUrls(parts.map(cleanLink).filter(Boolean));
+              setQ('');
+            }}
+            onBlur={(e) => {
+              if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+              if (looksLikeLink(q.trim())) addTyped();
             }}
           >
             <NameCombo
