@@ -4474,3 +4474,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .tour .tour-copy { bottom: 228px; }
   .tour .tour-stage { bottom: 380px; }
 }
+
+/* V20-409: the "has already passed" line spans the whole Time row (both fields) instead of sitting under Time. */
+.time-grid > .time-grid-note { grid-column: 1 / -1; margin-top: -4px; }

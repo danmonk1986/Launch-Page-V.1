@@ -2013,9 +2013,29 @@ function TimedForm({
               set('atTime', e.target.value || nextHalfHour());
             }}
           />
+        </label>
+        <label className="field">
+          <span>Time allotted (minutes)</span>
+          <input
+            type="number"
+            min={1}
+            max={480}
+            step={1}
+            value={d.minutes}
+            onChange={(e) => set('minutes', Math.min(480, Math.max(1, Number(e.target.value) || 1)))}
+          />
+        </label>
+        {d.repeat === 'hourly' && (
+          <label className="field">
+            <span>Until (last one)</span>
+            <input type="time" required value={d.untilTime ?? ''} onChange={(e) => set('untilTime', e.target.value || null)} />
+          </label>
+        )}
+          {/* V20-409 (Dan, Nov 19): the passed-time line runs the full width under Time and Time allotted, so the
+              Time allotted field no longer jumps down. */}
           {pastErr && passedToday(d) && (
             // CP-035 (Dan, Nov 18): one line: "[time] has already passed. START NOW" (START NOW = right now).
-            <span className="field-error" role="alert">
+            <span className="field-error time-grid-note" role="alert">
               {formatMinutes(toMinutes(d.atTime))} has already passed.{' '}
               <button
                 type="button"
@@ -2046,24 +2066,6 @@ function TimedForm({
               )}
             </span>
           )}
-        </label>
-        <label className="field">
-          <span>Time allotted (minutes)</span>
-          <input
-            type="number"
-            min={1}
-            max={480}
-            step={1}
-            value={d.minutes}
-            onChange={(e) => set('minutes', Math.min(480, Math.max(1, Number(e.target.value) || 1)))}
-          />
-        </label>
-        {d.repeat === 'hourly' && (
-          <label className="field">
-            <span>Until (last one)</span>
-            <input type="time" required value={d.untilTime ?? ''} onChange={(e) => set('untilTime', e.target.value || null)} />
-          </label>
-        )}
       </div>
 
       {/* V20-076 (Dan, Nov 12): Logs when checked off is gone; What says what kind of time it is. Every What
