@@ -179,7 +179,10 @@ export function Setup({
         await onSave({ account: { setup: 4 } as AccountInfo });
       } else {
         await onSaveLaunch(launchOf());
-        await onSave({ account: { setup: 'done' } as AccountInfo });
+        // V20-358: how long setup took, for the 10-minute goal (from the first tap; this browser session).
+        const done = Date.now();
+        const timing = startedAt ? { setupStartedAt: new Date(startedAt).toISOString(), setupDoneAt: new Date(done).toISOString(), setupSeconds: Math.round((done - startedAt) / 1000) } : { setupDoneAt: new Date(done).toISOString() };
+        await onSave({ account: { setup: 'done', ...timing } as AccountInfo });
       }
       return true;
     } finally {

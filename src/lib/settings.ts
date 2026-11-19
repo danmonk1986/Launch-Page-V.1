@@ -169,6 +169,10 @@ export interface AccountInfo {
   /** V20-308: first-run setup. 'done', or the step to resume (1–4). Unset on older accounts (they skip it when a
    *  birthday is on file). */
   setup?: 'done' | number;
+  /** V20-358 (BETA BACKEND tracking): how long first-run setup took (the 10-minute goal), saved when it finishes. */
+  setupStartedAt?: string;
+  setupDoneAt?: string;
+  setupSeconds?: number;
 }
 
 export const EMPTY_ACCOUNT: AccountInfo = {

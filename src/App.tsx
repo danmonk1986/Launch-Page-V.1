@@ -137,6 +137,22 @@ export default function App() {
   // settings arrived.
   const [settingsFor, setSettingsFor] = useState<string | null | undefined>(undefined);
   const settingsLoaded = settingsFor === (session?.user.id ?? null);
+  // V20-358 (BETA BACKEND tracking): count which days this account opens the app (once per visit, and again when
+  // the tab comes back after 30+ minutes away). Never what's in it. Table app_opens (0068); fails quietly.
+  useEffect(() => {
+    const uid = session?.user.id;
+    if (!uid || !supabase) return;
+    const db = supabase;
+    let hiddenAt = 0;
+    const record = () => void db.rpc('record_open', { p_day: isoDate(new Date()) }).then(() => undefined, () => undefined);
+    record();
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+      else if (hiddenAt && Date.now() - hiddenAt > 30 * 60 * 1000) record();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [session?.user.id]);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
   const [settingsOpen, setSettingsOpen] = useState<false | SettingsTab>(false);
