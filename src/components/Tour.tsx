@@ -153,7 +153,17 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
         </div>
       </div>
       <div className="tour-copy">
-        <h2>{SLIDES[i].title}</h2>
+        {/* V20-404 (Dan, Nov 19): phones break the first headline after WHAT'S. */}
+        <h2>
+          {SLIDES[i].title.includes("WHAT'S ") ? (
+            <>
+              {SLIDES[i].title.split("WHAT'S ")[0]}WHAT'S <br className="phone-br" />
+              {SLIDES[i].title.split("WHAT'S ")[1]}
+            </>
+          ) : (
+            SLIDES[i].title
+          )}
+        </h2>
         <p>{SLIDES[i].body}</p>
       </div>
       <div className="welcome-dots tour-dots" role="tablist" aria-label="Tour slides">

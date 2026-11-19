@@ -4437,3 +4437,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 
 /* V20-403: the request-an-invite page's BACK / SEND REQUEST row (same buttons as the tour), in the form's flow. */
 .signin .beta-actions { position: static; display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
+
+/* V20-404: a line break only phones use (the tour's first headline breaks after WHAT'S). */
+.phone-br { display: none; }
+@media (max-width: 640px) { .phone-br { display: inline; } }
