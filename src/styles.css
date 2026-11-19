@@ -4319,3 +4319,13 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 @media (max-width: 640px) {
   .setup-stage > .setup-card.is-scroll { padding-bottom: 26px; }
 }
+
+/* V20-398 (Dan, Nov 19): phone search opens like the laptop's: the pill grows out of the search button, right to
+   left, across the logo's spot (it grew from the left edge, then jumped to full width). */
+@keyframes search-pop-phone { from { width: 32px; opacity: 0.4; } to { width: 100%; opacity: 1; } }
+@media (max-width: 640px) {
+  .app.app:not(.is-kb) .topbar .search-box.search-pill.header-search { justify-self: end; width: 100%; animation: search-pop-phone 0.2s ease-out; }
+}
+@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .app.app:not(.is-kb) .topbar .search-box.search-pill.header-search { animation: none; }
+}
