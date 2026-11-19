@@ -1,3 +1,4 @@
+import { useBeta } from '../lib/beta';
 import { useHeaderSearch } from '../lib/headerSearch';
 import { CardExplain } from './CardExplain';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, useId, type ReactNode } from 'react';
@@ -110,7 +111,8 @@ type Actions = {
   setStatus: (t: Task, status: string) => void;
   purge: (t: Task) => void;
   clear: (t: Task) => void;
-  toCalendar: (t: Task) => void;
+  /** V20-362: absent in beta mode (no Google Calendar). */
+  toCalendar?: (t: Task) => void;
   toLaunch: (t: Task) => void;
   hasLaunch?: (id: string) => boolean;
 };
@@ -200,9 +202,11 @@ function RowMenu({ t, act, checked }: { t: Task; act: Actions; checked: boolean 
           <button type="button" role="menuitem" onClick={run(() => act.edit(t))}>
             Edit
           </button>
-          <button type="button" role="menuitem" onClick={run(() => act.toCalendar(t))}>
-            {t.googleEventId ? 'Add to calendar again' : 'Add to calendar'}
-          </button>
+          {act.toCalendar && (
+            <button type="button" role="menuitem" onClick={run(() => act.toCalendar?.(t))}>
+              {t.googleEventId ? 'Add to calendar again' : 'Add to calendar'}
+            </button>
+          )}
           <button type="button" role="menuitem" onClick={run(() => act.toLaunch(t))}>
             {/* V20-209 (Dan, Nov 14): a task whose launch still exists edits it instead of making another. */}
             {t.launchId && act.hasLaunch?.(t.launchId) ? 'Edit launch' : 'Create launch'}
@@ -697,7 +701,7 @@ function useTaskEditor(p: EditorProps) {
 }
 
 type PageProps = EditorProps & {
-  onAddToCalendar: (t: Task) => void;
+  onAddToCalendar?: (t: Task) => void;
   onCreateLaunch: (t: Task) => void;
 };
 
@@ -987,6 +991,8 @@ function TaskForm({
   const [d, setD] = useState<Task>(task);
   const pushRocket = useRef(false);
   const [steps, setSteps] = useState<StepDraft[]>(initialSteps ?? []);
+  // V20-362: beta mode has no Budget, so no Budget expense field.
+  const beta = useBeta();
   const [openStep, setOpenStep] = useState<number | null>(null);
   const setStep = (i: number, patch: Partial<StepDraft>) => setSteps((list) => list.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const addStep = () => {
@@ -1200,7 +1206,7 @@ function TaskForm({
         </label>
         {/* V20-091 (Dan, Nov 12): the money has its own field. Fill in Budget expense and saving puts it in Budget
             (it replaces the Push to Budget box and amounts typed into Notes). The task list can be sorted by it. */}
-        {!isStep && (
+        {!isStep && !beta && (
           <label className="field budget-expense">
             <span>{linked ? 'Budget expense · in Budget' : 'Budget expense'}</span>
             <input

@@ -26,6 +26,10 @@ export type DataAction = { label: string; hint: string; button: string; onClick:
 type Props = {
   /** V20-359: the admin (Dan) sees ⚙ › Beta Testers. */
   admin?: boolean;
+  /** V20-362: beta mode (Modules shows only the essentials). */
+  beta?: boolean;
+  lpMode?: 'main' | 'beta';
+  onLpMode?: (m: 'main' | 'beta') => void;
   open: boolean;
   tab: SettingsTab;
   onTab: (t: SettingsTab) => void;
@@ -50,7 +54,7 @@ type Props = {
   onSignOut?: () => void;
 };
 
-export function SettingsPanel({ admin = false, open, tab, onTab, settings, onClose, onSave, onSetPassword, onCheckPassword, onSendReset, email, projects, data, onSignOut, bgSlots, onBgImage }: Props) {
+export function SettingsPanel({ admin = false, beta = false, lpMode = 'main', onLpMode, open, tab, onTab, settings, onClose, onSave, onSetPassword, onCheckPassword, onSendReset, email, projects, data, onSignOut, bgSlots, onBgImage }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState(settings);
   const [pwOpen, setPwOpen] = useState(false);
@@ -318,7 +322,7 @@ export function SettingsPanel({ admin = false, open, tab, onTab, settings, onClo
               default; from Personal Alchemy down they're off by default. Ones still to be built are greyed out. */}
           {tab === 'modules' && (
             <>
-              {MODULE_GROUPS.map((g, gi) => (
+              {(beta ? MODULE_GROUPS.slice(0, 1) : MODULE_GROUPS).map((g, gi) => (
                 <div key={g.title} className="module-group">
                   {gi === 0 ? (
                     <SectionHead title={g.title} onRestore={() => saveNow((d) => ({ ...d, modules: DEFAULT_MODULES }))} />
@@ -575,7 +579,7 @@ export function SettingsPanel({ admin = false, open, tab, onTab, settings, onClo
           </div>
         )}
 
-        {admin && tab === 'beta' && <BetaTesters />}
+        {admin && tab === 'beta' && <BetaTesters lpMode={lpMode} onLpMode={onLpMode} />}
 
         {tab === 'signout' && (
           <div className="settings-action">
@@ -1085,7 +1089,7 @@ function ColourTile({ label, value, onChange }: { label: string; value: string; 
  */
 type TesterRow = { email: string; joined: string; last_sign_in: string | null; setup: string; setup_seconds: number | null; days_opened: number; days_7: number; last_open: string | null };
 type InviteRow = { id: string; name: string; email: string; note: string | null; created_at: string; invited_at?: string | null };
-function BetaTesters() {
+function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?: (m: 'main' | 'beta') => void }) {
   const [rows, setRows] = useState<TesterRow[] | null>(null);
   const [invites, setInvites] = useState<InviteRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -1129,14 +1133,21 @@ function BetaTesters() {
       <div className="beta-admin-head">
         <h3 className="timed-title settings-section">Beta testers</h3>
         <div className="beta-admin-tools">
-          {/* V20-360 (Dan, Nov 19): MAIN / BETA switch for the Launch Page itself (main's full page vs the lean beta
-              version testers get). A placeholder until the scale-back is built; then it flips the page. */}
-          <span className="beta-mode" title="Coming with the scale-back: flips your Launch Page to the lean beta version testers see">
-            <span className="beta-mode-label is-on">Main</span>
-            <button type="button" role="switch" aria-checked={false} aria-label="Launch Page: Main or Beta (coming soon)" disabled className="module-switch">
+          {/* V20-360 / V20-362 (Dan, Nov 19): MAIN / BETA switch for the Launch Page itself: Beta shows the lean
+              version testers get (kept on this device). */}
+          <span className="beta-mode is-live" title="Flip your Launch Page between main (everything) and the lean beta testers get">
+            <span className={`beta-mode-label${lpMode === 'main' ? ' is-on' : ''}`}>Main</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={lpMode === 'beta'}
+              aria-label="Launch Page: Main or Beta"
+              className={`module-switch${lpMode === 'beta' ? ' is-on' : ''}`}
+              onClick={() => onLpMode?.(lpMode === 'beta' ? 'main' : 'beta')}
+            >
               <span />
             </button>
-            <span className="beta-mode-label">Beta</span>
+            <span className={`beta-mode-label${lpMode === 'beta' ? ' is-on' : ''}`}>Beta</span>
           </span>
           <button type="button" className="btn btn-quiet" onClick={() => void load()}>
             Refresh

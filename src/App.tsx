@@ -126,6 +126,7 @@ import { SignIn } from './components/SignIn';
 import { Welcome } from './components/Welcome';
 import { Tour } from './components/Tour';
 import { Setup, setupStepFor } from './components/Setup';
+import { BETA_MODULES, BetaContext, readLpMode, writeLpMode } from './lib/beta';
 import { KnowledgeBasePage } from './components/KnowledgeBase';
 
 export default function App() {
@@ -137,6 +138,16 @@ export default function App() {
   // settings arrived.
   const [settingsFor, setSettingsFor] = useState<string | null | undefined>(undefined);
   const settingsLoaded = settingsFor === (session?.user.id ?? null);
+  // V20-362 BETA MODE: testers always; the admin flips Main · Beta in ⚙ › Beta Testers (kept on this device).
+  const isAdmin = session?.user.app_metadata?.role === 'admin';
+  const [lpMode, setLpModeState] = useState<'main' | 'beta'>(readLpMode);
+  const setLpMode = (m: 'main' | 'beta') => {
+    writeLpMode(m);
+    setLpModeState(m);
+  };
+  const beta = !isAdmin || lpMode === 'beta';
+  /** The modules in force: beta mode's fixed MVP set, or the account's own switches (main). */
+  const mods = beta ? BETA_MODULES : settings.modules;
   // V20-358 (BETA BACKEND tracking): count which days this account opens the app (once per visit, and again when
   // the tab comes back after 30+ minutes away). Never what's in it. Table app_opens (0068); fails quietly.
   useEffect(() => {
@@ -602,7 +613,7 @@ export default function App() {
   const exportBrand = () =>
     ((settings.account.businessName || '').trim() || shownName(settings).trim() || 'L4UNCH!P4GE').toUpperCase().replace(/[^A-Za-z0-9!_-]+/g, '-').replace(/^-|-$/g, '') || 'LAUNCH-SHEET';
   // V20-158: pages switched off in Settings › Modules leave the menu (and send you to the Launch Page).
-  const hiddenPages = ([['days26', settings.modules.days26], ['budget', settings.modules.budget], ['invoices', booksOn(settings.modules) || settings.modules.invoice], ['kb', settings.modules.kb !== false], ['tasks', settings.modules.tasks], ['planner', settings.modules.planner]] as const)
+  const hiddenPages = ([['days26', mods.days26], ['budget', mods.budget], ['invoices', booksOn(mods) || mods.invoice], ['kb', mods.kb !== false], ['tasks', mods.tasks], ['planner', mods.planner]] as const)
     .filter(([, on]) => !on)
     .map(([id]) => id) as PageId[];
   const hiddenPagesKey = hiddenPages.join(',');
@@ -2014,6 +2025,7 @@ export default function App() {
   // V20-308 (Dan, Nov 17): first-run setup before the Launch Page, once settings have loaded.
   if (session && settingsLoaded && setupStepFor(settings.account)) {
     return (
+      <BetaContext.Provider value={beta}>
       <div className="app app-light" style={theme}>
         <Setup
           settings={settings}
@@ -2027,6 +2039,7 @@ export default function App() {
           onTest={(l) => setReminder(l)}
         />
       </div>
+      </BetaContext.Provider>
     );
   }
 
@@ -2089,6 +2102,7 @@ export default function App() {
     : theme;
 
   return (
+    <BetaContext.Provider value={beta}>
     <HeaderSearchContext.Provider value={{ q: headerQ, setQ: setHeaderQ }}>
     <MeditationsContext.Provider value={{ list: meditations, save: saveMeditation, remove: removeMeditation }}>
     <HiddenPicksContext.Provider value={{ hidden: hiddenPicks, hide: hidePick }}>
@@ -2148,7 +2162,7 @@ export default function App() {
         <main aria-label={page === 'launch' ? 'L4UNCH P4GE' : 'Page'}>
           {page === 'launch' ? (
             <LaunchPageHome
-              rockets={!settings.modules.rockets ? null : 
+              rockets={!mods.rockets ? null : 
                 <RocketsPanel
                   rituals={routines.filter((r) => r.kind === 'ritual').map((r) => ({ id: r.id, name: r.name }))}
                   projects={projects}
@@ -2186,7 +2200,7 @@ export default function App() {
                   onEditOpened={() => setEditLaunch(null)}
                 />
               }
-              week={!settings.modules.week ? null : 
+              week={!mods.week ? null : 
                 <WeekCalendar
                   addPreset={eventPreset}
                   userId={userId}
@@ -2213,18 +2227,18 @@ export default function App() {
                   onAddTask={(e) => setTaskPreset({ fill: { task: e.title, startDate: e.startDate, endDate: e.endDate }, n: Date.now() })}
                 />
               }
-              tasks={!settings.modules.tasks ? null : 
+              tasks={!mods.tasks ? null : 
                 <TasksPanel
                   addPreset={taskPreset}
                   onAddPresetUsed={() => setTaskPreset(null)}
                   tasks={headerQ ? shownTasks.filter((t) => matchesSearch(headerQ, t.description, t.notes)) : shownTasks}
-                  onPushToBudget={pushToBudget}
+                  onPushToBudget={mods.budget ? pushToBudget : undefined}
                   projects={projects}
                   today={now}
                   onSave={saveTask}
                   onDelete={taskOps.remove}
                   onSaveMany={saveTasks}
-                  onAddToCalendar={addTaskToCalendar}
+                  onAddToCalendar={beta ? undefined : addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
                   hasLaunch={(id) => launches.some((l) => l.id === id)}
                   onOpenAll={() => {
@@ -2237,10 +2251,10 @@ export default function App() {
                   }}
                 />
               }
-              budget={!settings.modules.budget ? null : <BudgetCard lines={budget} today={now} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} />}
-              planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
-              journal={!settings.modules.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
-              today={!settings.modules.routine ? null : 
+              budget={!mods.budget ? null : <BudgetCard lines={budget} today={now} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} />}
+              planner={!mods.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
+              journal={!mods.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
+              today={!mods.routine ? null : 
                 <TodayPanel
                   follow
                   routine={activeRoutine}
@@ -2252,13 +2266,13 @@ export default function App() {
           ) : page === 'tasks' ? (
             <TasksPage
               tasks={shownTasks}
-                  onPushToBudget={pushToBudget}
+                  onPushToBudget={mods.budget ? pushToBudget : undefined}
               projects={projects}
               today={now}
               onSave={saveTask}
               onDelete={taskOps.remove}
                   onSaveMany={saveTasks}
-                  onAddToCalendar={addTaskToCalendar}
+                  onAddToCalendar={beta ? undefined : addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
                   hasLaunch={(id) => launches.some((l) => l.id === id)}
               onOpenProjects={() => setSettingsOpen('projects')}
@@ -2281,7 +2295,7 @@ export default function App() {
             <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} full onClose={() => setPage('launch')} />
           ) : page === 'days26' ? (
             <Days26Page
-              show={{ nonneg: settings.modules.d26Nonneg, logging: settings.modules.d26Logging, rituals: settings.modules.d26Rituals, summary: settings.modules.d26Summary }}
+              show={{ nonneg: mods.d26Nonneg, logging: mods.d26Logging, rituals: mods.d26Rituals, summary: mods.d26Summary }}
               now={now}
               displayName={shownName(settings)}
               routine={activeRoutine}
@@ -2315,9 +2329,9 @@ export default function App() {
             />
           ) : page === 'invoices' ? (
             <RecordsPage
-              showInvoices={settings.modules.invoice}
-              showBooks={booksOn(settings.modules)}
-              showViews={{ expenses: settings.modules.recExpenses, income: settings.modules.recIncome, draws: settings.modules.recDraws }}
+              showInvoices={mods.invoice}
+              showBooks={booksOn(mods)}
+              showViews={{ expenses: mods.recExpenses, income: mods.recIncome, draws: mods.recDraws }}
               expenses={expenses}
               lines={budget}
               onSaveExpense={editExpense}
@@ -2589,7 +2603,10 @@ export default function App() {
         }}
       />
       <SettingsPanel
-        admin={session?.user.app_metadata?.role === 'admin'}
+        admin={isAdmin}
+        beta={beta}
+        lpMode={lpMode}
+        onLpMode={setLpMode}
         open={!!settingsOpen}
         bgSlots={bgSlots}
         onBgImage={async (mode, slot, image) => {
@@ -2643,7 +2660,7 @@ export default function App() {
               setStatus(`Launch Sheet exported: ${counts.length + 1} tabs, ${counts.reduce((a, c) => a + c.rows, 0)} rows.`);
             }
           },
-          ...(booksOn(settings.modules) || settings.modules.invoice
+          ...(booksOn(mods) || mods.invoice
             ? [
                 {
                   group: 'Export',
@@ -2659,7 +2676,7 @@ export default function App() {
                 }
               ]
             : []),
-          ...(settings.modules.budget
+          ...(mods.budget
             ? [
                 {
                   group: 'Export',
@@ -2683,7 +2700,7 @@ export default function App() {
               importInput.current?.click();
             }
           },
-          ...(settings.modules.budget
+          ...(mods.budget
             ? [
                 {
                   group: 'Import',
@@ -2698,7 +2715,7 @@ export default function App() {
                 }
               ]
             : []),
-          ...(booksOn(settings.modules)
+          ...(booksOn(mods)
             ? [
                 {
                   group: 'Import',
@@ -2713,7 +2730,7 @@ export default function App() {
                 }
               ]
             : []),
-          {
+          ...(mods.kb === false ? [] : [{
             group: 'Import',
             label: 'Import knowledge base',
             hint: 'Adds courses and decks to KNOWLEDGE!B4SE (kb-index.json). Opens it first.',
@@ -2723,7 +2740,7 @@ export default function App() {
               setPage('kb');
               setTimeout(() => window.dispatchEvent(new Event('kb:import')), 250);
             }
-          },
+          }]),
           {
             group: 'Setup',
             label: 'Run setup again',
@@ -2767,5 +2784,6 @@ export default function App() {
     </HiddenPicksContext.Provider>
     </MeditationsContext.Provider>
     </HeaderSearchContext.Provider>
+    </BetaContext.Provider>
   );
 }

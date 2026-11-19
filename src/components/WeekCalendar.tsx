@@ -1,3 +1,4 @@
+import { useBeta } from '../lib/beta';
 import { useCallback, useEffect, useRef, useState, useId } from 'react';
 import { FormActions, Sheet } from './Sheet';
 import { CardExplain } from './CardExplain';
@@ -67,6 +68,7 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
     if (!open) setPresetTitle('');
   }, [open]);
   const [gEvents, setGEvents] = useState<CalEvent[]>([]);
+  const beta = useBeta();
   const [g, setG] = useState<GState>(() => (!googleConfigured() ? 'off' : hasToken() ? 'loading' : wasConnected() ? 'reconnect' : 'off'));
   const [gError, setGError] = useState<string | null>(null);
 
@@ -313,7 +315,7 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
           <button type="button" className="week-arrow" aria-label={mobile ? 'Previous 3 days' : 'Previous week'} title={mobile ? 'Previous 3 days' : 'Previous week'} onClick={() => setOffset((o) => o - 1)}>
             <Icon d="M15 6l-6 6 6 6" />
           </button>
-          {googleConfigured() && (
+          {googleConfigured() && !beta && (
             <button
               type="button"
               className={`icon-btn tool-btn gcal-sync ${g === 'on' || g === 'loading' ? 'gcal-on' : 'gcal-off'}${g === 'loading' ? ' is-syncing' : ''}`}
