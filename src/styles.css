@@ -4477,3 +4477,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 
 /* V20-409: the "has already passed" line spans the whole Time row (both fields) instead of sitting under Time. */
 .time-grid > .time-grid-note { grid-column: 1 / -1; margin-top: -4px; }
+/* V20-410b: phone tour words get 16 px side room (was 24) so each line of the tightened copy fits on one line. */
+@media (max-width: 640px) { .tour .tour-copy { padding-left: 16px; padding-right: 16px; } }
