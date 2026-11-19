@@ -4029,3 +4029,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .setup-blocks { gap: 2px; }
 .setup-blocks li { grid-template-columns: 156px minmax(0, 1fr) 30px; column-gap: 12px; }
 .setup-blocks input[type='time'] { min-width: 0; width: 100%; padding-right: 4px; font-variant-numeric: tabular-nums; }
+
+/* V20-342 (Dan, Nov 19): the card-title hover words (V20-326) are off for now. The words still show on the tour. */
+.card-explain { display: none !important; }
