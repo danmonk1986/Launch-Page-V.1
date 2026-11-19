@@ -4410,3 +4410,27 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .app.app .bc-row > .pl-desc:nth-of-type(4) { grid-area: meth; }
   .app.app .bc-row > .bc-amt { grid-area: amt; text-align: right; }
 }
+
+/* V20-402 (Dan, Nov 19, iPhone): the phone tour, laid out from the bottom up so every slide (not Welcome) has its
+   words, dots, buttons and Skip the tour in exactly the same place:
+     Skip the tour   on the same line as Welcome's REQUEST AN INVITE (24 px from the bottom)
+     BACK / NEXT     above it, then the dots, then the headline and text (sitting on the dots)
+   The picture is centred in the white space between the logo and the words, sized so the biggest one (the
+   routine) fits. Laptop unchanged. */
+@media (max-width: 640px) {
+  .tour { position: relative; height: 100dvh; min-height: 0; overflow: hidden; }
+  .tour .tour-skip { top: auto; bottom: 24px; }
+  .tour .tour-actions { top: auto; bottom: 62px; }
+  .tour .tour-dots { top: auto; bottom: 128px; }
+  .tour .tour-copy { top: auto; bottom: 157px; height: auto; max-height: 140px; justify-content: flex-end; }
+  .tour .tour-copy h2 { font-size: 19px; line-height: 1.25; }
+  .tour .tour-copy p { font-size: 15px; line-height: 1.45; }
+  .tour .tour-stage { top: 76px; bottom: 305px; height: auto; display: flex; align-items: center; justify-content: center; }
+  .tour .tour-stage .tour-slide > * { zoom: 0.75; }
+}
+@media (max-width: 640px) and (max-height: 700px) {
+  .tour .tour-stage .tour-slide > * { zoom: 0.62; }
+}
+@media (max-width: 640px) and (max-height: 600px) {
+  .tour .tour-stage .tour-slide > * { zoom: 0.52; }
+}
