@@ -37,7 +37,9 @@ const STATUS_COLOR: Record<DecisionStatus, string> = {
 function fmtDate(iso: string | null): string {
   if (!iso) return '—';
   const d = new Date(`${iso}T12:00:00`);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  // V20-346 (Dan, Nov 19): a date in another year shows its year, so a slip (2027 for 2026) can't hide.
+  const other = d.getFullYear() !== new Date().getFullYear();
+  return d.toLocaleDateString('en-US', other ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
 }
 
 export function PlannerPanel(p: {
