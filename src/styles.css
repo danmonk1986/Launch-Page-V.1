@@ -4479,3 +4479,19 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .time-grid > .time-grid-note { grid-column: 1 / -1; margin-top: -4px; }
 /* V20-410b: phone tour words get 16 px side room (was 24) so each line of the tightened copy fits on one line. */
 @media (max-width: 640px) { .tour .tour-copy { padding-left: 16px; padding-right: 16px; } }
+
+/* V20-411 (Dan, Nov 19): phone tour, final layout. Three picture sizes, so:
+   - every picture starts the same distance under the logo (top-justified, not centred);
+   - the block from Skip the tour up (Skip, BACK / NEXT, dots, words) stays exactly where it is on every slide;
+   - the pictures scale with the screen's height so the tallest (Workday) always ends just above the words, with no
+     big empty gap on tall phones and no overlap on short ones. */
+@media (max-width: 640px) {
+  .tour .tour-stage { align-items: flex-start; padding-top: 24px; }
+  .tour .tour-slide { align-items: flex-start; }
+}
+@media (max-width: 640px) and (min-height: 701px) {
+  .tour .tour-stage .tour-slide > * { zoom: 0.8; }
+}
+@media (max-width: 640px) and (min-height: 781px) {
+  .tour .tour-stage .tour-slide > * { zoom: 0.95; }
+}
