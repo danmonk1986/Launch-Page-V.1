@@ -4452,3 +4452,16 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .tour .tour-stage { bottom: 346px; }
   .tour .tp-task:last-child { display: none; }
 }
+
+/* V20-407 (Dan, Nov 19): the Workday picture was the tall one throwing the phone tour off. Phones: it's the same
+   width as the other pictures, drops the Wake up / TOMORROW row and sits a little tighter, so every picture is about
+   the same height; the words, dots and buttons move up a bit more (Skip the tour stays put). */
+@media (max-width: 640px) {
+  .tour .tp.tp-narrow { width: 600px; }
+  .tour .tp-rt.is-next-day { display: none; }
+  .tour .tp.tp-narrow .tp-rt { padding-top: 7px; padding-bottom: 7px; }
+  .tour .tour-actions { bottom: 92px; }
+  .tour .tour-dots { bottom: 164px; }
+  .tour .tour-copy { bottom: 204px; }
+  .tour .tour-stage { bottom: 356px; }
+}
