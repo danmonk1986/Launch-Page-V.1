@@ -4495,3 +4495,13 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 @media (max-width: 640px) and (min-height: 781px) {
   .tour .tour-stage .tour-slide > * { zoom: 0.95; }
 }
+
+/* V20-412 (Dan, Nov 19): phone tour: the bottom block is perfect; the picture now sits centred in the space between
+   the logo and this slide's headline (the space is measured per slide, since the words' height changes). */
+@media (max-width: 640px) {
+  .tour .tour-stage {
+    top: var(--logo-bottom, 68px); bottom: auto; height: calc(var(--copy-top, 400px) - var(--logo-bottom, 68px));
+    padding-top: 0; align-items: center;
+  }
+  .tour .tour-slide { align-items: center; }
+}

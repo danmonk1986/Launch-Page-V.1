@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { RocketIcon } from './RocketIcon';
 import { FEATURE_COPY, type FeatureKey } from '../lib/featureCopy';
 
@@ -14,9 +14,32 @@ const SLIDES = (['timed', 'rockets', 'routine', 'tasks', 'logging'] as FeatureKe
 export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWelcome: () => void; onSignUp: () => void }) {
   const [i, setI] = useState(Math.max(0, Math.min(SLIDES.length - 1, start)));
   const last = i === SLIDES.length - 1;
+  // V20-412 (Dan, Nov 19): on phones the picture sits centred between the logo and this slide's headline. The words
+  // are pinned from the bottom and their height changes slide to slide, so measure where the headline starts.
+  const main = useRef<HTMLElement>(null);
+  const logo = useRef<HTMLImageElement>(null);
+  const copy = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const place = () => {
+      const m = main.current, l = logo.current, c = copy.current;
+      if (!m || !l || !c) return;
+      const top = m.getBoundingClientRect().top;
+      m.style.setProperty('--logo-bottom', `${Math.round(l.getBoundingClientRect().bottom - top)}px`);
+      m.style.setProperty('--copy-top', `${Math.round(c.getBoundingClientRect().top - top)}px`);
+    };
+    place();
+    const r = new ResizeObserver(place);
+    if (copy.current) r.observe(copy.current);
+    if (logo.current) r.observe(logo.current);
+    window.addEventListener('resize', place);
+    return () => {
+      r.disconnect();
+      window.removeEventListener('resize', place);
+    };
+  }, [i]);
   return (
-    <main className="tour">
-      <img className="tour-logo" src="/launchpage-logo.png" alt="L4UNCH P4GE" />
+    <main className="tour" ref={main}>
+      <img className="tour-logo" src="/launchpage-logo.png" alt="L4UNCH P4GE" ref={logo} />
       <div className="tour-stage">
         <div className="tour-slide" key={i}>
           {/* V20-327 (Dan, Nov 18): each slide's picture is a small copy of the real Launch Page card (first-time
@@ -152,7 +175,7 @@ export function Tour({ start = 0, onWelcome, onSignUp }: { start?: number; onWel
           )}
         </div>
       </div>
-      <div className="tour-copy">
+      <div className="tour-copy" ref={copy}>
         {/* V20-404 (Dan, Nov 19): phones break the first headline after WHAT'S. */}
         <h2>
           {SLIDES[i].title.includes("WHAT'S ") ? (
