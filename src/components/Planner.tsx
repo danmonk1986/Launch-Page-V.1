@@ -19,6 +19,8 @@ const UP = 'M6 15l6-6 6 6';
 const PLUS = 'M12 5v14M5 12h14';
 const CHECK = 'M5 12.5l4.5 4.5L19 7.5';
 const X = 'M6 6l12 12M18 6L6 18';
+// One plan = one task (V20-340) is built but parked: the button is hidden until we revisit it.
+const SEND_TO_TASKS = false;
 // A checklist: the plan as one task with steps.
 const TASKS = 'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2';
 const SAVE = 'M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6';
@@ -130,7 +132,8 @@ export function PlannerPanel(p: {
           </div>
         </div>
         <div className="panel-actions">
-          {plan && p.onPlanToTasks && (
+          {/* Nov 19 (Dan): parked until we revisit how a plan's dated steps read in Tasks (V20-341). */}
+          {SEND_TO_TASKS && plan && p.onPlanToTasks && (
             <button
               type="button"
               className="icon-btn tool-btn"
