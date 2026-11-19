@@ -19,6 +19,8 @@ const UP = 'M6 15l6-6 6 6';
 const PLUS = 'M12 5v14M5 12h14';
 const CHECK = 'M5 12.5l4.5 4.5L19 7.5';
 const X = 'M6 6l12 12M18 6L6 18';
+// A checklist: the plan as one task with steps.
+const TASKS = 'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2';
 const SAVE = 'M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6';
 const TRASH = 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3';
 const STATUS_COLOR: Record<DecisionStatus, string> = {
@@ -43,6 +45,8 @@ export function PlannerPanel(p: {
   onSave: (d: Decision) => Promise<void>;
   onSaveMany: (d: Decision[]) => Promise<void>;
   onSavePlan: (p: Plan) => Promise<void>;
+  /** ONE PLAN = ONE TASK (Nov 19): the plan goes to Tasks as one task, its decisions as steps (again = opens Tasks). */
+  onPlanToTasks?: (p: Plan) => void;
   /** V20-265: Add to workflow opens the calendar's Add event filled in (then Push task › rocket). */
   onToWorkflow: (d: Decision) => void;
   onRemove: (id: string) => Promise<void>;
@@ -126,6 +130,18 @@ export function PlannerPanel(p: {
           </div>
         </div>
         <div className="panel-actions">
+          {plan && p.onPlanToTasks && (
+            <button
+              type="button"
+              className="icon-btn tool-btn"
+              aria-label={plan.taskId ? `${plan.name} is in Tasks: open Tasks` : `Send ${plan.name} to Tasks`}
+              title={plan.taskId ? 'In Tasks: open it' : 'Send to Tasks: one task, the decisions as its steps'}
+              aria-pressed={!!plan.taskId}
+              onClick={() => p.onPlanToTasks?.(plan)}
+            >
+              <Icon d={TASKS} />
+            </button>
+          )}
           <button type="button" className="icon-btn tool-btn is-key" aria-label="Add a plan" title="Add a plan" onClick={() => setSheet({ plan: newPlan(plan?.projectId ?? null, plans.reduce((m, x) => Math.max(m, x.sort), 0) + 1), isNew: true })}>
             <Icon d={PLUS} />
           </button>

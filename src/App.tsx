@@ -16,7 +16,7 @@ import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
 import { HeaderSearchContext, matchesSearch } from './lib/headerSearch';
-import { decisionStore, type Decision } from './lib/decisions';
+import { byDate, decisionStore, type Decision } from './lib/decisions';
 import { planStore, type Plan } from './lib/plans';
 import { PlannerPanel } from './components/Planner';
 import { BudgetCard } from './components/BudgetCard';
@@ -73,7 +73,7 @@ import { buildJournalImport, byNewest, checkinsOf, journalStore, mergeJournal, n
 import { JournalPanel } from './components/Journal';
 import { Sheet } from './components/Sheet';
 import { RitualRunner } from './components/Rituals';
-import { buildImport, doneToday, isRecurring, repeatOf, taskName, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
+import { buildImport, doneToday, isRecurring, newTask, repeatOf, taskName, taskStore, trashExpired, type ImportRow, type Task } from './lib/tasks';
 import { addTaskToGoogle, googleConfigured, knownCalendars } from './lib/google';
 import {
   isDue,
@@ -1009,6 +1009,7 @@ export default function App() {
   const saveTask = async (t: Task) => {
     const old = tasksRef.current.find((x) => x.id === t.id);
     launchFollowsTasks([t]);
+    decisionsFollowTasks([t]);
     await taskOps.save(t);
     await payFor([t]);
     await lineFollowsTask(t);
@@ -1039,9 +1040,98 @@ export default function App() {
   }
   const saveTasks = async (items: Task[]) => {
     launchFollowsTasks(items);
+    decisionsFollowTasks(items);
     await taskOps.saveMany(items);
     await payFor(items);
   };
+
+  /**
+   * ONE PLAN = ONE TASK (Dan, Nov 19). A plan goes to Tasks as one task (the plan's name); each decision is a step
+   * under it. They stay linked both ways: a step ticked marks its decision done (and back), a renamed step renames the
+   * decision, a step's date is the decide-by date; a new decision becomes a new step. A plan is in Tasks once: sending
+   * it again opens Tasks. Deleting either side only unlinks, nothing else is deleted.
+   */
+  const liveTask = (id: string | null | undefined) => (id ? tasksRef.current.find((t) => t.id === id && !t.deletedAt) : undefined);
+  const nextTaskSort = () => tasksRef.current.reduce((m, t) => Math.max(m, t.sort), 0) + 1;
+  function stepFor(d: Decision, parent: Task, existing: Task | undefined, sort: number): Task {
+    const base: Task = existing ?? { ...newTask(sort, parent.projectId), status: 'PENDING' };
+    const done = d.status === 'done';
+    const picked = d.options.find((o) => o.picked);
+    // The picked option goes in the step's notes, unless you've written notes of your own there.
+    const ownNotes = base.notes.trim() && !base.notes.startsWith('Picked: ');
+    return {
+      ...base,
+      parentId: parent.id,
+      task: d.title.trim() || base.task,
+      description: existing ? base.description : '',
+      endDate: d.decideBy ?? base.endDate,
+      done,
+      doneAt: done ? base.doneAt ?? new Date().toISOString() : null,
+      notes: ownNotes ? base.notes : picked ? `Picked: ${picked.name}` : ''
+    };
+  }
+  const sameTask = (a: Task, b: Task) => JSON.stringify(a) === JSON.stringify(b);
+  async function planToTasks(plan: Plan) {
+    const already = liveTask(plan.taskId);
+    if (already) {
+      setPage('tasks');
+      setStatus(`${plan.name} is already in Tasks (${taskName(already)}).`);
+      return;
+    }
+    let sort = nextTaskSort();
+    const parent: Task = {
+      ...newTask(sort++, plan.projectId),
+      task: plan.name.trim() || 'Plan',
+      description: plan.description.trim(),
+      startDate: plan.startDate ?? isoDate(new Date()),
+      endDate: plan.decideBy
+    };
+    const decs = decisions.filter((d) => d.planId === plan.id).sort(byDate);
+    const steps = decs.map((d) => stepFor(d, parent, liveTask(d.taskId), sort++));
+    await taskOps.saveMany([parent, ...steps]);
+    await planOps.save({ ...plan, taskId: parent.id });
+    const relinked = decs.map((d, i) => ({ ...d, taskId: steps[i].id })).filter((d, i) => d.taskId !== decs[i].taskId);
+    if (relinked.length) await decisionOps.saveMany(relinked);
+    setStatus(`${plan.name} is in Tasks: one task, ${steps.length} step${steps.length === 1 ? '' : 's'}.`);
+  }
+  /** A decision saved in the Planner: its step follows (a new decision in a plan that's in Tasks gets a step). */
+  async function saveDecision(d: Decision) {
+    const plan = d.planId ? plans.find((x) => x.id === d.planId) : undefined;
+    const parent = liveTask(plan?.taskId);
+    if (!parent) return decisionOps.save(d);
+    const existing = liveTask(d.taskId);
+    const step = stepFor(d, parent, existing, nextTaskSort());
+    if (!existing || !sameTask(step, existing)) await taskOps.save(step);
+    await decisionOps.save(existing ? d : { ...d, taskId: step.id });
+  }
+  /** A plan saved: its task takes the new name / description / date. */
+  async function savePlan(p: Plan) {
+    await planOps.save(p);
+    const t = liveTask(p.taskId);
+    if (!t) return;
+    const next = { ...t, task: p.name.trim() || t.task, description: p.description.trim(), endDate: p.decideBy ?? t.endDate };
+    if (!sameTask(next, t)) await taskOps.save(next);
+  }
+  /** A step or plan task changed in Tasks: its decision / plan follows. Runs before the save (reads the old copy). */
+  function decisionsFollowTasks(items: Task[]) {
+    const before = tasksRef.current;
+    const changedDecisions: Decision[] = [];
+    for (const t of items) {
+      const old = before.find((x) => x.id === t.id);
+      if (!old || t.deletedAt) continue;
+      const d = decisions.find((x) => x.taskId === t.id && x.planId && plans.find((p) => p.id === x.planId)?.taskId === t.parentId);
+      if (d) {
+        let n = d;
+        if (t.done !== old.done) n = { ...n, status: t.done ? 'done' : d.options.some((o) => o.picked) ? 'decided' : 'open' };
+        if (t.task.trim() && t.task !== old.task) n = { ...n, title: t.task.trim() };
+        if ((t.endDate ?? null) !== (old.endDate ?? null)) n = { ...n, decideBy: t.endDate };
+        if (n !== d) changedDecisions.push(n);
+      }
+      const plan = plans.find((p) => p.taskId === t.id);
+      if (plan && t.task.trim() && t.task !== old.task) void planOps.save({ ...plan, name: t.task.trim() });
+    }
+    if (changedDecisions.length) void decisionOps.saveMany(changedDecisions);
+  }
   /** A budget line saved: its linked task takes the shared fields (name, repeat / date, amount). */
   async function saveBudgetLine(l: BudgetLine) {
     await budgetOps.save(l);
@@ -1383,6 +1473,14 @@ export default function App() {
   // calendar › task › rocket, the same chain as everywhere else.
   const [eventPreset, setEventPreset] = useState<{ title: string; date: string; n: number } | null>(null);
   function decisionToWorkflow(d: Decision) {
+    // ONE PLAN = ONE TASK: a decision that's already a step goes to Tasks, not to a second copy via the calendar.
+    const step = d.taskId ? tasksRef.current.find((t) => t.id === d.taskId && !t.deletedAt) : undefined;
+    if (step) {
+      const parent = step.parentId ? tasksRef.current.find((t) => t.id === step.parentId) : undefined;
+      setPage('tasks');
+      setStatus(`${d.title} is a step in ${parent ? taskName(parent) : 'a task'} in Tasks.`);
+      return;
+    }
     setPage('launch');
     setEventPreset({ title: d.title, date: d.decideBy ?? isoDate(new Date()), n: Date.now() });
   }
@@ -2085,7 +2183,7 @@ export default function App() {
                 />
               }
               budget={!settings.modules.budget ? null : <BudgetCard lines={budget} today={now} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} />}
-              planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
+              planner={!settings.modules.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
               journal={!settings.modules.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!settings.modules.routine ? null : 
                 <TodayPanel
@@ -2119,7 +2217,7 @@ export default function App() {
               expenses={expenses}
             />
           ) : page === 'planner' ? (
-            <PlannerPanel full decisions={decisions} plans={plans} projects={projects} onSave={decisionOps.save} onSaveMany={decisionOps.saveMany} onSavePlan={planOps.save} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => {
+            <PlannerPanel full decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => {
               // V20-257 (Dan, Nov 15): ^ comes back to the Project Planner card, not the top of the page.
               returnTo.current = 'h-planner';
               setPage('launch');
