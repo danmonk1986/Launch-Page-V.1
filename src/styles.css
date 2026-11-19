@@ -4148,3 +4148,17 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .timed-tabs.fold-tabs { overflow: visible; }
   .fold-list { z-index: 30; }
 }
+
+/* V20-382 (Dan, Nov 19, iPhone): on phones the × sat half outside the step card's top-right corner and the card
+   covered its bottom half. Phones only: the × sits inside the card, 12 px from its top and right edges (the card is
+   the first thing in .setup-main and fills its width, so the corner is the same spot), a 32 px circle (purple border,
+   white fill, 14 px ×) above everything, with a 44 px tap area. Step titles keep clear of it: they're sized to fit one
+   line beside it and wrap before reaching it if they can't. Desktop keeps the × outside, top right (V20-376). */
+@media (max-width: 640px) {
+  .setup .setup-main > .setup-close { top: 12px; right: 12px; z-index: 20; }
+  .app .setup-close .tool-btn { position: relative; width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; border: 2px solid #8869cb; background: #ffffff; color: #8869cb; border-radius: 50%; }
+  .app .setup-close .tool-btn svg { width: 14px; height: 14px; }
+  .app .setup-close .tool-btn::after { content: ''; position: absolute; inset: -8px; border-radius: 50%; }
+  .setup-card-head { padding-right: 36px; }
+  .setup-card-head h2 { white-space: normal; font-size: max(12px, min(15px, calc((100vw - 144px) / 18.4))); }
+}
