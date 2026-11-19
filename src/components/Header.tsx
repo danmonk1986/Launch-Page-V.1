@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { shownName, type BrandSettings } from '../lib/settings';
+import { shownName, type BrandSettings, logoFamily } from '../lib/settings';
 import { useMobile } from '../lib/useMobile';
 import { OneMenu } from './OneMenu';
 
@@ -46,7 +46,7 @@ export function Header({ settings, slim, page, onPage, right, hidden = [] }: Pro
     <header className="topbar">
       {/* V20-123 (Dan, Nov 12): no logo uploaded + Logo text typed = the text becomes the logo, in L4UNCH P4GE Hand. */}
       {!settings.logoUrl && settings.logoText.trim() ? (
-        <span className="topbar-logo topbar-logo-text">{settings.logoText.trim()}</span>
+        <span className={`topbar-logo topbar-logo-text logo-font-${settings.logoFont ?? 'hand'}`} style={{ fontFamily: logoFamily(settings.logoFont) }}>{settings.logoText.trim()}</span>
       ) : (
         <img className="topbar-logo" src={settings.logoUrl || '/launchpage-logo.png'} alt={settings.logoUrl ? settings.logoText || 'Logo' : 'LaunchPage'} />
       )}

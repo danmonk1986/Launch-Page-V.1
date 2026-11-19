@@ -497,11 +497,17 @@ function EventForm({
   const google = isGoogle || (!event && toGoogle);
 
   const formId = useId();
+  const [missing, setMissing] = useState(false);
   return (
-    <form id={formId}
+    <form id={formId} noValidate
       onSubmit={async (e) => {
         e.preventDefault();
-        if (!d.title.trim()) return;
+        // V20-373 (Dan, Nov 19): the app's own message under the field, not the browser's grey bubble.
+        if (!d.title.trim()) {
+          setMissing(true);
+          (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.focus();
+          return;
+        }
         const endDate = !d.endDate || d.endDate < d.startDate ? d.startDate : d.endDate;
         await onSave({ ...d, title: d.title.trim(), endDate }, !event && toGoogle);
         if (pushTask.current) {
@@ -512,7 +518,8 @@ function EventForm({
     >
       <label className="field">
         <span>Event</span>
-        <input required readOnly={readOnly} value={d.title} onChange={(e) => set('title', e.target.value)} placeholder="Pay mid-month bills" />
+        <input required readOnly={readOnly} value={d.title} aria-invalid={missing || undefined} onChange={(e) => { set('title', e.target.value); if (missing) setMissing(false); }} placeholder="Pay mid-month bills" />
+        {missing && <small className="field-error" role="alert">Name the event to save it.</small>}
       </label>
       {isGoogle && d.google?.calendar && (
         <p className="field-hint event-when">
@@ -526,7 +533,7 @@ function EventForm({
           {d.google?.time ? ` at ${d.google.time}. Change the time in Google Calendar.` : d.endDate !== d.startDate ? ` to ${new Date(`${d.endDate}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}.` : '.'}
         </p>
       ) : (
-        <div className="time-grid">
+        <div className="time-grid event-dates">
           <label className="field">
             <span>Starts</span>
             <input

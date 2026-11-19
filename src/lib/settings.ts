@@ -26,9 +26,21 @@ function normalizeBackground(b: string): Background {
   return (BACKGROUNDS as readonly string[]).includes(b) ? (b as Background) : 'synthwave';
 }
 
+/** V20-372 (Dan, Nov 19): the typed logo's lettering. Fonts the app already loads, so nothing extra downloads. */
+export type LogoFont = 'hand' | 'grotesk' | 'slab' | 'mono' | 'roboto';
+export const LOGO_FONTS: { id: LogoFont; label: string; family: string }[] = [
+  { id: 'hand', label: 'L4UNCH P4GE', family: "'L4UNCH P4GE Hand', sans-serif" },
+  { id: 'grotesk', label: 'Space Grotesk', family: "'Space Grotesk', system-ui, sans-serif" },
+  { id: 'slab', label: 'Roboto Slab', family: "'Roboto Slab', Georgia, serif" },
+  { id: 'mono', label: 'Roboto Mono', family: "'Roboto Mono', ui-monospace, monospace" },
+  { id: 'roboto', label: 'Roboto', family: 'Roboto, system-ui, sans-serif' }
+];
+export const logoFamily = (f: LogoFont | undefined) => (LOGO_FONTS.find((x) => x.id === f) ?? LOGO_FONTS[0]).family;
+
 export interface BrandSettings {
   displayName: string;
   logoText: string;
+  logoFont: LogoFont;
   logoUrl: string | null;
   goal: string;
   mantra: string;
@@ -200,6 +212,7 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   // Dan's own account keeps its saved values (defaults only fill blanks).
   displayName: '',
   logoText: '',
+  logoFont: 'hand',
   logoUrl: null,
   goal: 'MAKE A PLAN. STICK TO IT.',
   mantra: '',
@@ -280,6 +293,7 @@ function writeLocal(s: BrandSettings) {
 type Row = {
   display_name: string;
   logo_text: string;
+  logo_font?: string | null;
   logo_url: string | null;
   goal: string;
   mantra: string;
@@ -311,6 +325,7 @@ type Row = {
 const toRow = (s: BrandSettings): Row => ({
   display_name: s.displayName,
   logo_text: s.logoText,
+  logo_font: s.logoFont,
   logo_url: s.logoUrl,
   goal: s.goal,
   mantra: s.mantra,
@@ -342,6 +357,7 @@ const toRow = (s: BrandSettings): Row => ({
 const fromRow = (r: Row): BrandSettings => ({
   displayName: r.display_name,
   logoText: r.logo_text,
+  logoFont: (LOGO_FONTS.some((x) => x.id === r.logo_font) ? r.logo_font : 'hand') as LogoFont,
   logoUrl: r.logo_url,
   goal: r.goal,
   mantra: r.mantra,

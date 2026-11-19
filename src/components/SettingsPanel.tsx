@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { shrinkImage } from '../lib/images';
-import { settingsPatch, BG_NAME, DEFAULT_MODULES, MODULE_SOON, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, FONT_THEMES, FONT_CHOICES, DEFAULT_FONT_CUSTOM, fontStack, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings } from '../lib/settings';
+import { settingsPatch, BG_NAME, DEFAULT_MODULES, MODULE_SOON, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, FONT_THEMES, FONT_CHOICES, DEFAULT_FONT_CUSTOM, fontStack, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings, LOGO_FONTS, logoFamily, type LogoFont } from '../lib/settings';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, TRASH_ICON, useClickOff } from './Sheet';
 import { FoldTabs } from './FoldTabs';
 import { supabase } from '../lib/supabase';
@@ -363,11 +363,13 @@ export function SettingsPanel({ admin = false, beta = false, lpMode = 'main', on
             <>
               {/* V20-128 (Dan, Nov 12): Appearance is in sections; the first is BRAND (logo, headline, mantra). Same look as
                   the TIMED LAUNCHES heading: colour 2, its font and size. */}
-              <SectionHead title="Brand" onRestore={() => saveNow((d) => ({ ...d, logoText: '', logoUrl: null, goal: D.goal, mantra: D.mantra }))} />
+              <SectionHead title="Brand" onRestore={() => saveNow((d) => ({ ...d, logoText: '', logoFont: 'hand', logoUrl: null, goal: D.goal, mantra: D.mantra }))} />
               {/* V20-124 (Dan's sketch, Nov 12): one logo box, 600 × 110. Type in it and your words show in the L4UNCH P4GE
                   lettering; Choose image beside it uploads a file into the same box instead. */}
               <LogoField
                 text={draft.logoText}
+                font={draft.logoFont}
+                onFont={(v) => set('logoFont', v)}
                 image={draft.logoUrl}
                 onText={(v) => set('logoText', v)}
                 onImage={(v) => set('logoUrl', v)}
@@ -776,7 +778,7 @@ function PickOther({ label, options, value, other, onValue, onOther }: { label: 
 }
 
 /** V20-124: the logo box. Typed text previews in the hand lettering; an uploaded image fills the box instead. */
-function LogoField({ text, image, onText, onImage }: { text: string; image: string | null; onText: (v: string) => void; onImage: (v: string | null) => void }) {
+function LogoField({ text, font, onFont, image, onText, onImage }: { text: string; font: LogoFont; onFont: (v: LogoFont) => void; image: string | null; onText: (v: string) => void; onImage: (v: string | null) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -790,7 +792,7 @@ function LogoField({ text, image, onText, onImage }: { text: string; image: stri
           {image ? (
             <img src={image} alt="Your logo" />
           ) : (
-            <input id="logo-text" className="logo-type" value={text} placeholder="Type your logo" maxLength={24} spellCheck={false} onChange={(e) => onText(e.target.value)} />
+            <input id="logo-text" className={`logo-type logo-font-${font}`} style={{ fontFamily: logoFamily(font) }} value={text} placeholder="Type your logo" maxLength={24} spellCheck={false} onChange={(e) => onText(e.target.value)} />
           )}
         </div>
         <div className="logo-tools">
@@ -823,7 +825,17 @@ function LogoField({ text, image, onText, onImage }: { text: string; image: stri
           )}
         </div>
       </div>
-      <p className="field-hint">600 × 110 px at most: an image is trimmed and fitted inside it. Type your name or brand and it’s drawn in the L4UNCH P4GE lettering, or upload an image (PNG keeps a see-through background). Leave it empty for the L4UNCH!P4GE logo.</p>
+      {/* V20-372 (Dan, Nov 19): pick the typed logo's lettering. Each choice is shown in its own font. */}
+      {!image && (
+        <div className="logo-fonts" role="radiogroup" aria-label="Logo font">
+          {LOGO_FONTS.map((f) => (
+            <button key={f.id} type="button" role="radio" aria-checked={font === f.id} className={`logo-font-chip${font === f.id ? ' is-on' : ''}`} style={{ fontFamily: f.family }} onClick={() => onFont(f.id)}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="field-hint">600 × 110 px at most: an image is trimmed and fitted inside it. Type your name or brand and pick its lettering, or upload an image (PNG keeps a see-through background). Leave it empty for the L4UNCH!P4GE logo.</p>
       {error && <p className="field-hint image-pick-error">{error}</p>}
     </div>
   );

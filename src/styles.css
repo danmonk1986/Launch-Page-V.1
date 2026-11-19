@@ -4095,3 +4095,18 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .tour-copy p { font-size: 16px; line-height: 1.5; }
   .tour-stage .tour-slide > * { zoom: 0.8; }
 }
+
+/* V20-372 (Dan, Nov 19): logo font picker. Every lettering keeps the teal fill and purple outline; the plain fonts
+   are bold and a little tighter so they sit like the hand lettering. */
+.logo-fonts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.app .logo-font-chip { all: unset; box-sizing: border-box; cursor: pointer; padding: 6px 14px; border-radius: 999px; border: 2px solid var(--line, rgba(136, 105, 203, 0.5)); font-size: 15px; font-weight: 700; color: var(--text, inherit); }
+.app .logo-font-chip:hover { border-color: var(--accent-purple); }
+.app .logo-font-chip.is-on { border-color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 18%, transparent); }
+.app .logo-font-chip:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
+.topbar-logo.topbar-logo-text:not(.logo-font-hand), .field .logo-box input.logo-type:not(.logo-font-hand) { font-weight: 700; letter-spacing: 0; -webkit-text-stroke-width: 6px; }
+.topbar-logo.topbar-logo-text.logo-font-mono, .field .logo-box input.logo-type.logo-font-mono { letter-spacing: -1px; }
+
+/* V20-373 (Dan, Nov 19): Add event: Starts and Ends line up at the top (the hint under Ends no longer pushes
+   Starts down), and a missing name shows the app's message, not the browser bubble. */
+.time-grid.event-dates { align-items: start; }
+.time-grid.event-dates > .field { align-self: start; }
