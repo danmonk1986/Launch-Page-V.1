@@ -4054,3 +4054,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .launch-rockets .launch-rocket-next .launch-rocket-add { grid-column: auto; white-space: nowrap; }
 /* V20-350: the one "Add (all) as a rocket" box rides the last line (the box you type in). */
 .launch-rockets .launch-rocket-row { grid-template-columns: minmax(0, 1fr) 30px; }
+
+/* V20-354 (Dan, Nov 19): the button pairs read off-centre because START (with its rocket) was wider than SIGN IN, so
+   the gap between them sat left of the dots. Paired buttons are now the same width, so the gap is dead centre. */
+.welcome-btns .welcome-btn,
+.tour-actions .welcome-btn { min-width: 128px; justify-content: center; }
