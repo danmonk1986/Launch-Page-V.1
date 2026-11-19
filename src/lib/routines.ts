@@ -1,4 +1,4 @@
-import { selectAll, supabase } from './supabase';
+import { isMissingTable, selectAll, supabase } from './supabase';
 import type { StepLog } from './days26';
 
 export type Kind = 'routine' | 'ritual';
@@ -293,9 +293,12 @@ export async function loadRoutines(userId: string | null): Promise<LoadResult> {
       return { routines: [], problem: null };
     }
     const fallback = readLocal() ?? [];
+    // V20-392: only a missing table needs the setup script; anything else is the connection (it retries on reload).
     return {
       routines: fallback,
-      problem: 'Routines are saving on this device only. Run supabase/migrations/0002_routines.sql in Supabase to sync them.'
+      problem: isMissingTable(error)
+        ? 'Routines are saving on this device only. Run supabase/migrations/0002_routines.sql in Supabase to sync them.'
+        : "Couldn't reach the cloud just now, so this is your routine as saved on this device. Reload when you're back online to sync."
     };
   }
   const local = readLocal();

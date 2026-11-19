@@ -4274,3 +4274,48 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .app:not(.is-kb) .frame { padding-left: 16px; padding-right: 16px; }
   .app:not(.is-kb) .home .panel { padding-left: 18px; padding-right: 18px; }
 }
+
+/* ═══ Phone pass 2, Nov 19 (Dan's iPhone, 6 AM) ═══════════════════════════════════════════════════════════════ */
+
+/* V20-393: the routine pill's list opens from the pill's right edge, so it never runs off the screen. */
+@media (max-width: 640px) {
+  .app .topbar .picker .picker-menu { left: auto; right: 0; min-width: 220px; max-width: calc(100vw - 32px); }
+}
+
+/* V20-394: one-item menus (Timed launches, Settings, the page menu) look like a selected tab on a laptop: the name
+   and its count in Colour 1 (purple), sharing one underline; the ⌄ sits right beside it (Colour 2, purple on hover
+   and while open, never underlined). */
+.one-menu-btn { gap: 6px; }
+.one-menu-name { display: inline-flex; align-items: baseline; gap: 6px; border-bottom: 2px solid var(--accent-purple); padding-bottom: 3px; color: var(--accent-purple); }
+.app[data-tone='dark'] .one-menu-name { color: color-mix(in srgb, var(--accent-purple) 55%, white); }
+.one-menu-label { border-bottom: 0; padding-bottom: 0; }
+.one-menu-btn { color: var(--accent-purple); }
+.one-menu-btn .one-menu-name .one-menu-count { color: inherit; margin: 0; }
+
+/* V20-395: header buttons at the size of the setup × (Dan: "just right"): on phones every round button in the page
+   header, a pop-up's header and a card's header is a 32 px circle with a 14 px icon, and a 44 px tap area. Row
+   buttons inside cards keep their size. The Settings header fits on one row again: its Saving… / Saved note no longer
+   takes room (it floats under the buttons), and the sun | moon switch is 32 px tall. */
+@media (max-width: 640px) {
+  .app :is(.topbar, .sheet-tools:not(.setup-close), .panel-head, .panel-actions, .timed-head) :is(.tool-btn, .icon-btn:not(.budget-groupby)) {
+    position: relative; width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0;
+  }
+  .app :is(.topbar, .sheet-tools:not(.setup-close), .panel-head, .panel-actions, .timed-head) :is(.tool-btn, .icon-btn) svg { width: 14px; height: 14px; }
+  .app :is(.topbar, .sheet-tools:not(.setup-close), .panel-head, .panel-actions, .timed-head) :is(.tool-btn, .icon-btn)::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; }
+  .app .sheet-head { flex-wrap: nowrap; }
+  .app .sheet-head .sheet-tools { position: relative; gap: 6px; }
+  .app .sheet-head .settings-save-state { position: absolute; top: calc(100% + 4px); right: 0; white-space: nowrap; }
+  .app .sheet-head .daynight { height: 32px; min-height: 32px; }
+  .app .sheet-head .daynight > * { height: 28px; min-height: 28px; width: 28px; }
+}
+
+/* V20-396: tick boxes on the label line: the label matches every other field label, and the tick text is short and
+   small, so every row in Account Information is the same height. */
+.field-label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: nowrap; }
+.field-label-row > .field-label { font-size: 14px; font-weight: 500; color: var(--dim); }
+.field-label-row > .check-line { font-size: 13px; white-space: nowrap; gap: 6px; }
+
+/* V20-397: setup step 4 on phones: TEST no longer sits on the card's bottom edge. */
+@media (max-width: 640px) {
+  .setup-stage > .setup-card.is-scroll { padding-bottom: 26px; }
+}

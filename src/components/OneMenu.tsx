@@ -30,8 +30,11 @@ export function OneMenu<T extends string>({
       onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}
     >
       <button type="button" className="one-menu-btn" aria-haspopup="menu" aria-expanded={open} aria-label={`${label}: ${current.label}`} onClick={() => setOpen((o) => !o)}>
-        <span className="one-menu-label">{current.label}</span>
-        {current.count !== undefined && <span className="one-menu-count">{current.count}</span>}
+        {/* V20-394 (Dan, Nov 19): the name and its count share one underline, like a selected tab on a laptop. */}
+        <span className="one-menu-name">
+          <span className="one-menu-label">{current.label}</span>
+          {current.count !== undefined && <span className="one-menu-count">{current.count}</span>}
+        </span>
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 9l6 6 6-6" />
         </svg>

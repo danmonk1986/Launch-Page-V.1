@@ -1,4 +1,4 @@
-import { selectAll, supabase } from './supabase';
+import { isMissingTable, selectAll, supabase } from './supabase';
 
 /**
  * One list of records kept in a Supabase table when signed in, mirrored in this
@@ -187,7 +187,9 @@ export function makeStore<T extends { id: string }, R extends { id: string }>(op
         }
         return {
           items: readLocal() ?? opts.seed(),
-          problem: `Saving on this device only. Run ${opts.script} in Supabase to sync.`
+          problem: isMissingTable(error)
+            ? `Saving on this device only. Run ${opts.script} in Supabase to sync.`
+            : `Couldn't reach the cloud just now, so this is what's saved on this device (${opts.table}). Reload when you're back online to sync.`
         };
       }
       const local = readLocal();

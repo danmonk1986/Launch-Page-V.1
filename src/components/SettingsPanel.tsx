@@ -251,7 +251,7 @@ export function SettingsPanel({ admin = false, beta = false, lpMode = 'main', on
                     </label>
                     <label className="check-line">
                       <input type="checkbox" checked={acct.hideRealName} onChange={(e) => setAcct('hideRealName', e.target.checked)} />
-                      <span>Hide my real name (show the alias instead)</span>
+                      <span>Show alias instead</span>
                     </label>
                   </div>
                   <input id="acct-alias" value={acct.alias} onChange={(e) => setAcct('alias', e.target.value)} />
@@ -279,7 +279,7 @@ export function SettingsPanel({ admin = false, beta = false, lpMode = 'main', on
                     </label>
                     <label className="check-line">
                       <input type="checkbox" checked={acct.linkEmails} disabled={!acct.backupEmail.trim()} onChange={(e) => setAcct('linkEmails', e.target.checked)} />
-                      <span>Sync both emails (sign in with either)</span>
+                      <span>Sign in with either</span>
                     </label>
                   </div>
                   <input id="acct-backup" type="email" value={acct.backupEmail} autoComplete="email" onChange={(e) => setAcct('backupEmail', e.target.value)} />
