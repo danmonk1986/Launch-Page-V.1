@@ -50,7 +50,14 @@ import { OneMenu } from './OneMenu';
 import { FoldTabs } from './FoldTabs';
 
 /** What "+ Timed launch" hands over: the fields to fill in, and who to tell once it's saved. */
-export type TimedPreset = { fill: Partial<Launch>; n: number; onSaved?: (l: Launch) => void };
+export type StepPick = { name: string; date: string | null };
+export type TimedPreset = {
+  fill: Partial<Launch>;
+  n: number;
+  onSaved?: (l: Launch) => void;
+  /** V20-347 (Dan, Nov 19): a launch made from a task with steps: its open steps to pick from. */
+  stepPicks?: StepPick[];
+};
 
 type Props = {
   routineName: string | null;
@@ -1297,6 +1304,7 @@ export function RocketsPanel(p: Props) {
           launch={timed}
           today={p.today}
           fill={timed ? null : fill?.fill ?? null}
+          stepPicks={timed ? undefined : fill?.stepPicks}
           rockets={p.rockets}
           onAddRocket={async (url) => {
             await p.onSaveRocket({ id: crypto.randomUUID(), name: nameFromUrl(url), note: '', url, color: 'teal', routineIds: p.routineId ? [p.routineId] : null, sort: p.rockets.length });
@@ -1623,7 +1631,24 @@ function LinksField({ links, draft, onDraft, onChange, suggest }: { links: strin
   );
 }
 
-function StepsField({ steps, draft, onDraft, onChange }: { steps: string[]; draft: string; onDraft: (v: string) => void; onChange: (v: string[]) => void }) {
+function StepsField({
+  steps,
+  draft,
+  onDraft,
+  onChange,
+  picks,
+  onPick
+}: {
+  steps: string[];
+  draft: string;
+  onDraft: (v: string) => void;
+  onChange: (v: string[]) => void;
+  /** V20-347: the task's open steps, to pick into this launch. */
+  picks?: StepPick[];
+  onPick?: (x: StepPick) => void;
+}) {
+  const left = (picks ?? []).filter((x) => !steps.some((s) => s.trim().toLowerCase() === x.name.trim().toLowerCase()));
+  const shortDay = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const add = () => {
     const x = draft.trim();
     if (!x) return;
@@ -1638,6 +1663,26 @@ function StepsField({ steps, draft, onDraft, onChange }: { steps: string[]; draf
   return (
     <div className="field steps-field">
       <span>Steps</span>
+      {left.length > 0 && onPick && (
+        <select
+          className="lstep-pick"
+          aria-label="Pick a step from the task"
+          value=""
+          onChange={(e) => {
+            const x = left[Number(e.target.value)];
+            if (x) onPick(x);
+          }}
+        >
+          <option value="" disabled>
+            Pick a step from the task ({left.length})
+          </option>
+          {left.map((x, i) => (
+            <option key={i} value={i}>
+              {x.date ? `${x.name} · ${shortDay(x.date)}` : x.name}
+            </option>
+          ))}
+        </select>
+      )}
       <ol className="lstep-list">
         {steps.map((x, i) => (
           <li key={i}>
@@ -1690,6 +1735,7 @@ function TimedForm({
   launch,
   today,
   fill,
+  stepPicks,
   rockets,
   projects,
   titles,
@@ -1701,6 +1747,7 @@ function TimedForm({
   launch: Launch | null;
   today: Date;
   fill?: Partial<Launch> | null;
+  stepPicks?: StepPick[];
   rockets: Rocket[];
   /** Add new rocket: saves a pasted link as a rocket tile. */
   onAddRocket: (url: string) => Promise<void>;
@@ -1920,7 +1967,18 @@ function TimedForm({
         <span>Description</span>
         <TitleCombo value={desc} titles={descriptions} required={false} placeholder="L4UNCH P4GE Construction" onChange={(v) => setWhat(cat, v)} list={launchListFor(cat)} />
       </label>
-      <StepsField steps={d.steps ?? []} draft={stepDraft} onDraft={setStepDraft} onChange={(v) => set('steps', v)} />
+      <StepsField
+        steps={d.steps ?? []}
+        draft={stepDraft}
+        onDraft={setStepDraft}
+        onChange={(v) => set('steps', v)}
+        picks={stepPicks}
+        onPick={(x) => {
+          set('steps', [...(d.steps ?? []), x.name]);
+          // The Date still on the task's default: it moves to the picked step's date.
+          if (x.date && d.repeat === 'once' && d.onDate === (fill?.onDate ?? null)) set('onDate', x.date);
+        }}
+      />
 
       <div className="time-grid">
         <label className="field">

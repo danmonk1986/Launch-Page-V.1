@@ -4048,3 +4048,4 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-345: the link button is gone from step rows; the ⌄ opens Link · Date · Time · Notes. A set link shows a mark. */
 .step-draft .step-input { grid-template-columns: 16px minmax(0, 1fr) 64px 18px 30px; }
 .step-link-mark { display: inline-flex; justify-content: center; color: var(--accent-teal); }
+.lstep-pick { margin-bottom: 6px; }

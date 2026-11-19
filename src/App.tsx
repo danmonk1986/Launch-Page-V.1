@@ -1532,6 +1532,11 @@ export default function App() {
         projectId: t.projectId ?? null
       },
       n: Date.now(),
+      // V20-347 (Dan, Nov 19): a task with steps: pick which of its open steps this block is for.
+      stepPicks: tasksRef.current
+        .filter((x) => x.parentId === t.id && !x.done && !x.deletedAt)
+        .sort((a, b) => (a.endDate ?? '9999').localeCompare(b.endDate ?? '9999') || a.sort - b.sort)
+        .map((x) => ({ name: x.task.trim() || taskName(x), date: x.endDate })),
       onSaved: (l) => {
         // Read the newest copy of the task: it may have changed while the form was open.
         const list = tasksRef.current;
