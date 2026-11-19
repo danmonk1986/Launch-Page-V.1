@@ -1047,7 +1047,9 @@ function SectionHead({ title, onRestore }: { title: string; onRestore: () => voi
     <div className="settings-section-head">
       <h3 className="timed-title settings-section">{title}</h3>
       <button type="button" className={`restore-btn${ask ? ' is-asking' : ''}`} onClick={() => (ask ? (setAsk(false), onRestore()) : setAsk(true))}>
-        {ask ? 'Sure? Restore' : 'Restore default'}
+        {/* V20-390 (Dan, Nov 19): always two short lines, small, so it never crowds the heading. */}
+        <span>{ask ? 'Sure?' : 'Restore'}</span>
+        <span>{ask ? 'Restore' : 'default'}</span>
       </button>
     </div>
   );

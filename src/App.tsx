@@ -203,7 +203,9 @@ export default function App() {
     else window.scrollTo({ top: 0 });
   }, [page]);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    // V20-383 (Dan, Nov 19, iPhone): on phones the header never changes size while you scroll (its shrinking made the
+    // page jump and stopped it scrolling back up), so 'scrolled' is for wider screens only.
+    const onScroll = () => setScrolled(window.scrollY > 24 && !window.matchMedia('(max-width: 700px)').matches);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);

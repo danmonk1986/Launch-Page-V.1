@@ -4162,3 +4162,101 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .setup-card-head { padding-right: 36px; }
   .setup-card-head h2 { white-space: normal; font-size: max(12px, min(15px, calc((100vw - 144px) / 18.4))); }
 }
+
+/* ═══ Phone pass, Nov 19 (Dan's iPhone photos, items 1–12) ═══════════════════════════════════════════════════ */
+
+/* V20-383 (1, 2): one way to scroll on a phone: straight down the page. No card-by-card snapping (it fought the
+   finger and wouldn't go back up to the top), nothing slides sideways, no card scrolls inside itself. */
+@media (max-width: 640px) {
+  html.snap-scroll { scroll-snap-type: none; }
+  .app { overflow-x: clip; }
+  .timed-pages.is-paged { display: grid; gap: 6px; overflow: visible; scroll-snap-type: none; }
+  .timed-pages.is-paged > .timed-list, .timed-pages.is-paged > .swipe-page { flex: none; scroll-snap-align: none; }
+  .timed-dots { display: none; }
+  .task-scroll { overflow-x: visible; margin: 0; }
+  .panel-tasks-page .task-pins, .panel-budget .task-pins, .panel-records .task-pins { overflow: visible; max-height: none; }
+  .setup-stage > .setup-card.is-scroll { position: static; overflow: visible; }
+  .setup-stage > .setup-card.is-scroll::after { display: none; }
+}
+
+/* V20-384 (2): on a phone the Launch Page runs Rockets + Timed launches first, then the routine, then the rest. */
+@media (max-width: 640px) {
+  .home { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+  .home-main { display: contents; }
+  .home > *, .home-main > * { flex: none; width: auto; }
+  .home-main > * { order: 2; }
+  .home-main > :first-child { order: 0; }
+  .home > .panel-today { order: 1; min-height: 0; }
+}
+
+/* V20-385 (3, 6): the phone header, one solid block that scrolls away with the page and never changes size.
+   Row 1: logo · search · ⚙ (tap search: the logo steps aside and the search pill takes its place).
+   Row 2: headline + mantra. Row 3: date and time. Row 4: page menu ⌄ (main) · routine pill, as wide as its name. */
+@media (max-width: 640px) {
+  .app:not(.is-kb) .topbar {
+    position: relative; top: auto; -webkit-backdrop-filter: none; backdrop-filter: none;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "logo search gear" "words words words" "clock clock clock" "tabs routine routine";
+    column-gap: 10px; row-gap: 10px; align-items: center;
+  }
+  .app:not(.is-kb) .topbar .topbar-logo { grid-area: logo; justify-self: start; align-self: center; height: 40px; width: auto; max-width: 100%; object-fit: contain; object-position: left center; }
+  .app:not(.is-kb) .topbar .topbar-logo.topbar-logo-text { height: auto; font-size: 36px; -webkit-text-stroke-width: 6px; overflow: hidden; text-overflow: clip; }
+  .app:not(.is-kb) .topbar .header-search-btn { grid-area: search; }
+  .app:not(.is-kb) .topbar .gear-btn { grid-area: gear; justify-self: end; align-self: center; }
+  .app:not(.is-kb) .topbar .header-search { grid-row: 1; grid-column: 1 / 3; width: 100%; min-width: 0; }
+  .app:not(.is-kb) .topbar .header-search input { min-width: 0; width: 100%; }
+  .app:not(.is-kb) .topbar:has(.header-search) .topbar-logo { display: none; }
+  .app:not(.is-kb) .topbar .topbar-words { grid-area: words; display: block; min-width: 0; }
+  .app:not(.is-kb) .topbar .topbar-right .header-clock { grid-area: clock; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; margin: 0; }
+  .app:not(.is-kb) .topbar .header-clock time, .app:not(.is-kb) .topbar .header-clock .header-time { display: inline; font-size: 15px; }
+  .app:not(.is-kb) .topbar .tabs-one { grid-area: tabs; }
+  .app:not(.is-kb) .topbar .picker { grid-area: routine; justify-self: end; width: auto; max-width: 100%; min-width: 0; }
+  .app:not(.is-kb) .topbar .picker-split { width: auto; max-width: 100%; }
+  .app:not(.is-kb) .topbar .picker-main { flex: 0 1 auto; }
+}
+
+/* V20-386 (4, 5): date and time fields on phones: they fit their column (iPhone made them wider than the card),
+   their text sits on the left like every other field, and an empty one keeps its height. */
+@media (max-width: 640px) {
+  .app :is(input[type='date'], input[type='time'], input[type='datetime-local'], input[type='month']) {
+    -webkit-appearance: none; appearance: none; display: block; width: 100%; min-width: 0; max-width: 100%;
+    box-sizing: border-box; min-height: 44px; text-align: left;
+  }
+  .app :is(input[type='date'], input[type='time'], input[type='datetime-local'], input[type='month'])::-webkit-date-and-time-value { text-align: left; margin: 0; }
+  .app .time-grid > .field, .app .time-grid > * { min-width: 0; }
+}
+
+/* V20-387 (7, 11): menus. Phones show one item with a ⌄ (Settings too). A ⌄ is never underlined: only the name
+   is; the ⌄ is Colour 2 and turns Colour 1 (purple) on hover and while its list is open. */
+.one-menu-btn { border-bottom: 0; }
+.one-menu-label { border-bottom: 2px solid currentColor; padding-bottom: 2px; }
+.one-menu-btn svg { color: var(--accent-teal); }
+.one-menu-btn:hover svg, .one-menu-btn[aria-expanded='true'] svg { color: var(--accent-purple); }
+.app :is(.fold-more-btn, .tabs-more-btn), .app :is(.fold-more-btn, .tabs-more-btn).is-active { border-bottom-color: transparent; box-shadow: none; text-decoration: none; }
+.app :is(.fold-more-btn, .tabs-more-btn):hover, .app :is(.fold-more-btn, .tabs-more-btn)[aria-expanded='true'] { color: var(--accent-purple); }
+.fold-tabs-one { flex: none; }
+
+/* V20-388 (8): Appearance › Cards + header on phones: two across (colour · its transparency), the long
+   "Adjust transparency" label wraps instead of running into the next tile. */
+@media (max-width: 640px) {
+  .bg-tiles:has(.solid-swatch) { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 14px; row-gap: 16px; }
+  .bg-tiles:has(.solid-swatch) > * { grid-column: auto; min-width: 0; }
+  .solid-name { white-space: normal; }
+}
+
+/* V20-389 (9, 12): phone buttons: every round button in a header (the page header, a pop-up's header, a card's
+   header) is the same 40 px circle with a 16 px icon, so + matches ×; pop-up headers wrap their buttons below the
+   title instead of pushing ✕ off the edge. */
+@media (max-width: 640px) {
+  .app :is(.topbar, .sheet-tools:not(.setup-close), .panel-head, .panel-actions) :is(.tool-btn, .icon-btn:not(.budget-groupby)) {
+    width: 40px; height: 40px; min-width: 40px; min-height: 40px; padding: 0;
+  }
+  .app :is(.topbar, .sheet-tools:not(.setup-close), .panel-head, .panel-actions) :is(.tool-btn, .icon-btn) svg { width: 16px; height: 16px; }
+  .app .sheet-head { flex-wrap: wrap; row-gap: 10px; }
+  .app .sheet-head > h2 { flex: 1 1 auto; min-width: 0; font-size: 18px; }
+  .app .sheet-head .sheet-tools { margin-left: auto; flex-wrap: nowrap; }
+}
+
+/* V20-390 (10): Restore default is always two short lines, small and right-aligned, everywhere. */
+.app .restore-btn { display: inline-grid; justify-items: end; font-size: 11px; line-height: 1.15; letter-spacing: 0.08em; text-align: right; flex: none; }
+.settings-section-head { align-items: center; }

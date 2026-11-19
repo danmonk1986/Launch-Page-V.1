@@ -1,4 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import { useMobile } from '../lib/useMobile';
+import { OneMenu } from './OneMenu';
 
 /**
  * V20-061 (Nov 11): a row of tabs that never stacks. When the row gets too narrow, the tabs that
@@ -19,7 +21,9 @@ export function FoldTabs<T extends string>({
   const ruler = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState(items.length);
   const [open, setOpen] = useState(false);
-  const key = items.map((i) => `${i.label}${i.count ?? ''}`).join('|');
+  // V20-387 (Dan, Nov 19): phones show one item (the one you're on) with a ⌄ to the rest, like every phone menu.
+  const mobile = useMobile();
+  const key = items.map((i) => `${i.label}${i.count ?? ''}`).join('|') + (mobile ? '|m' : '');
 
   useLayoutEffect(() => {
     const row = wrap.current;
@@ -42,6 +46,13 @@ export function FoldTabs<T extends string>({
     return () => ro.disconnect();
   }, [key]);
 
+  if (mobile) {
+    return (
+      <div className="timed-tabs fold-tabs fold-tabs-one" aria-label={label}>
+        <OneMenu label={label} items={items} value={value} onPick={onPick} />
+      </div>
+    );
+  }
   const shown = items.slice(0, fit);
   const folded = items.slice(fit);
   const foldedOn = folded.some((i) => i.id === value);
