@@ -544,27 +544,37 @@ export function SettingsPanel({ admin = false, beta = false, lpMode = 'main', on
         {/* V20-169 (Nov 13): first draft of the privacy statement, for Dan to review. Not legal advice. Updated V20-352. */}
         {tab === 'privacy' && (
           <div className="privacy">
-            {/* V20-352 (Dan, Nov 19): contact email, delete by email (30 days), beta tracking line, US storage, Resend,
+            {/* V20-366: STARDVST LTD, admin read-out, backups, leaked-password check, beta list (no Calendar). V20-352 (Dan, Nov 19): contact email, delete by email (30 days), beta tracking line, US storage, Resend,
                 invite requests, rockets and the 18+ birthday check. Still a draft until a qualified check. */}
             <p className="privacy-draft">Draft for review · updated Nov 19, 2026</p>
             <h3 className="timed-title settings-section">Privacy statement</h3>
-            <p>L4UNCH P4GE is a personal planner made by STARDVST. This is what it keeps, where, and what you can do about it.</p>
+            <p>L4UNCH P4GE is a personal planner made by STARDVST LTD. This is what it keeps, where, and what you can do about it.</p>
             <h4>What we keep</h4>
             <ul>
-              <li><strong>Your account:</strong> your sign-in email and password (the password is stored scrambled by our sign-in provider; we can't read it).</li>
-              <li><strong>What you tell us in Settings and setup:</strong> name, alias, business details, backup email, address, and your look (logo, backgrounds, colours). Your birthday is asked once to check you're 18 or over.</li>
-              <li><strong>What you make:</strong> tasks and their steps, projects, rockets (the links you save), timed launches and how long they ran, routines, rituals, journal entries and check-ins, calendar events, and, if you use them, budget and records.</li>
-              <li><strong>If you request an invite:</strong> your name, email and what you'd use it for.</li>
+              <li><strong>Your account:</strong> your sign-in email and password (the password is stored scrambled by our sign-in provider; we can't read it). New passwords are checked against lists of leaked passwords: only a scrambled fragment is sent, never the password.</li>
+              <li><strong>What you tell us in Settings and setup:</strong> name, alias, business details, backup email, address, and your look (logo, backgrounds, colours). Your birthday, to confirm you're 18 or over.</li>
+              <li>
+                <strong>What you make:</strong>{' '}
+                {beta
+                  ? 'tasks and their steps, projects, rockets (the links you save), routines, and timed launches and how long they ran.'
+                  : 'tasks and their steps, projects, rockets (the links you save), timed launches and how long they ran, routines, rituals, journal entries and check-ins, calendar events, and, if you use them, budget and records.'}
+              </li>
+              <li><strong>If you request an invite:</strong> your name, email and what you'd use it for. We email you at that address.</li>
               <li><strong>During the beta:</strong> how long setup takes and which days you open the app, so we can see if it's quick and useful. Never what's in your tasks.</li>
             </ul>
             <h4>Where it lives</h4>
             <ul>
-              <li>In your account on our database (Supabase), locked so only you can read it. Its servers are in the United States, so your data is stored outside Canada.</li>
+              <li>In your account on our database (Supabase), locked so only you can read what's in it. During the beta, we can see your email, when you joined and signed in, how long setup took and which days you open the app, nothing else. Its servers are in the United States, so your data is stored outside Canada.</li>
+              <li>Our database keeps daily backups for 7 days.</li>
               <li>A copy on each device you use, so the app opens offline. Signing out clears that copy.</li>
               <li>The app itself is served by Cloudflare. Sign-in emails are sent through Resend, which sees your email address to deliver them.</li>
             </ul>
-            <h4>Google Calendar</h4>
-            <p>Only if you connect it. We show your calendars on This Week and add events you ask us to. The Google sign-in stays in your browser. Disconnect any time in Data Management; your L4UNCH P4GE events stay.</p>
+            {!beta && (
+              <>
+                <h4>Google Calendar</h4>
+                <p>Only if you connect it. We show your calendars on This Week and add events you ask us to. The Google sign-in stays in your browser. Disconnect any time in Data Management; your L4UNCH P4GE events stay.</p>
+              </>
+            )}
             <h4>What we don't do</h4>
             <ul>
               <li>We don't sell your data or show you ads.</li>
