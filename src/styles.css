@@ -4434,3 +4434,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 @media (max-width: 640px) and (max-height: 600px) {
   .tour .tour-stage .tour-slide > * { zoom: 0.52; }
 }
+
+/* V20-403: the request-an-invite page's BACK / SEND REQUEST row (same buttons as the tour), in the form's flow. */
+.signin .beta-actions { position: static; display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 6px; }

@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 type State = 'closed' | 'open' | 'working' | 'sent' | 'error';
 
 /** "Request beta test" on the sign-in page. Saves to the beta_requests table. */
-export function BetaRequest({ startOpen = false, onCancel }: { startOpen?: boolean; onCancel?: () => void } = {}) {
+export function BetaRequest({ startOpen = false, onCancel, onBack }: { startOpen?: boolean; onCancel?: () => void; onBack?: () => void } = {}) {
   // V20-294: SIGN UP on Welcome opens the request straight away.
   const [state, setState] = useState<State>(startOpen ? 'open' : 'closed');
   const [name, setName] = useState('');
@@ -56,9 +56,21 @@ export function BetaRequest({ startOpen = false, onCancel }: { startOpen?: boole
         <span>What would you use it for? (optional)</span>
         <textarea rows={3} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} />
       </label>
-      <button className="btn" type="submit" disabled={state === 'working'}>
-        {state === 'working' ? 'Sending…' : 'Send request'}
-      </button>
+      {/* V20-403 (Dan, Nov 19): on the request page, BACK sits beside SEND REQUEST like the tour's BACK / NEXT. */}
+      {onBack ? (
+        <div className="tour-actions beta-actions">
+          <button type="button" className="welcome-btn" onClick={onBack}>
+            Back
+          </button>
+          <button type="submit" className="welcome-btn welcome-key" disabled={state === 'working'}>
+            {state === 'working' ? 'Sending…' : 'Send request'}
+          </button>
+        </div>
+      ) : (
+        <button className="btn" type="submit" disabled={state === 'working'}>
+          {state === 'working' ? 'Sending…' : 'Send request'}
+        </button>
+      )}
       {state === 'error' && <p className="signin-error">{message}</p>}
       {/* V20-297: on its own sign-up page the page's ← Back does this. */}
       {!startOpen && (

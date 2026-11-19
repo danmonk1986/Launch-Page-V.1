@@ -69,12 +69,7 @@ export function SignIn({ signUp = false, onBack }: { signUp?: boolean; onBack?: 
     return (
       <main className="signin signin-light">
         <img className="signin-logo" src="/launchpage-logo.png" alt="L4UNCH P4GE" />
-        <BetaRequest startOpen />
-        {onBack && (
-          <button type="button" className="link-btn signin-back" onClick={onBack}>
-            ← Back
-          </button>
-        )}
+        <BetaRequest startOpen onBack={onBack} />
       </main>
     );
   }
