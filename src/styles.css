@@ -4724,3 +4724,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .feedback-flag-icon { display: none; }
   .feedback-flag-word { font-size: 16px; font-weight: 800; letter-spacing: 0.14em; }
 }
+/* V20-446d (Dan, Nov 20): lower again, toward the bottom of the calendar box. */
+@media (min-width: 641px) { .feedback-flag { top: auto; bottom: 14vh; transform: none; } }
