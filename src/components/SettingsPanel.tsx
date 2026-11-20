@@ -1281,12 +1281,16 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
         <ul className="beta-admin-invites">
           {invites.map((i) => (
             <li key={i.id} className="beta-invite-row">
-              <span>
-                <b>{i.name}</b> · <a href={`mailto:${i.email}`}>{i.email}</a> · {day(i.created_at)}
-                {i.note ? <span className="field-hint"> — {i.note}</span> : null}
-                {inviteMsg[i.id] && <span className="field-hint beta-invite-msg"> {inviteMsg[i.id]}</span>}
+              {/* V20-437 (Dan, Nov 20): name, then email · asked date on one line (no stray dots), the note, your notes box. */}
+              <div className="beta-invite-body">
+                <b className="beta-invite-name">{i.name}</b>
+                <span className="beta-invite-meta">
+                  <a href={`mailto:${i.email}`}>{i.email}</a> · asked {day(i.created_at)}
+                </span>
+                {i.note ? <span className="field-hint beta-invite-note">{i.note}</span> : null}
+                {inviteMsg[i.id] && <span className="field-hint beta-invite-msg">{inviteMsg[i.id]}</span>}
                 <TesterNote email={i.email} value={noteFor(i.email)} onSaved={keepNote} />
-              </span>
+              </div>
               {i.invited_at ? (
                 <span className="beta-invited">Invited {day(i.invited_at)}</span>
               ) : (
