@@ -58,10 +58,15 @@ export function SignIn({ signUp = false, onBack }: { signUp?: boolean; onBack?: 
       setState('sent');
       return;
     }
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+    // V20-420 (Nov 19): a sign-in link never creates an account. The beta is invite-only, and a link for an unknown
+    // email used to make a brand-new account (no invite needed).
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin, shouldCreateUser: false } });
     if (error) {
       setState('error');
-      setMessage(`Sign-in link not sent: ${error.message}`);
+      const wait = /after (\d+) seconds/i.exec(error.message)?.[1];
+      if (/signups? not allowed|not found|user.*not.*exist/i.test(error.message)) setMessage("There's no account for that email yet. Tap ← Back, then REQUEST AN INVITE.");
+      else if (wait) setMessage(`A link was just sent. Wait ${wait} seconds, then try again.`);
+      else setMessage(`Sign-in link not sent: ${error.message}`);
     } else setState('sent');
   }
 
