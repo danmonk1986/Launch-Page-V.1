@@ -12,6 +12,7 @@ import { setWhatList, whatList } from './lib/whats';
 import { launchFromTask, taskFromLaunch } from './lib/linkSync';
 import { loadCached } from './lib/gcalCache';
 import { Header, type PageId } from './components/Header';
+import { FirstPassword } from './components/FirstPassword';
 import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
@@ -473,6 +474,28 @@ export default function App() {
   // (and the page reloads, so nothing of the last account stays in memory). Runs before any load.
   useLayoutEffect(() => {
     if (userId && claimDevice(userId) === 'wiped') window.location.reload();
+  }, [userId]);
+  // V20-430 (Dan, Nov 20; was V20-418): an account with no password of its own yet (an invite, or email links only)
+  // sets one first, before setup and the Launch Page. has_password() (0074) ignores the hidden password Supabase
+  // gives every invite. "Later" waits until this browser next opens the app.
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [pwLater, setPwLater] = useState(() => {
+    try {
+      return sessionStorage.getItem('lp.pwLater') === '1';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    setNeedsPassword(false);
+    if (!supabase || !userId) return;
+    let live = true;
+    void supabase.rpc('has_password').then(({ data, error }) => {
+      if (live && !error && data === false) setNeedsPassword(true);
+    });
+    return () => {
+      live = false;
+    };
   }, [userId]);
   /** Sign out (⚙ menu): clears this browser's copy, after a warning if changes haven't synced. */
   async function signOutClean() {
@@ -2024,6 +2047,31 @@ export default function App() {
     );
   }
 
+  // V20-430: set a password first.
+  if (session && supabase && needsPassword && !pwLater) {
+    return (
+      <div className="app app-light" style={theme}>
+        <FirstPassword
+          email={session.user.email ?? null}
+          onLater={() => {
+            try {
+              sessionStorage.setItem('lp.pwLater', '1');
+            } catch {
+              /* ignore */
+            }
+            setPwLater(true);
+          }}
+          onSave={async (password) => {
+            const { error } = await supabase!.auth.updateUser({ password, data: { pw_set: true } });
+            if (error) return error.message;
+            setNeedsPassword(false);
+            return null;
+          }}
+        />
+      </div>
+    );
+  }
+
   // V20-308 (Dan, Nov 17): first-run setup before the Launch Page, once settings have loaded.
   if (session && settingsLoaded && setupStepFor(settings.account)) {
     return (
@@ -2772,7 +2820,7 @@ export default function App() {
         onSetPassword={
           supabase && session
             ? async (password) => {
-                const { error } = await supabase!.auth.updateUser({ password });
+                const { error } = await supabase!.auth.updateUser({ password, data: { pw_set: true } });
                 if (error && /session/i.test(error.message)) {
                   // This device's sign-in has expired: send it back to the sign-in page.
                   await supabase!.auth.signOut({ scope: 'local' });

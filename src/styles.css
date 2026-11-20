@@ -4639,3 +4639,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .app.app .panel-planner .pl-stat-add { display: flex; align-items: center; justify-content: center; }
   .app.app .panel-planner .pl-head { display: none; }
 }
+
+/* V20-430: the set-a-password page after an invite or email link (same look as the sign-in page). */
+.first-password .signin-form .field-hint { text-align: center; margin: -6px 0 6px; }
+.first-password .beta-title { text-align: center; }
