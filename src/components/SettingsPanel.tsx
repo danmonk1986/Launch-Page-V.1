@@ -62,7 +62,7 @@ export function SettingsPanel({ admin = false, beta = false, lpMode = 'main', on
   // database (yes / no, nothing else) so the window can offer Set a password with no 'current password' box.
   const [hasPw, setHasPw] = useState<boolean | null>(null);
   useEffect(() => {
-    if (tab !== 'account' && !pwOpen) return;
+    if ((tab !== 'account' && !pwOpen) || !supabase) return;
     let live = true;
     void supabase.rpc('has_password').then(({ data, error }) => {
       if (live) setHasPw(error ? null : data === true);
