@@ -11,13 +11,13 @@ import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
 const CHEV = 'M6 9l6 6 6-6';
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-export function BudgetCard({ lines, today, onOpenAll, onOpenLine, onAdd, projects = [] }: { lines: BudgetLine[]; today: Date; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void; projects?: Project[] }) {
+export function BudgetCard({ lines, today, onOpenAll, onOpenLine, onAdd, projects: projectList = [] }: { lines: BudgetLine[]; today: Date; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void; projects?: Project[] }) {
   // V20-423 (Dan, Nov 20): the project is a coloured pill, like the Tasks card and the Budget page (same matching).
   const norm = (x: string) => x.toUpperCase().replace(/^STARDVST\s+/, '').replace(/[^A-Z0-9]/g, '');
   const projectFor = (name: string) => {
     const n = norm(name);
     if (!n) return undefined;
-    return projects.find((x) => norm(x.name) === n) ?? projects.find((x) => norm(x.name).startsWith(n) || n.startsWith(norm(x.name)));
+    return projectList.find((x) => norm(x.name) === n) ?? projectList.find((x) => norm(x.name).startsWith(n) || n.startsWith(norm(x.name)));
   };
   const { q } = useHeaderSearch();
   const perProject = monthlyByCategory(lines, 'project');
