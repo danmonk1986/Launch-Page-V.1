@@ -20,9 +20,15 @@ export function BetaRequest({ startOpen = false, onCancel, onBack }: { startOpen
     const { error } = await supabase
       .from('beta_requests')
       .insert({ name: name.trim(), email: email.trim(), note: note.trim() });
-    if (!error || error.code === '23505') {
-      // 23505 = this email already asked. Treat it as a success.
+    if (!error) {
       setState('sent');
+      return;
+    }
+    if (error.code === '23505') {
+      // V20-429 (Dan, Nov 20): one request per email. The database refuses a second one (unique on the email,
+      // any capitals); say so plainly instead of pretending a new request went in.
+      setState('error');
+      setMessage("That email has already asked for an invite. You're on the list. I'll be in touch soon.");
       return;
     }
     setState('error');
