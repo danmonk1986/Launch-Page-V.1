@@ -27,7 +27,7 @@ export function BetaRequest({ startOpen = false, onCancel, onBack }: { startOpen
     if (error.code === 'P0001' && /already has an account/i.test(error.message)) {
       // V20-440 (Dan, Nov 20): an email that already has an account can't request an invite (0075).
       setState('error');
-      setMessage('That email already has an account. Tap Back, then SIGN IN.');
+      setMessage("That email is already invited or has an account. Check that inbox for your invite, or tap Back, then SIGN IN.");
       return;
     }
     if (error.code === '23505') {
