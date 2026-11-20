@@ -4541,7 +4541,3 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-416 (Dan, Nov 19): the "Check … for a sign-in link" message (and the request thank-you) sat at the left edge
    under the logo on a laptop. Centred under the logo, like everything else on the sign-in page. */
 .signin .signin-note { justify-self: center; margin-left: auto; margin-right: auto; text-align: center; }
-
-/* V20-418: the set-a-password page after an email-link sign-in (same look as the sign-in page). */
-.first-password .signin-form .field-hint { text-align: center; margin: -6px 0 6px; }
-.first-password .beta-title { text-align: center; }

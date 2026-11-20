@@ -12,7 +12,6 @@ import { setWhatList, whatList } from './lib/whats';
 import { launchFromTask, taskFromLaunch } from './lib/linkSync';
 import { loadCached } from './lib/gcalCache';
 import { Header, type PageId } from './components/Header';
-import { FirstPassword } from './components/FirstPassword';
 import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
@@ -475,26 +474,6 @@ export default function App() {
   // V20-417 (Dan, Nov 19): while it switches accounts, show a blank white page, never a flash of the last account's
   // Launch Page (this re-renders before the browser paints).
   const [switchingAccount, setSwitchingAccount] = useState(false);
-  // V20-418 (Dan, Nov 19): an account with no password yet (email links only) is sent to set one first.
-  const [needsPassword, setNeedsPassword] = useState(false);
-  const [pwLater, setPwLater] = useState(() => {
-    try {
-      return sessionStorage.getItem('lp.pwLater') === '1';
-    } catch {
-      return false;
-    }
-  });
-  useEffect(() => {
-    setNeedsPassword(false);
-    if (!supabase || !userId) return;
-    let live = true;
-    void supabase.rpc('has_password').then(({ data, error }) => {
-      if (live && !error && data === false) setNeedsPassword(true);
-    });
-    return () => {
-      live = false;
-    };
-  }, [userId]);
   useLayoutEffect(() => {
     if (userId && claimDevice(userId) === 'wiped') {
       setSwitchingAccount(true);
@@ -2048,32 +2027,6 @@ export default function App() {
         ) : (
           <SignIn key={signedOut} signUp={signedOut === 'signup'} onBack={() => setSignedOut('welcome')} />
         )}
-      </div>
-    );
-  }
-
-  // V20-418: set a password first (email-link accounts), before setup and the Launch Page. "Later" waits until the
-  // next time this browser opens the app.
-  if (session && needsPassword && !pwLater) {
-    return (
-      <div className="app app-light" style={theme}>
-        <FirstPassword
-          email={session.user.email ?? null}
-          onLater={() => {
-            try {
-              sessionStorage.setItem('lp.pwLater', '1');
-            } catch {
-              /* ignore */
-            }
-            setPwLater(true);
-          }}
-          onSave={async (password) => {
-            const { error } = await supabase!.auth.updateUser({ password });
-            if (error) return error.message;
-            setNeedsPassword(false);
-            return null;
-          }}
-        />
       </div>
     );
   }
