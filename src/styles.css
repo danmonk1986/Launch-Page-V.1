@@ -4626,3 +4626,16 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 
 /* V20-426 (Dan, Nov 20; was V20-419, redone on its own): text on the sign-in pages is centred: notes, hints and error lines. */
 .signin :is(.signin-note, .signin-error, .field-hint, .account-status, .beta-thanks) { text-align: center; justify-self: center; margin-left: auto; margin-right: auto; }
+/* V20-427 (Dan, Nov 20): Planner header on phones: title + chevron on the left, the two buttons on the right of the
+   same line, the plan pill full width underneath. The add-a-decision + sits in the empty spot after Next due. */
+.pl-stat-add { display: none; }
+@media (max-width: 640px) {
+  .app.app .panel-planner > .panel-head { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "h tog . acts" "pill pill pill pill"; align-items: center; gap: 12px 6px; }
+  .app.app .panel-planner > .panel-head > .pl-title { display: contents; }
+  .app.app .panel-planner > .panel-head > .pl-title > h2 { grid-area: h; }
+  .app.app .panel-planner > .panel-head > .pl-title > .rockets-toggle { grid-area: tog; }
+  .app.app .panel-planner > .panel-head > .pl-title > .pl-pill { grid-area: pill; margin: 0; width: 100%; }
+  .app.app .panel-planner > .panel-head > .panel-actions { grid-area: acts; margin: 0; justify-self: end; }
+  .app.app .panel-planner .pl-stat-add { display: flex; align-items: center; justify-content: center; }
+  .app.app .panel-planner .pl-head { display: none; }
+}

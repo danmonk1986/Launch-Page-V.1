@@ -169,6 +169,12 @@ export function PlannerPanel(p: {
           <span className="budget-stat-label">Next due</span>
           <span className="budget-stat-value">{next ? fmtDate(next.decideBy) : '—'}</span>
         </div>
+        {/* V20-427 (Dan, Nov 20): on phones the add-a-decision + sits with the summary tiles (in the empty eighth spot). */}
+        <span className="pl-stat-add">
+          <button type="button" className="quick-btn task-quick is-key" aria-label="Add a decision" title="Add a decision" onClick={add} disabled={!plan}>
+            <Icon d={PLUS} />
+          </button>
+        </span>
       </div>
 
       <div className="pl-table" role="table" aria-label={`Decisions in ${plan?.name ?? 'this plan'}`}>
