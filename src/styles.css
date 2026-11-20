@@ -4670,3 +4670,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-443c (Dan, Nov 20): the × is exactly as tall as the pill beside it (a circle the pill's height). */
 .app.app .beta-invite-acts { align-items: stretch; }
 .app.app .beta-invite-acts > .beta-remove { width: auto; height: auto; min-height: 0; aspect-ratio: 1; align-self: stretch; padding: 0; display: grid; place-items: center; }
+/* V20-443d (Dan, Nov 20): pill and × share one fixed height; the × is a true circle of that size, also when alone. */
+.app.app .beta-invite-acts { align-items: center; }
+.app.app .beta-invite-acts > .btn { height: 40px; min-height: 40px; box-sizing: border-box; }
+.app.app .beta-invite-acts > .beta-remove { width: 40px; height: 40px; min-width: 40px; min-height: 40px; aspect-ratio: auto; align-self: center; border-radius: 50%; box-sizing: border-box; }
