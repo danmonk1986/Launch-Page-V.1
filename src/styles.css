@@ -4663,3 +4663,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .beta-invite-side { justify-self: end; display: flex; align-items: flex-start; gap: 10px; }
 .app.app .beta-invite-side > .btn, .app.app .beta-invite-side > .beta-invited-col { justify-self: auto; }
 .app.app .beta-remove { width: 32px; height: 32px; min-height: 32px; flex: none; }
+/* V20-443b: INVITED <date> on top, then the pill and × side by side, all right-aligned. */
+.app.app .beta-invite-row > .beta-invite-side { justify-self: end; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.app.app .beta-invite-acts { display: flex; align-items: center; gap: 10px; }
+.app.app .beta-invite-side > .beta-invited { padding-top: 0; }

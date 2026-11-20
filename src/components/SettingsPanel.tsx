@@ -1313,26 +1313,27 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
                 {inviteMsg[i.id] && <span className="field-hint beta-invite-msg">{inviteMsg[i.id]}</span>}
                 <TesterNote email={i.email} value={noteFor(i.email)} onSaved={keepNote} />
               </div>
-              <span className="beta-invite-side">
-              {i.invited_at ? (
-                // V20-441 (Dan, Nov 20): RESEND under INVITED until they've signed in (a fresh one-time link).
-                <span className="beta-invited-col">
-                  <span className="beta-invited">Invited {day(i.invited_at)}</span>
-                  {!rows?.some((t) => t.email.toLowerCase() === i.email.toLowerCase() && t.last_sign_in) && (
-                    <button type="button" className="btn btn-quiet beta-resend" disabled={sending === i.id} onClick={() => void invite(i, true)}>
-                      {sending === i.id ? 'Sending…' : 'Resend'}
+              {/* V20-443b (Dan, Nov 20): INVITED <date> on top; under it the pill (RESEND or INVITE) with the × beside it. */}
+              <div className="beta-invite-side">
+                {i.invited_at && <span className="beta-invited">Invited {day(i.invited_at)}</span>}
+                <div className="beta-invite-acts">
+                  {!i.invited_at ? (
+                    <button type="button" className="btn" disabled={sending === i.id} onClick={() => void invite(i)}>
+                      {sending === i.id ? 'Sending…' : 'Invite'}
                     </button>
+                  ) : (
+                    // V20-441: RESEND until they've signed in (a fresh one-time link).
+                    !rows?.some((t) => t.email.toLowerCase() === i.email.toLowerCase() && t.last_sign_in) && (
+                      <button type="button" className="btn btn-quiet beta-resend" disabled={sending === i.id} onClick={() => void invite(i, true)}>
+                        {sending === i.id ? 'Sending…' : 'Resend'}
+                      </button>
+                    )
                   )}
-                </span>
-              ) : (
-                <button type="button" className="btn" disabled={sending === i.id} onClick={() => void invite(i)}>
-                  {sending === i.id ? 'Sending…' : 'Invite'}
-                </button>
-              )}
-              <button type="button" className="icon-btn beta-remove" aria-label={`Take ${i.name} off the list`} title={i.invited_at ? 'Withdraw the invite and take off the list' : 'Take off the list'} disabled={sending === i.id} onClick={() => void removeRequest(i)}>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
-              </button>
-              </span>
+                  <button type="button" className="icon-btn beta-remove" aria-label={`Take ${i.name} off the list`} title={i.invited_at ? 'Withdraw the invite and take off the list' : 'Take off the list'} disabled={sending === i.id} onClick={() => void removeRequest(i)}>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              </div>
             </li>
           ))}
         </ul>
