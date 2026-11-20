@@ -4537,3 +4537,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .tester-note-state { font-size: 12px; color: var(--dim); white-space: nowrap; }
 .beta-invite-row > span { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* V20-416 (Dan, Nov 19): the "Check … for a sign-in link" message (and the request thank-you) sat at the left edge
+   under the logo on a laptop. Centred under the logo, like everything else on the sign-in page. */
+.signin .signin-note { justify-self: center; margin-left: auto; margin-right: auto; text-align: center; }
