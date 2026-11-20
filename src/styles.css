@@ -4584,3 +4584,31 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-424b (Dan, Nov 20: "it's the font size"): iPhone Safari enlarged this card's text because its rows were wider
    than the screen. Lock the text size so the Budget card matches the Tasks card exactly. */
 .app.app .panel-budget-card { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* V20-425 (Dan, Nov 20): Planner on phones = tiles, like the Tasks card. Each decision is a card:
+   line 1 the name + open chevron, line 2 status pill · cost · decide-by, ✓ on the right. Column headers go; the + stays. */
+@media (max-width: 640px) {
+  .app.app .pl-table { overflow: visible; display: flex; flex-direction: column; gap: 8px; }
+  .app.app .pl-item { min-width: 0; }
+  .app.app .pl-row:not(.pl-head) {
+    min-width: 0; width: 100%; box-sizing: border-box; min-height: 0;
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "name name name name open" "chip cost due acts acts";
+    gap: 8px; padding: 12px; border: 1px solid var(--edge); border-radius: 14px; background: var(--surface-solid);
+  }
+  .app.app .pl-row.is-alt:not(.pl-head) { background: var(--surface-solid); }
+  .app.app .pl-row.is-open:not(.pl-head) { border-color: var(--accent-teal); }
+  .app.app .pl-row:not(.pl-head):hover { box-shadow: none; }
+  .app.app .pl-row:not(.pl-head) > .pl-chip { grid-area: chip; width: auto; padding-inline: 10px; }
+  .app.app .pl-row:not(.pl-head) > .pl-name { grid-area: name; font-size: 15px; font-weight: 600; white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
+  .app.app .pl-row:not(.pl-head) > .pl-desc { display: none; }
+  .app.app .pl-row:not(.pl-head) > .pl-mono:not(.pl-due) { grid-area: cost; font-size: 12px; color: var(--mist); white-space: nowrap; }
+  .app.app .pl-row:not(.pl-head) > .pl-due { grid-area: due; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .app.app .pl-row:not(.pl-head) > .pl-acts { grid-area: acts; }
+  .app.app .pl-row:not(.pl-head) > .pl-open { grid-area: open; justify-self: end; }
+  .app.app .pl-row:not(.pl-head) .task-quick { width: 34px; height: 34px; min-height: 34px; }
+  .app.app .pl-head { display: flex; justify-content: flex-end; min-width: 0; min-height: 0; border-bottom: 0; padding: 0; }
+  .app.app .pl-head > span:not(.pl-add) { display: none; }
+  .app.app .pl-head .pl-add { top: 0; margin-right: 0; }
+  .app.app .pl-edit { min-width: 0; }
+  .app.app .panel-planner { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+}
