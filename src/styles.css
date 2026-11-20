@@ -4653,3 +4653,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-438 (Dan, Nov 20): the "has already passed" line had no breathing room: it sat tight under the fields and the
    next label crowded it. A little space above, a full gap below. */
 .app .time-grid > .time-grid-note { margin-top: 4px; margin-bottom: 14px; line-height: 1.5; }
+/* V20-441: RESEND sits under INVITED <date>, both at the top right of the request card. */
+.app.app .beta-invite-row > .beta-invited-col { justify-self: end; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }

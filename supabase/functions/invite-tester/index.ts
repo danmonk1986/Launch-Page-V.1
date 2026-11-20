@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
   const { data: me } = await caller.auth.getUser();
   if (me?.user?.app_metadata?.role !== 'admin') return json({ error: 'Only the admin can send invites.' }, 403);
 
-  let body: { requestId?: string };
+  let body: { requestId?: string; resend?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -31,6 +31,21 @@ Deno.serve(async (req) => {
   if (!r) return json({ error: 'That request is gone.' }, 404);
   const email = String(r.email).trim().toLowerCase();
 
+  // V20-441 (Dan, Nov 20): RESEND. An invite that was never opened (the account has never signed in) is sent again:
+  // the unused, empty invited account is removed and a fresh invite goes out (a new one-time link). Someone who has
+  // already signed in doesn't need one: they sign in, or use Email me a sign-in link / a reset link.
+  if (body.resend) {
+    const { data: list, error: le } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (le) return json({ error: `Invite not sent: ${le.message}` }, 400);
+    const u = list.users.find((x) => (x.email ?? '').toLowerCase() === email);
+    if (u && (u.last_sign_in_at || u.email_confirmed_at)) {
+      return json({ error: `${email} has already signed in. They can use Email me a sign-in link on the sign-in page.` }, 409);
+    }
+    if (u) {
+      const { error: de } = await admin.auth.admin.deleteUser(u.id);
+      if (de) return json({ error: `Invite not sent: ${de.message}` }, 400);
+    }
+  }
   const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo: APP, data: { name: r.name } });
   if (error) {
     const already = /already|registered|exists/i.test(error.message);

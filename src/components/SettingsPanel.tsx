@@ -1175,10 +1175,10 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
   // V20-361: INVITE sends the request's person a sign-up email (server function, admin only).
   const [sending, setSending] = useState<string | null>(null);
   const [inviteMsg, setInviteMsg] = useState<Record<string, string>>({});
-  const invite = async (i: InviteRow) => {
+  const invite = async (i: InviteRow, resend = false) => {
     if (!supabase || sending) return;
     setSending(i.id);
-    const { data, error } = await supabase.functions.invoke('invite-tester', { body: { requestId: i.id } });
+    const { data, error } = await supabase.functions.invoke('invite-tester', { body: { requestId: i.id, resend } });
     setSending(null);
     let msg = '';
     if (error) {
@@ -1191,7 +1191,7 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
     if (msg) return setInviteMsg((m) => ({ ...m, [i.id]: msg }));
     const at = (data as { invited_at?: string })?.invited_at ?? new Date().toISOString();
     setInvites((list) => list.map((x) => (x.id === i.id ? { ...x, invited_at: at } : x)));
-    setInviteMsg((m) => ({ ...m, [i.id]: `Invite sent to ${i.email}.` }));
+    setInviteMsg((m) => ({ ...m, [i.id]: `${resend ? 'A fresh invite went' : 'Invite sent'} to ${i.email}.` }));
   };
   const load = async () => {
     if (!supabase) return setErr('No database connection.');
@@ -1292,7 +1292,15 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
                 <TesterNote email={i.email} value={noteFor(i.email)} onSaved={keepNote} />
               </div>
               {i.invited_at ? (
-                <span className="beta-invited">Invited {day(i.invited_at)}</span>
+                // V20-441 (Dan, Nov 20): RESEND under INVITED until they've signed in (a fresh one-time link).
+                <span className="beta-invited-col">
+                  <span className="beta-invited">Invited {day(i.invited_at)}</span>
+                  {!rows?.some((t) => t.email.toLowerCase() === i.email.toLowerCase() && t.last_sign_in) && (
+                    <button type="button" className="btn btn-quiet beta-resend" disabled={sending === i.id} onClick={() => void invite(i, true)}>
+                      {sending === i.id ? 'Sending…' : 'Resend'}
+                    </button>
+                  )}
+                </span>
               ) : (
                 <button type="button" className="btn" disabled={sending === i.id} onClick={() => void invite(i)}>
                   {sending === i.id ? 'Sending…' : 'Invite'}
