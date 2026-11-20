@@ -479,6 +479,7 @@ export default function App() {
   // sets one first, before setup and the Launch Page. has_password() (0074) ignores the hidden password Supabase
   // gives every invite. "Later" waits until this browser next opens the app.
   const [needsPassword, setNeedsPassword] = useState(false);
+  const [recovering, setRecovering] = useState(false);
   const [pwLater, setPwLater] = useState(() => {
     try {
       return sessionStorage.getItem('lp.pwLater') === '1';
@@ -512,7 +513,11 @@ export default function App() {
       setSession(data.session);
       setAuthReady(true);
     });
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data } = supabase.auth.onAuthStateChange((e, s) => {
+      setSession(s);
+      // V20-432 (Nov 20): a password-reset link signs you in; go straight to set a new password (no Later skip).
+      if (e === 'PASSWORD_RECOVERY') setRecovering(true);
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -2048,12 +2053,14 @@ export default function App() {
   }
 
   // V20-430: set a password first.
-  if (session && supabase && needsPassword && !pwLater) {
+  if (session && supabase && (recovering || (needsPassword && !pwLater))) {
     return (
       <div className="app app-light" style={theme}>
         <FirstPassword
           email={session.user.email ?? null}
+          reset={recovering}
           onLater={() => {
+            setRecovering(false);
             try {
               sessionStorage.setItem('lp.pwLater', '1');
             } catch {
@@ -2065,6 +2072,7 @@ export default function App() {
             const { error } = await supabase!.auth.updateUser({ password, data: { pw_set: true } });
             if (error) return error.message;
             setNeedsPassword(false);
+            setRecovering(false);
             return null;
           }}
         />

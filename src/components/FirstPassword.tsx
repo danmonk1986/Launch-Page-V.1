@@ -5,7 +5,7 @@ import { useState } from 'react';
  * to set one, before setup or the Launch Page. New password twice, the same rules as Settings. "Later" lets them
  * carry on (it asks again next time they sign in with a link); ⚙ › Account Information › Set a password works too.
  */
-export function FirstPassword({ email, onSave, onLater }: { email: string | null; onSave: (password: string) => Promise<string | null>; onLater: () => void }) {
+export function FirstPassword({ email, onSave, onLater, reset = false }: { email: string | null; onSave: (password: string) => Promise<string | null>; onLater: () => void; reset?: boolean }) {
   const [next, setNext] = useState('');
   const [again, setAgain] = useState('');
   const [show, setShow] = useState(false);
@@ -35,8 +35,8 @@ export function FirstPassword({ email, onSave, onLater }: { email: string | null
           if (error) setErr(`Password not set: ${error}`);
         }}
       >
-        <p className="beta-title">Set a password</p>
-        <p className="field-hint">Set a password so you can sign in on any device without waiting for an email.</p>
+        <p className="beta-title">{reset ? 'Set a new password' : 'Set a password'}</p>
+        <p className="field-hint">{reset ? 'You opened a password reset link. Choose a new password for this account.' : 'Set a password so you can sign in on any device without waiting for an email.'}</p>
         {email && <input type="email" value={email} autoComplete="username" readOnly hidden />}
         <label className="field">
           <span>New password</span>
@@ -61,7 +61,7 @@ export function FirstPassword({ email, onSave, onLater }: { email: string | null
         {err && <p className="signin-error">{err}</p>}
         <div className="tour-actions beta-actions">
           <button type="button" className="welcome-btn" onClick={onLater}>
-            Later
+            {reset ? 'Cancel' : 'Later'}
           </button>
           <button type="submit" className="welcome-btn welcome-key" disabled={!ready}>
             {busy ? 'Saving…' : 'Save'}
