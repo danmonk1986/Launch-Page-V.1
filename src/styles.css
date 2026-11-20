@@ -4505,3 +4505,25 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   }
   .tour .tour-slide { align-items: center; }
 }
+
+/* V20-414 (Dan, Nov 19): phone tour as one full-height flex column (replaces the absolute positioning of V20-402 to
+   V20-412 on phones; the laptop tour is untouched). Logo at the top; the words / dots / BACK·NEXT / Skip the tour block
+   anchored at the bottom with the same spacing as before; the picture area takes the space left and centres its
+   picture both ways, so every slide's picture sits in the middle of the white space between logo and headline. */
+@media (max-width: 640px) {
+  .tour.tour {
+    display: flex; flex-direction: column; align-items: stretch; gap: 0;
+    height: 100dvh; min-height: 0; padding: 24px 0 24px; box-sizing: border-box; overflow: hidden; position: relative;
+  }
+  .tour.tour > * { position: static; left: auto; right: auto; top: auto; bottom: auto; transform: none; }
+  .tour.tour .tour-logo { flex: none; align-self: flex-start; margin: 0 0 0 24px; height: 44px; }
+  .tour.tour .tour-stage {
+    flex: 1 1 auto; min-height: 0; height: auto; width: 100%; max-width: 100%; margin: 0; padding: 12px 24px;
+    display: flex; align-items: center; justify-content: center; box-sizing: border-box;
+  }
+  .tour.tour .tour-stage .tour-slide { align-items: center; justify-content: center; }
+  .tour.tour .tour-copy { flex: none; width: 100%; max-width: 100%; height: auto; max-height: none; min-height: 0; margin: 0; padding: 0 16px; box-sizing: border-box; justify-content: flex-end; }
+  .tour.tour .tour-dots { flex: none; display: flex; justify-content: center; margin: 29px 0 0; }
+  .tour.tour .tour-actions { flex: none; display: flex; justify-content: center; margin: 40px 0 0; }
+  .tour.tour .tour-skip { flex: none; align-self: center; margin: 51px 0 0; }
+}
