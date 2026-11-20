@@ -4581,3 +4581,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .app.app .panel-budget-card .budget-stats > .budget-stat-total { grid-column: 1 / -1; }
   .app.app .panel-budget-card .budget-stat-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+/* V20-424b (Dan, Nov 20: "it's the font size"): iPhone Safari enlarged this card's text because its rows were wider
+   than the screen. Lock the text size so the Budget card matches the Tasks card exactly. */
+.app.app .panel-budget-card { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
