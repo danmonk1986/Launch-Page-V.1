@@ -24,6 +24,12 @@ export function BetaRequest({ startOpen = false, onCancel, onBack }: { startOpen
       setState('sent');
       return;
     }
+    if (error.code === 'P0001' && /already has an account/i.test(error.message)) {
+      // V20-440 (Dan, Nov 20): an email that already has an account can't request an invite (0075).
+      setState('error');
+      setMessage('That email already has an account. Tap Back, then SIGN IN.');
+      return;
+    }
     if (error.code === '23505') {
       // V20-429 (Dan, Nov 20): one request per email. The database refuses a second one (unique on the email,
       // any capitals); say so plainly instead of pretending a new request went in.
