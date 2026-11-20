@@ -4527,3 +4527,13 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .tour.tour .tour-actions { flex: none; display: flex; justify-content: center; margin: 40px 0 0; }
   .tour.tour .tour-skip { flex: none; align-self: center; margin: 69px 0 0; }
 }
+
+/* V20-415: Dan's notes box under each beta tester and invite request. */
+.beta-admin-table tr.tester-row > td { border-bottom: 0; }
+.beta-admin-table tr.tester-note-row > td { padding-top: 0; }
+.tester-note { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.tester-note input { flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 6px 0; background: transparent; border: 0; border-bottom: 2px solid color-mix(in srgb, var(--accent-purple) 45%, transparent); color: inherit; }
+.tester-note input:focus { outline: none; border-bottom-color: var(--accent-teal); }
+.tester-note-state { font-size: 12px; color: var(--dim); white-space: nowrap; }
+.beta-invite-row > span { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

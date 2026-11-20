@@ -1134,8 +1134,33 @@ function ColourTile({ label, value, onChange }: { label: string; value: string; 
  */
 type TesterRow = { email: string; joined: string; last_sign_in: string | null; setup: string; setup_seconds: number | null; days_opened: number; days_7: number; last_open: string | null };
 type InviteRow = { id: string; name: string; email: string; note: string | null; created_at: string; invited_at?: string | null };
+/** V20-415 (Dan, Nov 19): Dan's own note on a tester (only he sees it). Saves itself when he clicks away. */
+function TesterNote({ email, value, onSaved }: { email: string; value: string; onSaved: (email: string, note: string) => void }) {
+  const [text, setText] = useState(value);
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  useEffect(() => setText(value), [value]);
+  const save = async () => {
+    if (!supabase || text === value) return;
+    setState('saving');
+    const { error } = await supabase.rpc('admin_set_tester_note', { p_email: email, p_note: text });
+    if (error) return setState('error');
+    onSaved(email.toLowerCase(), text);
+    setState('saved');
+  };
+  return (
+    <label className="tester-note">
+      <span className="sr-only">Notes on {email}</span>
+      <input type="text" maxLength={1000} placeholder="Notes (only you see these)" value={text} onChange={(e) => { setText(e.target.value); setState('idle'); }} onBlur={() => void save()} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} />
+      {state !== 'idle' && <small className={`tester-note-state${state === 'error' ? ' pw-bad' : ''}`}>{state === 'saving' ? 'Saving…' : state === 'saved' ? 'Saved' : 'Not saved'}</small>}
+    </label>
+  );
+}
+
 function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?: (m: 'main' | 'beta') => void }) {
   const [rows, setRows] = useState<TesterRow[] | null>(null);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const noteFor = (email: string) => notes[email.toLowerCase()] ?? '';
+  const keepNote = (email: string, note: string) => setNotes((n) => ({ ...n, [email]: note }));
   const [invites, setInvites] = useState<InviteRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
   // V20-361: INVITE sends the request's person a sign-up email (server function, admin only).
@@ -1162,8 +1187,9 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
   const load = async () => {
     if (!supabase) return setErr('No database connection.');
     setErr(null);
-    const [a, b] = await Promise.all([supabase.rpc('admin_beta_overview'), supabase.rpc('admin_invite_requests')]);
+    const [a, b, n] = await Promise.all([supabase.rpc('admin_beta_overview'), supabase.rpc('admin_invite_requests'), supabase.rpc('admin_tester_notes')]);
     if (a.error || b.error) return setErr((a.error ?? b.error)!.message);
+    setNotes(Object.fromEntries(((n.data ?? []) as { email: string; note: string }[]).map((x) => [x.email.toLowerCase(), x.note])));
     setRows((a.data ?? []) as TesterRow[]);
     setInvites((b.data ?? []) as InviteRow[]);
   };
@@ -1218,15 +1244,22 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.email}>
-                  <td>{r.email}</td>
-                  <td>{day(r.joined)}</td>
-                  <td>{setupLabel(r)}</td>
-                  <td className={r.setup_seconds != null && r.setup_seconds > 600 ? 'is-over' : undefined}>{mins(r.setup_seconds)}</td>
-                  <td>{r.days_opened}</td>
-                  <td>{r.days_7}</td>
-                  <td>{day(r.last_open ?? r.last_sign_in)}</td>
-                </tr>
+                <Fragment key={r.email}>
+                  <tr className="tester-row">
+                    <td>{r.email}</td>
+                    <td>{day(r.joined)}</td>
+                    <td>{setupLabel(r)}</td>
+                    <td className={r.setup_seconds != null && r.setup_seconds > 600 ? 'is-over' : undefined}>{mins(r.setup_seconds)}</td>
+                    <td>{r.days_opened}</td>
+                    <td>{r.days_7}</td>
+                    <td>{day(r.last_open ?? r.last_sign_in)}</td>
+                  </tr>
+                  <tr className="tester-note-row">
+                    <td colSpan={7}>
+                      <TesterNote email={r.email} value={noteFor(r.email)} onSaved={keepNote} />
+                    </td>
+                  </tr>
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -1243,6 +1276,7 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
                 <b>{i.name}</b> · <a href={`mailto:${i.email}`}>{i.email}</a> · {day(i.created_at)}
                 {i.note ? <span className="field-hint"> — {i.note}</span> : null}
                 {inviteMsg[i.id] && <span className="field-hint beta-invite-msg"> {inviteMsg[i.id]}</span>}
+                <TesterNote email={i.email} value={noteFor(i.email)} onSaved={keepNote} />
               </span>
               {i.invited_at ? (
                 <span className="beta-invited">Invited {day(i.invited_at)}</span>
