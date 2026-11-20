@@ -58,6 +58,20 @@ export function SettingsPanel({ admin = false, beta = false, lpMode = 'main', on
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState(settings);
   const [pwOpen, setPwOpen] = useState(false);
+  // V20-413 (Dan, Nov 19): an account that has only ever signed in with an email link has no password yet. Ask the
+  // database (yes / no, nothing else) so the window can offer Set a password with no 'current password' box.
+  const [hasPw, setHasPw] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (tab !== 'account' && !pwOpen) return;
+    let live = true;
+    void supabase.rpc('has_password').then(({ data, error }) => {
+      if (live) setHasPw(error ? null : data === true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [tab, pwOpen]);
+  const noPw = hasPw === false;
   const clickOff = useClickOff(onClose);
 
   // V20-119 (Dan, Nov 12): Account Information and Appearance save themselves, like the journal: 0.9 s after the
@@ -512,14 +526,14 @@ export function SettingsPanel({ admin = false, beta = false, lpMode = 'main', on
           <div className="settings-action">
             <div>
               <p className="settings-action-title">Password</p>
-              <p className="field-hint">Change the password you sign in with on any device.</p>
+              <p className="field-hint">{noPw ? 'You sign in with email links. Set a password to sign in with it on any device too.' : 'Change the password you sign in with on any device.'}</p>
             </div>
             <button type="button" className="btn btn-quiet" onClick={() => setPwOpen(true)}>
-              Change password
+              {noPw ? 'Set a password' : 'Change password'}
             </button>
           </div>
         )}
-        {onSetPassword && <PasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} email={email ?? null} onSetPassword={onSetPassword} onCheckPassword={onCheckPassword} onSendReset={onSendReset} />}
+        {onSetPassword && <PasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} email={email ?? null} onSetPassword={onSetPassword} onCheckPassword={onCheckPassword} onSendReset={onSendReset} firstPassword={noPw} onPasswordSet={() => setHasPw(true)} />}
 
 
         {tab === 'projects' && <ProjectHeadContext.Provider value={setProjectHead}>{projects}</ProjectHeadContext.Provider>}
@@ -631,8 +645,12 @@ function PasswordDialog({
   email,
   onSetPassword,
   onCheckPassword,
-  onSendReset
+  onSendReset,
+  firstPassword = false,
+  onPasswordSet
 }: {
+  firstPassword?: boolean;
+  onPasswordSet?: () => void;
   open: boolean;
   onClose: () => void;
   email: string | null;
@@ -670,16 +688,16 @@ function PasswordDialog({
     { ok: /[a-z]/.test(next) && /[A-Z]/.test(next), text: 'Upper and lower case letters' },
     { ok: /[0-9]/.test(next), text: 'A number' },
     { ok: /[^A-Za-z0-9]/.test(next), text: 'A symbol (! ? # …)' },
-    { ok: !!next && next !== current, text: 'Different from the current password' }
+    ...(firstPassword ? [] : [{ ok: !!next && next !== current, text: 'Different from the current password' }])
   ];
   const matches = !!again && next === again;
-  const ready = !!current && rules.every((r) => r.ok) && matches && !busy;
+  const ready = (firstPassword || !!current) && rules.every((r) => r.ok) && matches && !busy;
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!ready) return;
     setBusy(true);
     setStatus(null);
-    if (onCheckPassword && !(await onCheckPassword(current))) {
+    if (!firstPassword && onCheckPassword && !(await onCheckPassword(current))) {
       setBusy(false);
       setStatus({ ok: false, text: 'That isn’t your current password.' });
       return;
@@ -687,7 +705,8 @@ function PasswordDialog({
     const error = await onSetPassword(next);
     setBusy(false);
     if (error) return setStatus({ ok: false, text: `Password not changed: ${error}` });
-    setStatus({ ok: true, text: 'Password changed. Use the new one to sign in on any device.' });
+    setStatus({ ok: true, text: firstPassword ? 'Password set. You can sign in with it on any device now.' : 'Password changed. Use the new one to sign in on any device.' });
+    onPasswordSet?.();
     setCurrent('');
     setNext('');
     setAgain('');
@@ -697,7 +716,7 @@ function PasswordDialog({
     <dialog ref={ref} tabIndex={-1} className="sheet sheet-password" onClose={onClose} aria-labelledby="pw-title" {...clickOff}>
       <form onSubmit={submit}>
         <div className="sheet-head">
-          <h2 id="pw-title">Change password</h2>
+          <h2 id="pw-title">{firstPassword ? 'Set a password' : 'Change password'}</h2>
           <div className="sheet-tools">
             <button type="submit" className="icon-btn tool-btn tool-btn-go" disabled={!ready} aria-label="Save new password" title="Save">
               <HeadIcon d={SAVE_ICON} />
@@ -708,10 +727,12 @@ function PasswordDialog({
           </div>
         </div>
         {email && <input type="email" value={email} autoComplete="username" readOnly hidden />}
-        <label className="field">
-          <span>Current password</span>
-          <input type={kind} required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
-        </label>
+        {!firstPassword && (
+          <label className="field">
+            <span>Current password</span>
+            <input type={kind} required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+          </label>
+        )}
         <label className="field">
           <span>New password</span>
           <input type={kind} required autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
@@ -737,7 +758,7 @@ function PasswordDialog({
             {status.text}
           </p>
         )}
-        {onSendReset && email && (
+        {onSendReset && email && !firstPassword && (
           <p className="field-hint">
             Forgot your current password?{' '}
             <button
