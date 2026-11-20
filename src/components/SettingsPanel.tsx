@@ -1193,6 +1193,28 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
     setInvites((list) => list.map((x) => (x.id === i.id ? { ...x, invited_at: at } : x)));
     setInviteMsg((m) => ({ ...m, [i.id]: `${resend ? 'A fresh invite went' : 'Invite sent'} to ${i.email}.` }));
   };
+  // V20-443 (Dan, Nov 20): × takes a request off the list (and withdraws an invite nobody has opened yet).
+  const removeRequest = async (i: InviteRow) => {
+    if (!supabase || sending) return;
+    const opened = rows?.some((t) => t.email.toLowerCase() === i.email.toLowerCase() && t.last_sign_in);
+    const ask = i.invited_at && !opened
+      ? `Withdraw ${i.name}'s invite and take them off the list? Their invite link stops working.`
+      : `Take ${i.name} (${i.email}) off the list?${opened ? ' Their account stays.' : ''}`;
+    if (!window.confirm(ask)) return;
+    setSending(i.id);
+    const { error } = await supabase.functions.invoke('invite-tester', { body: { requestId: i.id, remove: true } });
+    setSending(null);
+    if (error) {
+      let msg = error.message;
+      try {
+        msg = ((await (error as { context?: Response }).context?.json()) as { error?: string })?.error ?? msg;
+      } catch {
+        /* keep msg */
+      }
+      return setInviteMsg((m) => ({ ...m, [i.id]: msg }));
+    }
+    setInvites((list) => list.filter((x) => x.id !== i.id));
+  };
   const load = async () => {
     if (!supabase) return setErr('No database connection.');
     setErr(null);
@@ -1291,6 +1313,7 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
                 {inviteMsg[i.id] && <span className="field-hint beta-invite-msg">{inviteMsg[i.id]}</span>}
                 <TesterNote email={i.email} value={noteFor(i.email)} onSaved={keepNote} />
               </div>
+              <span className="beta-invite-side">
               {i.invited_at ? (
                 // V20-441 (Dan, Nov 20): RESEND under INVITED until they've signed in (a fresh one-time link).
                 <span className="beta-invited-col">
@@ -1306,6 +1329,10 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
                   {sending === i.id ? 'Sending…' : 'Invite'}
                 </button>
               )}
+              <button type="button" className="icon-btn beta-remove" aria-label={`Take ${i.name} off the list`} title={i.invited_at ? 'Withdraw the invite and take off the list' : 'Take off the list'} disabled={sending === i.id} onClick={() => void removeRequest(i)}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+              </span>
             </li>
           ))}
         </ul>

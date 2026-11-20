@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
   const { data: me } = await caller.auth.getUser();
   if (me?.user?.app_metadata?.role !== 'admin') return json({ error: 'Only the admin can send invites.' }, 403);
 
-  let body: { requestId?: string; resend?: boolean };
+  let body: { requestId?: string; resend?: boolean; remove?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -30,6 +30,24 @@ Deno.serve(async (req) => {
   const { data: r } = await admin.from('beta_requests').select('id, name, email, invited_at').eq('id', String(body.requestId ?? '')).maybeSingle();
   if (!r) return json({ error: 'That request is gone.' }, 404);
   const email = String(r.email).trim().toLowerCase();
+
+  // V20-443 (Dan, Nov 20): × takes the request off the list. An invite that was never opened is withdrawn too (the
+  // unused, empty invited account goes, so its START link stops working). Someone who has already signed in keeps
+  // their account; only the request leaves the list.
+  if (body.remove) {
+    const { data: list, error: le } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (le) return json({ error: `Not removed: ${le.message}` }, 400);
+    const u = list.users.find((x) => (x.email ?? '').toLowerCase() === email);
+    let withdrawn = false;
+    if (u && !u.last_sign_in_at && !u.email_confirmed_at) {
+      const { error: de } = await admin.auth.admin.deleteUser(u.id);
+      if (de) return json({ error: `Not removed: ${de.message}` }, 400);
+      withdrawn = true;
+    }
+    const { error: re } = await admin.from('beta_requests').delete().eq('id', r.id);
+    if (re) return json({ error: `Not removed: ${re.message}` }, 400);
+    return json({ ok: true, removed: true, withdrawn, keptAccount: !!u && !withdrawn });
+  }
 
   // V20-441 (Dan, Nov 20): RESEND. An invite that was never opened (the account has never signed in) is sent again:
   // the unused, empty invited account is removed and a fresh invite goes out (a new one-time link). Someone who has
