@@ -4612,3 +4612,14 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .app.app .pl-edit { min-width: 0; }
   .app.app .panel-planner { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 }
+/* V20-425b (Dan, Nov 20): the tile's buttons (✓ and open chevron) sit together at the top right, beside the name. */
+@media (max-width: 640px) {
+  .app.app .pl-row:not(.pl-head) {
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "name name name acts open" "chip cost due due due";
+    align-items: start;
+  }
+  .app.app .pl-row:not(.pl-head) > .pl-name { align-self: center; }
+  .app.app .pl-row:not(.pl-head) > :is(.pl-chip, .pl-mono) { align-self: center; }
+  .app.app .pl-row:not(.pl-head) > .pl-open { align-self: center; }
+}
