@@ -4553,3 +4553,13 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .panel-budget-card .bc-head:hover { box-shadow: none; }
 .app.app .panel-budget-card .bc-amt { text-align: right; }
 @media (max-width: 640px) { .app.app .panel-budget-card .bc-head { display: none; } }
+
+/* V20-422b (Dan, Nov 20): the Budget card's type was still bigger than the other cards. It now uses the Tasks table's
+   exact sizes: 13 px text, names in 13 px semibold caps, dates and amounts in the 12 px number font; the AMOUNT header
+   is a header like the rest. Dates are one colour on every card: Colour 2 (teal), like the Planner, Budget and the
+   timed launch times (the Tasks card's Required dates were grey). */
+.app.app .panel-budget-card .bc-row { font-size: 13px; }
+.app.app .panel-budget-card .bc-row .bc-name, .app.app .panel-budget-card .bc-row .pl-desc { font-size: 13px; }
+.app.app .panel-budget-card .bc-row .pl-due, .app.app .panel-budget-card .bc-row .bc-amt { font-size: 12px; }
+.app.app .panel-budget-card .bc-head > span, .app.app .panel-budget-card .bc-head > span.bc-amt { font-family: var(--font-body, inherit); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; }
+.app .task-row td.col-date, .app .task-row td.col-date:not(.col-start) { color: var(--accent-teal); }
