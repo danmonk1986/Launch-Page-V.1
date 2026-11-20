@@ -218,7 +218,8 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   mantra: '',
   // V20-151 (Dan, Nov 12): default backgrounds Damascus (day) and Synthwave (night); the colour tiles default to darker
   // beige and navy (V20-143).
-  background: 'synthwave',
+  // V20-431 (Dan, Nov 20): a new account opens in day mode on solid white.
+  background: 'day-colour',
   accentPurple: '#8869cb',
   accentTeal: '#06f9c2',
   accentGreen: '#98ee92',
@@ -231,10 +232,10 @@ export const DEFAULT_SETTINGS: BrandSettings = {
   nightBgImage: null,
   dayBgImage: null,
   account: EMPTY_ACCOUNT,
-  dayBackground: 'damascus',
+  dayBackground: 'day-colour',
   nightBackground: 'synthwave',
   nightColour: '#0b0820',
-  dayColour: '#f5f5dc',
+  dayColour: '#ffffff',
   dayNeutral: '#444242',
   nightNeutral: '#f5f5dc',
   surfaces: DEFAULT_SURFACES,
