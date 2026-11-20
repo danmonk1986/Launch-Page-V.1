@@ -665,6 +665,7 @@ function PasswordDialog({
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
   const clickOff = useClickOff(onClose);
   useEffect(() => {
     const d = ref.current;
@@ -753,24 +754,32 @@ function PasswordDialog({
           <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} />
           <span>Show passwords</span>
         </label>
-        {status && (
-          <p className={`account-status${status.ok ? '' : ' pw-bad'}`} role="status">
-            {status.text}
-          </p>
-        )}
         {onSendReset && email && !firstPassword && (
           <p className="field-hint">
             Forgot your current password?{' '}
+            {/* V20-433 (Dan, Nov 20): no sign it worked, so it was tapped twice. Sending… while it goes, then a clear
+                line right under the link; one tap only. */}
             <button
               type="button"
               className="link-btn link-btn-inline"
+              disabled={resetBusy}
               onClick={async () => {
+                if (resetBusy) return;
+                setResetBusy(true);
+                setStatus(null);
                 const err = await onSendReset();
-                setStatus(err ? { ok: false, text: `Reset link not sent: ${err}` } : { ok: true, text: `A reset link is on its way to ${email}.` });
+                setResetBusy(false);
+                const wait = err && /after (\d+) seconds/i.exec(err)?.[1];
+                setStatus(err ? { ok: false, text: wait ? `A reset link was just sent. Wait ${wait} seconds to send another.` : `Reset link not sent: ${err}` } : { ok: true, text: `Sent. Check ${email} for the reset link (it can take a minute).` });
               }}
             >
-              Email me a reset link
+              {resetBusy ? 'Sending…' : 'Email me a reset link'}
             </button>
+          </p>
+        )}
+        {status && (
+          <p className={`account-status${status.ok ? '' : ' pw-bad'}`} role="status">
+            {status.text}
           </p>
         )}
       </form>
