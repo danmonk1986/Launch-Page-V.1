@@ -4674,3 +4674,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .beta-invite-acts { align-items: center; }
 .app.app .beta-invite-acts > .btn { height: 40px; min-height: 40px; box-sizing: border-box; }
 .app.app .beta-invite-acts > .beta-remove { width: 40px; height: 40px; min-width: 40px; min-height: 40px; aspect-ratio: auto; align-self: center; border-radius: 50%; box-sizing: border-box; }
+/* V20-443e (Dan, Nov 20): card size: pill and × are 32 px, like the buttons on the cards. */
+.app.app .beta-invite-acts { gap: 8px; }
+.app.app .beta-invite-acts > .btn { height: 32px; min-height: 32px; padding: 0 14px; font-size: 12px; }
+.app.app .beta-invite-acts > .beta-remove { width: 32px; height: 32px; min-width: 32px; min-height: 32px; }
+.app.app .beta-invite-acts > .beta-remove svg { width: 14px; height: 14px; }
