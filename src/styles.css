@@ -4667,3 +4667,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .beta-invite-row > .beta-invite-side { justify-self: end; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .app.app .beta-invite-acts { display: flex; align-items: center; gap: 10px; }
 .app.app .beta-invite-side > .beta-invited { padding-top: 0; }
+/* V20-443c (Dan, Nov 20): the × is exactly as tall as the pill beside it (a circle the pill's height). */
+.app.app .beta-invite-acts { align-items: stretch; }
+.app.app .beta-invite-acts > .beta-remove { width: auto; height: auto; min-height: 0; aspect-ratio: 1; align-self: stretch; padding: 0; display: grid; place-items: center; }
