@@ -4623,3 +4623,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .app.app .pl-row:not(.pl-head) > :is(.pl-chip, .pl-mono) { align-self: center; }
   .app.app .pl-row:not(.pl-head) > .pl-open { align-self: center; }
 }
+
+/* V20-426 (Dan, Nov 20; was V20-419, redone on its own): text on the sign-in pages is centred: notes, hints and error lines. */
+.signin :is(.signin-note, .signin-error, .field-hint, .account-status, .beta-thanks) { text-align: center; justify-self: center; margin-left: auto; margin-right: auto; }
