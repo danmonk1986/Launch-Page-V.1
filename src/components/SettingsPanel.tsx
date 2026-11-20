@@ -1142,6 +1142,8 @@ function ColourTile({ label, value, onChange }: { label: string; value: string; 
  * took, days opened) and the invite requests. Numbers only: the database answers just the admin (0069).
  */
 type TesterRow = { email: string; joined: string; last_sign_in: string | null; setup: string; setup_seconds: number | null; days_opened: number; days_7: number; last_open: string | null };
+type FeedbackRow = { id: string; email: string | null; kind: 'flag' | 'setup'; hangup: string | null; words: string | null; feeling: number | null; page: string | null; device: { type?: string; browser?: string; screen?: string } | null; app_build: string | null; setup_seconds: number | null; status: 'new' | 'seen' | 'fixed'; bug_ref: string | null; created_at: string };
+const FEEL_FACE: Record<number, string> = { 1: '😣', 2: '😕', 3: '😐', 4: '🙂', 5: '🤩' };
 type InviteRow = { id: string; name: string; email: string; note: string | null; created_at: string; invited_at?: string | null };
 /** V20-415 (Dan, Nov 19): Dan's own note on a tester (only he sees it). Saves itself when he clicks away. */
 function TesterNote({ email, value, onSaved }: { email: string; value: string; onSaved: (email: string, note: string) => void }) {
@@ -1171,6 +1173,7 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
   const noteFor = (email: string) => notes[email.toLowerCase()] ?? '';
   const keepNote = (email: string, note: string) => setNotes((n) => ({ ...n, [email]: note }));
   const [invites, setInvites] = useState<InviteRow[]>([]);
+  const [feedback, setFeedback] = useState<FeedbackRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
   // V20-361: INVITE sends the request's person a sign-up email (server function, admin only).
   const [sending, setSending] = useState<string | null>(null);
@@ -1223,6 +1226,14 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
     setNotes(Object.fromEntries(((n.data ?? []) as { email: string; note: string }[]).map((x) => [x.email.toLowerCase(), x.note])));
     setRows((a.data ?? []) as TesterRow[]);
     setInvites((b.data ?? []) as InviteRow[]);
+    // V20-446: beta feedback, newest first (only the admin can read it).
+    const f = await supabase.from('feedback').select('*').order('created_at', { ascending: false }).limit(300);
+    if (!f.error) setFeedback((f.data ?? []) as FeedbackRow[]);
+  };
+  const setFbStatus = async (id: string, status: FeedbackRow['status']) => {
+    if (!supabase) return;
+    setFeedback((l) => l.map((x) => (x.id === id ? { ...x, status } : x)));
+    await supabase.from('feedback').update({ status }).eq('id', id);
   };
   useEffect(() => {
     void load();
@@ -1333,6 +1344,41 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
                   </button>
                 </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {/* V20-446 (Dan, Nov 20): what testers sent from the Feedback flag and "How was setup?". */}
+      <h3 className="timed-title settings-section">Feedback ({feedback.filter((x) => x.status === 'new').length} new)</h3>
+      {feedback.length === 0 ? (
+        <p className="field-hint">None yet.</p>
+      ) : (
+        <ul className="beta-feedback">
+          {feedback.map((f) => (
+            <li key={f.id} className={`beta-feedback-row is-${f.status}`}>
+              <div className="beta-feedback-body">
+                <div className="beta-feedback-top">
+                  {f.feeling ? <span className="beta-feedback-face" title={`Feeling ${f.feeling} of 5`}>{FEEL_FACE[f.feeling]}</span> : null}
+                  <b>{f.kind === 'setup' ? 'Setup' : f.hangup ?? 'Feedback'}</b>
+                  {f.kind === 'setup' && f.hangup ? <span> · {f.hangup}</span> : null}
+                </div>
+                {f.words && <p className="beta-feedback-words">{f.words}</p>}
+                <span className="field-hint">
+                  {f.email ?? 'someone'} · {day(f.created_at)} {new Date(f.created_at).toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' })}
+                  {f.page ? ` · ${f.page}` : ''}
+                  {f.device ? ` · ${[f.device.type, f.device.browser, f.device.screen].filter(Boolean).join(' ')}` : ''}
+                  {f.kind === 'setup' && f.setup_seconds != null ? ` · setup ${mins(f.setup_seconds)}` : ''}
+                  {f.app_build ? ` · build ${f.app_build}` : ''}
+                  {f.bug_ref ? ` · ${f.bug_ref}` : ''}
+                </span>
+              </div>
+              <div className="beta-feedback-status" role="radiogroup" aria-label="Status">
+                {(['new', 'seen', 'fixed'] as const).map((st) => (
+                  <button key={st} type="button" role="radio" aria-checked={f.status === st} className={`fb-status${f.status === st ? ' is-on' : ''}`} onClick={() => void setFbStatus(f.id, st)}>
+                    {st}
+                  </button>
+                ))}
               </div>
             </li>
           ))}

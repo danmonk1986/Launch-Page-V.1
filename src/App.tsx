@@ -13,6 +13,7 @@ import { launchFromTask, taskFromLaunch } from './lib/linkSync';
 import { loadCached } from './lib/gcalCache';
 import { Header, type PageId } from './components/Header';
 import { FirstPassword } from './components/FirstPassword';
+import { FeedbackFlag, SetupFeedback } from './components/Feedback';
 import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
@@ -2769,6 +2770,14 @@ export default function App() {
           addNonNeg(label);
         }}
       />
+      {/* V20-446 (Dan, Nov 20): beta feedback: the flag any time, and "How was setup?" once after a tester's first setup. */}
+      {session && beta && <FeedbackFlag page={page} />}
+      {session && beta && !isAdmin && settings.account.setupDoneAt && !settings.account.setupFeedbackAt && (
+        <SetupFeedback
+          setupSeconds={settings.account.setupSeconds ?? null}
+          onDone={() => void handleSave({ account: { ...settings.account, setupFeedbackAt: new Date().toISOString() } as BrandSettings['account'] })}
+        />
+      )}
       <SettingsPanel
         admin={isAdmin}
         beta={beta}

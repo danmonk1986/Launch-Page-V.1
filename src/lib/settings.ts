@@ -184,6 +184,8 @@ export interface AccountInfo {
   /** V20-358 (BETA BACKEND tracking): how long first-run setup took (the 10-minute goal), saved when it finishes. */
   setupStartedAt?: string;
   setupDoneAt?: string;
+  /** V20-446: when the "How was setup?" feedback was sent or skipped (so it shows once). */
+  setupFeedbackAt?: string;
   setupSeconds?: number;
 }
 

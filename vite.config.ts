@@ -5,6 +5,10 @@ import { VitePWA } from 'vite-plugin-pwa';
 // Installable app + light offline: the app shell is cached so LaunchPage
 // opens without a connection. Data still lives in Supabase.
 export default defineConfig({
+  // V20-446: which build a piece of feedback came from (the commit on Cloudflare, else the build time).
+  define: {
+    __BUILD__: JSON.stringify((process.env.WORKERS_CI_COMMIT_SHA || process.env.CF_PAGES_COMMIT_SHA || '').slice(0, 7) || new Date().toISOString().slice(0, 16))
+  },
   plugins: [
     react(),
     VitePWA({

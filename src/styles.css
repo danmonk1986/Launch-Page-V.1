@@ -4682,3 +4682,38 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-444: the blank page shown on a refresh until your own look and data are in (the last mode's colour). */
 .boot-blank { position: fixed; inset: 0; background: #0f0b22; }
 .boot-blank[data-tone='light'] { background: #ffffff; }
+/* V20-446 (Dan, Nov 20): the Feedback flag: a tab on the right edge (beta), a corner button on phones. */
+.feedback-flag {
+  position: fixed; right: 0; top: 50%; z-index: 40; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 8px;
+  border: 1px solid var(--accent-purple); border-right: 0; border-radius: 12px 0 0 12px;
+  background: var(--accent-teal); color: var(--accent-purple); cursor: pointer; font: inherit;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 0.25);
+}
+.feedback-flag:hover { box-shadow: 0 0 0 2px var(--accent-purple), 0 4px 18px rgb(0 0 0 / 0.25); }
+.feedback-flag-word { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: 700; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+@media (max-width: 640px) {
+  .feedback-flag { top: auto; bottom: 16px; right: 16px; transform: none; width: 44px; height: 44px; padding: 0; border-radius: 50%; border: 1px solid var(--accent-purple); justify-content: center; }
+  .feedback-flag-word { display: none; }
+}
+.feedback-form .field select, .feedback-form .field textarea { width: 100%; }
+.feedback-feelings { display: flex; gap: 10px; flex-wrap: wrap; }
+.feedback-feeling { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--accent-purple); background: transparent; font-size: 22px; line-height: 1; cursor: pointer; display: grid; place-items: center; opacity: 0.75; }
+.feedback-feeling:hover { opacity: 1; background: color-mix(in srgb, var(--accent-purple) 12%, transparent); }
+.feedback-feeling.is-on { opacity: 1; background: var(--accent-teal); border-color: var(--accent-teal); box-shadow: 0 0 0 2px var(--accent-purple); }
+.feedback-send { display: flex; justify-content: center; margin-top: 6px; }
+.feedback-skip { display: flex; justify-content: center; margin-top: 10px; }
+.feedback-thanks { display: grid; gap: 16px; justify-items: center; text-align: center; padding: 8px 0 4px; }
+/* V20-446: ⚙ › Beta Testers › Feedback list. */
+.beta-feedback { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.beta-feedback-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: start; padding: 14px 0; border-bottom: 1px solid var(--edge); }
+.beta-feedback-row.is-fixed { opacity: 0.6; }
+.beta-feedback-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.beta-feedback-top { display: flex; align-items: center; gap: 8px; }
+.beta-feedback-face { font-size: 20px; line-height: 1; }
+.beta-feedback-words { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.beta-feedback-row.is-new .beta-feedback-top b { color: var(--accent-teal); }
+.beta-feedback-status { display: flex; gap: 6px; }
+.fb-status { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--accent-purple); background: transparent; color: var(--accent-purple); font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+.fb-status.is-on { background: var(--accent-teal); border-color: var(--accent-teal); color: var(--accent-purple); }
+@media (max-width: 640px) { .beta-feedback-row { grid-template-columns: 1fr; } }
