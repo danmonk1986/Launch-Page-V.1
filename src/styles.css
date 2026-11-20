@@ -4655,3 +4655,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app .time-grid > .time-grid-note { margin-top: 4px; margin-bottom: 14px; line-height: 1.5; }
 /* V20-441: RESEND sits under INVITED <date>, both at the top right of the request card. */
 .app.app .beta-invite-row > .beta-invited-col { justify-self: end; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+/* V20-442 (Dan, Nov 20): your own background image shows as it is: no scanlines, grid or horizon over it, and no
+   white (day) or dark (night) wash on top. */
+.app[data-bg='image'] .sky > * { display: none !important; }
+.app.has-bg-image .sky::after, .app[data-bg='image'] .sky::after { content: none; background: none; }
