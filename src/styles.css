@@ -4545,3 +4545,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-418: the set-a-password page after an email-link sign-in (same look as the sign-in page). */
 .first-password .signin-form .field-hint { text-align: center; margin: -6px 0 6px; }
 .first-password .beta-title { text-align: center; }
+
+/* V20-419 (Dan, Nov 19, new rule): text on the sign-in pages is centred: notes, hints and error lines. */
+.signin :is(.signin-note, .signin-error, .field-hint, .account-status, .beta-thanks) { text-align: center; justify-self: center; margin-left: auto; margin-right: auto; }
