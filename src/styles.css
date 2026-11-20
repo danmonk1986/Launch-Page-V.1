@@ -4525,5 +4525,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .tour.tour .tour-copy { flex: none; width: 100%; max-width: 100%; height: auto; max-height: none; min-height: 0; margin: 0; padding: 0 16px; box-sizing: border-box; justify-content: flex-end; }
   .tour.tour .tour-dots { flex: none; display: flex; justify-content: center; margin: 29px 0 0; }
   .tour.tour .tour-actions { flex: none; display: flex; justify-content: center; margin: 40px 0 0; }
-  .tour.tour .tour-skip { flex: none; align-self: center; margin: 51px 0 0; }
+  .tour.tour .tour-skip { flex: none; align-self: center; margin: 69px 0 0; }
 }
