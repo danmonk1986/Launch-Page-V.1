@@ -477,6 +477,9 @@ export default function App() {
   const [switchingAccount, setSwitchingAccount] = useState(false);
   // V20-418 (Dan, Nov 19): an account with no password yet (email links only) is sent to set one first.
   const [needsPassword, setNeedsPassword] = useState(false);
+  // V20-421: which account the password answer is for; until it's in, the page waits (blank) so it never flashes setup
+  // or the Launch Page first.
+  const [pwCheckedFor, setPwCheckedFor] = useState<string | null>(null);
   const [pwLater, setPwLater] = useState(() => {
     try {
       return sessionStorage.getItem('lp.pwLater') === '1';
@@ -489,7 +492,9 @@ export default function App() {
     if (!supabase || !userId) return;
     let live = true;
     void supabase.rpc('has_password').then(({ data, error }) => {
-      if (live && !error && data === false) setNeedsPassword(true);
+      if (!live) return;
+      if (!error && data === false) setNeedsPassword(true);
+      setPwCheckedFor(userId);
     });
     return () => {
       live = false;
@@ -2054,6 +2059,7 @@ export default function App() {
 
   // V20-418: set a password first (email-link accounts), before setup and the Launch Page. "Later" waits until the
   // next time this browser opens the app.
+  if (session && supabase && pwCheckedFor !== session.user.id) return <main className="signin signin-light" aria-busy="true" />;
   if (session && needsPassword && !pwLater) {
     return (
       <div className="app app-light" style={theme}>
