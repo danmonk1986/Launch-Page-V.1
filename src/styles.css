@@ -4717,3 +4717,10 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .fb-status { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--accent-purple); background: transparent; color: var(--accent-purple); font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
 .fb-status.is-on { background: var(--accent-teal); border-color: var(--accent-teal); color: var(--accent-purple); }
 @media (max-width: 640px) { .beta-feedback-row { grid-template-columns: 1fr; } }
+/* V20-446c (Dan, Nov 20): the Feedback tab sits lower, no flag icon, the word bold and as big as the tab allows,
+   and a little wider so it overhangs the routine card a touch more. Phones keep the round corner button (icon). */
+@media (min-width: 641px) {
+  .feedback-flag { top: 66%; padding: 20px 14px; gap: 0; }
+  .feedback-flag-icon { display: none; }
+  .feedback-flag-word { font-size: 16px; font-weight: 800; letter-spacing: 0.14em; }
+}
