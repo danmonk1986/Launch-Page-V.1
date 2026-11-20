@@ -1143,7 +1143,7 @@ function ColourTile({ label, value, onChange }: { label: string; value: string; 
  */
 type TesterRow = { email: string; joined: string; last_sign_in: string | null; setup: string; setup_seconds: number | null; days_opened: number; days_7: number; last_open: string | null };
 type FeedbackRow = { id: string; email: string | null; kind: 'flag' | 'setup'; hangup: string | null; words: string | null; feeling: number | null; page: string | null; device: { type?: string; browser?: string; screen?: string } | null; app_build: string | null; setup_seconds: number | null; status: 'new' | 'seen' | 'fixed'; bug_ref: string | null; created_at: string };
-const FEEL_FACE: Record<number, string> = { 1: '😣', 2: '😕', 3: '😐', 4: '🙂', 5: '🤩' };
+const FEEL_FACE: Record<number, string> = { 1: '🤬', 2: '😕', 3: '😐', 4: '🙂', 5: '🥰' };
 type InviteRow = { id: string; name: string; email: string; note: string | null; created_at: string; invited_at?: string | null };
 /** V20-415 (Dan, Nov 19): Dan's own note on a tester (only he sees it). Saves itself when he clicks away. */
 function TesterNote({ email, value, onSaved }: { email: string; value: string; onSaved: (email: string, note: string) => void }) {

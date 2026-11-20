@@ -9,11 +9,11 @@ export const HANGUPS = ['Something broke', 'Confusing', 'Too slow', 'Missing som
 export type Hangup = (typeof HANGUPS)[number];
 /** Feeling, 1 to 5. */
 export const FEELINGS = [
-  { v: 1, face: '😣', label: 'Frustrated' },
+  { v: 1, face: '🤬', label: 'Angry' },
   { v: 2, face: '😕', label: 'Meh' },
   { v: 3, face: '😐', label: 'Okay' },
   { v: 4, face: '🙂', label: 'Good' },
-  { v: 5, face: '🤩', label: 'Love it' }
+  { v: 5, face: '🥰', label: 'Smitten' }
 ] as const;
 
 declare const __BUILD__: string;
