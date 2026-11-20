@@ -1,5 +1,6 @@
 import { Icon } from './Tasks';
 import { monthlyByCategory, money, type BudgetLine } from '../lib/budget';
+import type { Project } from '../lib/projects';
 import { nextRepeat, readRepeat } from '../lib/repeat';
 import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
 
@@ -10,7 +11,14 @@ import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
 const CHEV = 'M6 9l6 6 6-6';
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-export function BudgetCard({ lines, today, onOpenAll, onOpenLine, onAdd }: { lines: BudgetLine[]; today: Date; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void }) {
+export function BudgetCard({ lines, today, onOpenAll, onOpenLine, onAdd, projects = [] }: { lines: BudgetLine[]; today: Date; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void; projects?: Project[] }) {
+  // V20-423 (Dan, Nov 20): the project is a coloured pill, like the Tasks card and the Budget page (same matching).
+  const norm = (x: string) => x.toUpperCase().replace(/^STARDVST\s+/, '').replace(/[^A-Z0-9]/g, '');
+  const projectFor = (name: string) => {
+    const n = norm(name);
+    if (!n) return undefined;
+    return projects.find((x) => norm(x.name) === n) ?? projects.find((x) => norm(x.name).startsWith(n) || n.startsWith(norm(x.name)));
+  };
   const { q } = useHeaderSearch();
   const perProject = monthlyByCategory(lines, 'project');
   const monthly = Object.values(perProject).reduce((a, x) => a + x, 0);
@@ -92,7 +100,18 @@ export function BudgetCard({ lines, today, onOpenAll, onOpenLine, onAdd }: { lin
             >
               <span className="pl-mono pl-due">{day(next)}</span>
               <span className="pl-name bc-name">{l.description}</span>
-              <span className="pl-desc">{l.project}</span>
+              <span className="pl-desc bc-proj">
+                {l.project
+                  ? (() => {
+                      const pr = projectFor(l.project);
+                      return (
+                        <span className="chip" style={pr ? { ['--chip' as string]: pr.color } : undefined} title={l.project}>
+                          {pr ? pr.name.replace(/^STARDVST\s+/i, '') : l.project}
+                        </span>
+                      );
+                    })()
+                  : null}
+              </span>
               <span className="pl-desc">{l.method}</span>
               <span className="pl-mono bc-amt">{l.amount === null ? '—' : money(l.amount)}</span>
             </button>

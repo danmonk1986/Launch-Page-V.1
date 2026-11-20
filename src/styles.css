@@ -4563,3 +4563,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .panel-budget-card .bc-row .pl-due, .app.app .panel-budget-card .bc-row .bc-amt { font-size: 12px; }
 .app.app .panel-budget-card .bc-head > span, .app.app .panel-budget-card .bc-head > span.bc-amt { font-family: var(--font-body, inherit); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; }
 .app .task-row td.col-date, .app .task-row td.col-date:not(.col-start) { color: var(--accent-teal); }
+/* V20-423: Budget card project pills (same chip as Tasks), never wider than their column. */
+.app.app .panel-budget-card .bc-proj { overflow: visible; }
+.app.app .panel-budget-card .bc-proj .chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
