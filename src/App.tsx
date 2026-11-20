@@ -139,11 +139,15 @@ export default function App() {
   // settings arrived.
   const [settingsFor, setSettingsFor] = useState<string | null | undefined>(undefined);
   const settingsLoaded = settingsFor === (session?.user.id ?? null);
+  // V20-445 (Dan, Nov 20) PLATFORM RULE: no card ever draws its defaults or its empty message ("No steps yet",
+  // "ADD A ROUTINE", "Nothing this week yet") before this account's data has loaded. The whole page waits, blank,
+  // for every card's data (settings, background, routines, rockets, tasks, budget, planner, records…), max 6 s.
   // V20-444 (Dan, Nov 20): on a refresh, nothing shows until this account's own look and data are in: its background
   // image (not the tile it replaced), its rockets and routine (not the empty "ADD A ROUTINE" page). A blank page in
   // the last mode's colour shows meanwhile. Never stuck: after 6 s the page shows whatever has arrived.
   const [bgFor, setBgFor] = useState<string | null | undefined>(undefined);
   const [coreFor, setCoreFor] = useState<string | null | undefined>(undefined);
+  const [planFor, setPlanFor] = useState<string | null | undefined>(undefined);
   const [bootGaveUp, setBootGaveUp] = useState(false);
   useEffect(() => {
     const t = window.setTimeout(() => setBootGaveUp(true), 6000);
@@ -597,10 +601,16 @@ export default function App() {
   }, [userId]);
   useEffect(() => {
     if (supabase && !session) return;
-    decisionStore.load(userId).then((r) => setDecisions(r.items));
-    planStore.load(userId).then((r) => setPlans(r.items));
+    let live = true;
+    void Promise.all([
+      decisionStore.load(userId).then((r) => live && setDecisions(r.items)),
+      planStore.load(userId).then((r) => live && setPlans(r.items))
+    ]).then(() => live && setPlanFor(userId));
     planStore.onNewer((id, newer) => setPlans((l) => (newer ? l.map((x) => (x.id === id ? newer : x)) : l.filter((x) => x.id !== id))));
     decisionStore.onNewer((id, newer) => setDecisions((l) => (newer ? l.map((x) => (x.id === id ? newer : x)) : l.filter((x) => x.id !== id))));
+    return () => {
+      live = false;
+    };
   }, [userId, session]);
 
   useEffect(() => {
@@ -638,7 +648,6 @@ export default function App() {
       setRockets(tiles);
       setLaunches(l2.items);
       setEvents(l3.items);
-      setCoreFor(userId);
       const [p1, t1, j1, g1] = await Promise.all([projectStore.load(userId), taskStore.load(userId), journalStore.load(userId), launchLogStore.load(userId)]);
       if (!live) return;
       setLaunchLog(g1.items);
@@ -692,6 +701,8 @@ export default function App() {
       setCommon(ce.items);
       setDraws(dr.items);
       setMedReady(true);
+      // V20-445: every card's data is in.
+      setCoreFor(userId);
       setStoreProblem(l1.problem ?? l2.problem ?? l3.problem ?? p1.problem ?? t1.problem ?? j1.problem ?? n1.problem ?? dd.problem ?? lg.problem);
     })();
     return () => {
@@ -2101,7 +2112,7 @@ export default function App() {
   (theme as Record<string, string>)['--bg-colour'] = light ? settings.dayColour : settings.nightColour;
   if (switchingAccount) return <main className="signin signin-light" aria-busy="true" />;
   const bootUser = session?.user.id ?? null;
-  const bootReady = bootGaveUp || !supabase || !session || (settingsLoaded && bgFor === bootUser && coreFor === bootUser);
+  const bootReady = bootGaveUp || !supabase || !session || (settingsLoaded && bgFor === bootUser && coreFor === bootUser && planFor === bootUser);
   if (session && !bootReady) {
     let tone = 'dark';
     try {
