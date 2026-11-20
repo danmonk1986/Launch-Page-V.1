@@ -471,14 +471,8 @@ export default function App() {
 
   // V20-006: this browser's copy belongs to one account. A different account starts clean
   // (and the page reloads, so nothing of the last account stays in memory). Runs before any load.
-  // V20-417 (Dan, Nov 19): while it switches accounts, show a blank white page, never a flash of the last account's
-  // Launch Page (this re-renders before the browser paints).
-  const [switchingAccount, setSwitchingAccount] = useState(false);
   useLayoutEffect(() => {
-    if (userId && claimDevice(userId) === 'wiped') {
-      setSwitchingAccount(true);
-      window.location.reload();
-    }
+    if (userId && claimDevice(userId) === 'wiped') window.location.reload();
   }, [userId]);
   /** Sign out (⚙ menu): clears this browser's copy, after a warning if changes haven't synced. */
   async function signOutClean() {
@@ -2014,7 +2008,6 @@ export default function App() {
   const bgImage = shown.image;
   if (bgImage) (theme as Record<string, string>)['--bg-image'] = `url("${bgImage}")`;
   (theme as Record<string, string>)['--bg-colour'] = light ? settings.dayColour : settings.nightColour;
-  if (switchingAccount) return <main className="signin signin-light" aria-busy="true" />;
   if (!authReady) return <div className="app" style={theme} data-bg={bgImage ? 'image' : shown.tile} data-tone={light ? 'light' : 'dark'} />;
   if (supabase && !session) {
     return (
