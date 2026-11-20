@@ -4566,3 +4566,18 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-423: Budget card project pills (same chip as Tasks), never wider than their column. */
 .app.app .panel-budget-card .bc-proj { overflow: visible; }
 .app.app .panel-budget-card .bc-proj .chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* V20-424 (Dan, Nov 20): Budget card on phones. Rows fit the card (no 560px minimum, nothing off the right edge):
+   line 1 the name, line 2 date · project pill · method, amount on the right. Totals tidy into two columns. */
+@media (max-width: 640px) {
+  .app.app .panel-budget-card .bc-table { overflow: visible; }
+  .app.app .panel-budget-card .bc-row { min-width: 0; width: 100%; box-sizing: border-box; grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "name name name name" "due proj meth amt"; gap: 6px 10px; padding: 10px 12px; }
+  .app.app .panel-budget-card .bc-row > .bc-name { font-size: 15px; line-height: 1.25; overflow-wrap: anywhere; }
+  .app.app .panel-budget-card .bc-row > .pl-due { white-space: nowrap; }
+  .app.app .panel-budget-card .bc-row > .bc-proj { overflow: hidden; }
+  .app.app .panel-budget-card .bc-row > .pl-desc:nth-of-type(4) { color: var(--dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app.app .panel-budget-card .bc-row > .bc-amt { white-space: nowrap; }
+  .app.app .panel-budget-card .budget-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .app.app .panel-budget-card .budget-stats > .budget-stat { min-width: 0; width: auto; }
+  .app.app .panel-budget-card .budget-stats > .budget-stat-total { grid-column: 1 / -1; }
+  .app.app .panel-budget-card .budget-stat-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
