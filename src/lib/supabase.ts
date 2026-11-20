@@ -3,6 +3,9 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
+/** V20-434: the address as the page opened (read before the client below handles and clears an email link's error). */
+export const OPENED_WITH = typeof window === 'undefined' ? '' : window.location.hash.slice(1) || window.location.search.slice(1);
+
 /** Null until Supabase keys are set; the app then runs on this device only. */
 export const supabase: SupabaseClient | null =
   url && anonKey ? createClient(url, anonKey) : null;

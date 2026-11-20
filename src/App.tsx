@@ -4,7 +4,7 @@ import { ClashSheet } from './components/ClashSheet';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { claimDevice, releaseDevice, unsyncedCount } from './lib/account';
 import type { Session } from '@supabase/supabase-js';
-import { checkPassword, supabase } from './lib/supabase';
+import { OPENED_WITH, checkPassword, supabase } from './lib/supabase';
 import { booksOn, DEFAULT_SETTINGS, LIGHT_BACKGROUNDS, loadSettings, saveSettingsPatch, fontStack, fontWeights, applySettingsPatch, shownName, syncLinkedEmail, loadBgImages, saveBgImage, resolveBackground, EMPTY_SLOTS, type BgSlots, type BrandSettings } from './lib/settings';
 import { downloadLaunchSheet } from './lib/launchSheet';
 import { downloadRecords } from './lib/recordsSheet';
@@ -192,7 +192,21 @@ export default function App() {
   // SCHEDULE GUARDRAILS: a launch just saved on top of another block (the after-save check).
   const [appClash, setAppClash] = useState<{ l: Launch; with: Clash[] } | null>(null);
   // V20-294: signed out, Welcome comes first.
-  const [signedOut, setSignedOut] = useState<'welcome' | 'tour' | 'signin' | 'signup'>('welcome');
+  // V20-434 (Dan, Nov 20): an email link that was already used or has expired comes back with an error in the address.
+  // Open the sign-in page with a plain message instead of the Welcome page saying nothing.
+  const [linkError] = useState<string | null>(() => {
+    try {
+      const q = new URLSearchParams(OPENED_WITH);
+      if (!q.get('error') && !q.get('error_code')) return null;
+      window.history.replaceState(null, '', window.location.pathname);
+      return q.get('error_code') === 'otp_expired' || /expired|invalid/i.test(q.get('error_description') ?? '')
+        ? 'That email link was already used or has expired. Each link works once. Sign in, or ask for a new link below.'
+        : `That email link didn't work: ${q.get('error_description') ?? q.get('error')}. Ask for a new one below.`;
+    } catch {
+      return null;
+    }
+  });
+  const [signedOut, setSignedOut] = useState<'welcome' | 'tour' | 'signin' | 'signup'>(() => (linkError ? 'signin' : 'welcome'));
   const [tourAt, setTourAt] = useState(0);
   // V20-269: the budget line picked on the Budget card, opened in Edit line on the Budget page.
   const [budgetOpen, setBudgetOpen] = useState<string | null>(null);
@@ -2046,7 +2060,7 @@ export default function App() {
         ) : signedOut === 'tour' ? (
           <Tour start={tourAt} onWelcome={() => setSignedOut('welcome')} onSignUp={() => setSignedOut('signup')} />
         ) : (
-          <SignIn key={signedOut} signUp={signedOut === 'signup'} onBack={() => setSignedOut('welcome')} />
+          <SignIn key={signedOut} signUp={signedOut === 'signup'} notice={signedOut === 'signin' ? linkError : null} onBack={() => setSignedOut('welcome')} />
         )}
       </div>
     );

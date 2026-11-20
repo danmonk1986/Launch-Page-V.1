@@ -8,11 +8,11 @@ type State = 'idle' | 'signing' | 'sending' | 'sent' | 'error';
  *  only the beta request (the sign-up track for now), sign in shows only the sign-in form.
  *  V20-326 (COPY CP-013 to 015, Nov 18): one form, no toggles: Email · Password · SIGN IN · EMAIL ME A SIGN-IN LINK
  *  (the link goes to the email typed above). */
-export function SignIn({ signUp = false, onBack }: { signUp?: boolean; onBack?: () => void } = {}) {
+export function SignIn({ signUp = false, onBack, notice = null }: { signUp?: boolean; onBack?: () => void; notice?: string | null } = {}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [state, setState] = useState<State>('idle');
-  const [message, setMessage] = useState('');
+  const [state, setState] = useState<State>(notice ? 'error' : 'idle');
+  const [message, setMessage] = useState(notice ?? '');
   const [linkedSent, setLinkedSent] = useState(false);
   const busy = state === 'signing' || state === 'sending';
 
