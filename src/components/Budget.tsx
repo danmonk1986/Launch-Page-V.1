@@ -134,6 +134,13 @@ export function BudgetPage(p: Props) {
   const fromCard = useRef(false);
   useEffect(() => {
     if (!p.openId) return;
+    // V20-422 (Dan, Nov 20): the Budget card's + opens Add line here, and closing it returns to the card.
+    if (p.openId === 'new') {
+      p.onOpened?.();
+      fromCard.current = true;
+      setAdding(true);
+      return;
+    }
     const l = p.lines.find((x) => x.id === p.openId);
     p.onOpened?.();
     if (!l) return;
@@ -143,6 +150,7 @@ export function BudgetPage(p: Props) {
   }, [p.openId]);
   const closeEdit = () => {
     setEditing(null);
+    setAdding(false);
     if (fromCard.current) {
       fromCard.current = false;
       p.onClose();
@@ -532,7 +540,7 @@ export function BudgetPage(p: Props) {
         </div>
       )}
 
-      <Sheet open={!!editing || adding} title={adding ? 'Add line' : 'Edit line'} onClose={() => (adding ? setAdding(false) : closeEdit())} wide>
+      <Sheet open={!!editing || adding} title={adding ? 'Add line' : 'Edit line'} onClose={closeEdit} wide>
         {(adding || editing) && (() => {
           const line = adding ? newBudgetLine('planned', p.lines.reduce((m, l) => Math.max(m, l.sort + 1), 0)) : editing!;
           const hasTask = p.tasks.some((t) => t.budgetLineId === line.id && !t.deletedAt);
@@ -545,8 +553,7 @@ export function BudgetPage(p: Props) {
               picks={linePicks}
               onSave={async (l, withhold) => {
                 await saveLine(l, withhold);
-                if (adding) setAdding(false);
-                else closeEdit();
+                closeEdit();
               }}
               onDelete={
                 adding

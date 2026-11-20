@@ -4541,3 +4541,15 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-416 (Dan, Nov 19): the "Check … for a sign-in link" message (and the request thank-you) sat at the left edge
    under the logo on a laptop. Centred under the logo, like everything else on the sign-in page. */
 .signin .signin-note { justify-self: center; margin-left: auto; margin-right: auto; text-align: center; }
+
+/* V20-422 (Dan, Nov 20): the Launch Page Budget card matches the Tasks card: the same type sizes (name bold, the rest
+   regular, the date in the number font), column headers like the Tasks table, and a + to add a line. */
+.app.app .panel-budget-card .bc-row { font-size: 15px; font-family: var(--font-body, inherit); }
+.app.app .panel-budget-card .bc-row .bc-name { font-size: 15px; font-weight: 600; text-transform: uppercase; }
+.app.app .panel-budget-card .bc-row .pl-desc { font-size: 15px; font-weight: 400; }
+.app.app .panel-budget-card .bc-row .pl-due, .app.app .panel-budget-card .bc-row .bc-amt { font-family: var(--font-mono); font-size: 14px; }
+.app.app .panel-budget-card .bc-head { min-height: 0; padding-top: 6px; padding-bottom: 6px; border-radius: 0; border-bottom: 1px solid var(--edge); background: none; }
+.app.app .panel-budget-card .bc-head > span { font-family: var(--font-body, inherit); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.app.app .panel-budget-card .bc-head:hover { box-shadow: none; }
+.app.app .panel-budget-card .bc-amt { text-align: right; }
+@media (max-width: 640px) { .app.app .panel-budget-card .bc-head { display: none; } }

@@ -10,7 +10,7 @@ import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
 const CHEV = 'M6 9l6 6 6-6';
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-export function BudgetCard({ lines, today, onOpenAll, onOpenLine }: { lines: BudgetLine[]; today: Date; onOpenAll: () => void; onOpenLine?: (id: string) => void }) {
+export function BudgetCard({ lines, today, onOpenAll, onOpenLine, onAdd }: { lines: BudgetLine[]; today: Date; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void }) {
   const { q } = useHeaderSearch();
   const perProject = monthlyByCategory(lines, 'project');
   const monthly = Object.values(perProject).reduce((a, x) => a + x, 0);
@@ -42,6 +42,14 @@ export function BudgetCard({ lines, today, onOpenAll, onOpenLine }: { lines: Bud
             <Icon d={CHEV} />
           </button>
         </div>
+        {/* V20-422 (Dan, Nov 20): + adds a budget line, like the Tasks card's +. */}
+        {onAdd && (
+          <div className="panel-actions">
+            <button type="button" className="icon-btn tool-btn" aria-label="Add a budget line" title="Add a budget line" onClick={onAdd}>
+              <Icon d="M12 5v14M5 12h14" />
+            </button>
+          </div>
+        )}
       </div>
       {lines.length > 0 && (
         <div className="budget-stats" aria-label="A month of spending">
@@ -64,6 +72,14 @@ export function BudgetCard({ lines, today, onOpenAll, onOpenLine }: { lines: Bud
         <p className="field-hint">Nothing due in the next 7 days.</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Due in the next 7 days">
+          {/* V20-422: column headers, like the Tasks card. */}
+          <div className="bc-row bc-head" role="row">
+            <span role="columnheader">Date</span>
+            <span role="columnheader">Line item</span>
+            <span role="columnheader">Project</span>
+            <span role="columnheader">Method</span>
+            <span role="columnheader" className="bc-amt">Amount</span>
+          </div>
           {due.map(({ l, next }, i) => (
             // V20-269 (Dan, Nov 15): a row opens its line's Edit line on the Budget page.
             <button
