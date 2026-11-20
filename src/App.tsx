@@ -501,15 +501,43 @@ export default function App() {
       return false;
     }
   });
+  // V20-435 (Dan, Nov 20; was V20-421, redone safer): until the password answer is in, the page stays blank, so setup
+  // or the Launch Page never flashes before Set a password. Never stuck: any error, or no answer in 4 s, carries on.
+  // An account already known to have a password on this browser doesn't wait at all.
+  const pwKnownKey = (id: string) => `lp.hasPw.${id}`;
+  const [pwCheckedFor, setPwCheckedFor] = useState<string | null>(null);
+  const pwKnown = (id: string) => {
+    try {
+      return localStorage.getItem(pwKnownKey(id)) === '1';
+    } catch {
+      return false;
+    }
+  };
   useEffect(() => {
     setNeedsPassword(false);
     if (!supabase || !userId) return;
     let live = true;
-    void supabase.rpc('has_password').then(({ data, error }) => {
-      if (live && !error && data === false) setNeedsPassword(true);
-    });
+    const done = () => {
+      if (live) setPwCheckedFor(userId);
+    };
+    const timer = window.setTimeout(done, 4000);
+    supabase
+      .rpc('has_password')
+      .then(({ data, error }) => {
+        if (!live) return;
+        if (!error && data === false) setNeedsPassword(true);
+        try {
+          if (!error && data === true) localStorage.setItem(pwKnownKey(userId), '1');
+          else localStorage.removeItem(pwKnownKey(userId));
+        } catch {
+          /* ignore */
+        }
+        done();
+      })
+      .then(undefined, done);
     return () => {
       live = false;
+      window.clearTimeout(timer);
     };
   }, [userId]);
   /** Sign out (⚙ menu): clears this browser's copy, after a warning if changes haven't synced. */
@@ -2066,6 +2094,8 @@ export default function App() {
     );
   }
 
+  // V20-435: wait (blank) for the password answer before anything else.
+  if (session && supabase && pwCheckedFor !== session.user.id && !pwKnown(session.user.id)) return <main className="signin signin-light" aria-busy="true" />;
   // V20-430: set a password first.
   if (session && supabase && (recovering || (needsPassword && !pwLater))) {
     return (
@@ -2087,6 +2117,11 @@ export default function App() {
             if (error) return error.message;
             setNeedsPassword(false);
             setRecovering(false);
+            try {
+              localStorage.setItem(pwKnownKey(session.user.id), '1');
+            } catch {
+              /* ignore */
+            }
             return null;
           }}
         />
