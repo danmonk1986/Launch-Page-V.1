@@ -36,7 +36,12 @@ export async function shrinkImage(file: File, opts: { maxW: number; maxH: number
   }
 }
 
-/** The box around everything that isn't see-through (or the whole image when nothing is). */
+/**
+ * The box around everything that's actually drawn: not see-through, and (V20-439, Dan, Nov 20) not the plain
+ * background either. A logo saved with a white (or any solid) border around it is cut to the lettering, so it can
+ * fill its box. The background is the colour shared by the four corners; when they don't agree, only see-through
+ * edges are trimmed.
+ */
 function drawnArea(img: HTMLImageElement) {
   const W = img.naturalWidth;
   const H = img.naturalHeight;
@@ -47,15 +52,24 @@ function drawnArea(img: HTMLImageElement) {
   if (!g) return { x: 0, y: 0, w: W, h: H };
   g.drawImage(img, 0, 0);
   const a = g.getImageData(0, 0, W, H).data;
+  const px = (x: number, y: number) => {
+    const i = (y * W + x) * 4;
+    return [a[i], a[i + 1], a[i + 2], a[i + 3]];
+  };
+  const corners = [px(0, 0), px(W - 1, 0), px(0, H - 1), px(W - 1, H - 1)];
+  const near = (p: number[], q: number[]) => Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]) + Math.abs(p[2] - q[2]) <= 36 && Math.abs(p[3] - q[3]) <= 24;
+  const solid = corners[0][3] > 12 && corners.every((q) => near(q, corners[0])) ? corners[0] : null;
   let x0 = W, y0 = H, x1 = -1, y1 = -1;
   for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++)
-      if (a[(y * W + x) * 4 + 3] > 12) {
-        if (x < x0) x0 = x;
-        if (x > x1) x1 = x;
-        if (y < y0) y0 = y;
-        if (y > y1) y1 = y;
-      }
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      if (a[i + 3] <= 32) continue;
+      if (solid && Math.abs(a[i] - solid[0]) + Math.abs(a[i + 1] - solid[1]) + Math.abs(a[i + 2] - solid[2]) <= 36) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
   if (x1 < 0) return { x: 0, y: 0, w: W, h: H };
   return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
