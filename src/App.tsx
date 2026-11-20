@@ -200,8 +200,8 @@ export default function App() {
       if (!q.get('error') && !q.get('error_code')) return null;
       window.history.replaceState(null, '', window.location.pathname);
       return q.get('error_code') === 'otp_expired' || /expired|invalid/i.test(q.get('error_description') ?? '')
-        ? 'That email link was already used or has expired. Each link works once. Sign in, or ask for a new link below.'
-        : `That email link didn't work: ${q.get('error_description') ?? q.get('error')}. Ask for a new one below.`;
+        ? 'That email link was already used or has expired. Each link works once. Sign in, or tap Email me a sign-in link for a new one.'
+        : `That email link didn't work: ${q.get('error_description') ?? q.get('error')}. Tap Email me a sign-in link for a new one.`;
     } catch {
       return null;
     }
@@ -486,8 +486,14 @@ export default function App() {
 
   // V20-006: this browser's copy belongs to one account. A different account starts clean
   // (and the page reloads, so nothing of the last account stays in memory). Runs before any load.
+  // V20-436 (Dan, Nov 20; was V20-417, redone on its own): while it switches accounts, show a blank white page, never a
+  // flash of the last account's Launch Page (this re-renders before the browser paints).
+  const [switchingAccount, setSwitchingAccount] = useState(false);
   useLayoutEffect(() => {
-    if (userId && claimDevice(userId) === 'wiped') window.location.reload();
+    if (userId && claimDevice(userId) === 'wiped') {
+      setSwitchingAccount(true);
+      window.location.reload();
+    }
   }, [userId]);
   // V20-430 (Dan, Nov 20; was V20-418): an account with no password of its own yet (an invite, or email links only)
   // sets one first, before setup and the Launch Page. has_password() (0074) ignores the hidden password Supabase
@@ -2078,6 +2084,7 @@ export default function App() {
   const bgImage = shown.image;
   if (bgImage) (theme as Record<string, string>)['--bg-image'] = `url("${bgImage}")`;
   (theme as Record<string, string>)['--bg-colour'] = light ? settings.dayColour : settings.nightColour;
+  if (switchingAccount) return <main className="signin signin-light" aria-busy="true" />;
   if (!authReady) return <div className="app" style={theme} data-bg={bgImage ? 'image' : shown.tile} data-tone={light ? 'light' : 'dark'} />;
   if (supabase && !session) {
     return (
