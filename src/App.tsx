@@ -139,6 +139,16 @@ export default function App() {
   // settings arrived.
   const [settingsFor, setSettingsFor] = useState<string | null | undefined>(undefined);
   const settingsLoaded = settingsFor === (session?.user.id ?? null);
+  // V20-444 (Dan, Nov 20): on a refresh, nothing shows until this account's own look and data are in: its background
+  // image (not the tile it replaced), its rockets and routine (not the empty "ADD A ROUTINE" page). A blank page in
+  // the last mode's colour shows meanwhile. Never stuck: after 6 s the page shows whatever has arrived.
+  const [bgFor, setBgFor] = useState<string | null | undefined>(undefined);
+  const [coreFor, setCoreFor] = useState<string | null | undefined>(undefined);
+  const [bootGaveUp, setBootGaveUp] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setBootGaveUp(true), 6000);
+    return () => window.clearTimeout(t);
+  }, []);
   // V20-362 BETA MODE: testers always; the admin flips Main · Beta in ⚙ › Beta Testers (kept on this device).
   const isAdmin = session?.user.app_metadata?.role === 'admin';
   const [lpMode, setLpModeState] = useState<'main' | 'beta'>(readLpMode);
@@ -576,7 +586,11 @@ export default function App() {
       setSettings(x);
       setSettingsFor(userId);
     });
-    loadBgImages(userId).then(setBgSlots);
+    loadBgImages(userId).then((b) => {
+      if (!live) return;
+      setBgSlots(b);
+      setBgFor(userId);
+    });
     return () => {
       live = false;
     };
@@ -624,6 +638,7 @@ export default function App() {
       setRockets(tiles);
       setLaunches(l2.items);
       setEvents(l3.items);
+      setCoreFor(userId);
       const [p1, t1, j1, g1] = await Promise.all([projectStore.load(userId), taskStore.load(userId), journalStore.load(userId), launchLogStore.load(userId)]);
       if (!live) return;
       setLaunchLog(g1.items);
@@ -2085,6 +2100,24 @@ export default function App() {
   if (bgImage) (theme as Record<string, string>)['--bg-image'] = `url("${bgImage}")`;
   (theme as Record<string, string>)['--bg-colour'] = light ? settings.dayColour : settings.nightColour;
   if (switchingAccount) return <main className="signin signin-light" aria-busy="true" />;
+  const bootUser = session?.user.id ?? null;
+  const bootReady = bootGaveUp || !supabase || !session || (settingsLoaded && bgFor === bootUser && coreFor === bootUser);
+  if (session && !bootReady) {
+    let tone = 'dark';
+    try {
+      tone = localStorage.getItem('lp.lastTone') ?? 'dark';
+    } catch {
+      /* ignore */
+    }
+    return <div className="boot-blank" data-tone={tone} aria-busy="true" />;
+  }
+  if (session && settingsLoaded) {
+    try {
+      localStorage.setItem('lp.lastTone', light ? 'light' : 'dark');
+    } catch {
+      /* ignore */
+    }
+  }
   if (!authReady) return <div className="app" style={theme} data-bg={bgImage ? 'image' : shown.tile} data-tone={light ? 'light' : 'dark'} />;
   if (supabase && !session) {
     return (

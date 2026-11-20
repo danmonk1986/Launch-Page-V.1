@@ -4679,3 +4679,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .beta-invite-acts > .btn { height: 32px; min-height: 32px; padding: 0 14px; font-size: 12px; }
 .app.app .beta-invite-acts > .beta-remove { width: 32px; height: 32px; min-width: 32px; min-height: 32px; }
 .app.app .beta-invite-acts > .beta-remove svg { width: 14px; height: 14px; }
+/* V20-444: the blank page shown on a refresh until your own look and data are in (the last mode's colour). */
+.boot-blank { position: fixed; inset: 0; background: #0f0b22; }
+.boot-blank[data-tone='light'] { background: #ffffff; }
