@@ -4736,3 +4736,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
    (solid, so forms stay readable) in both modes, instead of the fixed night navy / day white.
    KNOWLEDGE!B4SE keeps its own white. */
 .app.app:not(.is-kb) { --surface-solid: var(--card-solid, #1a1338); }
+
+/* V20-449: "Draft restored · CLEAR" at the top of Add task. */
+.app .draft-note { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 13px; color: var(--mist); }
+.app .draft-clear { padding: 0; border: 0; background: none; font: inherit; font-weight: 700; letter-spacing: 0.08em; color: var(--accent-teal); cursor: pointer; }
+.app .draft-clear:hover { text-decoration: underline; }

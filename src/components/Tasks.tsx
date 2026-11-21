@@ -31,6 +31,7 @@ import {
 } from '../lib/tasks';
 import { describeRepeat, writeRepeat, type RepeatKind } from '../lib/repeat';
 import { RepeatPicker } from './RepeatPicker';
+import { clearDraft, readDraft, writeDraft } from '../lib/drafts';
 
 const REPEAT_BADGE: Record<RepeatKind, string> = { none: '', weekly: 'WEEKLY', monthly: 'MONTHLY', quarterly: 'QUARTERLY', annual: 'ANNUAL' };
 
@@ -988,9 +989,21 @@ function TaskForm({
   /** V20-090: rocket + beside Save: save, then open Add timed launch filled in from the task. */
   onPushRocket?: (t: Task) => void;
 }) {
-  const [d, setD] = useState<Task>(task);
+  // V20-449 (Dan, Nov 21): a new task (not a step, not one the Planner filled) keeps a draft on this browser.
+  // Clicking off or closing keeps it; the next Add task brings it back; Save or CLEAR ends it.
+  const drafting = isNew && !isStep && !initialSteps;
+  const [restored] = useState(() => (drafting ? readDraft<{ d: Task; steps: StepDraft[] }>('addTask') : null));
+  const [d, setD] = useState<Task>(() => (restored ? { ...task, ...restored.d, id: task.id, sort: task.sort } : task));
   const pushRocket = useRef(false);
-  const [steps, setSteps] = useState<StepDraft[]>(initialSteps ?? []);
+  const [steps, setSteps] = useState<StepDraft[]>(() => restored?.steps ?? initialSteps ?? []);
+  const [showRestored, setShowRestored] = useState(!!restored);
+  const saved = useRef(false);
+  useEffect(() => {
+    if (!drafting || saved.current) return;
+    const typed = !!(d.task.trim() || d.description.trim() || d.notes.trim() || steps.some((x) => x.task.trim()));
+    if (typed) writeDraft('addTask', { d, steps });
+    else clearDraft('addTask');
+  }, [drafting, d, steps]);
   // V20-363 (Dan, Nov 19): beta mode has no Budget page, but the expense field stays as a simple interim budget:
   // called Expense, kept on the task (nothing goes to Budget).
   const beta = useBeta();
@@ -1001,7 +1014,7 @@ function TaskForm({
     setOpenStep(null);
   };
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setD((x) => ({ ...x, [k]: v }));
-  const [rep, setRep] = useState(() => repeatOf(task));
+  const [rep, setRep] = useState(() => repeatOf(restored ? { ...task, ...restored.d } : task));
   const recurring = rep.kind !== 'none';
   const tree = projectTree(pickable(projects, task.projectId));
   const formId = useId();
@@ -1027,6 +1040,10 @@ function TaskForm({
         // Status is automatic now; only THREE (a key task) is kept.
         const status = d.status === 'THREE' ? 'THREE' : 'PENDING';
         const out = { ...d, task: d.task.trim(), description: d.description.trim(), notes: d.notes.trim(), expense: (d.expense ?? '').trim(), endDate: recurring ? null : endDate, repeatRule, status };
+        if (drafting) {
+          saved.current = true;
+          clearDraft('addTask');
+        }
         await onSave(out, steps, !isStep && !linked && !!out.expense.trim());
         if (pushRocket.current) {
           pushRocket.current = false;
@@ -1034,6 +1051,24 @@ function TaskForm({
         }
       }}
     >
+      {showRestored && (
+        <p className="draft-note">
+          Draft restored
+          <button
+            type="button"
+            className="draft-clear"
+            onClick={() => {
+              clearDraft('addTask');
+              setD(task);
+              setSteps([]);
+              setRep(repeatOf(task));
+              setShowRestored(false);
+            }}
+          >
+            CLEAR
+          </button>
+        </p>
+      )}
       {isStep ? (
         <label className="field">
           <span>Step</span>
