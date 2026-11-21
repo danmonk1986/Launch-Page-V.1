@@ -79,7 +79,7 @@ export function FeedbackFlag({ page }: { page: string }) {
       <Sheet open={open} title={thanks ? 'Thank you' : 'Feedback'} onClose={() => setOpen(false)}>
         {thanks ? (
           <div className="feedback-thanks">
-            <p>Got it. Dan reads every one.</p>
+            <p>Got it. Dan @ STARDVST reads every one.</p>
             <button type="button" className="btn" onClick={() => setOpen(false)}>
               Close
             </button>
