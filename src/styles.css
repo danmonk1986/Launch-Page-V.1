@@ -4726,3 +4726,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 }
 /* V20-446d (Dan, Nov 20): lower again, toward the bottom of the calendar box. */
 @media (min-width: 641px) { .feedback-flag { top: auto; bottom: 14vh; transform: none; } }
+/* V20-447: Beta Testers section titles with a hide / show chevron (the chevron law: 6 px gap, Colour 2, no box). */
+.beta-sec-title { display: flex; align-items: center; gap: 6px; }
+.beta-sec-title > h3 { margin-bottom: 0; }
+.beta-sec-title { margin: 18px 0 10px; }
+.beta-admin-head .beta-sec-title { margin: 0; }

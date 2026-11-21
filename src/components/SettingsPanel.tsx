@@ -1174,6 +1174,31 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
   const keepNote = (email: string, note: string) => setNotes((n) => ({ ...n, [email]: note }));
   const [invites, setInvites] = useState<InviteRow[]>([]);
   const [feedback, setFeedback] = useState<FeedbackRow[]>([]);
+  // V20-447 (Dan, Nov 20): a chevron on each section (testers, invite requests, feedback) hides or shows it; remembered.
+  const [shut, setShut] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('lp.betaShut') ?? '{}') as Record<string, boolean>;
+    } catch {
+      return {};
+    }
+  });
+  const toggle = (k: string) =>
+    setShut((m) => {
+      const next = { ...m, [k]: !m[k] };
+      try {
+        localStorage.setItem('lp.betaShut', JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  const Chev = ({ k, label }: { k: string; label: string }) => (
+    <button type="button" className={`rockets-toggle beta-sec-toggle${shut[k] ? '' : ' is-open'}`} aria-expanded={!shut[k]} aria-label={`${shut[k] ? 'Show' : 'Hide'} ${label}`} title={shut[k] ? 'Show' : 'Hide'} onClick={() => toggle(k)}>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </button>
+  );
   const [err, setErr] = useState<string | null>(null);
   // V20-361: INVITE sends the request's person a sign-up email (server function, admin only).
   const [sending, setSending] = useState<string | null>(null);
@@ -1244,7 +1269,10 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
   return (
     <div className="beta-admin">
       <div className="beta-admin-head">
-        <h3 className="timed-title settings-section">Beta testers</h3>
+        <div className="beta-sec-title">
+          <h3 className="timed-title settings-section">Beta testers</h3>
+          <Chev k="testers" label="beta testers" />
+        </div>
         <div className="beta-admin-tools">
           {/* V20-360 / V20-362 (Dan, Nov 19): MAIN / BETA switch for the Launch Page itself: Beta shows the lean
               version testers get (kept on this device). */}
@@ -1269,8 +1297,8 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
       </div>
       <p className="field-hint">Only you see this. Numbers only: never what's in anyone's tasks. Setup goal: under 10 minutes.</p>
       {err && <p className="field-error">{err}</p>}
-      {!rows && !err && <p className="field-hint">Loading…</p>}
-      {rows && (
+      {!shut.testers && !rows && !err && <p className="field-hint">Loading…</p>}
+      {!shut.testers && rows && (
         <div className="beta-admin-scroll">
           <table className="beta-admin-table">
             <thead>
@@ -1307,8 +1335,11 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
           </table>
         </div>
       )}
-      <h3 className="timed-title settings-section">Invite requests ({invites.length})</h3>
-      {invites.length === 0 ? (
+      <div className="beta-sec-title">
+        <h3 className="timed-title settings-section">Invite requests ({invites.length})</h3>
+        <Chev k="invites" label="invite requests" />
+      </div>
+      {shut.invites ? null : invites.length === 0 ? (
         <p className="field-hint">None yet.</p>
       ) : (
         <ul className="beta-admin-invites">
@@ -1350,8 +1381,11 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
         </ul>
       )}
       {/* V20-446 (Dan, Nov 20): what testers sent from the Feedback flag and "How was setup?". */}
-      <h3 className="timed-title settings-section">Feedback ({feedback.filter((x) => x.status === 'new').length} new)</h3>
-      {feedback.length === 0 ? (
+      <div className="beta-sec-title">
+        <h3 className="timed-title settings-section">Feedback ({feedback.filter((x) => x.status === 'new').length} new)</h3>
+        <Chev k="feedback" label="feedback" />
+      </div>
+      {shut.feedback ? null : feedback.length === 0 ? (
         <p className="field-hint">None yet.</p>
       ) : (
         <ul className="beta-feedback">
