@@ -10,7 +10,7 @@ export type Hangup = (typeof HANGUPS)[number];
 /** Feeling, 1 to 5. */
 export const FEELINGS = [
   { v: 1, face: '🤬', label: 'Angry' },
-  { v: 2, face: '😕', label: 'Meh' },
+  { v: 2, face: '😬', label: 'Yikes' },
   { v: 3, face: '😐', label: 'Okay' },
   { v: 4, face: '🙂', label: 'Good' },
   { v: 5, face: '🥰', label: 'Smitten' }
