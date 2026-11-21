@@ -4731,3 +4731,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .beta-sec-title > h3 { margin-bottom: 0; }
 .beta-sec-title { margin: 18px 0 10px; }
 .beta-admin-head .beta-sec-title { margin: 0; }
+
+/* V20-448 (Dan, Nov 21): pop-ups, Settings, menus and table header bars follow the Cards colour
+   (solid, so forms stay readable) in both modes, instead of the fixed night navy / day white.
+   KNOWLEDGE!B4SE keeps its own white. */
+.app.app:not(.is-kb) { --surface-solid: var(--card-solid, #1a1338); }
