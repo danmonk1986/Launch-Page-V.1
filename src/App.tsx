@@ -1156,9 +1156,35 @@ export default function App() {
       }
     }
   }
+  /** V20-450 (Dan, Nov 21): a task added to the in-app calendar (beta) keeps its event in step: name and date follow
+   *  the task; deleting the task takes it off the calendar. Linked through the task's googleEventId (the event's id). */
+  function eventFollowsTasks(items: Task[]) {
+    for (const t of items) {
+      if (!t.googleEventId) continue;
+      const ev = events.find((e) => e.id === t.googleEventId && !e.google);
+      if (!ev) continue;
+      if (t.deletedAt) {
+        void eventOps.remove(ev.id);
+        continue;
+      }
+      const date = t.endDate ?? t.startDate ?? ev.startDate;
+      const title = taskName(t);
+      if (ev.title !== title || ev.startDate !== date || ev.endDate !== date) void eventOps.save({ ...ev, title, startDate: date, endDate: date });
+    }
+  }
+  /** V20-450: ⋯ → Add to calendar in beta (no Google): the task goes on This Week as an event on its Date required. */
+  async function addTaskToAppCalendar(t: Task) {
+    const date = t.endDate ?? t.startDate ?? isoDate(new Date());
+    const existing = t.googleEventId ? events.find((e) => e.id === t.googleEventId && !e.google) : undefined;
+    const ev: CalEvent = { id: existing?.id ?? crypto.randomUUID(), title: taskName(t), startDate: date, endDate: date, color: existing?.color ?? 'teal', sort: existing?.sort ?? events.length };
+    await eventOps.save(ev);
+    if (!existing) await taskOps.save({ ...t, googleEventId: ev.id });
+    setStatus(`${taskName(t)} is on your calendar on ${new Date(`${date}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`);
+  }
   const saveTask = async (t: Task) => {
     const old = tasksRef.current.find((x) => x.id === t.id);
     launchFollowsTasks([t]);
+    eventFollowsTasks([t]);
     decisionsFollowTasks([t]);
     await taskOps.save(t);
     await payFor([t]);
@@ -1190,6 +1216,7 @@ export default function App() {
   }
   const saveTasks = async (items: Task[]) => {
     launchFollowsTasks(items);
+    eventFollowsTasks(items);
     decisionsFollowTasks(items);
     await taskOps.saveMany(items);
     await payFor(items);
@@ -2385,7 +2412,7 @@ export default function App() {
                   taskFor={(e) => {
                     const live = tasks.filter((t) => !t.deletedAt);
                     // The event made from the task, or (older ones) a task of the same name on that day.
-                    const byId = e.google ? live.find((t) => t.googleEventId === e.google!.id) : undefined;
+                    const byId = e.google ? live.find((t) => t.googleEventId === e.google!.id) : live.find((t) => t.googleEventId === e.id);
                     const name = e.title.trim().toLowerCase();
                     const byName = live.find((t) => t.task.trim().toLowerCase() === name && (!t.endDate || (t.endDate >= e.startDate && t.endDate <= e.endDate) || t.startDate === e.startDate));
                     return (byId ?? byName)?.id ?? null;
@@ -2408,7 +2435,7 @@ export default function App() {
                   onSave={saveTask}
                   onDelete={taskOps.remove}
                   onSaveMany={saveTasks}
-                  onAddToCalendar={beta ? undefined : addTaskToCalendar}
+                  onAddToCalendar={beta ? addTaskToAppCalendar : addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
                   hasLaunch={(id) => launches.some((l) => l.id === id)}
                   onOpenAll={() => {
@@ -2442,7 +2469,7 @@ export default function App() {
               onSave={saveTask}
               onDelete={taskOps.remove}
                   onSaveMany={saveTasks}
-                  onAddToCalendar={beta ? undefined : addTaskToCalendar}
+                  onAddToCalendar={beta ? addTaskToAppCalendar : addTaskToCalendar}
                   onCreateLaunch={createLaunchFromTask}
                   hasLaunch={(id) => launches.some((l) => l.id === id)}
               onOpenProjects={() => setSettingsOpen('projects')}
