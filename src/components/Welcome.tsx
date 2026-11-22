@@ -1,4 +1,5 @@
 import { RocketIcon } from './RocketIcon';
+import { BOOKS_LOGO, booksPath } from '../lib/beta';
 
 /**
  * V20-294 (Dan, Nov 17): the first screen when signed out, from the white setup canvas (board A · Welcome).
@@ -12,7 +13,7 @@ export function Welcome({ onSignIn, onTour, onRequest }: { onSignIn: () => void;
     <main className="welcome">
       <div className="welcome-logo">
         <span className="welcome-to">Welcome to</span>
-        <img src="/launchpage-logo.png" alt="L4UNCH P4GE" />
+        <img src={booksPath() ? BOOKS_LOGO : '/launchpage-logo.png'} alt={booksPath() ? 'BOOKS' : 'L4UNCH P4GE'} />
       </div>
       <div className="welcome-btns welcome-rise">
         {/* V20-405 (Dan, Nov 19): START is the teal call to action; SIGN IN is the outline. */}

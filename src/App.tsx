@@ -129,7 +129,9 @@ import { SignIn } from './components/SignIn';
 import { Welcome } from './components/Welcome';
 import { Tour } from './components/Tour';
 import { Setup, resetSetupClock, setupStepFor } from './components/Setup';
-import { BETA_MODULES, BetaContext, readLpMode, writeLpMode } from './lib/beta';
+import { BETA_MODULES, BOOKS_MODULES, BetaContext, BooksContext, booksPath, readLpMode, trackOf, writeLpMode, type LpMode } from './lib/beta';
+import { ExpensesCard, IncomeCard } from './components/BooksCards';
+import { presetRecordsView } from './components/Records';
 import { KnowledgeBasePage } from './components/KnowledgeBase';
 
 export default function App() {
@@ -157,14 +159,21 @@ export default function App() {
   }, []);
   // V20-362 BETA MODE: testers always; the admin flips Main · Beta in ⚙ › Beta Testers (kept on this device).
   const isAdmin = session?.user.app_metadata?.role === 'admin';
-  const [lpMode, setLpModeState] = useState<'main' | 'beta'>(readLpMode);
-  const setLpMode = (m: 'main' | 'beta') => {
+  const [lpMode, setLpModeState] = useState<LpMode>(readLpMode);
+  const setLpMode = (m: LpMode) => {
     writeLpMode(m);
     setLpModeState(m);
   };
-  const beta = !isAdmin || lpMode === 'beta';
+  const beta = !isAdmin || lpMode !== 'main';
+  // V20-453 (Dan, Nov 22): BETA TRACKS. A tester's track is on their account (set only by the invite function); the
+  // admin previews it with Main · Beta Launch · Beta Books. Books = the Books home (Budget, Expenses, Income), BOOKS logo.
+  const books = beta && (isAdmin ? lpMode === 'books' : trackOf(session?.user.app_metadata) === 'books');
   /** The modules in force: beta mode's fixed MVP set, or the account's own switches (main). */
-  const mods = beta ? BETA_MODULES : settings.modules;
+  const mods = books ? BOOKS_MODULES : beta ? BETA_MODULES : settings.modules;
+  useEffect(() => {
+    // V20-453: the tab says BOOKS on the Books track (and on /books before signing in).
+    document.title = books || booksPath() ? 'BOOKS · L4UNCH P4GE' : 'LaunchPage';
+  }, [books]);
   // V20-358 (BETA BACKEND tracking): count which days this account opens the app (once per visit, and again when
   // the tab comes back after 30+ minutes away). Never what's in it. Table app_opens (0068); fails quietly.
   useEffect(() => {
@@ -2232,7 +2241,8 @@ export default function App() {
   }
 
   // V20-308 (Dan, Nov 17): first-run setup before the Launch Page, once settings have loaded.
-  if (session && settingsLoaded && setupStepFor(settings.account)) {
+  // V20-453: the Books track skips the launch setup (its own walkthrough comes next).
+  if (session && settingsLoaded && !books && setupStepFor(settings.account)) {
     return (
       <BetaContext.Provider value={beta}>
       <div className="app app-light" style={theme}>
@@ -2321,6 +2331,7 @@ export default function App() {
 
   return (
     <BetaContext.Provider value={beta}>
+    <BooksContext.Provider value={books}>
     <HeaderSearchContext.Provider value={{ q: headerQ, setQ: setHeaderQ }}>
     <MeditationsContext.Provider value={{ list: meditations, save: saveMeditation, remove: removeMeditation }}>
     <HiddenPicksContext.Provider value={{ hidden: hiddenPicks, hide: hidePick }}>
@@ -2468,6 +2479,40 @@ export default function App() {
                     setPage('tasks');
                   }}
                 />
+              }
+              expenses={
+                !books ? null : (
+                  <ExpensesCard
+                    expenses={expenses}
+                    today={now}
+                    onOpenAll={() => {
+                      presetRecordsView('expenses');
+                      setPage('invoices');
+                    }}
+                    onAdd={() => {
+                      presetRecordsView('expenses');
+                      setPage('invoices');
+                      setTimeout(() => window.dispatchEvent(new Event('records:add')), 250);
+                    }}
+                  />
+                )
+              }
+              income={
+                !books ? null : (
+                  <IncomeCard
+                    lines={bankLines}
+                    today={now}
+                    onOpenAll={() => {
+                      presetRecordsView('income');
+                      setPage('invoices');
+                    }}
+                    onImport={() => {
+                      presetRecordsView('income');
+                      setPage('invoices');
+                      setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
+                    }}
+                  />
+                )
               }
               budget={!mods.budget ? null : <BudgetCard lines={budget} today={now} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
               planner={!mods.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
@@ -2841,7 +2886,7 @@ export default function App() {
       />
       {/* V20-446 (Dan, Nov 20): beta feedback: the flag any time, and "How was setup?" once after a tester's first setup. */}
       {session && beta && <FeedbackFlag page={page} />}
-      {session && beta && !isAdmin && settings.account.setupDoneAt && !settings.account.setupFeedbackAt && (
+      {session && beta && !books && !isAdmin && settings.account.setupDoneAt && !settings.account.setupFeedbackAt && (
         <SetupFeedback
           setupSeconds={settings.account.setupSeconds ?? null}
           onDone={() => void handleSave({ account: { ...settings.account, setupFeedbackAt: new Date().toISOString() } as BrandSettings['account'] })}
@@ -3030,6 +3075,7 @@ export default function App() {
     </HiddenPicksContext.Provider>
     </MeditationsContext.Provider>
     </HeaderSearchContext.Provider>
+    </BooksContext.Provider>
     </BetaContext.Provider>
   );
 }

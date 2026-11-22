@@ -14,19 +14,42 @@ export const BETA_MODULES: Modules = {
   invoice: false, records: false, crm: false, marketing: false, planner: false, projects: false, kb: false
 };
 
+/**
+ * V20-453 (Dan, Nov 22): BETA TRACKS. The Books track (Dan's dad, a test harness for the books features): a Books
+ * home with Budget, Expenses and Income, branded BOOKS. No rockets, routine, tasks, calendar, draws or invoices.
+ */
+export const BOOKS_MODULES: Modules = {
+  ...DEFAULT_MODULES,
+  rockets: false, routine: false, tasks: false, week: false,
+  journal: false, days26: false, goals: false, milestones: false, budget: true, trips: false,
+  invoice: false, records: true, recExpenses: true, recIncome: true, recDraws: false,
+  crm: false, marketing: false, planner: false, projects: false, kb: false
+};
+export type BetaTrack = 'launch' | 'books';
+/** The track on the account (set only by the invite function; anything else is Launch). */
+export const trackOf = (meta: Record<string, unknown> | undefined | null): BetaTrack => (meta?.beta_track === 'books' ? 'books' : 'launch');
+/** True on the Books track (a Books tester, or the admin previewing Beta Books). */
+export const BooksContext = createContext(false);
+export const useBooks = () => useContext(BooksContext);
+/** /books in the address: the invite and sign-in pages wear BOOKS before anyone has signed in. */
+export const booksPath = () => typeof window !== 'undefined' && /^\/books(\/|$)/.test(window.location.pathname);
+export const BOOKS_LOGO = '/books-logo.png';
+
 export const BetaContext = createContext(false);
 /** True in beta mode (testers always; the admin when the switch says Beta). */
 export const useBeta = () => useContext(BetaContext);
 
 const KEY = 'lp.mode';
-export const readLpMode = (): 'main' | 'beta' => {
+export type LpMode = 'main' | 'beta' | 'books';
+export const readLpMode = (): LpMode => {
   try {
-    return localStorage.getItem(KEY) === 'beta' ? 'beta' : 'main';
+    const v = localStorage.getItem(KEY);
+    return v === 'beta' || v === 'books' ? v : 'main';
   } catch {
     return 'main';
   }
 };
-export const writeLpMode = (m: 'main' | 'beta') => {
+export const writeLpMode = (m: LpMode) => {
   try {
     localStorage.setItem(KEY, m);
   } catch {

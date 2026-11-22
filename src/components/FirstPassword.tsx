@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BOOKS_LOGO, booksPath } from '../lib/beta';
 
 /**
  * V20-418/V20-430 (Dan): someone who arrives by invite or email link and has never set a password is sent straight here
@@ -22,7 +23,7 @@ export function FirstPassword({ email, onSave, onLater, reset = false }: { email
   const kind = show ? 'text' : 'password';
   return (
     <main className="signin signin-light first-password">
-      <img className="signin-logo" src="/launchpage-logo.png" alt="L4UNCH P4GE" />
+      <img className="signin-logo" src={booksPath() ? BOOKS_LOGO : '/launchpage-logo.png'} alt={booksPath() ? 'BOOKS' : 'L4UNCH P4GE'} />
       <form
         className="signin-form"
         onSubmit={async (e) => {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BOOKS_LOGO, booksPath } from '../lib/beta';
 import { supabase } from '../lib/supabase';
 import { BetaRequest } from './BetaRequest';
 
@@ -73,7 +74,7 @@ export function SignIn({ signUp = false, onBack, notice = null }: { signUp?: boo
   if (signUp) {
     return (
       <main className="signin signin-light">
-        <img className="signin-logo" src="/launchpage-logo.png" alt="L4UNCH P4GE" />
+        <img className="signin-logo" src={booksPath() ? BOOKS_LOGO : '/launchpage-logo.png'} alt={booksPath() ? 'BOOKS' : 'L4UNCH P4GE'} />
         <BetaRequest startOpen onBack={onBack} />
       </main>
     );
@@ -81,7 +82,7 @@ export function SignIn({ signUp = false, onBack, notice = null }: { signUp?: boo
 
   return (
     <main className="signin signin-light">
-      <img className="signin-logo" src="/launchpage-logo.png" alt="L4UNCH P4GE" />
+      <img className="signin-logo" src={booksPath() ? BOOKS_LOGO : '/launchpage-logo.png'} alt={booksPath() ? 'BOOKS' : 'L4UNCH P4GE'} />
       {state === 'sent' ? (
         <p className="signin-note">{linkedSent ? `${email} is linked to your account, so the sign-in link went to your account's sign-in email. Open it on this device.` : `Check ${email} for a sign-in link. Open it on this device.`}</p>
       ) : (

@@ -17,6 +17,14 @@ const IMPORT = 'M12 3v12M7 10l5 5 5-5M5 21h14';
 const PLUS = 'M12 5v14M5 12h14';
 type View = 'expenses' | 'income' | 'draws' | 'invoices';
 const VIEW_KEY = 'launchpage.records.view';
+/** V20-453: the Books home's cards open Records on their own view (Expenses or Income). */
+export const presetRecordsView = (v: 'expenses' | 'income') => {
+  try {
+    localStorage.setItem(VIEW_KEY, v);
+  } catch {
+    /* ignore */
+  }
+};
 
 /**
  * Records (Oct 26): the books. Expenses (what was actually paid) and Invoices (STARDVST billing)
@@ -68,7 +76,13 @@ export function RecordsPage(
   useEffect(() => {
     const open = () => setImporting(true);
     window.addEventListener('records:import', open);
-    return () => window.removeEventListener('records:import', open);
+    // V20-453: the Expenses card's + opens Records, then Add expense.
+    const add = () => setAddTick((n) => n + 1);
+    window.addEventListener('records:add', add);
+    return () => {
+      window.removeEventListener('records:import', open);
+      window.removeEventListener('records:add', add);
+    };
   }, []);
   const fyEnd = p.profile?.fyEnd ?? '09-30';
   const [fy, setFy] = useState(() => thisFy(fyEnd));

@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { BOOKS_LOGO, useBooks } from '../lib/beta';
 import { shownName, type BrandSettings, logoFamily } from '../lib/settings';
 import { useMobile } from '../lib/useMobile';
 import { OneMenu } from './OneMenu';
@@ -29,9 +30,11 @@ type Props = {
 };
 
 export function Header({ settings, slim, page, onPage, right, hidden = [] }: Props) {
+  // V20-453 (Dan, Nov 22): the Books track wears BOOKS: its logo, and the home tab is called BOOKS.
+  const books = useBooks();
   // V20-266 (Dan, Nov 15): pages switched off leave the menu (no more greyed-out tabs); with only L4UNCH P4GE left,
   // there's no menu at all.
-  const pages = PAGES.filter((p) => !hidden.includes(p.id) || p.id === page);
+  const pages = PAGES.filter((p) => !hidden.includes(p.id) || p.id === page).map((p) => (books && p.id === 'launch' ? { ...p, label: 'BOOKS' } : p));
   if (slim) {
     return (
       <header className="topbar topbar-slim">
@@ -48,7 +51,7 @@ export function Header({ settings, slim, page, onPage, right, hidden = [] }: Pro
       {!settings.logoUrl && settings.logoText.trim() ? (
         <span className={`topbar-logo topbar-logo-text logo-font-${settings.logoFont ?? 'hand'}`} style={{ fontFamily: logoFamily(settings.logoFont) }}>{settings.logoText.trim()}</span>
       ) : (
-        <img className="topbar-logo" src={settings.logoUrl || '/launchpage-logo.png'} alt={settings.logoUrl ? settings.logoText || 'Logo' : 'LaunchPage'} />
+        <img className="topbar-logo" src={settings.logoUrl || (books ? BOOKS_LOGO : '/launchpage-logo.png')} alt={settings.logoUrl ? settings.logoText || 'Logo' : books ? 'BOOKS' : 'LaunchPage'} />
       )}
       {/* V20-364 (canvas D1): no mantra yet = business (else alias / name) · role under the headline. */}
       <HeaderWords goal={settings.goal} mantra={settings.mantra.trim() || [settings.account.businessName.trim() || shownName(settings), settings.account.role.trim()].filter(Boolean).join(' · ')} />

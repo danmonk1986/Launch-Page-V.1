@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import type { LpMode } from '../lib/beta';
 import { shrinkImage } from '../lib/images';
 import { settingsPatch, BG_NAME, DEFAULT_MODULES, MODULE_SOON, DEFAULT_SETTINGS as D, DEFAULT_SURFACES, FONT_THEMES, FONT_CHOICES, DEFAULT_FONT_CUSTOM, fontStack, type Modules, DAY_TILES, DESCRIBES, INDUSTRIES, NIGHT_TILES, flipDayNight, isDay, withBackground, type AccountInfo, type Background, type BgMode, type BgSlots, type BrandSettings, LOGO_FONTS, logoFamily, type LogoFont } from '../lib/settings';
 import { CLOSE_ICON, HeadIcon, SAVE_ICON, TRASH_ICON, useClickOff } from './Sheet';
@@ -28,8 +29,8 @@ type Props = {
   admin?: boolean;
   /** V20-362: beta mode (Modules shows only the essentials). */
   beta?: boolean;
-  lpMode?: 'main' | 'beta';
-  onLpMode?: (m: 'main' | 'beta') => void;
+  lpMode?: LpMode;
+  onLpMode?: (m: LpMode) => void;
   open: boolean;
   tab: SettingsTab;
   onTab: (t: SettingsTab) => void;
@@ -1141,7 +1142,7 @@ function ColourTile({ label, value, onChange }: { label: string; value: string; 
  * V20-359 (Dan, Nov 19): ⚙ › Beta Testers, the admin's read-out. One row per account (joined, setup, how long setup
  * took, days opened) and the invite requests. Numbers only: the database answers just the admin (0069).
  */
-type TesterRow = { email: string; joined: string; last_sign_in: string | null; setup: string; setup_seconds: number | null; days_opened: number; days_7: number; last_open: string | null };
+type TesterRow = { email: string; joined: string; last_sign_in: string | null; setup: string; setup_seconds: number | null; days_opened: number; days_7: number; last_open: string | null; track?: 'launch' | 'books' | 'admin' };
 type FeedbackRow = { id: string; email: string | null; kind: 'flag' | 'setup'; hangup: string | null; words: string | null; feeling: number | null; page: string | null; device: { type?: string; browser?: string; screen?: string } | null; app_build: string | null; setup_seconds: number | null; status: 'new' | 'seen' | 'fixed'; bug_ref: string | null; created_at: string };
 const FEEL_FACE: Record<number, string> = { 1: '🤬', 2: '😬', 3: '😐', 4: '🙂', 5: '🥰' };
 type InviteRow = { id: string; name: string; email: string; note: string | null; created_at: string; invited_at?: string | null };
@@ -1167,7 +1168,7 @@ function TesterNote({ email, value, onSaved }: { email: string; value: string; o
   );
 }
 
-function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?: (m: 'main' | 'beta') => void }) {
+function BetaTesters({ lpMode, onLpMode }: { lpMode: LpMode; onLpMode?: (m: LpMode) => void }) {
   const [rows, setRows] = useState<TesterRow[] | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const noteFor = (email: string) => notes[email.toLowerCase()] ?? '';
@@ -1243,6 +1244,45 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
     }
     setInvites((list) => list.filter((x) => x.id !== i.id));
   };
+  // V20-453 (Dan, Nov 22): a tester's TRACK (Launch or Books), changed here; it takes effect at their next sign-in.
+  const fnError = async (error: unknown) => {
+    const e = error as { message?: string; context?: Response };
+    try {
+      return ((await e.context?.json()) as { error?: string })?.error ?? e.message ?? 'Something went wrong.';
+    } catch {
+      return e.message ?? 'Something went wrong.';
+    }
+  };
+  const [trackBusy, setTrackBusy] = useState<string | null>(null);
+  const [trackMsg, setTrackMsg] = useState<Record<string, string>>({});
+  const changeTrack = async (email: string, track: 'launch' | 'books') => {
+    if (!supabase) return;
+    setTrackBusy(email);
+    const { error } = await supabase.functions.invoke('invite-tester', { body: { setTrack: true, email, track } });
+    setTrackBusy(null);
+    if (error) return setTrackMsg((m) => ({ ...m, [email]: `Not changed: ${await fnError(error)}` }));
+    setRows((list) => list?.map((x) => (x.email === email ? { ...x, track } : x)) ?? list);
+    setTrackMsg((m) => ({ ...m, [email]: `Now on ${track === 'books' ? 'Books' : 'Launch'}. They see it next time they sign in.` }));
+  };
+  // V20-453 (Dan, Nov 22): PERSONAL INVITE. Straight to an email, with its track; no request needed.
+  const [pEmail, setPEmail] = useState('');
+  const [pName, setPName] = useState('');
+  const [pTrack, setPTrack] = useState<'launch' | 'books'>('books');
+  const [pBusy, setPBusy] = useState(false);
+  const [pMsg, setPMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const personalInvite = async () => {
+    if (!supabase || pBusy) return;
+    const email = pEmail.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return setPMsg({ ok: false, text: 'That email doesn\'t look right.' });
+    setPBusy(true);
+    const { error } = await supabase.functions.invoke('invite-tester', { body: { email, name: pName.trim(), track: pTrack } });
+    setPBusy(false);
+    if (error) return setPMsg({ ok: false, text: await fnError(error) });
+    setPMsg({ ok: true, text: `Invite sent to ${email} on the ${pTrack === 'books' ? 'Books' : 'Launch'} track.` });
+    setPEmail('');
+    setPName('');
+    void load();
+  };
   const load = async () => {
     if (!supabase) return setErr('No database connection.');
     setErr(null);
@@ -1276,19 +1316,14 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
         <div className="beta-admin-tools">
           {/* V20-360 / V20-362 (Dan, Nov 19): MAIN / BETA switch for the Launch Page itself: Beta shows the lean
               version testers get (kept on this device). */}
-          <span className="beta-mode is-live" title="Flip your Launch Page between main (everything) and the lean beta testers get">
-            <span className={`beta-mode-label${lpMode === 'main' ? ' is-on' : ''}`}>Main</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={lpMode === 'beta'}
-              aria-label="Launch Page: Main or Beta"
-              className={`module-switch${lpMode === 'beta' ? ' is-on' : ''}`}
-              onClick={() => onLpMode?.(lpMode === 'beta' ? 'main' : 'beta')}
-            >
-              <span />
-            </button>
-            <span className={`beta-mode-label${lpMode === 'beta' ? ' is-on' : ''}`}>Beta</span>
+          {/* V20-453 (Dan, Nov 22): MAIN · BETA LAUNCH · BETA BOOKS. Preview exactly what each track's testers get
+              (kept on this device). */}
+          <span className="beta-mode beta-mode-3" role="radiogroup" aria-label="Your Launch Page: Main, Beta Launch or Beta Books">
+            {([['main', 'Main'], ['beta', 'Beta Launch'], ['books', 'Beta Books']] as const).map(([m, label]) => (
+              <button key={m} type="button" role="radio" aria-checked={lpMode === m} className={`fb-status beta-mode-pick${lpMode === m ? ' is-on' : ''}`} onClick={() => onLpMode?.(m)}>
+                {label}
+              </button>
+            ))}
           </span>
           <button type="button" className="btn btn-quiet" onClick={() => void load()}>
             Refresh
@@ -1310,6 +1345,7 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
                 <th>Days opened</th>
                 <th>Last 7 days</th>
                 <th>Last in</th>
+                <th>Track</th>
               </tr>
             </thead>
             <tbody>
@@ -1323,9 +1359,20 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
                     <td>{r.days_opened}</td>
                     <td>{r.days_7}</td>
                     <td>{day(r.last_open ?? r.last_sign_in)}</td>
+                    <td>
+                      {r.track === 'admin' ? (
+                        <span className="field-hint">You</span>
+                      ) : (
+                        <select className="track-pick" aria-label={`Track for ${r.email}`} value={r.track ?? 'launch'} disabled={trackBusy === r.email} onChange={(e) => void changeTrack(r.email, e.target.value as 'launch' | 'books')}>
+                          <option value="launch">Launch</option>
+                          <option value="books">Books</option>
+                        </select>
+                      )}
+                    </td>
                   </tr>
                   <tr className="tester-note-row">
-                    <td colSpan={7}>
+                    <td colSpan={8}>
+                      {trackMsg[r.email] && <span className="field-hint tester-track-msg">{trackMsg[r.email]}</span>}
                       <TesterNote email={r.email} value={noteFor(r.email)} onSaved={keepNote} />
                     </td>
                   </tr>
@@ -1334,6 +1381,42 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: 'main' | 'beta'; onLpMode?:
             </tbody>
           </table>
         </div>
+      )}
+      <div className="beta-sec-title">
+        <h3 className="timed-title settings-section">Personal invite</h3>
+        <Chev k="personal" label="personal invite" />
+      </div>
+      {!shut.personal && (
+        <form
+          className="personal-invite"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void personalInvite();
+          }}
+        >
+          <label className="field">
+            <span>Name</span>
+            <input value={pName} onChange={(e) => setPName(e.target.value)} placeholder="Optional" autoComplete="off" />
+          </label>
+          <label className="field">
+            <span>Email</span>
+            <input type="email" required value={pEmail} onChange={(e) => { setPEmail(e.target.value); setPMsg(null); }} placeholder="name@example.com" autoComplete="off" />
+          </label>
+          <div className="field">
+            <span>Track</span>
+            <div className="beta-mode beta-mode-3" role="radiogroup" aria-label="Track">
+              {([['launch', 'Launch'], ['books', 'Books']] as const).map(([t, label]) => (
+                <button key={t} type="button" role="radio" aria-checked={pTrack === t} className={`fb-status beta-mode-pick${pTrack === t ? ' is-on' : ''}`} onClick={() => setPTrack(t)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button type="submit" className="btn personal-invite-send" disabled={pBusy}>
+            {pBusy ? 'Sending…' : 'Send invite'}
+          </button>
+          {pMsg && <p className={`field-hint personal-invite-msg${pMsg.ok ? '' : ' pw-bad'}`}>{pMsg.text}</p>}
+        </form>
       )}
       <div className="beta-sec-title">
         <h3 className="timed-title settings-section">Invite requests ({invites.length})</h3>

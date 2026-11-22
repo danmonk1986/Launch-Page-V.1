@@ -4741,3 +4741,19 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app .draft-note { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 13px; color: var(--mist); }
 .app .draft-clear { padding: 0; border: 0; background: none; font: inherit; font-weight: 700; letter-spacing: 0.08em; color: var(--accent-teal); cursor: pointer; }
 .app .draft-clear:hover { text-decoration: underline; }
+
+/* V20-453 (Dan, Nov 22): BETA TRACKS. */
+/* The Books home's Expenses and Income cards: date · what · category/account · amount. */
+.bc-row.books-row { grid-template-columns: 110px minmax(160px, 1.6fr) minmax(90px, 1fr) 110px; }
+/* ⚙ › Beta Testers: Main · Beta Launch · Beta Books, and the Personal invite box. */
+.app .beta-mode-3 { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.app .beta-mode-pick { white-space: nowrap; }
+.app .personal-invite { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(200px, 1.4fr) auto auto; gap: 10px 14px; align-items: end; margin: 6px 0 18px; }
+.app .personal-invite .field { margin: 0; }
+.app .personal-invite-msg { grid-column: 1 / -1; margin: 0; }
+.app .personal-invite-send { height: 32px; }
+.app .track-pick { height: 32px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--edge-strong); background: var(--surface-solid); color: var(--beige); font: inherit; font-size: 13px; }
+.app .tester-track-msg { display: block; margin: 0 0 4px; }
+@media (max-width: 640px) {
+  .app .personal-invite { grid-template-columns: 1fr; }
+}
