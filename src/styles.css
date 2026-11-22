@@ -4768,3 +4768,4 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .app .cashbook-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .app .cashbook-cards .pd-num { font-size: 22px; }
 }
+.app .budget-empty-acts { display: flex; flex-wrap: wrap; gap: 10px; }

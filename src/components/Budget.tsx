@@ -1,4 +1,6 @@
 import { useHeaderSearch } from '../lib/headerSearch';
+import { useBooks } from '../lib/beta';
+import { download as downloadFile, linesToCsv } from '../lib/budget';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from './Sheet';
 import { Icon, TaskSheet, ViewToggle } from './Tasks';
@@ -124,6 +126,7 @@ function shortDate(iso: string | null) {
 
 /** Budget V.1: the Launch Sheet's BUDGET tab, laid out like the task list. */
 export function BudgetPage(p: Props) {
+  const books = useBooks();
   // The box clicked: shows only its lines. null = everything.
   const [pick, setPick] = useState<string | null>(null);
   // V20-245: the header search drives this page.
@@ -441,6 +444,22 @@ export function BudgetPage(p: Props) {
       )}
 
       {view !== 'master' ? null : p.lines.length === 0 ? (
+        books ? (
+          // V20-456 (Dan, Nov 22): Books track only: the empty Budget hands out a blank sheet to fill in and bring back.
+          <div className="budget-empty">
+            <p className="panel-empty">
+              No budget yet. Download the blank budget sheet and open it in Excel or Google Sheets. Add one line per bill or cost under its heading (date, description, how you pay, category, amount), or paste in values from a sheet you already keep. Save it as <strong>.csv</strong>, then import it here.
+            </p>
+            <div className="budget-empty-acts">
+              <button type="button" className="btn btn-quiet" onClick={() => downloadFile('BOOKS-BUDGET-blank.csv', linesToCsv([]), 'text/csv')}>
+                Download the blank sheet
+              </button>
+              <button type="button" className="btn" onClick={() => file.current?.click()}>
+                Import your sheet
+              </button>
+            </div>
+          </div>
+        ) : (
         <div className="budget-empty">
           <p className="panel-empty">
             No budget yet. In the Launch Sheet, open the <strong>BUDGET</strong> tab, then <strong>File → Download → Comma-separated values (.csv)</strong>, and import it from ⚙ › Data Management › Import budget.
@@ -449,6 +468,7 @@ export function BudgetPage(p: Props) {
             Import the BUDGET tab
           </button>
         </div>
+        )
       ) : (
         <div className="task-scroll">
           <table className="task-table budget-table budget-lines">
