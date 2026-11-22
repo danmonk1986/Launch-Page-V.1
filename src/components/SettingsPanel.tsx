@@ -1319,14 +1319,22 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: LpMode; onLpMode?: (m: LpMo
         <div className="beta-admin-tools">
           {/* V20-360 / V20-362 (Dan, Nov 19): MAIN / BETA switch for the Launch Page itself: Beta shows the lean
               version testers get (kept on this device). */}
-          {/* V20-453 (Dan, Nov 22): MAIN · BETA LAUNCH · BETA BOOKS. Preview exactly what each track's testers get
-              (kept on this device). */}
-          <span className="beta-mode beta-mode-3" role="radiogroup" aria-label="Your Launch Page: Main, Beta Launch or Beta Books">
-            {([['main', 'Main'], ['beta', 'Beta Launch'], ['books', 'Beta Books']] as const).map(([m, label]) => (
-              <button key={m} type="button" role="radio" aria-checked={lpMode === m} className={`fb-status beta-mode-pick${lpMode === m ? ' is-on' : ''}`} onClick={() => onLpMode?.(m)}>
-                {label}
-              </button>
-            ))}
+          {/* V20-360 / V20-362 (Dan, Nov 19): MAIN / BETA switch for the Launch Page itself: Beta shows the lean
+              version testers get (kept on this device). V20-453b (Dan, Nov 22): no Books preview here; the Books track
+              is set on an account (FNTSY LVNG is the Books test account). */}
+          <span className="beta-mode is-live" title="Flip your Launch Page between main (everything) and the lean beta testers get">
+            <span className={`beta-mode-label${lpMode === 'main' ? ' is-on' : ''}`}>Main</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={lpMode === 'beta'}
+              aria-label="Launch Page: Main or Beta"
+              className={`module-switch${lpMode === 'beta' ? ' is-on' : ''}`}
+              onClick={() => onLpMode?.(lpMode === 'beta' ? 'main' : 'beta')}
+            >
+              <span />
+            </button>
+            <span className={`beta-mode-label${lpMode === 'beta' ? ' is-on' : ''}`}>Beta</span>
           </span>
           <button type="button" className="btn btn-quiet" onClick={() => void load()}>
             Refresh

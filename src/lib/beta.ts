@@ -28,7 +28,7 @@ export const BOOKS_MODULES: Modules = {
 export type BetaTrack = 'launch' | 'books';
 /** The track on the account (set only by the invite function; anything else is Launch). */
 export const trackOf = (meta: Record<string, unknown> | undefined | null): BetaTrack => (meta?.beta_track === 'books' ? 'books' : 'launch');
-/** True on the Books track (a Books tester, or the admin previewing Beta Books). */
+/** True on the Books track (a tester whose account is set to Books). */
 export const BooksContext = createContext(false);
 export const useBooks = () => useContext(BooksContext);
 /** /books in the address: the invite and sign-in pages wear BOOKS before anyone has signed in. */
@@ -40,11 +40,10 @@ export const BetaContext = createContext(false);
 export const useBeta = () => useContext(BetaContext);
 
 const KEY = 'lp.mode';
-export type LpMode = 'main' | 'beta' | 'books';
+export type LpMode = 'main' | 'beta';
 export const readLpMode = (): LpMode => {
   try {
-    const v = localStorage.getItem(KEY);
-    return v === 'beta' || v === 'books' ? v : 'main';
+    return localStorage.getItem(KEY) === 'beta' ? 'beta' : 'main';
   } catch {
     return 'main';
   }

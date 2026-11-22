@@ -165,9 +165,9 @@ export default function App() {
     setLpModeState(m);
   };
   const beta = !isAdmin || lpMode !== 'main';
-  // V20-453 (Dan, Nov 22): BETA TRACKS. A tester's track is on their account (set only by the invite function); the
-  // admin previews it with Main · Beta Launch · Beta Books. Books = the Books home (Budget, Expenses, Income), BOOKS logo.
-  const books = beta && (isAdmin ? lpMode === 'books' : trackOf(session?.user.app_metadata) === 'books');
+  // V20-453 (Dan, Nov 22): BETA TRACKS. A tester's track is on their account (set only by the invite function).
+  // Books = the Books home (Budget, Expenses, Income), BOOKS logo. The admin sees it by signing in as a Books test account.
+  const books = !isAdmin && trackOf(session?.user.app_metadata) === 'books';
   /** The modules in force: beta mode's fixed MVP set, or the account's own switches (main). */
   const mods = books ? BOOKS_MODULES : beta ? BETA_MODULES : settings.modules;
   useEffect(() => {
