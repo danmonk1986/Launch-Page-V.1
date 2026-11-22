@@ -68,11 +68,15 @@ export function WeekCalendar({ userId, disconnectTick = 0, onDisconnected, event
     setFromTask(!!addPreset.fromTask);
     setOpen(true);
   }, [addPreset?.n]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Clear the preset only when the sheet closes, not on first load: arriving from Tasks mounts this card with the
+  // preset already set, and clearing on mount wiped the task's name (V20-451b).
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (!open) {
+    if (wasOpen.current && !open) {
       setPresetTitle('');
       setFromTask(false);
     }
+    wasOpen.current = open;
   }, [open]);
   const [gEvents, setGEvents] = useState<CalEvent[]>([]);
   const beta = useBeta();
