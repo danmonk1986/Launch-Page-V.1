@@ -4757,3 +4757,14 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 @media (max-width: 640px) {
   .app .personal-invite { grid-template-columns: 1fr; }
 }
+
+/* V20-455 (Dan, Nov 22): the Books track's Cash Book (the Stats summary tiles: Opening · In · Out · Closing). */
+.app .panel-cashbook .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.app .cashbook-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.app .cashbook-hint { margin: 12px 0 0; }
+.app .cashbook-set { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 12px; margin-top: 12px; }
+.app .cashbook-set .field { margin: 0; min-width: 220px; }
+@media (max-width: 640px) {
+  .app .cashbook-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app .cashbook-cards .pd-num { font-size: 22px; }
+}

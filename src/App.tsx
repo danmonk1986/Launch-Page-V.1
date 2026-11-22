@@ -130,7 +130,7 @@ import { Welcome } from './components/Welcome';
 import { Tour } from './components/Tour';
 import { Setup, resetSetupClock, setupStepFor } from './components/Setup';
 import { BETA_MODULES, BOOKS_MODULES, BetaContext, BooksContext, booksPath, readLpMode, trackOf, writeLpMode, type LpMode } from './lib/beta';
-import { ExpensesCard, IncomeCard } from './components/BooksCards';
+import { CashBookCard, ExpensesCard, IncomeCard } from './components/BooksCards';
 import { presetRecordsView } from './components/Records';
 import { KnowledgeBasePage } from './components/KnowledgeBase';
 
@@ -2479,6 +2479,16 @@ export default function App() {
                     setPage('tasks');
                   }}
                 />
+              }
+              cashbook={
+                !books ? null : (
+                  <CashBookCard
+                    expenses={expenses}
+                    lines={bankLines}
+                    cashBook={settings.account.cashBook}
+                    onSetOpening={(start, opening) => void handleSave({ account: { ...settings.account, cashBook: { start, opening } } as BrandSettings['account'] })}
+                  />
+                )
               }
               expenses={
                 !books ? null : (

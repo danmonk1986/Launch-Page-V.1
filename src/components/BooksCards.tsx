@@ -3,6 +3,8 @@ import { money } from '../lib/budget';
 import type { Expense } from '../lib/expenses';
 import { tidy, type BankLine } from '../lib/bank';
 import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
+import { useState } from 'react';
+import { MonthNav, thisMonth } from './Expenses';
 
 /**
  * V20-453 (Dan, Nov 22): the Books home (beta Books track). Two cards beside the Budget card, laid out like it:
@@ -129,6 +131,100 @@ export function IncomeCard({ lines, today, onOpenAll, onImport }: { lines: BankL
             </button>
           ))}
         </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * V20-455 (Dan, Nov 22): the CASH BOOK, top of the Books home, laid out like the Stats summary.
+ * Opening + In − Out = Closing for a month. In = money in from the bank imports (the Income card); Out = Expenses.
+ * The opening balance is set once, for the month the cash book starts; each later month opens with the month
+ * before's closing balance (carried forward, like a paper cash book).
+ */
+const shiftM = (m: string, n: number) => {
+  const d = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + n, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+const mLabel = (m: string) => new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+export function CashBookCard({ expenses, lines, cashBook, onSetOpening }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; onSetOpening: (start: string, opening: number) => void }) {
+  const [month, setMonth] = useState(thisMonth);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const inOf = (m: string) => lines.filter((l) => (l.route === 'income' || l.route === 'interest') && l.date.slice(0, 7) === m).reduce((a, l) => a + (l.credit ?? -(l.debit ?? 0)), 0);
+  const outOf = (m: string) => expenses.filter((e) => e.date.slice(0, 7) === m).reduce((a, e) => a + (e.amount ?? 0), 0);
+  const moneyIn = inOf(month);
+  const moneyOut = outOf(month);
+  let opening: number | null = null;
+  if (cashBook && month >= cashBook.start) {
+    opening = cashBook.opening;
+    for (let m = cashBook.start; m < month; m = shiftM(m, 1)) opening += inOf(m) - outOf(m);
+  }
+  const closing = opening === null ? null : opening + moneyIn - moneyOut;
+  const carried = !!cashBook && month > cashBook.start;
+  const save = () => {
+    const n = Number(draft.replace(/[$,\s]/g, ''));
+    if (!Number.isFinite(n)) return;
+    onSetOpening(month, Math.round(n * 100) / 100);
+    setEditing(false);
+  };
+  const card = (label: string, value: string, sub: string, hero = false) => (
+    <div className={`pd-card${hero ? ' st-hero' : ''}`}>
+      <span className="pd-label">{label}</span>
+      <span className="pd-num">{value}</span>
+      <span className="pd-sub">{sub}</span>
+    </div>
+  );
+  return (
+    <section className="panel panel-cashbook" aria-labelledby="h-cashbook">
+      <div className="panel-head">
+        <h2 id="h-cashbook" className="panel-title">
+          Cash Book
+        </h2>
+        <div className="panel-actions">
+          <MonthNav month={month} onChange={setMonth} />
+        </div>
+      </div>
+      <div className="pd-cards cashbook-cards">
+        {card('Opening', opening === null ? '—' : money(opening), opening === null ? (cashBook ? `starts ${mLabel(cashBook.start)}` : 'not set yet') : carried ? `carried from ${mLabel(shiftM(month, -1))}` : 'set by you')}
+        {card('In', `+ ${money(moneyIn)}`, 'money in from your bank')}
+        {card('Out', `− ${money(moneyOut)}`, 'your expenses')}
+        {card('Closing', closing === null ? '—' : money(closing), closing === null ? 'set an opening balance' : closing < 0 ? 'below zero' : 'what\'s left', true)}
+      </div>
+      {editing ? (
+        <form
+          className="cashbook-set"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+        >
+          <label className="field">
+            <span>Opening balance for {mLabel(month)}</span>
+            <input inputMode="decimal" autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="e.g. 2,450.00" />
+          </label>
+          <button type="submit" className="btn">
+            Save
+          </button>
+          <button type="button" className="btn btn-quiet" onClick={() => setEditing(false)}>
+            Cancel
+          </button>
+        </form>
+      ) : (
+        <p className="field-hint cashbook-hint">
+          {cashBook ? `Your cash book starts ${mLabel(cashBook.start)}. ` : 'Set what you had on the first day of a month, and every month after carries on from it. '}
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => {
+              setDraft(opening !== null && !carried ? String(opening) : '');
+              setEditing(true);
+            }}
+          >
+            {!cashBook ? `Set the opening balance for ${mLabel(month)}` : month === cashBook.start ? 'Change the opening balance' : `Start it at ${mLabel(month)} instead`}
+          </button>
+        </p>
       )}
     </section>
   );

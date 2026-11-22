@@ -186,6 +186,9 @@ export interface AccountInfo {
   setupDoneAt?: string;
   /** V20-446: when the "How was setup?" feedback was sent or skipped (so it shows once). */
   setupFeedbackAt?: string;
+  /** V20-455 (Dan, Nov 22): the Books track's Cash Book: the opening balance set for the month it starts ('YYYY-MM');
+   *  every later month opens with the month before's closing balance. */
+  cashBook?: { start: string; opening: number };
   setupSeconds?: number;
 }
 
