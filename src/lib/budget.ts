@@ -1,5 +1,6 @@
 import { makeStore } from './store';
 import { describeRepeat, parseRepeatText, readRepeat } from './repeat';
+import { serialToIso } from './xlsxRead';
 
 /**
  * Budget V.1: the BUDGET tab of the Launch Sheet as a list of lines, in four groups.
@@ -203,7 +204,11 @@ export function linesFromCsv(text: string): BudgetLine[] {
   let body = text;
   const part = text.match(/## Sheet name:\s*"?BUDGET"?\s*\r?\n([\s\S]*?)(?=\r?\n## Sheet name:|$)/i);
   if (part) body = part[1];
-  const rows = parseCsv(body);
+  return linesFromRows(parseCsv(body));
+}
+
+/** V20-458: the same, from rows already read (a CSV, or a tab of an .xlsx). */
+export function linesFromRows(rows: string[][]): BudgetLine[] {
   const head = rows.findIndex((r) => r.some((c) => key(c) === 'PROJECT') && r.some((c) => key(c) === 'DESCRIPTION' || key(c) === 'LINE ITEM'));
   if (head < 0) throw new Error('No Project / Line item header row found. Use the blank budget sheet, or export the BUDGET tab as CSV.');
   const h = rows[head].map(key);
@@ -257,7 +262,7 @@ export function linesFromCsv(text: string): BudgetLine[] {
       link: at(r, C.link),
       linkLabel: at(r, C.linkLabel),
       project: description ? project : loose.length > 1 ? project : '',
-      date: toIso(at(r, C.date)),
+      date: toIso(at(r, C.date)) ?? serialToIso(at(r, C.date)),
       description: description || loose[loose.length - 1].trim(),
       method: at(r, C.method),
       type: at(r, C.type).toUpperCase(),

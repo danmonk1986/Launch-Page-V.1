@@ -131,6 +131,7 @@ import { Tour } from './components/Tour';
 import { Setup, resetSetupClock, setupStepFor } from './components/Setup';
 import { BETA_MODULES, BOOKS_MODULES, BetaContext, BooksContext, booksPath, readLpMode, trackOf, writeLpMode, type LpMode } from './lib/beta';
 import { CashBookCard, ExpensesCard, IncomeCard } from './components/BooksCards';
+import { blankBooksFile, downloadBlob, newOnly, readBooksFile } from './lib/booksFile';
 import { presetRecordsView } from './components/Records';
 import { KnowledgeBasePage } from './components/KnowledgeBase';
 
@@ -994,6 +995,34 @@ export default function App() {
   const profileOps = ops(profileStore, invoiceProfile, setInvoiceProfile, () => 'Your details');
   const drawOps = ops(drawStore, draws, setDraws, (d) => d.description || 'Draw');
   const bankLineOps = ops(bankLineStore, bankLines, setBankLines, (l) => l.income?.description || 'Deposit');
+
+  /** V20-458 (Dan, Nov 22): the Books track's books file (.xlsx with Budget / Expenses / Income tabs, or one tab as .csv):
+   *  read, count, ask, then add only what isn't here yet (same date, description and amount). */
+  async function importBooksFile(file: File) {
+    let found;
+    try {
+      found = await readBooksFile(file);
+    } catch (e) {
+      return setStatus((e as Error).message || 'Couldn\'t read that file.');
+    }
+    const fresh = newOnly(found, { budget, expenses: expRef.current, income: bankLines });
+    const total = fresh.budget.length + fresh.expenses.length + fresh.income.length;
+    if (!found.budget.length && !found.expenses.length && !found.income.length) {
+      return setStatus('Nothing to import: no Budget, Expenses or Income lines found. Use the blank books file\'s columns.');
+    }
+    if (!total) return setStatus(`Everything in ${file.name} is already here (${fresh.skipped} lines).`);
+    const parts = [
+      fresh.budget.length ? `${fresh.budget.length} budget line${fresh.budget.length === 1 ? '' : 's'}` : '',
+      fresh.expenses.length ? `${fresh.expenses.length} expense${fresh.expenses.length === 1 ? '' : 's'}` : '',
+      fresh.income.length ? `${fresh.income.length} money-in line${fresh.income.length === 1 ? '' : 's'}` : ''
+    ].filter(Boolean);
+    if (!window.confirm(`Add ${parts.join(', ')} from ${file.name}?${fresh.skipped ? ` (${fresh.skipped} already here, skipped.)` : ''}`)) return;
+    const base = budget.reduce((m, l) => Math.max(m, l.sort + 1), 0);
+    if (fresh.budget.length) await budgetOps.saveMany(fresh.budget.map((l, i) => ({ ...l, sort: base + i })));
+    for (const e of fresh.expenses) await saveExpense(e, true);
+    if (fresh.income.length) await bankLineOps.saveMany(fresh.income);
+    setStatus(`Imported ${parts.join(', ')} from ${file.name}.`);
+  }
 
   /** V20-015: a confirmed bank import, saved list by list (each in one go). */
   async function saveImport(r: ImportResult) {
@@ -2487,6 +2516,8 @@ export default function App() {
                     lines={bankLines}
                     cashBook={settings.account.cashBook}
                     onSetOpening={(start, opening) => void handleSave({ account: { ...settings.account, cashBook: { start, opening } } as BrandSettings['account'] })}
+                    onDownloadBlank={() => downloadBlob('BOOKS-blank.xlsx', blankBooksFile({ purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' }))}
+                    onImportFile={(f) => void importBooksFile(f)}
                   />
                 )
               }

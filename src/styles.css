@@ -4769,3 +4769,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .app .cashbook-cards .pd-num { font-size: 22px; }
 }
 .app .budget-empty-acts { display: flex; flex-wrap: wrap; gap: 10px; }
+/* V20-458: Cash Book › Get started from your own data; the opening-balance link stays on its sentence. */
+.app .cashbook-link { display: inline; width: auto; min-height: 0; margin: 0; padding: 0; text-align: left; }
+.app .cashbook-start { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--edge); }
+.app .cashbook-start .field-hint { margin: 4px 0 10px; }

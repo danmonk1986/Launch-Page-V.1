@@ -3,7 +3,7 @@ import { money } from '../lib/budget';
 import type { Expense } from '../lib/expenses';
 import { tidy, type BankLine } from '../lib/bank';
 import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { MonthNav, thisMonth } from './Expenses';
 
 /**
@@ -148,7 +148,8 @@ const shiftM = (m: string, n: number) => {
 };
 const mLabel = (m: string) => new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
-export function CashBookCard({ expenses, lines, cashBook, onSetOpening }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; onSetOpening: (start: string, opening: number) => void }) {
+export function CashBookCard({ expenses, lines, cashBook, onSetOpening, onDownloadBlank, onImportFile }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; onSetOpening: (start: string, opening: number) => void; onDownloadBlank?: () => void; onImportFile?: (f: File) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
   const [month, setMonth] = useState(thisMonth);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -213,10 +214,10 @@ export function CashBookCard({ expenses, lines, cashBook, onSetOpening }: { expe
         </form>
       ) : (
         <p className="field-hint cashbook-hint">
-          {cashBook ? `Your cash book starts ${mLabel(cashBook.start)}. ` : 'Set what you had on the first day of a month, and every month after carries on from it. '}
+          {cashBook ? `Your cash book starts ${mLabel(cashBook.start)}.` : 'Set what you had on the first day of a month, and every month after carries on from it.'}{' '}
           <button
             type="button"
-            className="link-btn"
+            className="link-btn cashbook-link"
             onClick={() => {
               setDraft(opening !== null && !carried ? String(opening) : '');
               setEditing(true);
@@ -225,6 +226,39 @@ export function CashBookCard({ expenses, lines, cashBook, onSetOpening }: { expe
             {!cashBook ? `Set the opening balance for ${mLabel(month)}` : month === cashBook.start ? 'Change the opening balance' : `Start it at ${mLabel(month)} instead`}
           </button>
         </p>
+      )}
+      {/* V20-458 (Dan, Nov 22): start from your own data: the blank books file (Budget · Expenses · Income tabs), filled
+          in or pasted into, then imported in one go. */}
+      {(onDownloadBlank || onImportFile) && (
+        <div className="cashbook-start">
+          <h3 className="card-h">Get started from your own data</h3>
+          <p className="field-hint">Download the blank books file (Budget, Expenses and Income tabs), fill it in or paste from a sheet you already keep, then import it. Anything already here is skipped.</p>
+          <div className="budget-empty-acts">
+            {onDownloadBlank && (
+              <button type="button" className="btn btn-quiet" onClick={onDownloadBlank}>
+                Download the blank file
+              </button>
+            )}
+            {onImportFile && (
+              <>
+                <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
+                  Import your file
+                </button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (f) onImportFile(f);
+                  }}
+                />
+              </>
+            )}
+          </div>
+        </div>
       )}
     </section>
   );
