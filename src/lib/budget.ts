@@ -321,7 +321,12 @@ export function linesFromFile(name: string, text: string): BudgetLine[] {
  */
 export const BUDGET_COLUMNS = ['Section', 'Project', 'Date', 'Repeat', 'Line item', 'Pmt method', 'Pmt type', 'Budget group', 'Payment category', 'Amount (CAD)', 'Original price', 'Link name', 'Info link', 'Notes'];
 export function linesToCsv(lines: BudgetLine[], title = 'BUDGET'): string {
-  const out: string[][] = [[title], BUDGET_COLUMNS];
+  const out: string[][] = [[title], BUDGET_COLUMNS, ...budgetRows(lines)];
+  return out.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+}
+/** V20-459: the budget's rows in BUDGET_COLUMNS order (the CSV export and the Launch Sheet's BUDGET tab). */
+export function budgetRows(lines: BudgetLine[]): string[][] {
+  const out: string[][] = [];
   for (const sec of BUDGET_SECTIONS) {
     for (const l of lines.filter((x) => x.section === sec.id).sort((a, b) => a.sort - b.sort)) {
       const r = readRepeat(l.repeat ?? null);
@@ -343,7 +348,7 @@ export function linesToCsv(lines: BudgetLine[], title = 'BUDGET'): string {
       ]);
     }
   }
-  return out.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+  return out;
 }
 /** The blank sheet: the same columns, nothing in them. Section is fixed, variable, annual or planned. */
 export const blankBudgetCsv = () => linesToCsv([], 'BUDGET (blank) · one line per row · Section: fixed, variable, annual or planned');

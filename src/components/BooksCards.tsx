@@ -148,7 +148,7 @@ const shiftM = (m: string, n: number) => {
 };
 const mLabel = (m: string) => new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
-export function CashBookCard({ expenses, lines, cashBook, onSetOpening, onDownloadBlank, onImportFile }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; onSetOpening: (start: string, opening: number) => void; onDownloadBlank?: () => void; onImportFile?: (f: File) => void }) {
+export function CashBookCard({ expenses, lines, cashBook, onSetOpening, onDownloadBlank, onImportFile, onExport }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; onSetOpening: (start: string, opening: number) => void; onDownloadBlank?: () => void; onImportFile?: (f: File) => void; onExport?: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [month, setMonth] = useState(thisMonth);
   const [editing, setEditing] = useState(false);
@@ -227,16 +227,23 @@ export function CashBookCard({ expenses, lines, cashBook, onSetOpening, onDownlo
           </button>
         </p>
       )}
-      {/* V20-458 (Dan, Nov 22): start from your own data: the blank books file (Budget · Expenses · Income tabs), filled
-          in or pasted into, then imported in one go. */}
+      {/* V20-458 / 459 (Dan, Nov 22): start from your own data. One Launch Sheet (LINES + BUDGET) is the blank file,
+          the import and the export, so a person can go round between a spreadsheet and the app. */}
       {(onDownloadBlank || onImportFile) && (
         <div className="cashbook-start">
           <h3 className="card-h">Get started from your own data</h3>
-          <p className="field-hint">Download the blank books file (Budget, Expenses and Income tabs), fill it in or paste from a sheet you already keep, then import it. Anything already here is skipped.</p>
+          <p className="field-hint">
+            One Launch Sheet, in and out: LINES (your cash book, one row per money movement) and BUDGET. Fill in the blank one or paste from a sheet you already keep, then import it. Export it any time to keep working in Sheets, Excel or Numbers and import it back: anything already here is skipped.
+          </p>
           <div className="budget-empty-acts">
             {onDownloadBlank && (
               <button type="button" className="btn btn-quiet" onClick={onDownloadBlank}>
-                Download the blank file
+                Download the blank Launch Sheet
+              </button>
+            )}
+            {onExport && (
+              <button type="button" className="btn btn-quiet" onClick={onExport}>
+                Export your Launch Sheet
               </button>
             )}
             {onImportFile && (

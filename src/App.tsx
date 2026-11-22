@@ -131,7 +131,7 @@ import { Tour } from './components/Tour';
 import { Setup, resetSetupClock, setupStepFor } from './components/Setup';
 import { BETA_MODULES, BOOKS_MODULES, BetaContext, BooksContext, booksPath, readLpMode, trackOf, writeLpMode, type LpMode } from './lib/beta';
 import { CashBookCard, ExpensesCard, IncomeCard } from './components/BooksCards';
-import { blankBooksFile, downloadBlob, newOnly, readBooksFile } from './lib/booksFile';
+import { blankBooksFile, downloadBlob, launchSheetFile, newOnly, readBooksFile } from './lib/booksFile';
 import { presetRecordsView } from './components/Records';
 import { KnowledgeBasePage } from './components/KnowledgeBase';
 
@@ -1005,18 +1005,35 @@ export default function App() {
     } catch (e) {
       return setStatus((e as Error).message || 'Couldn\'t read that file.');
     }
-    const fresh = newOnly(found, { budget, expenses: expRef.current, income: bankLines });
-    const total = fresh.budget.length + fresh.expenses.length + fresh.income.length;
-    if (!found.budget.length && !found.expenses.length && !found.income.length) {
-      return setStatus('Nothing to import: no Budget, Expenses or Income lines found. Use the blank books file\'s columns.');
+    const fresh = newOnly(found, { budget, expenses: expRef.current, income: bankLines, draws, accounts: bankAccounts });
+    const sheet = fresh.sheet;
+    const total = fresh.budget.length + fresh.expenses.length + fresh.income.length + (sheet?.lines.length ?? 0);
+    if (!found.budget.length && !found.expenses.length && !found.income.length && !found.sheet?.lines.length) {
+      return setStatus('Nothing to import: no Lines, Budget, Expenses or Income found. Use the blank Launch Sheet\'s columns.');
     }
     if (!total) return setStatus(`Everything in ${file.name} is already here (${fresh.skipped} lines).`);
+    const n = (k: string) => sheet?.lines.filter((l) => l.route === k).length ?? 0;
+    // V20-459: the opening balance comes from the sheet's Balance column when the cash book hasn't got one yet.
+    const opening = !settings.account.cashBook && sheet?.lines.length ? sheet.opening : null;
     const parts = [
+      sheet?.lines.length
+        ? `${sheet.lines.length} line${sheet.lines.length === 1 ? '' : 's'} (${n('expense')} expenses, ${n('income') + n('interest')} money in, ${n('draw')} draws, ${n('personal')} personal, ${n('transfer')} transfers)`
+        : '',
       fresh.budget.length ? `${fresh.budget.length} budget line${fresh.budget.length === 1 ? '' : 's'}` : '',
       fresh.expenses.length ? `${fresh.expenses.length} expense${fresh.expenses.length === 1 ? '' : 's'}` : '',
       fresh.income.length ? `${fresh.income.length} money-in line${fresh.income.length === 1 ? '' : 's'}` : ''
     ].filter(Boolean);
-    if (!window.confirm(`Add ${parts.join(', ')} from ${file.name}?${fresh.skipped ? ` (${fresh.skipped} already here, skipped.)` : ''}`)) return;
+    const openNote = opening ? `\n\nCash Book opening balance: ${opening.opening.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })} at the start of ${new Date(`${opening.start}-01T12:00`).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' })} (worked out from the Balance column; change it any time).` : '';
+    if (!window.confirm(`Add ${parts.join(', ')} from ${file.name}?${fresh.skipped ? ` (${fresh.skipped} already here, skipped.)` : ''}${openNote}`)) return;
+    if (sheet?.lines.length) {
+      setStatus(`Importing ${sheet.lines.length} lines… a big file can take a minute.`);
+      const after = <T extends { sort: number }>(have: T[], add: T[]) => {
+        const from = have.reduce((m, x) => Math.max(m, x.sort + 1), 0);
+        return add.map((x, i) => ({ ...x, sort: from + i }));
+      };
+      await saveImport({ accounts: after(bankAccounts, sheet.accounts), lines: after(bankLines, sheet.lines), expenses: after(expRef.current, sheet.expenses), draws: after(draws, sheet.draws), common: [], invoices: [], profile: null });
+    }
+    if (opening) await handleSave({ account: { ...settings.account, cashBook: opening } as BrandSettings['account'] });
     const base = budget.reduce((m, l) => Math.max(m, l.sort + 1), 0);
     if (fresh.budget.length) await budgetOps.saveMany(fresh.budget.map((l, i) => ({ ...l, sort: base + i })));
     for (const e of fresh.expenses) await saveExpense(e, true);
@@ -2516,8 +2533,14 @@ export default function App() {
                     lines={bankLines}
                     cashBook={settings.account.cashBook}
                     onSetOpening={(start, opening) => void handleSave({ account: { ...settings.account, cashBook: { start, opening } } as BrandSettings['account'] })}
-                    onDownloadBlank={() => downloadBlob('BOOKS-blank.xlsx', blankBooksFile({ purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' }))}
+                    onDownloadBlank={() => downloadBlob('LAUNCH-SHEET-blank.xlsx', blankBooksFile({ purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' }))}
                     onImportFile={(f) => void importBooksFile(f)}
+                    onExport={() =>
+                      downloadBlob(
+                        `${exportBrand()}-LAUNCH-SHEET-${new Date().toLocaleDateString('en-CA')}.xlsx`,
+                        launchSheetFile({ lines: bankLines, expenses, draws, accounts: bankAccounts, budget }, { purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' })
+                      )
+                    }
                   />
                 )
               }
