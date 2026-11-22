@@ -148,7 +148,7 @@ const shiftM = (m: string, n: number) => {
 };
 const mLabel = (m: string) => new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
-export function CashBookCard({ expenses, lines, cashBook, onSetOpening, onDownloadBlank, onImportFile, onImportBank }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; onSetOpening: (start: string, opening: number) => void; onDownloadBlank?: () => void; onImportFile?: (f: File) => void; onImportBank?: () => void }) {
+export function CashBookCard({ expenses, lines, cashBook, onSetOpening, onDownloadBlank, onImportFile, onImportBank, onExport }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; onSetOpening: (start: string, opening: number) => void; onDownloadBlank?: () => void; onImportFile?: (f: File) => void; onImportBank?: () => void; onExport?: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [month, setMonth] = useState(thisMonth);
   const [editing, setEditing] = useState(false);
@@ -183,10 +183,34 @@ export function CashBookCard({ expenses, lines, cashBook, onSetOpening, onDownlo
         <h2 id="h-cashbook" className="panel-title">
           Cash Book
         </h2>
+        {/* V20-462 (Dan, Nov 22): laid out like the Expenses page: month beside the title, import / export icons on the right. */}
+        <MonthNav month={month} onChange={setMonth} />
         <div className="panel-actions">
-          <MonthNav month={month} onChange={setMonth} />
+          {onImportFile && (
+            <button type="button" className="icon-btn tool-btn" aria-label="Import your Launch Sheet" title="Import your Launch Sheet (.xlsx or one tab as .csv)" onClick={() => fileRef.current?.click()}>
+              <Icon d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+            </button>
+          )}
+          {onExport && (
+            <button type="button" className="icon-btn tool-btn" aria-label="Export your Launch Sheet" title="Export your Launch Sheet (every tab, opens in Sheets, Excel or Numbers)" onClick={onExport}>
+              <Icon d="M12 21V9M7 14l5-5 5 5M5 3h14" />
+            </button>
+          )}
         </div>
       </div>
+      {onImportFile && (
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (f) onImportFile(f);
+          }}
+        />
+      )}
       <div className="pd-cards cashbook-cards">
         {card('Opening', opening === null ? '—' : money(opening), opening === null ? (cashBook ? `starts ${mLabel(cashBook.start)}` : 'not set yet') : carried ? `carried from ${mLabel(shiftM(month, -1))}` : 'set by you')}
         {card('In', `+ ${money(moneyIn)}`, 'money in from your bank')}
@@ -246,17 +270,6 @@ export function CashBookCard({ expenses, lines, cashBook, onSetOpening, onDownlo
                 <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
                   Import your Launch Sheet
                 </button>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-                  hidden
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    e.target.value = '';
-                    if (f) onImportFile(f);
-                  }}
-                />
               </>
             )}
             {onImportBank && (

@@ -131,7 +131,7 @@ import { Tour } from './components/Tour';
 import { Setup, resetSetupClock, setupStepFor } from './components/Setup';
 import { BETA_MODULES, BOOKS_MODULES, BetaContext, BooksContext, booksPath, readLpMode, trackOf, writeLpMode, type LpMode } from './lib/beta';
 import { CashBookCard, ExpensesCard, IncomeCard } from './components/BooksCards';
-import { blankBooksFile, downloadBlob, newOnly, readBooksFile } from './lib/booksFile';
+import { blankBooksFile, downloadBlob, launchSheetFile, newOnly, readBooksFile } from './lib/booksFile';
 import { presetRecordsView } from './components/Records';
 import { KnowledgeBasePage } from './components/KnowledgeBase';
 
@@ -2532,6 +2532,12 @@ export default function App() {
                     onSetOpening={(start, opening) => void handleSave({ account: { ...settings.account, cashBook: { start, opening } } as BrandSettings['account'] })}
                     onDownloadBlank={() => downloadBlob('LAUNCH-SHEET-blank.xlsx', blankBooksFile({ purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' }))}
                     onImportFile={(f) => void importBooksFile(f)}
+                    onExport={() =>
+                      downloadBlob(
+                        `${exportBrand()}-LAUNCH-SHEET-${new Date().toLocaleDateString('en-CA')}.xlsx`,
+                        launchSheetFile({ lines: bankLines, expenses, draws, accounts: bankAccounts, budget, common, invoices }, { purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' })
+                      )
+                    }
                     onImportBank={() => {
                       presetRecordsView('income');
                       setPage('invoices');
