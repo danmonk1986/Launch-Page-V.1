@@ -1,4 +1,5 @@
 import { useHeaderSearch } from '../lib/headerSearch';
+import { useBooks } from '../lib/beta';
 import { useEffect, useState, type ComponentProps } from 'react';
 import { Icon } from './Tasks';
 import { ExpensesView, MonthNav, thisMonth } from './Expenses';
@@ -69,6 +70,7 @@ export function RecordsPage(
     }
   };
   const [month, setMonth] = useState(thisMonth);
+  const books = useBooks();
   // V20-245: the header search drives this page.
   const { q } = useHeaderSearch();
   const [importing, setImporting] = useState(false);
@@ -123,7 +125,7 @@ export function RecordsPage(
               <Icon d={PLUS} />
             </button>
           )}
-          <button type="button" className="icon-btn tool-btn" aria-label="Back to L4UNCH P4GE" title="Back to L4UNCH P4GE" onClick={p.onClose}>
+          <button type="button" className="icon-btn tool-btn" aria-label={books ? 'Back to BOOKS' : 'Back to L4UNCH P4GE'} title={books ? 'Back to BOOKS' : 'Back to L4UNCH P4GE'} onClick={p.onClose}>
             <Icon d={CLOSE} />
           </button>
         </div>

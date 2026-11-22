@@ -34,7 +34,8 @@ export function Header({ settings, slim, page, onPage, right, hidden = [] }: Pro
   const books = useBooks();
   // V20-266 (Dan, Nov 15): pages switched off leave the menu (no more greyed-out tabs); with only L4UNCH P4GE left,
   // there's no menu at all.
-  const pages = PAGES.filter((p) => !hidden.includes(p.id) || p.id === page).map((p) => (books && p.id === 'launch' ? { ...p, label: 'BOOKS' } : p));
+  // V20-453d (Dan, Nov 22): no menu on the Books track; each card's ⌄ opens its page and its ^ comes back.
+  const pages = books ? [] : PAGES.filter((p) => !hidden.includes(p.id) || p.id === page);
   if (slim) {
     return (
       <header className="topbar topbar-slim">
