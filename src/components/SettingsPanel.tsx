@@ -1260,7 +1260,10 @@ function BetaTesters({ lpMode, onLpMode }: { lpMode: LpMode; onLpMode?: (m: LpMo
     setTrackBusy(email);
     const { error } = await supabase.functions.invoke('invite-tester', { body: { setTrack: true, email, track } });
     setTrackBusy(null);
-    if (error) return setTrackMsg((m) => ({ ...m, [email]: `Not changed: ${await fnError(error)}` }));
+    if (error) {
+      const msg = await fnError(error);
+      return setTrackMsg((m) => ({ ...m, [email]: `Not changed: ${msg}` }));
+    }
     setRows((list) => list?.map((x) => (x.email === email ? { ...x, track } : x)) ?? list);
     setTrackMsg((m) => ({ ...m, [email]: `Now on ${track === 'books' ? 'Books' : 'Launch'}. They see it next time they sign in.` }));
   };
