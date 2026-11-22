@@ -16,6 +16,7 @@ import { FoldTabs } from './FoldTabs';
 const IMPORT = 'M12 3v12M7 10l5 5 5-5M5 21h14';
 const PLUS = 'M12 5v14M5 12h14';
 type View = 'expenses' | 'income' | 'draws' | 'invoices';
+const CLOSE = 'M6 6l12 12M18 6L6 18';
 const VIEW_KEY = 'launchpage.records.view';
 /** V20-453: the Books home's cards open Records on their own view (Expenses or Income). */
 export const presetRecordsView = (v: 'expenses' | 'income') => {
@@ -110,15 +111,22 @@ export function RecordsPage(
   return (
     <section className="panel panel-budget panel-records" aria-labelledby="h-records">
       <div className="panel-head">
-        {/* V20-455b (Dan, Nov 22): like Budget and Tasks, the ^ beside RECORDS goes back (the × is gone). */}
-        <div className="rockets-title">
+        {/* V20-455b (Dan, Nov 22): on the Books track (a test harness) the ^ beside RECORDS goes back to BOOKS.
+            Main keeps its × (the harness doesn't change the real Records page). */}
+        {books ? (
+          <div className="rockets-title">
+            <h2 id="h-records" className="panel-title">
+              Records
+            </h2>
+            <button type="button" className="rockets-toggle is-open" aria-label="Back to BOOKS" title="Back to BOOKS" onClick={p.onClose}>
+              <Icon d="M6 9l6 6 6-6" />
+            </button>
+          </div>
+        ) : (
           <h2 id="h-records" className="panel-title">
             Records
           </h2>
-          <button type="button" className="rockets-toggle is-open" aria-label={books ? 'Back to BOOKS' : 'Back to L4UNCH P4GE'} title={books ? 'Back to BOOKS' : 'Back to L4UNCH P4GE'} onClick={p.onClose}>
-            <Icon d="M6 9l6 6 6-6" />
-          </button>
-        </div>
+        )}
         {view === 'draws' || view === 'income' ? <FyNav fy={fy} fyEnd={fyEnd} onChange={setFy} /> : <MonthNav month={month} onChange={setMonth} />}
         <div className="panel-actions">
           {/* V20-195 (Dan, Nov 14): search always first (outermost), like Tasks and Budget. */}
@@ -128,6 +136,11 @@ export function RecordsPage(
           {view === 'expenses' && (
             <button type="button" className="icon-btn tool-btn" aria-label="Add expense" title="Add an expense" onClick={() => setAddTick((n) => n + 1)}>
               <Icon d={PLUS} />
+            </button>
+          )}
+          {!books && (
+            <button type="button" className="icon-btn tool-btn" aria-label="Back to L4UNCH P4GE" title="Back to L4UNCH P4GE" onClick={p.onClose}>
+              <Icon d={CLOSE} />
             </button>
           )}
         </div>
