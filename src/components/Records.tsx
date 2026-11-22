@@ -111,12 +111,13 @@ export function RecordsPage(
   return (
     <section className="panel panel-budget panel-records" aria-labelledby="h-records">
       <div className="panel-head">
-        {/* V20-455b (Dan, Nov 22): on the Books track (a test harness) the ^ beside RECORDS goes back to BOOKS.
+        {/* V20-455b/d (Dan, Nov 22): on the Books track (a test harness) the page is titled by its card (EXPENSES or
+            INCOME) and its ^ goes back to BOOKS.
             Main keeps its × (the harness doesn't change the real Records page). */}
         {books ? (
           <div className="rockets-title">
             <h2 id="h-records" className="panel-title">
-              Records
+              {view === 'income' ? 'Income' : 'Expenses'}
             </h2>
             <button type="button" className="rockets-toggle is-open" aria-label="Back to BOOKS" title="Back to BOOKS" onClick={p.onClose}>
               <Icon d="M6 9l6 6 6-6" />
@@ -145,7 +146,8 @@ export function RecordsPage(
           )}
         </div>
       </div>
-      {views}
+      {/* V20-455d (Dan, Nov 22): on Books each card opens its own page (Expenses or Income), so no view tabs. */}
+      {!books && views}
       {view === 'income' ? (
         <IncomeView
           lines={p.bankLines}
