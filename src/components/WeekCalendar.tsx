@@ -476,7 +476,7 @@ function Icon({ d }: { d: string }) {
   );
 }
 
-function EventForm({
+export function EventForm({
   event,
   date,
   title = '',

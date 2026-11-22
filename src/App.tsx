@@ -68,7 +68,7 @@ import { TodayPanel, useNow } from './components/TodayPanel';
 import { BLOCKED_HELP, RocketsPanel, nameFromUrl, rocketOptions, type TimedPreset } from './components/Rockets';
 import { LaunchReminder, MissedLaunches, TimeUpReminder } from './components/LaunchReminder';
 import { chime, unlockAudioOnFirstGesture } from './lib/alerts';
-import { WeekCalendar } from './components/WeekCalendar';
+import { EventForm, WeekCalendar } from './components/WeekCalendar';
 import { TasksPage, TasksPanel, type TaskSeed } from './components/Tasks';
 import { ProjectsManager } from './components/Projects';
 import { logsProductivity, matchCalendar, projectStore, type Project } from './lib/projects';
@@ -1184,24 +1184,23 @@ export default function App() {
   }
   /** V20-450 / V20-451 (Dan, Nov 21): ⋯ → Add to calendar in beta (no Google) opens Add event filled in from the task
    *  (its name, its Date required), like Create launch opens Add timed launch. Saving links the event to the task.
-   *  A task already on the calendar opens its event to edit instead of making a second. */
-  const eventLink = useRef<{ eventId: string; taskId: string } | null>(null);
+   *  A task already on the calendar opens its event to edit instead of making a second.
+   *  V20-451c: it opens right where you are (Tasks stays open), not on the Launch Page. */
+  const [taskEvent, setTaskEvent] = useState<{ event: CalEvent | null; id: string; title: string; date: string; taskId: string } | null>(null);
   function addTaskToAppCalendar(t: Task) {
     const date = t.endDate ?? t.startDate ?? isoDate(new Date());
     const existing = t.googleEventId ? events.find((e) => e.id === t.googleEventId && !e.google) : undefined;
-    const id = existing?.id ?? crypto.randomUUID();
-    eventLink.current = existing ? null : { eventId: id, taskId: t.id };
-    setPage('launch');
-    setEventPreset({ title: taskName(t), date, n: Date.now(), id, edit: existing ?? null, fromTask: true });
+    setTaskEvent({ event: existing ?? null, id: existing?.id ?? crypto.randomUUID(), title: taskName(t), date, taskId: t.id });
   }
-  async function saveEvent(e: CalEvent) {
+  async function saveTaskEvent(e: CalEvent) {
+    const link = taskEvent;
     await eventOps.save(e);
-    const link = eventLink.current;
-    if (link && link.eventId === e.id) {
-      eventLink.current = null;
+    if (link && !link.event) {
       const t = tasksRef.current.find((x) => x.id === link.taskId);
       if (t) await taskOps.save({ ...t, googleEventId: e.id });
     }
+    setStatus(`${e.title} is on your calendar on ${new Date(`${e.startDate}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`);
+    setTaskEvent(null);
   }
   const saveTask = async (t: Task) => {
     const old = tasksRef.current.find((x) => x.id === t.id);
@@ -2428,7 +2427,7 @@ export default function App() {
                   events={events}
                   projects={projects}
                   onCalendars={() => setCalVersion((v) => v + 1)}
-                  onSave={saveEvent}
+                  onSave={eventOps.save}
                   onDelete={eventOps.remove}
                   onStatus={setStatus}
                   taskFor={(e) => {
@@ -2693,6 +2692,25 @@ export default function App() {
         onSkip={(l) => finishLaunch(l, 'skipped')}
         onDone={(l) => finishLaunch(l, 'done')}
       />
+      {/* V20-451c: Add event for a task, over whatever page you're on. */}
+      <Sheet open={!!taskEvent} title={taskEvent?.event ? 'Edit event' : 'Add event'} onClose={() => setTaskEvent(null)}>
+        {taskEvent && (
+          <EventForm
+            key={taskEvent.id}
+            event={taskEvent.event}
+            date={taskEvent.date}
+            title={taskEvent.title}
+            newId={taskEvent.id}
+            googleOn={false}
+            onCancel={() => setTaskEvent(null)}
+            onSave={(e) => saveTaskEvent(e)}
+            onDelete={async (e) => {
+              await eventOps.remove(e.id);
+              setTaskEvent(null);
+            }}
+          />
+        )}
+      </Sheet>
       <ClashSheet
         clash={appClash}
         launches={[...launches, ...taskStands()]}
