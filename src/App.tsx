@@ -1167,19 +1167,41 @@ export default function App() {
         void eventOps.remove(ev.id);
         continue;
       }
-      const date = t.endDate ?? t.startDate ?? ev.startDate;
+      // Only a change to the task's date moves the event, keeping its length (an end date picked in Add event stays).
+      const old = tasksRef.current.find((x) => x.id === t.id);
+      const was = old ? old.endDate ?? old.startDate : null;
+      const date = t.endDate ?? t.startDate ?? null;
       const title = taskName(t);
-      if (ev.title !== title || ev.startDate !== date || ev.endDate !== date) void eventOps.save({ ...ev, title, startDate: date, endDate: date });
+      let { startDate, endDate } = ev;
+      if (was && date && was !== date) {
+        const shift = Math.round((Date.parse(`${date}T12:00:00`) - Date.parse(`${was}T12:00:00`)) / 864e5);
+        const move = (d: string) => isoDate(new Date(Date.parse(`${d}T12:00:00`) + shift * 864e5));
+        startDate = move(ev.startDate);
+        endDate = move(ev.endDate);
+      }
+      if (ev.title !== title || startDate !== ev.startDate || endDate !== ev.endDate) void eventOps.save({ ...ev, title, startDate, endDate });
     }
   }
-  /** V20-450: ⋯ → Add to calendar in beta (no Google): the task goes on This Week as an event on its Date required. */
-  async function addTaskToAppCalendar(t: Task) {
+  /** V20-450 / V20-451 (Dan, Nov 21): ⋯ → Add to calendar in beta (no Google) opens Add event filled in from the task
+   *  (its name, its Date required), like Create launch opens Add timed launch. Saving links the event to the task.
+   *  A task already on the calendar opens its event to edit instead of making a second. */
+  const eventLink = useRef<{ eventId: string; taskId: string } | null>(null);
+  function addTaskToAppCalendar(t: Task) {
     const date = t.endDate ?? t.startDate ?? isoDate(new Date());
     const existing = t.googleEventId ? events.find((e) => e.id === t.googleEventId && !e.google) : undefined;
-    const ev: CalEvent = { id: existing?.id ?? crypto.randomUUID(), title: taskName(t), startDate: date, endDate: date, color: existing?.color ?? 'teal', sort: existing?.sort ?? events.length };
-    await eventOps.save(ev);
-    if (!existing) await taskOps.save({ ...t, googleEventId: ev.id });
-    setStatus(`${taskName(t)} is on your calendar on ${new Date(`${date}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`);
+    const id = existing?.id ?? crypto.randomUUID();
+    eventLink.current = existing ? null : { eventId: id, taskId: t.id };
+    setPage('launch');
+    setEventPreset({ title: taskName(t), date, n: Date.now(), id, edit: existing ?? null, fromTask: true });
+  }
+  async function saveEvent(e: CalEvent) {
+    await eventOps.save(e);
+    const link = eventLink.current;
+    if (link && link.eventId === e.id) {
+      eventLink.current = null;
+      const t = tasksRef.current.find((x) => x.id === link.taskId);
+      if (t) await taskOps.save({ ...t, googleEventId: e.id });
+    }
   }
   const saveTask = async (t: Task) => {
     const old = tasksRef.current.find((x) => x.id === t.id);
@@ -1666,7 +1688,7 @@ export default function App() {
   // V20-265 (Dan, Nov 15): Project Planner › Add to workflow opens the calendar's Add event filled in (the decision
   // and its decide-by date). From there Push task opens Add task, and the task's rocket pushes a timed launch:
   // calendar › task › rocket, the same chain as everywhere else.
-  const [eventPreset, setEventPreset] = useState<{ title: string; date: string; n: number } | null>(null);
+  const [eventPreset, setEventPreset] = useState<{ title: string; date: string; n: number; id?: string; edit?: CalEvent | null; fromTask?: boolean } | null>(null);
   function decisionToWorkflow(d: Decision) {
     // ONE PLAN = ONE TASK: a decision that's already a step goes to Tasks, not to a second copy via the calendar.
     const step = d.taskId ? tasksRef.current.find((t) => t.id === d.taskId && !t.deletedAt) : undefined;
@@ -2406,7 +2428,7 @@ export default function App() {
                   events={events}
                   projects={projects}
                   onCalendars={() => setCalVersion((v) => v + 1)}
-                  onSave={eventOps.save}
+                  onSave={saveEvent}
                   onDelete={eventOps.remove}
                   onStatus={setStatus}
                   taskFor={(e) => {
