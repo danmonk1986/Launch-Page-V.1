@@ -1,4 +1,5 @@
 import { makeStore } from './store';
+import { describeRepeat, parseRepeatText, readRepeat } from './repeat';
 
 /**
  * Budget V.1: the BUDGET tab of the Launch Sheet as a list of lines, in four groups.
@@ -178,12 +179,6 @@ function toIso(d: string): string | null {
   }
   return null;
 }
-const fromIso = (iso: string | null) => {
-  if (!iso) return '';
-  const [y, m, d] = iso.split('-');
-  return `${Number(m)}/${Number(d)}/${y}`;
-};
-
 function toAmount(v: string): number | null {
   const s = v.replace(/[$,\s]/g, '');
   if (!s || !/^-?\d*\.?\d+$/.test(s)) return null;
@@ -209,19 +204,25 @@ export function linesFromCsv(text: string): BudgetLine[] {
   const part = text.match(/## Sheet name:\s*"?BUDGET"?\s*\r?\n([\s\S]*?)(?=\r?\n## Sheet name:|$)/i);
   if (part) body = part[1];
   const rows = parseCsv(body);
-  const head = rows.findIndex((r) => r.some((c) => key(c) === 'PROJECT') && r.some((c) => key(c) === 'DESCRIPTION'));
-  if (head < 0) throw new Error('No PROJECT / DESCRIPTION header row found. Export the BUDGET tab as CSV.');
+  const head = rows.findIndex((r) => r.some((c) => key(c) === 'PROJECT') && r.some((c) => key(c) === 'DESCRIPTION' || key(c) === 'LINE ITEM'));
+  if (head < 0) throw new Error('No Project / Line item header row found. Use the blank budget sheet, or export the BUDGET tab as CSV.');
   const h = rows[head].map(key);
   const col = (...names: string[]) => h.findIndex((c) => names.includes(c));
   const C = {
     project: col('PROJECT'),
     date: col('DATE'),
-    desc: col('DESCRIPTION'),
+    desc: col('DESCRIPTION', 'LINE ITEM'),
+    // V20-457: the Launch Sheet / blank sheet layout.
+    section: col('SECTION'),
+    repeat: col('REPEAT'),
+    foreign: col('ORIGINAL PRICE'),
+    linkLabel: col('LINK NAME'),
+    link: col('INFO LINK'),
     method: col('PMT METHOD', 'PAYMENT METHOD', 'METHOD'),
     type: col('PMT TYPE', 'PAYMENT TYPE', 'TYPE'),
-    category: col('BUDGET CATEGORY', 'CATEGORY'),
+    category: col('BUDGET CATEGORY', 'BUDGET GROUP', 'CATEGORY'),
     pmtCategory: col('PMT CATEGORY', 'PAYMENT CATEGORY'),
-    amount: col('TOTAL $', 'AMOUNT', 'TOTAL'),
+    amount: col('TOTAL $', 'AMOUNT', 'AMOUNT (CAD)', 'TOTAL'),
     notes: col('NOTES')
   };
   // Sheet errors (#VALUE!, #REF!, #N/A…) count as blank.
@@ -244,9 +245,17 @@ export function linesFromCsv(text: string): BudgetLine[] {
     // Planned lines in the sheet sometimes sit in the PROJECT or DATE column alone.
     const loose = !description ? [project, at(r, C.date)].filter((x) => x && !toIso(x)) : [];
     if (!description && !loose.length) continue;
+    // V20-457: a Section column on the row wins over the last heading.
+    const rowSec = at(r, C.section).toLowerCase();
+    const lineSection = (BUDGET_SECTIONS.find((x) => x.id === rowSec)?.id ?? sectionFrom(rowSec) ?? section) as BudgetSection;
+    const fx = at(r, C.foreign).match(/^\s*\$?([\d,]*\.?\d+)\s*([A-Za-z]{3})\s*$/);
     out.push({
       id: crypto.randomUUID(),
-      section,
+      section: lineSection,
+      repeat: parseRepeatText(at(r, C.repeat)),
+      ...(fx ? { foreign: Number(fx[1].replace(/,/g, '')), currency: fx[2].toUpperCase() } : {}),
+      link: at(r, C.link),
+      linkLabel: at(r, C.linkLabel),
       project: description ? project : loose.length > 1 ? project : '',
       date: toIso(at(r, C.date)),
       description: description || loose[loose.length - 1].trim(),
@@ -301,17 +310,38 @@ export function linesFromFile(name: string, text: string): BudgetLine[] {
 }
 
 /** Back out in the sheet's column order, grouped under the sheet's own group headings. */
-export function linesToCsv(lines: BudgetLine[]): string {
-  const head = ['PROJECT', 'DATE', 'DESCRIPTION', 'PMT METHOD', 'PMT TYPE', 'BUDGET CATEGORY', 'PMT CATEGORY', 'TOTAL $', 'NOTES'];
-  const out: string[][] = [['BUDGET (LaunchPage export)'], head];
-  for (const s of BUDGET_SECTIONS) {
-    out.push([`  ${s.sheet}`]);
-    for (const l of lines.filter((x) => x.section === s.id).sort((a, b) => a.sort - b.sort)) {
-      out.push([l.project, fromIso(l.date), l.description, l.method, l.type, l.category, l.pmtCategory, l.amount === null ? '' : l.amount.toFixed(2), l.notes]);
+/**
+ * V20-457 (Dan, Nov 22): ONE BUDGET FORMAT. The budget CSV, the blank sheet and the Launch Sheet's BUDGET tab share the
+ * same columns, so any of them imports straight back (repeats, links and foreign prices included).
+ */
+export const BUDGET_COLUMNS = ['Section', 'Project', 'Date', 'Repeat', 'Line item', 'Pmt method', 'Pmt type', 'Budget group', 'Payment category', 'Amount (CAD)', 'Original price', 'Link name', 'Info link', 'Notes'];
+export function linesToCsv(lines: BudgetLine[], title = 'BUDGET'): string {
+  const out: string[][] = [[title], BUDGET_COLUMNS];
+  for (const sec of BUDGET_SECTIONS) {
+    for (const l of lines.filter((x) => x.section === sec.id).sort((a, b) => a.sort - b.sort)) {
+      const r = readRepeat(l.repeat ?? null);
+      out.push([
+        l.section,
+        l.project,
+        l.date ?? '',
+        r.kind === 'none' ? '' : describeRepeat(r),
+        l.description,
+        l.method,
+        l.type,
+        l.category,
+        l.pmtCategory,
+        l.amount === null ? '' : l.amount.toFixed(2),
+        l.currency && l.foreign != null ? `${l.foreign} ${l.currency}` : '',
+        l.linkLabel ?? '',
+        l.link ?? '',
+        l.notes
+      ]);
     }
   }
   return out.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
 }
+/** The blank sheet: the same columns, nothing in them. Section is fixed, variable, annual or planned. */
+export const blankBudgetCsv = () => linesToCsv([], 'BUDGET (blank) · one line per row · Section: fixed, variable, annual or planned');
 
 export function download(name: string, text: string, type: string) {
   const a = document.createElement('a');

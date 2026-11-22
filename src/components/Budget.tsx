@@ -1,6 +1,6 @@
 import { useHeaderSearch } from '../lib/headerSearch';
 import { useBooks } from '../lib/beta';
-import { download as downloadFile, linesToCsv } from '../lib/budget';
+import { blankBudgetCsv, download as downloadFile } from '../lib/budget';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from './Sheet';
 import { Icon, TaskSheet, ViewToggle } from './Tasks';
@@ -448,10 +448,10 @@ export function BudgetPage(p: Props) {
           // V20-456 (Dan, Nov 22): Books track only: the empty Budget hands out a blank sheet to fill in and bring back.
           <div className="budget-empty">
             <p className="panel-empty">
-              No budget yet. Download the blank budget sheet and open it in Excel or Google Sheets. Add one line per bill or cost under its heading (date, description, how you pay, category, amount), or paste in values from a sheet you already keep. Save it as <strong>.csv</strong>, then import it here.
+              No budget yet. Download the blank budget sheet and open it in Excel or Google Sheets. Add one line per bill or cost (its section, date, what it is, how you pay, amount), or paste in values from a sheet you already keep, or from a Launch Sheet's BUDGET tab: the columns match. Save it as <strong>.csv</strong>, then import it here.
             </p>
             <div className="budget-empty-acts">
-              <button type="button" className="btn btn-quiet" onClick={() => downloadFile('BOOKS-BUDGET-blank.csv', linesToCsv([]), 'text/csv')}>
+              <button type="button" className="btn btn-quiet" onClick={() => downloadFile('BOOKS-BUDGET-blank.csv', blankBudgetCsv(), 'text/csv')}>
                 Download the blank sheet
               </button>
               <button type="button" className="btn" onClick={() => file.current?.click()}>

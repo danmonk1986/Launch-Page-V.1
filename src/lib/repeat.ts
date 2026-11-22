@@ -147,3 +147,44 @@ export function describeRepeat(x: Repeat): string {
       return '';
   }
 }
+
+/**
+ * V20-457 (Dan, Nov 22): the other way round from describeRepeat, so a sheet's Repeat column comes back in:
+ * "Every day" · "Mon, Thu" · "17th" · "Last day" · "1st Thursday" · "15th · Jan Apr Jul Oct" · "Apr 30" (or a stored
+ * rule like "M:17"). Returns the stored rule ("A:04-30"), or null when the cell is blank or not understood.
+ */
+export function parseRepeatText(text: string | null | undefined): string | null {
+  const t = (text ?? '').trim();
+  if (!t) return null;
+  const stored = readRepeat(t);
+  if (stored.kind !== 'none') return writeRepeat(stored);
+  const up = t.toUpperCase().replace(/\s+/g, ' ');
+  const DAYS3 = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const MON3 = MONTHS.map((m) => m.toUpperCase());
+  if (up === 'EVERY DAY' || up === 'DAILY') return 'W:0,1,2,3,4,5,6';
+  // A month rule: "17th" / "17" / "Last day" / "1st Thursday"
+  const monthRule = (s: string): string | null => {
+    const r = s.trim();
+    let m = r.match(/^(\d{1,2})(ST|ND|RD|TH)?$/);
+    if (m && Number(m[1]) >= 1 && Number(m[1]) <= 31) return String(Number(m[1]));
+    if (r === 'LAST DAY' || r === 'LAST') return 'LAST';
+    m = r.match(/^(1ST|2ND|3RD|4TH|LAST) ([A-Z]{3})[A-Z]*$/);
+    if (m && DAYS3.includes(m[2])) return `${m[1]} ${m[2]}`;
+    return null;
+  };
+  // Quarterly: "15th · Jan Apr Jul Oct"
+  let m = up.match(/^(.+?)\s*·\s*([A-Z]{3})\b/);
+  if (m) {
+    const rule = monthRule(m[1]);
+    const start = MON3.indexOf(m[2]) + 1;
+    if (rule && start) return `Q${start}:${rule}`;
+  }
+  // Annually: "Apr 30" / "April 30"
+  m = up.match(/^([A-Z]{3})[A-Z]* (\d{1,2})$/);
+  if (m && MON3.includes(m[1])) return `A:${String(MON3.indexOf(m[1]) + 1).padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+  // Weekly: "Mon, Thu"
+  const parts = up.split(/\s*,\s*/).map((p) => p.slice(0, 3));
+  if (parts.length && parts.every((p) => DAYS3.includes(p))) return `W:${[...new Set(parts.map((p) => DAYS3.indexOf(p)))].sort().join(',')}`;
+  const rule = monthRule(up);
+  return rule ? `M:${rule}` : null;
+}
