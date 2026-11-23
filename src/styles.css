@@ -4782,3 +4782,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-468 (Dan, Nov 23): Books bank import drops the brown "to check" tint (hard to look at); the orange edge marks those rows. */
 .bank-import.is-books .bank-table tr.bank-row.needs-work td, .app .bank-import.is-books .bank-table tr.bank-row.needs-work.is-alt td { background: transparent; }
 .bank-import.is-books .bank-table tr.bank-row.needs-work:hover td { background: transparent; }
+/* V20-472 (Dan, Nov 23, Books bank import): an empty box that still needs filling gets the green outline; Personal and
+   Transfer lines stay readable (no fade). */
+.bank-import.is-books .bank-combo.is-need .combo input { outline: 1px solid var(--accent-green); outline-offset: -1px; }
+.bank-import.is-books .bank-row.is-quiet td { color: inherit; }
+.bank-import.is-books .bank-row.is-quiet input, .bank-import.is-books .bank-row.is-quiet select { opacity: 1; }

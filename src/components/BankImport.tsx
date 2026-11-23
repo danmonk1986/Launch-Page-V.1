@@ -87,7 +87,7 @@ function guessAccount(number: string, file: string, sort: number): BankAccount {
  * Type or pick (Nov 1): type anything, or ▾ for every value already in use (the merchant's own
  * Common Expenses first for Description); typing filters the list.
  */
-function Pick(p: { value: string; options: string[]; groups?: { label: string; options: string[] }[]; onChange: (v: string) => void; label: string; disabled?: boolean; wide?: boolean }) {
+function Pick(p: { value: string; options: string[]; groups?: { label: string; options: string[] }[]; onChange: (v: string) => void; label: string; disabled?: boolean; wide?: boolean; /** V20-472: Books outlines an empty box that still needs filling. */ need?: boolean }) {
   const books = useBooks();
   const titles = [...new Set([...(p.groups ?? []).flatMap((g) => g.options), ...p.options])];
   if (p.disabled)
@@ -97,7 +97,7 @@ function Pick(p: { value: string; options: string[]; groups?: { label: string; o
       </span>
     );
   return (
-    <div className={`bank-combo${p.wide ? ' is-wide' : ''}`}>
+    <div className={`bank-combo${p.wide ? ' is-wide' : ''}${books && p.need && !p.value.trim() ? ' is-need' : ''}`}>
       <TitleCombo value={p.value} titles={titles} onChange={p.onChange} placeholder="—" required={false} label={p.label} steady={books} />
     </div>
   );
@@ -358,6 +358,20 @@ export function BankImport(p: Props) {
       gst: hasGst(c) ? gstIn(Math.abs(r.amount)) * Math.sign(r.amount) : 0,
       status: r.status === 'check' || r.status === 'edited' ? 'common' : r.status
     });
+  }
+  /**
+   * V20-472 (Dan, Nov 23, Books): picking a division moves the line with it. Your personal division → Personal;
+   * a business division on a Personal line → Expense, and an empty Type fills as VARIABLE (FIXED comes from a
+   * Common Expense: the same price every month).
+   */
+  function setDivision(r: Draft, project: string) {
+    if (!books) return edit(r, { project });
+    const sq = (t: string) => t.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const mine = !!project.trim() && sq(project) === sq(personal);
+    if (mine && r.route === 'expense') return edit(r, { project, route: 'personal' });
+    if (!mine && project.trim() && r.route === 'personal')
+      return edit(r, { project, route: 'expense', ...(r.type.trim() ? {} : { type: 'VARIABLE' }), gst: r.gst || gstIn(Math.abs(r.amount)) * Math.sign(r.amount) });
+    edit(r, { project, ...(r.route === 'expense' && !r.type.trim() ? { type: 'VARIABLE' } : {}) });
   }
   function setRoute(r: Draft, route: Route) {
     edit(r, { route, gst: !spends(route) ? 0 : spends(r.route) ? r.gst : gstIn(Math.abs(r.amount)) * Math.sign(r.amount), ...(route === 'personal' ? { project: personal } : route === 'draw' && (!r.project || r.project === personal) ? { project: business } : {}) });
@@ -750,7 +764,7 @@ export function BankImport(p: Props) {
                           </select>
                         </td>
                         <td>
-                          <Pick value={r.project} options={divisions} disabled={off} onChange={(v) => edit(r, { project: v })} label="Division" />
+                          <Pick value={r.project} options={divisions} disabled={off} onChange={(v) => setDivision(r, v)} label="Division" need={spends(r.route)} />
                         </td>
                         <td className="col-task">
                           <div className="bank-desc-wrap" title={books ? r.text : undefined}>
@@ -767,17 +781,18 @@ export function BankImport(p: Props) {
                             disabled={off}
                             onChange={(v) => setDescription(r, v)}
                             label="Description"
+                            need={spends(r.route)}
                           />
                           </div>
                         </td>
                         <td>
-                          <Pick value={r.type} options={TYPES} disabled={off} onChange={(v) => edit(r, { type: v.toUpperCase() })} label="Type" />
+                          <Pick value={r.type} options={TYPES} disabled={off} onChange={(v) => edit(r, { type: v.toUpperCase() })} label="Type" need={spends(r.route)} />
                         </td>
                         <td>
-                          <Pick value={r.category} options={groups} disabled={off} onChange={(v) => edit(r, { category: v })} label="Group" />
+                          <Pick value={r.category} options={groups} disabled={off} onChange={(v) => edit(r, { category: v })} label="Group" need={spends(r.route)} />
                         </td>
                         <td>
-                          <Pick value={r.pmtCategory} options={cats} disabled={off} onChange={(v) => edit(r, { pmtCategory: v })} label="Category" />
+                          <Pick value={r.pmtCategory} options={cats} disabled={off} onChange={(v) => edit(r, { pmtCategory: v })} label="Category" need={spends(r.route)} />
                         </td>
                         <td className="col-amount" title={r.parts.length ? `What's left of ${money(r.total)} after the parts` : undefined}>
                           {money(r.amount)}
