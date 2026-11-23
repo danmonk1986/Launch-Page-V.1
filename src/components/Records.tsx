@@ -182,6 +182,7 @@ export function RecordsPage(
       <BankImport
         open={importing}
         onClose={() => setImporting(false)}
+        onDone={books ? p.onClose : undefined}
         accounts={p.bankAccounts}
         common={p.common}
         imported={p.bankLines}

@@ -50,6 +50,8 @@ export interface ImportResult {
 type Props = {
   open: boolean;
   onClose: () => void;
+  /** V20-470 (Dan, Nov 23, Books): after Process, go here (the Books home) instead of back to the page it opened on. */
+  onDone?: () => void;
   accounts: BankAccount[];
   common: CommonExpense[];
   imported: BankLine[];
@@ -422,6 +424,7 @@ export function BankImport(p: Props) {
     setSaving(false);
     clearDraft();
     p.onClose();
+    p.onDone?.();
   }
 
   async function saveSaved() {
@@ -526,7 +529,7 @@ export function BankImport(p: Props) {
             </button>
           )}
           <span className="bank-note">
-            {files.length ? `${files.length} file${files.length > 1 ? 's' : ''} · ${parsed.length} lines · your changes are kept until you save or clear` : 'ATB exports: Personal, Mastercard, Business… pick several at once. Nothing goes to Records until you press Save; your work here is kept if you close this.'}
+            {files.length ? `${files.length} file${files.length > 1 ? 's' : ''} · ${parsed.length} lines · your changes are kept until you ${books ? 'process' : 'save'} or clear` : `ATB exports: Personal, Mastercard, Business… pick several at once. Nothing goes to Records until you press ${books ? 'Process' : 'Save'}; your work here is kept if you close this.`}
           </span>
           {errors.map((e) => (
             <p key={e} className="bank-error">
@@ -873,7 +876,7 @@ export function BankImport(p: Props) {
               </button>
               ) : (
               <button type="button" className="btn btn-go" disabled={saving || !live.length || overSplit.length > 0} onClick={() => void save()}>
-                {saving ? 'Saving…' : live.length ? `Save ${live.length} line${live.length === 1 ? '' : 's'} to Records` : 'Nothing new to import'}
+                {saving ? (books ? 'Processing…' : 'Saving…') : live.length ? (books ? `Process ${live.length} line${live.length === 1 ? '' : 's'}` : `Save ${live.length} line${live.length === 1 ? '' : 's'} to Records`) : 'Nothing new to import'}
               </button>
               )}
             </div>
