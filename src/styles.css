@@ -4781,4 +4781,4 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .combo-opt.is-current::after { content: ' ✓'; }
 /* V20-468 (Dan, Nov 23): Books bank import drops the brown "to check" tint (hard to look at); the orange edge marks those rows. */
 .bank-import.is-books .bank-table tr.bank-row.needs-work td, .app .bank-import.is-books .bank-table tr.bank-row.needs-work.is-alt td { background: transparent; }
-.bank-import.is-books .bank-table tr.bank-row.needs-work:hover td { background: rgb(255 153 51 / 0.08); }
+.bank-import.is-books .bank-table tr.bank-row.needs-work:hover td { background: transparent; }
