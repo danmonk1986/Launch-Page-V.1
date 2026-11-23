@@ -4787,3 +4787,16 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .bank-import.is-books .bank-combo.is-need .combo input { outline: 1px solid var(--accent-green); outline-offset: -1px; }
 .bank-import.is-books .bank-row.is-quiet td { color: inherit; }
 .bank-import.is-books .bank-row.is-quiet input, .bank-import.is-books .bank-row.is-quiet select { opacity: 1; }
+/* V20-473 (Dan, Nov 23, Books bank import): every row reads the same. One font colour (no fades, no teal dates, no dim
+   accounts), no coloured edge lines; lines that are done (came in sorted, or you finished them) sit on light purple,
+   lines still to fill stay plain with green outlines on what's missing (V20-472). The teal hover underline stays. */
+.app .bank-import.is-books .bank-table tr.bank-row td,
+.app .bank-import.is-books .bank-table tr.bank-row td.col-date,
+.app .bank-import.is-books .bank-table tr.bank-row :is(input, select) { color: var(--beige); opacity: 1; }
+.app .bank-import.is-books .bank-table tr.bank-row:not(:hover) td:first-child { box-shadow: none; }
+.app .bank-import.is-books .bank-table tr.bank-row td,
+.app .bank-import.is-books .bank-table tr.bank-row.is-alt td { background: transparent; }
+.app .bank-import.is-books .bank-table tr.bank-row:not(.needs-work) td,
+.app .bank-import.is-books .bank-table tr.bank-row.is-alt:not(.needs-work) td { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
+.app .bank-import.is-books .bank-table tr.bank-row:not(.needs-work) td:first-child { border-radius: 8px 0 0 8px; }
+.app .bank-import.is-books .bank-table tr.bank-row:not(.needs-work) td:last-child { border-radius: 0 8px 8px 0; }
