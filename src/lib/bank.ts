@@ -401,6 +401,22 @@ export interface Draft extends ParsedLine {
 }
 
 const owed = (l: ParsedLine) => l.debit ?? -(l.credit ?? 0);
+
+/**
+ * V20-482 (Dan, Nov 23, Books): a Budget line and an expense / Common Expense are the same bill when their names match
+ * loosely: the same name, or one holds the other's first part ("Adobe" ↔ "Paypal - Adobe - Design Subscription",
+ * "Symless" ↔ "Paddle - Symless"). Short first parts (under 4 letters) don't count.
+ */
+export function sameBill(budgetName: string, other: string): boolean {
+  const a = budgetName.trim().toLowerCase();
+  const b = other.trim().toLowerCase();
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const first = (t: string) => t.split(' - ')[0].trim();
+  const fa = first(a);
+  const fb = first(b);
+  return (fa.length >= 4 && b.includes(fa)) || (fb.length >= 4 && a.includes(fb));
+}
 const daysApart = (a: string, b: string) => Math.abs(new Date(a + 'T12:00').getTime() - new Date(b + 'T12:00').getTime()) / 86_400_000;
 const CARD_PAYMENT = /Bill Payment ATB Mastercard|PAYMENT - THANK YOU|PAYMENT RECEIVED/i;
 
@@ -541,7 +557,9 @@ export function draft(
         // charge); lines priced in another currency are left to Recalc.
         const lineId = hit?.budgetLineId ?? null;
         const bill = (b: BudgetLine) => b.type.toUpperCase() === 'FIXED' || b.section === 'fixed' || b.section === 'annual';
-        const candidates = (ctx.budget ?? []).filter((b) => b.amount !== null && !b.currency && bill(b) && (b.id === lineId || (!lineId && (named(b.description) || (!!rule && b.description.trim().toLowerCase() === rule.description.trim().toLowerCase())))));
+        // V20-482: on Books the Budget follows the bank: a bill is also found through its Common Expense's name, loosely.
+        const viaRule = (b: BudgetLine) => !!rule && (ctx.books ? sameBill(b.description, rule.description) : b.description.trim().toLowerCase() === rule.description.trim().toLowerCase());
+        const candidates = (ctx.budget ?? []).filter((b) => b.amount !== null && !b.currency && bill(b) && (b.id === lineId || (!lineId && (named(b.description) || viaRule(b)))));
         const line = candidates.sort((a, b) => Math.abs((a.amount ?? 0) - amt) - Math.abs((b.amount ?? 0) - amt))[0];
         if (line && Math.abs((line.amount ?? 0) - amt) >= 0.005) base.budget = { lineId: line.id, planned: line.amount ?? 0, description: line.description, apply: true };
       }

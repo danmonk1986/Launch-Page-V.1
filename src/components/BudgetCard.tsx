@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Icon } from './Tasks';
 import { monthlyByCategory, money, type BudgetLine } from '../lib/budget';
 import type { Project } from '../lib/projects';
@@ -16,7 +17,7 @@ const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
  * V20-465 (Dan, Nov 23): on Books, `month` (YYYY-MM, from the Cash Book's ‹ ›) swaps "Next 7 days" for everything
  * due in that month, so the Budget card follows the overview like Expenses and Income. Main passes no month.
  */
-export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, projects: projectList = [] }: { lines: BudgetLine[]; today: Date; month?: string; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void; projects?: Project[] }) {
+export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, projects: projectList = [], lost = [], onKeep, onSkip, onRemove }: { lines: BudgetLine[]; today: Date; month?: string; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void; projects?: Project[]; /** V20-483 (Books): bills due this month the bank never charged. */ lost?: BudgetLine[]; onKeep?: (id: string) => void; onSkip?: (id: string) => void; onRemove?: (id: string) => void }) {
   // V20-423 (Dan, Nov 20): the project is a coloured pill, like the Tasks card and the Budget page (same matching).
   const norm = (x: string) => x.toUpperCase().replace(/^STARDVST\s+/, '').replace(/[^A-Z0-9]/g, '');
   const projectFor = (name: string) => {
@@ -136,6 +137,41 @@ export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, 
           ))}
         </div>
       )}
+      {/* V20-483 (Dan, Nov 23, Books): a bill that should have been charged but wasn't (e.g. a cancelled subscription)
+          is a lost budget item: keep it (stop asking), skip this month, or remove it from the Budget. */}
+      {lost.length > 0 && month && (
+        <div className="bc-lost">
+          <h3 className="card-h">
+            Not charged in {new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1, 12).toLocaleDateString('en-US', { month: 'long' })} · {lost.length} · {money(lost.reduce((a, l) => a + (l.amount ?? 0), 0))}
+          </h3>
+          <p className="field-hint">These bills are in your Budget, but the bank shows no charge for them this month. Still paying it? Keep it. Cancelled? Remove it.</p>
+          {lost.map((l) => (
+            <div key={l.id} className="bc-lost-row">
+              <span className="pl-desc">{l.description}</span>
+              <span className="pl-mono bc-amt">{l.amount === null ? '—' : money(l.amount)}</span>
+              <span className="bc-lost-acts">
+                <button type="button" className="btn btn-quiet" onClick={() => onKeep?.(l.id)} title="It's still a bill (charged under another name, or not every month): stop asking">
+                  Keep
+                </button>
+                <button type="button" className="btn btn-quiet" onClick={() => onSkip?.(l.id)} title="Not this month only">
+                  Skip this month
+                </button>
+                <RemoveBtn onRemove={() => onRemove?.(l.id)} />
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
+  );
+}
+
+/** Two taps to remove (no pop-up): Remove → Sure? */
+function RemoveBtn({ onRemove }: { onRemove: () => void }) {
+  const [sure, setSure] = useState(false);
+  return (
+    <button type="button" className={`btn ${sure ? '' : 'btn-quiet'}`} onClick={() => (sure ? onRemove() : setSure(true))} onBlur={() => setSure(false)} title="Take it out of your Budget">
+      {sure ? 'Sure? Remove' : 'Remove'}
+    </button>
   );
 }

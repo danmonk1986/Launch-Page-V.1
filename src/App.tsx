@@ -33,11 +33,11 @@ import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
 import { syncNonNegs } from './lib/nnsync';
 import { meditationStore, MeditationsContext, type Meditation } from './lib/meditations';
 import { hiddenPickStore, HiddenPicksContext, pickKey as hiddenKey, type HiddenPick } from './lib/hiddenPicks';
-import { bankAccountStore, bankLineStore, commonStore, drawStore, type BankAccount, type BankLine, type CommonExpense, type Draw } from './lib/bank';
+import { bankAccountStore, bankLineStore, commonStore, drawStore, sameBill, type BankAccount, type BankLine, type CommonExpense, type Draw } from './lib/bank';
 import type { ImportResult } from './components/BankImport';
 import { customerStore, emptyProfile, invoiceStore, profileStore, type Customer, type Invoice, type InvoiceProfile } from './lib/invoices';
 import { RecordsPage } from './components/Records';
-import { nextRepeat, readRepeat, writeRepeat } from './lib/repeat';
+import { nextRepeat, readRepeat, repeatOn, writeRepeat } from './lib/repeat';
 import { Days26Page } from './components/Days26';
 import {
   DEFAULT_CONFIG,
@@ -1440,6 +1440,37 @@ export default function App() {
     return !!personalDiv && !!d && (d === personalDiv || (d.length >= 5 && personalDiv.startsWith(d)));
   };
   const booksBudget = books && personalDiv ? budget.filter((l) => !isPersonalLine(l)) : budget;
+  /**
+   * V20-483 (Dan, Nov 23, Books): lost budget items. A bill (fixed / annual) due in the overview's month that no
+   * expense matches (linked to the line, or the same name loosely), once its due dates are 6 days past. Bills you
+   * kept, or skipped for this month, aren't asked about.
+   */
+  const budgetSeen = settings.account?.budgetSeen ?? {};
+  const lostBills: BudgetLine[] = !books
+    ? []
+    : (() => {
+        const start = new Date(Number(booksMonth.slice(0, 4)), Number(booksMonth.slice(5, 7)) - 1, 1, 12);
+        const end = new Date(start.getFullYear(), start.getMonth() + 1, 0, 12);
+        const iso = (d: Date) => d.toLocaleDateString('en-CA');
+        const shift = (d: string, n: number) => iso(new Date(new Date(`${d}T12:00:00`).getTime() + n * 86_400_000));
+        const today = iso(new Date());
+        return booksBudget.filter((l) => {
+          if (l.amount === null || l.currency || budgetSeen[l.id] === 'keep' || budgetSeen[l.id] === booksMonth) return false;
+          if (!(l.type.toUpperCase() === 'FIXED' || l.section === 'fixed' || l.section === 'annual')) return false;
+          const r = readRepeat(l.repeat ?? null);
+          const due: string[] = [];
+          if (r.kind === 'none') {
+            if (l.date) {
+              if (l.date.slice(0, 7) === booksMonth) due.push(l.date);
+            } else due.push(iso(start), iso(end));
+          } else for (let d = new Date(start); d <= end; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 12)) if (repeatOn(r, d)) due.push(iso(d));
+          if (!due.length || shift(due[due.length - 1], 6) >= today) return false;
+          const from = shift(due[0], -6);
+          const to = shift(due[due.length - 1], 6);
+          return !expenses.some((e) => e.date >= from && e.date <= to && (e.budgetLineId === l.id || sameBill(l.description, e.description)));
+        });
+      })();
+  const answerBill = (id: string, v: string) => void handleSave({ account: { ...settings.account, budgetSeen: { ...budgetSeen, [id]: v } } as BrandSettings['account'] });
   const replaceShownBudget = (next: BudgetLine[]) => replaceBudget(booksBudget === budget ? next : [...next, ...budget.filter(isPersonalLine)]);
 
   async function replaceBudget(next: BudgetLine[]) {
@@ -2609,7 +2640,7 @@ export default function App() {
                   />
                 )
               }
-              budget={!mods.budget ? null : <BudgetCard lines={booksBudget} today={now} month={books ? booksMonth : undefined} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
+              budget={!mods.budget ? null : <BudgetCard lines={booksBudget} today={now} month={books ? booksMonth : undefined} lost={lostBills} onKeep={(id) => answerBill(id, 'keep')} onSkip={(id) => answerBill(id, booksMonth)} onRemove={(id) => void deleteBudgetLine(id)} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
               planner={!mods.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
               journal={!mods.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!mods.routine ? null : 

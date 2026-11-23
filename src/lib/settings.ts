@@ -189,6 +189,9 @@ export interface AccountInfo {
   /** V20-455 (Dan, Nov 22): the Books track's Cash Book: the opening balance set for the month it starts ('YYYY-MM');
    *  every later month opens with the month before's closing balance. */
   cashBook?: { start: string; opening: number };
+  /** V20-483 (Dan, Nov 23, Books): Budget bills you answered about when they weren't charged: 'keep' (stop asking)
+   *  or a month 'YYYY-MM' (skipped that month). Keyed by Budget line id. */
+  budgetSeen?: Record<string, string>;
   setupSeconds?: number;
 }
 

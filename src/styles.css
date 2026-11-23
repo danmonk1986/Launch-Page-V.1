@@ -4806,3 +4806,9 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .bank-setup-step .field-hint { margin: 0 0 8px; }
 .bank-amt { width: 96px; text-align: right; }
 .bank-import.is-books .bank-amt.is-need { outline: 1px solid var(--accent-green); outline-offset: -1px; }
+/* V20-483 (Books): Budget card › Not charged this month. */
+.bc-lost { margin-top: 14px; }
+.bc-lost .field-hint { margin: 0 0 8px; }
+.bc-lost-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--edge); }
+.bc-lost-acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 640px) { .bc-lost-row { grid-template-columns: minmax(0, 1fr) auto; } .bc-lost-acts { grid-column: 1 / -1; justify-content: flex-start; } }
