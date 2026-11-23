@@ -160,6 +160,13 @@ export function BankImport(p: Props) {
     }
   }, [parsed, files, edits, skip, accounts, parts]);
   function clearDraft() {
+    // V20-476: forget the saved work right away. Process now closes this and leaves the page in the same moment, so
+    // waiting for the effect left the old draft in storage, and reopening brought back edited lines as new (18 doubles).
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* ignore */
+    }
     setParsed([]);
     setFiles([]);
     setEdits({});
@@ -288,7 +295,8 @@ export function BankImport(p: Props) {
   const rows = useMemo(
     () =>
       base.map((d) => {
-        const r = { ...d, ...edits[d.fp] };
+        // V20-476: a line already imported stays "already here", whatever an old edit says.
+        const r = d.status === 'duplicate' ? { ...d, ...edits[d.fp], status: d.status, route: d.route } : { ...d, ...edits[d.fp] };
         const total = r.amount;
         let ps: Part[] | undefined = parts[d.fp] ?? d.savedParts;
         if (!ps && r.status !== 'duplicate' && r.status !== 'saved') {

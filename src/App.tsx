@@ -1076,7 +1076,8 @@ export default function App() {
     await gone(expenseStore, expenses.filter((e) => !r.expenses.some((x) => x.id === e.id)).concat(r.expenses), setExpenses, r.removeExpenses);
     await gone(drawStore, draws.filter((d) => !r.draws.some((x) => x.id === d.id)).concat(r.draws), setDraws, r.removeDraws);
     // The import history last, so a line only counts as imported once what it made is saved.
-    const linesOk = await many(bankLineStore, bankLines, setBankLines, r.lines);
+    // V20-476: never save a second copy of a bank line (same FP, different id); reopened lines keep their id.
+    const linesOk = await many(bankLineStore, bankLines, setBankLines, r.lines.filter((l) => !bankLines.some((x) => x.fp === l.fp && x.id !== l.id)));
     if (r.update) {
       setStatus(`Updated ${r.lines.length} saved line${r.lines.length === 1 ? '' : 's'}${r.removeExpenses?.length ? `; ${r.removeExpenses.length} expense${r.removeExpenses.length > 1 ? 's' : ''} removed` : ''}.` + (oks.every(Boolean) && linesOk ? '' : ' Some saved on this device only.'));
       return;
