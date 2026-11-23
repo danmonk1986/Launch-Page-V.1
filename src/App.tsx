@@ -1121,6 +1121,9 @@ export default function App() {
    * dated the day it was ticked; unticking takes it back out.
    */
   async function payFor(items: Task[]) {
+    // V20-481 (Dan, Nov 23): on Books nothing goes from Budget to Expenses by itself: an expense comes from the bank or
+    // from you adding it (a budgeted bill may not have been charged, e.g. a cancelled subscription). Main keeps tick to pay.
+    if (books) return;
     for (const t of items) {
       if (!t.budgetLineId) continue;
       const old = tasks.find((x) => x.id === t.id);
