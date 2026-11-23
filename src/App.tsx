@@ -1427,6 +1427,17 @@ export default function App() {
     setStatus(`Linked ${plan.linked.length}, added ${plan.created.length} tasks, moved ${plan.remove.length} duplicates to Recently deleted.`);
   }
   /** An import: the budget becomes exactly this list. */
+  // V20-469 (Dan, Nov 23): Books is the business's books, so its Budget card and page leave out the personal division
+  // (the profile's, e.g. DANMONK26, and its older spelling DAN MONK). Hidden only: replace-all keeps them.
+  const squashDiv = (t: string) => t.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const personalDiv = squashDiv(invoiceProfile[0]?.personalDivision ?? '');
+  const isPersonalLine = (l: BudgetLine) => {
+    const d = squashDiv(l.project ?? '');
+    return !!personalDiv && !!d && (d === personalDiv || (d.length >= 5 && personalDiv.startsWith(d)));
+  };
+  const booksBudget = books && personalDiv ? budget.filter((l) => !isPersonalLine(l)) : budget;
+  const replaceShownBudget = (next: BudgetLine[]) => replaceBudget(booksBudget === budget ? next : [...next, ...budget.filter(isPersonalLine)]);
+
   async function replaceBudget(next: BudgetLine[]) {
     const old = budget;
     setBudget(next);
@@ -2589,7 +2600,7 @@ export default function App() {
                   />
                 )
               }
-              budget={!mods.budget ? null : <BudgetCard lines={budget} today={now} month={books ? booksMonth : undefined} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
+              budget={!mods.budget ? null : <BudgetCard lines={booksBudget} today={now} month={books ? booksMonth : undefined} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
               planner={!mods.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
               journal={!mods.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!mods.routine ? null : 
@@ -2697,11 +2708,11 @@ export default function App() {
             <KnowledgeBasePage userId={userId} onStatus={setStatus} />
           ) : page === 'budget' ? (
             <BudgetPage
-              lines={budget}
+              lines={booksBudget}
               projects={projects}
               onSave={saveBudgetLine}
               onDelete={deleteBudgetLine}
-              onReplace={replaceBudget}
+              onReplace={replaceShownBudget}
               tasks={tasks}
               onApplyLinks={applyLinks}
               expenses={expenses}
