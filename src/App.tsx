@@ -3021,12 +3021,13 @@ export default function App() {
                 {
                   group: 'Export',
                   label: 'Export records',
-                  hint: 'Expenses, Draws and Invoices: one .xlsx with a tab each.',
+                  hint: 'Expenses, Income, Draws and Invoices: one .xlsx with a tab each.',
                   button: 'Export',
                   onClick: () =>
                     void downloadRecords({
                       business: exportBrand(),
                       expenses, draws, invoices, customers,
+                      lines: bankLines, accounts: bankAccounts,
                       colors: { purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' }
                     })
                 }
