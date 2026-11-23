@@ -3,6 +3,7 @@ import { monthlyByCategory, money, type BudgetLine } from '../lib/budget';
 import type { Project } from '../lib/projects';
 import { nextRepeat, readRepeat, repeatOn } from '../lib/repeat';
 import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
+import { booksWeek } from './BooksCards';
 
 /**
  * V20-249 (Dan, Nov 14): the Budget card on the Launch Page, like the Tasks card. The month's totals by project
@@ -32,12 +33,14 @@ export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, 
   const from = iso(today);
   const to = iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 12));
   const mStart = month ? new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1, 12) : null;
-  const mName = mStart ? mStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '';
+  // V20-466 (Dan, Nov 23): one week, like the Launch Page: this month = Next 7 days from today; other months = 1st – 7th.
+  const wk = month ? booksWeek(month, true) : null;
   const inMonth = (l: BudgetLine): { l: BudgetLine; next: string }[] => {
     const r = readRepeat(l.repeat ?? null);
-    if (r.kind === 'none') return l.date && l.date.slice(0, 7) === month ? [{ l, next: l.date }] : [];
+    if (r.kind === 'none') return l.date && l.date >= wk!.from && l.date <= wk!.to ? [{ l, next: l.date }] : [];
     const out: { l: BudgetLine; next: string }[] = [];
-    for (let d = new Date(mStart!); d.getMonth() === mStart!.getMonth(); d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 12)) if (repeatOn(r, d)) out.push({ l, next: iso(d) });
+    const start = new Date(`${wk!.from}T12:00:00`);
+    for (let d = start; iso(d) <= wk!.to; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 12)) if (repeatOn(r, d)) out.push({ l, next: iso(d) });
     return out;
   };
   const due = (mStart
@@ -89,10 +92,10 @@ export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, 
         </div>
       )}
       <h3 className="card-h">
-        {mStart ? `Due in ${mName}` : 'Next 7 days'} · {due.length} · {money(dueTotal)}
+        {wk && wk.label !== 'Next 7 days' ? `Due ${wk.label}` : 'Next 7 days'} · {due.length} · {money(dueTotal)}
       </h3>
       {due.length === 0 ? (
-        <p className="field-hint">{mStart ? `Nothing due in ${mName}.` : 'Nothing due in the next 7 days.'}</p>
+        <p className="field-hint">{wk && wk.label !== 'Next 7 days' ? `Nothing due ${wk.label}.` : 'Nothing due in the next 7 days.'}</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Due in the next 7 days">
           {/* V20-422: column headers, like the Tasks card. */}

@@ -15,7 +15,23 @@ const PLUS = 'M12 5v14M5 12h14';
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 const day = (s: string) => new Date(`${s}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 const monthName = (d: Date) => d.toLocaleDateString('en-US', { month: 'long' });
-const SHOW = 6;
+const isoDay = (d: Date) => `${iso(d)}-${String(d.getDate()).padStart(2, '0')}`;
+const short = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+/**
+ * V20-466 (Dan, Nov 23): the Books cards show one week, like the Launch Page. This month: the week around today
+ * (Last 7 days for what's happened, Next 7 days for what's due). Any other month: its first week (1st – 7th).
+ */
+export function booksWeek(month: string, ahead: boolean): { from: string; to: string; label: string } {
+  const now = new Date();
+  if (month === iso(now)) {
+    const a = ahead ? now : new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 12);
+    const b = ahead ? new Date(now.getFullYear(), now.getMonth(), now.getDate() + 6, 12) : now;
+    return { from: isoDay(a), to: isoDay(b), label: ahead ? 'Next 7 days' : 'Last 7 days' };
+  }
+  const first = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1, 12);
+  return { from: `${month}-01`, to: `${month}-07`, label: `${short(first)} – 7` };
+}
 
 function CardHead({ id, title, openLabel, onOpen, addLabel, onAdd }: { id: string; title: string; openLabel: string; onOpen: () => void; addLabel?: string; onAdd?: () => void }) {
   return (
@@ -44,11 +60,13 @@ export function ExpensesCard({ expenses, today, onOpenAll, onAdd }: { expenses: 
   const m = iso(today);
   const month = expenses.filter((e) => e.date.slice(0, 7) === m);
   const total = month.reduce((a, e) => a + (e.amount ?? 0), 0);
-  // V20-464: Latest = the Cash Book's month (the whole Books overview follows its ‹ ›).
-  const latest = [...month]
+  // V20-464: the Cash Book's month (the whole Books overview follows its ‹ ›). V20-466: one week of it.
+  const wk = booksWeek(m, false);
+  const latest = expenses
+    .filter((e) => e.date >= wk.from && e.date <= wk.to)
     .filter((e) => matchesSearch(q, e.description, e.category, e.project, e.notes))
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.sort - a.sort))
-    .slice(0, SHOW);
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.sort - a.sort));
+  const wkTotal = latest.reduce((a, e) => a + (e.amount ?? 0), 0);
   return (
     <section className="panel panel-budget-card panel-books-card" aria-labelledby="h-expenses-card">
       <CardHead id="h-expenses-card" title="Expenses" openLabel="Open all Expenses" onOpen={onOpenAll} addLabel="Add an expense" onAdd={onAdd} />
@@ -62,9 +80,11 @@ export function ExpensesCard({ expenses, today, onOpenAll, onAdd }: { expenses: 
           <span className="budget-stat-value">{month.length}</span>
         </div>
       </div>
-      <h3 className="card-h">Latest</h3>
+      <h3 className="card-h">
+        {wk.label} · {latest.length} · {money(wkTotal)}
+      </h3>
       {latest.length === 0 ? (
-        <p className="field-hint">{expenses.length ? `No expenses in ${monthName(today)} ${today.getFullYear()}.` : 'No expenses yet. Tap + to add one, or ⌄ to import a bank statement.'}</p>
+        <p className="field-hint">{expenses.length ? `No expenses ${wk.label === 'Last 7 days' ? 'in the last 7 days' : `${wk.label}`}.` : 'No expenses yet. Tap + to add one, or ⌄ to import a bank statement.'}</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Latest expenses">
           <div className="bc-row bc-head books-row" role="row">
@@ -95,10 +115,12 @@ export function IncomeCard({ lines, today, onOpenAll, onImport }: { lines: BankL
     .map((l) => ({ l, amount: l.credit ?? -(l.debit ?? 0), what: l.income?.description || (l.route === 'interest' ? 'Interest' : tidy(l.key)) }));
   const month = ins.filter((x) => x.l.date.slice(0, 7) === m);
   const total = month.reduce((a, x) => a + x.amount, 0);
-  const latest = month
+  const wk = booksWeek(m, false);
+  const latest = ins
+    .filter((x) => x.l.date >= wk.from && x.l.date <= wk.to)
     .filter((x) => matchesSearch(q, x.what, x.l.text))
-    .sort((a, b) => (a.l.date < b.l.date ? 1 : a.l.date > b.l.date ? -1 : 0))
-    .slice(0, SHOW);
+    .sort((a, b) => (a.l.date < b.l.date ? 1 : a.l.date > b.l.date ? -1 : 0));
+  const wkTotal = latest.reduce((a, x) => a + x.amount, 0);
   return (
     <section className="panel panel-budget-card panel-books-card" aria-labelledby="h-income-card">
       <CardHead id="h-income-card" title="Income" openLabel="Open all Income" onOpen={onOpenAll} addLabel="Import a bank statement" onAdd={onImport} />
@@ -112,9 +134,11 @@ export function IncomeCard({ lines, today, onOpenAll, onImport }: { lines: BankL
           <span className="budget-stat-value">{month.length}</span>
         </div>
       </div>
-      <h3 className="card-h">Latest</h3>
+      <h3 className="card-h">
+        {wk.label} · {latest.length} · {money(wkTotal)}
+      </h3>
       {latest.length === 0 ? (
-        <p className="field-hint">{ins.length ? `No money in for ${monthName(today)} ${today.getFullYear()}.` : 'No income yet. Money in comes from your bank statements: tap + to import one.'}</p>
+        <p className="field-hint">{ins.length ? `No money in ${wk.label === 'Last 7 days' ? 'in the last 7 days' : `${wk.label}`}.` : 'No income yet. Money in comes from your bank statements: tap + to import one.'}</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Latest income">
           <div className="bc-row bc-head books-row" role="row">
