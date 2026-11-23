@@ -2544,7 +2544,7 @@ export default function App() {
                       )
                     }
                     onImportBank={() => {
-                      presetRecordsView('income');
+                      presetRecordsView('income', books ? booksMonth : undefined);
                       setPage('invoices');
                       setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
                     }}
@@ -2557,11 +2557,11 @@ export default function App() {
                     expenses={expenses}
                     today={booksDay}
                     onOpenAll={() => {
-                      presetRecordsView('expenses');
+                      presetRecordsView('expenses', books ? booksMonth : undefined);
                       setPage('invoices');
                     }}
                     onAdd={() => {
-                      presetRecordsView('expenses');
+                      presetRecordsView('expenses', books ? booksMonth : undefined);
                       setPage('invoices');
                       setTimeout(() => window.dispatchEvent(new Event('records:add')), 250);
                     }}
@@ -2574,11 +2574,11 @@ export default function App() {
                     lines={bankLines}
                     today={booksDay}
                     onOpenAll={() => {
-                      presetRecordsView('income');
+                      presetRecordsView('income', books ? booksMonth : undefined);
                       setPage('invoices');
                     }}
                     onImport={() => {
-                      presetRecordsView('income');
+                      presetRecordsView('income', books ? booksMonth : undefined);
                       setPage('invoices');
                       setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
                     }}

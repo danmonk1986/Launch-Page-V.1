@@ -8,6 +8,7 @@ import type { BudgetLine } from '../lib/budget';
 import type { Expense } from '../lib/expenses';
 import type { Project } from '../lib/projects';
 import type { BankAccount, BankLine, CommonExpense, Draw } from '../lib/bank';
+import { fyOf } from '../lib/bank';
 import { BankImport, type ImportResult } from './BankImport';
 import { DrawsView, FyNav, thisFy } from './Draws';
 import { IncomeView } from './Income';
@@ -19,12 +20,21 @@ type View = 'expenses' | 'income' | 'draws' | 'invoices';
 const CLOSE = 'M6 6l12 12M18 6L6 18';
 const VIEW_KEY = 'launchpage.records.view';
 /** V20-453: the Books home's cards open Records on their own view (Expenses or Income). */
-export const presetRecordsView = (v: 'expenses' | 'income') => {
+// V20-464b (Dan, Nov 22): …and on the month the Books overview is showing (Income: that month's fiscal year).
+// Read once when the page opens; from there the page's own ‹ › moves it on its own.
+let presetMonth: string | null = null;
+export const presetRecordsView = (v: 'expenses' | 'income', month?: string) => {
+  presetMonth = month ?? null;
   try {
     localStorage.setItem(VIEW_KEY, v);
   } catch {
     /* ignore */
   }
+};
+const takePresetMonth = () => {
+  const m = presetMonth;
+  presetMonth = null;
+  return m;
 };
 
 /**
@@ -69,7 +79,8 @@ export function RecordsPage(
       /* ignore */
     }
   };
-  const [month, setMonth] = useState(thisMonth);
+  const [preset] = useState(takePresetMonth);
+  const [month, setMonth] = useState(() => preset ?? thisMonth());
   const books = useBooks();
   // V20-245: the header search drives this page.
   const { q } = useHeaderSearch();
@@ -87,7 +98,7 @@ export function RecordsPage(
     };
   }, []);
   const fyEnd = p.profile?.fyEnd ?? '09-30';
-  const [fy, setFy] = useState(() => thisFy(fyEnd));
+  const [fy, setFy] = useState(() => (preset ? fyOf(`${preset}-01`, fyEnd) : thisFy(fyEnd)));
   const [addTick, setAddTick] = useState(0);
 
   // Nov 1: the views are pills under the header (Income joins them soon), like Tasks' filters.
