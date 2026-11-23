@@ -28,6 +28,7 @@ import { newExpense, type Expense } from '../lib/expenses';
 import type { Invoice, InvoiceProfile } from '../lib/invoices';
 import { MonthNav, dayLabel } from './Expenses';
 import { TitleCombo } from './Rockets';
+import { useBooks } from '../lib/beta';
 
 export interface ImportResult {
   accounts: BankAccount[];
@@ -190,11 +191,13 @@ export function BankImport(p: Props) {
   }
 
   const profile = p.profile;
+  // V20-467: Books sorts by Budget item too, and keeps a known merchant sorted within 20%.
+  const books = useBooks();
   const owner = profile?.person ?? '';
   const business = (profile?.business ?? '').replace(/\s+(LIMITED|LTD\.?|INC\.?|CORP\.?)$/i, '');
   const fresh = useMemo(
-    () => draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business, personal, budget: p.budget }),
-    [parsed, accounts, p.common, p.imported, p.expenses, p.invoices, owner, business, personal, p.budget]
+    () => draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business, personal, budget: p.budget, books }),
+    [parsed, accounts, p.common, p.imported, p.expenses, p.invoices, owner, business, personal, p.budget, books]
   );
 
   /**

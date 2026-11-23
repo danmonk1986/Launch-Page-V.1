@@ -20,6 +20,7 @@ import { jsonStore, money as cad, type Invoice } from './invoices';
 import { invoiceTotals } from './invoices';
 import type { Expense } from './expenses';
 import type { BudgetLine } from './budget';
+import { readRepeat, repeatOn } from './repeat';
 
 export type Route = 'expense' | 'draw' | 'income' | 'transfer' | 'personal' | 'interest';
 export const ROUTES: { id: Route; label: string; hint: string }[] = [
@@ -359,10 +360,11 @@ export const gstCollected = (deposit: number) => Math.round(((deposit * 5) / 105
 export const GST_RATE = 0.05;
 export const gstIn = (total: number) => Math.round(total * GST_RATE * 100) / 100;
 
-export type Status = 'duplicate' | 'common' | 'matched' | 'auto' | 'check' | 'edited' | 'saved';
+export type Status = 'duplicate' | 'common' | 'budget' | 'matched' | 'auto' | 'check' | 'edited' | 'saved';
 export const STATUS_LABEL: Record<Status, string> = {
   duplicate: 'Already imported',
   common: 'Common expense',
+  budget: 'Budget bill',
   matched: 'Matched',
   auto: 'Auto',
   check: 'Check',
@@ -411,11 +413,26 @@ const CARD_PAYMENT = /Bill Payment ATB Mastercard|PAYMENT - THANK YOU|PAYMENT RE
  */
 export function draft(
   parsed: ParsedLine[],
-  ctx: { accounts: BankAccount[]; common: CommonExpense[]; imported: BankLine[]; expenses: Expense[]; invoices: Invoice[]; owner: string; business: string; personal: string; budget?: BudgetLine[] }
+  ctx: { accounts: BankAccount[]; common: CommonExpense[]; imported: BankLine[]; expenses: Expense[]; invoices: Invoice[]; owner: string; business: string; personal: string; budget?: BudgetLine[]; books?: boolean }
 ): Draft[] {
   const done = new Set(ctx.imported.map((l) => l.fp));
   const acct = (num: string) => ctx.accounts.find((a) => a.number === num);
   const usedExpense = new Set(ctx.imported.map((l) => l.expenseId).filter(Boolean));
+  /** V20-467: the Budget line a bank charge is (Books): named in the bank text, due within 6 days, amount within 20%. */
+  const budgetBill = (l: ParsedLine, amt: number): BudgetLine | null => {
+    const bank = squash(l.key);
+    const at = new Date(`${l.date}T12:00:00`);
+    const near = (b: BudgetLine) => {
+      const r = readRepeat(b.repeat ?? null);
+      if (r.kind === 'none') return !b.date || daysApart(b.date, l.date) <= 6;
+      for (let k = -6; k <= 6; k++) if (repeatOn(r, new Date(at.getFullYear(), at.getMonth(), at.getDate() + k, 12))) return true;
+      return false;
+    };
+    const fits = (ctx.budget ?? []).filter(
+      (b) => b.amount !== null && b.amount > 0 && !b.currency && Math.abs(amt - b.amount) <= b.amount * 0.2 && ((ws) => ws.length > 0 && ws.every((w) => bank.includes(w)))(merchantWords(b.description)) && near(b)
+    );
+    return fits.sort((a, b) => Math.abs(amt - (a.amount ?? 0)) - Math.abs(amt - (b.amount ?? 0)))[0] ?? null;
+  };
   const ownerRe = ctx.owner.trim() ? new RegExp(ctx.owner.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') : null;
   const out: Draft[] = parsed
     .slice()
@@ -492,12 +509,29 @@ export function draft(
         });
         // A FIXED bill at a different amount than usual (PayPal $1,453 isn't the $12.99 subscription;
         // last year's insurance was a different charge): filled in, but to check.
-        if (rule.type === 'FIXED' && rule.amount !== null && Math.abs(Math.abs(amt) - rule.amount) > Math.max(0.5, rule.amount * 0.03))
+        // V20-467 (Dan, Nov 23): on Books a known merchant stays sorted within 20%; further off is left to sort.
+        if (rule.type === 'FIXED' && rule.amount !== null && Math.abs(Math.abs(amt) - rule.amount) > Math.max(0.5, rule.amount * (ctx.books ? 0.2 : 0.03)))
           set({ status: 'check', why: `${rule.description} is usually ${cad(rule.amount)}; this is ${cad(Math.abs(amt))}. Check it's the same thing.` });
       } else if (/Direct Deposit/i.test(l.text) && (l.credit ?? 0) > 0 && kind === 'business') {
         set({ route: 'income', status: 'check', why: 'A deposit into the business account: a client payment? It goes to Records → Income; link it to its invoice there if it isn\'t matched here.', description: `Payment - ${tidy(l.key)}`, amount: l.credit ?? 0, gst: gstCollected(l.credit ?? 0), project: ctx.business });
       } else if (/e-Transfer Received/i.test(l.text)) {
         set({ route: 'personal', status: 'check', why: 'E-transfer received: personal unless it’s the other side of a draw.', description: 'E-Transfer Received', amount: l.credit ?? 0 });
+      } else if (ctx.books && amt > 0 && budgetBill(l, amt)) {
+        // V20-467 (Dan, Nov 23): Books sorts a line by its Budget item too: the merchant is named in the Budget line,
+        // it's due within 6 days of the charge, and the amount is within 20% of what's planned.
+        const b = budgetBill(l, amt)!;
+        const route: Route = b.project.trim().toUpperCase() === ctx.personal.trim().toUpperCase() ? 'personal' : 'expense';
+        set({
+          route,
+          status: 'budget',
+          why: `Budget: ${b.description} (${cad(b.amount ?? 0)} planned).`,
+          project: b.project || ctx.business,
+          description: b.description,
+          type: b.type,
+          category: b.category,
+          pmtCategory: b.pmtCategory,
+          gst: hasGst({ gst: null, pmtCategory: b.pmtCategory, route }) ? gstIn(Math.abs(amt)) : 0
+        });
       } else {
         // Nov 1: a merchant with no Common Expense starts as personal (the personal division) on any
         // account, card and business included, until it's documented.
@@ -507,7 +541,7 @@ export function draft(
       // Every spending line shows its GST (5% of the total) unless its Common Expense says none.
       // Not on money moving between people, cash, bank fees or money received (other than a refund).
       const noGst = /e-Transfer|ABM|Cash|Interest/i.test(l.text) || /^Fee$/i.test(l.kind) || ((l.credit ?? 0) > 0 && !/Return|Refund|Credit/i.test(`${l.text} ${l.kind}`));
-      if (spends(base.route) && !rule && base.status !== 'duplicate' && !noGst) base.gst = gstIn(Math.abs(amt)) * Math.sign(amt);
+      if (spends(base.route) && !rule && base.status !== 'duplicate' && base.status !== 'budget' && !noGst) base.gst = gstIn(Math.abs(amt)) * Math.sign(amt);
       // A Budget bill already paid (ticked in Tasks) is this line: link it instead of adding it twice.
       // Same amount within 4 days, or (Nov 1) a bill from Budget by the same name within 6 days at a
       // new amount: the expense takes what the bank charged.
