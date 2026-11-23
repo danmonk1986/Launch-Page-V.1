@@ -173,7 +173,7 @@ const shiftM = (m: string, n: number) => {
 };
 const mLabel = (m: string) => new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
-export function CashBookCard({ expenses, lines, cashBook, month: shown, onMonth, onSetOpening, onDownloadBlank, onImportFile, onImportBank, onExport }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; month?: string; onMonth?: (m: string) => void; onSetOpening: (start: string, opening: number) => void; onDownloadBlank?: () => void; onImportFile?: (f: File) => void; onImportBank?: () => void; onExport?: () => void }) {
+export function CashBookCard({ expenses, lines, cashBook, month: shown, onMonth, onSetOpening, onDownloadBlank, onImportFile, onImportBank, onExport, onSetup }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; month?: string; onMonth?: (m: string) => void; onSetOpening: (start: string, opening: number) => void; onDownloadBlank?: () => void; onImportFile?: (f: File) => void; onImportBank?: () => void; onExport?: () => void; /** V20-474: one button, "Set up your books". */ onSetup?: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   // V20-464 (Dan, Nov 22): the month can be held by the Books home, so ‹ › moves the whole overview.
   const [own, setOwn] = useState(thisMonth);
@@ -281,7 +281,18 @@ export function CashBookCard({ expenses, lines, cashBook, month: shown, onMonth,
       )}
       {/* V20-458 / 459 / 461 (Dan, Nov 22): start from your own data: the blank Launch Sheet (paste each sheet you keep
           into its tab) or a bank statement .CSV. Exporting is for later, not setup. */}
-      {(onDownloadBlank || onImportFile || onImportBank) && (
+      {/* V20-474 (Dan, Nov 23): setting up without an import goes smoother: one button, a blank version of the import. */}
+      {onSetup ? (
+        <div className="cashbook-start">
+          <h3 className="card-h">Set up your books</h3>
+          <p className="field-hint">Start with your opening balance, then add your expenses and deposits one line at a time. Descriptions you use are remembered, so each month gets quicker. Have a bank .CSV? You can import it from there too.</p>
+          <div className="budget-empty-acts">
+            <button type="button" className="btn btn-go" onClick={onSetup}>
+              Set up your books
+            </button>
+          </div>
+        </div>
+      ) : (onDownloadBlank || onImportFile || onImportBank) && (
         <div className="cashbook-start">
           <h3 className="card-h">Get started from your own data</h3>
           <p className="field-hint">

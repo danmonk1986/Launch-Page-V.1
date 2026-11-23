@@ -61,6 +61,9 @@ export function RecordsPage(
     showBooks?: boolean;
     /** V20-310: each bookkeeping view on its own (Settings › Modules › Records). */
     showViews?: { expenses: boolean; income: boolean; draws: boolean };
+    /** V20-474 (Books): the Cash Book's opening balance, set from "Set up your books". */
+    cashBook?: { start: string; opening: number };
+    onSetOpening?: (start: string, opening: number) => void;
   }
 ) {
   const [view, setViewState] = useState<View>(() => {
@@ -85,15 +88,20 @@ export function RecordsPage(
   // V20-245: the header search drives this page.
   const { q } = useHeaderSearch();
   const [importing, setImporting] = useState(false);
+  // V20-474: "Set up your books" opens the import blank.
+  const [setup, setSetup] = useState(false);
   // V20-198: ⚙ › Data Management › Import bank statements opens Records, then this.
   useEffect(() => {
-    const open = () => setImporting(true);
+    const open = () => (setSetup(false), setImporting(true));
     window.addEventListener('records:import', open);
+    const openSetup = () => (setSetup(true), setImporting(true));
+    window.addEventListener('records:setup', openSetup);
     // V20-453: the Expenses card's + opens Records, then Add expense.
     const add = () => setAddTick((n) => n + 1);
     window.addEventListener('records:add', add);
     return () => {
       window.removeEventListener('records:import', open);
+      window.removeEventListener('records:setup', openSetup);
       window.removeEventListener('records:add', add);
     };
   }, []);
@@ -192,6 +200,9 @@ export function RecordsPage(
         invoices={p.invoices}
         profile={p.profile}
         onSave={p.onImport}
+        setup={setup}
+        cashBook={p.cashBook}
+        onSetOpening={p.onSetOpening}
       />
     </section>
   );

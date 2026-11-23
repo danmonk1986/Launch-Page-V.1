@@ -2563,6 +2563,11 @@ export default function App() {
                       setPage('invoices');
                       setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
                     }}
+                    onSetup={() => {
+                      presetRecordsView('expenses', booksMonth);
+                      setPage('invoices');
+                      setTimeout(() => window.dispatchEvent(new Event('records:setup')), 250);
+                    }}
                   />
                 )
               }
@@ -2678,6 +2683,8 @@ export default function App() {
             />
           ) : page === 'invoices' ? (
             <RecordsPage
+              cashBook={books ? settings.account.cashBook : undefined}
+              onSetOpening={books ? (start, opening) => void handleSave({ account: { ...settings.account, cashBook: { start, opening } } as BrandSettings['account'] }) : undefined}
               showInvoices={mods.invoice}
               showBooks={booksOn(mods)}
               showViews={{ expenses: mods.recExpenses, income: mods.recIncome, draws: mods.recDraws }}

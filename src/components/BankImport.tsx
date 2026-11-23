@@ -62,6 +62,11 @@ type Props = {
   /** Budget lines, for the budget audit. */
   budget: BudgetLine[];
   onSave: (r: ImportResult) => Promise<void>;
+  /** V20-474 (Dan, Nov 23, Books): "Set up your books": this same table, blank. You type each line (date, account,
+   *  amount) and fill it like an imported one; descriptions are learned. A bank .CSV is still one tap away. */
+  setup?: boolean;
+  cashBook?: { start: string; opening: number };
+  onSetOpening?: (start: string, opening: number) => void;
 };
 
 const KINDS: { id: AccountKind; label: string; method: string }[] = [
@@ -163,6 +168,30 @@ export function BankImport(p: Props) {
     setErrors([]);
     setAccounts(p.accounts);
   }
+  // V20-474: setup lines you type. Their fp starts "manual:"; their date, account and amount are edited in place.
+  const isManual = (fp: string) => fp.startsWith('manual:');
+  const [showCsv, setShowCsv] = useState(false);
+  const today = new Date().toLocaleDateString('en-CA');
+  function addLine() {
+    const account = accounts.find((a) => a.kind === 'business')?.number ?? accounts[0]?.number ?? '';
+    setParsed((l) => [...l, { account, date: today, kind: 'Manual', text: '', debit: null, credit: null, balance: null, fp: `manual:${crypto.randomUUID()}`, key: '' }]);
+  }
+  function addAccount() {
+    const n = accounts.length + 1;
+    setAccounts((l) => [...l, { id: crypto.randomUUID(), number: `M${String(n).padStart(4, '0')}`, name: n === 1 ? 'Business account' : `Account ${n}`, method: '', kind: 'business', sort: l.length }]);
+  }
+  const setLine = (fp: string, patch: Partial<ParsedLine>) => setParsed((l) => l.map((x) => (x.fp === fp ? { ...x, ...patch } : x)));
+  /** Money in (Income / Interest) is a credit; everything else goes out (a debit). The row shows it as a plus amount. */
+  const moneyIn = (route: Route) => route === 'income' || route === 'interest';
+  function setManualAmount(r: Draft, v: number | null) {
+    setLine(r.fp, moneyIn(r.route) ? { credit: v, debit: null } : { debit: v, credit: null });
+    // GST follows the amount: the Common Expense's rule if it has one, else 5% unless you took it off.
+    const c = p.common.find((x) => x.id === r.commonId);
+    const gst = !spends(r.route) || !v ? 0 : c ? (hasGst(c) ? gstIn(v) : 0) : r.gst || !r.amount ? gstIn(v) : 0;
+    edit(r, { amount: v ?? 0, gst });
+  }
+  const [openMonth, setOpenMonth] = useState(p.cashBook?.start ?? today.slice(0, 7));
+  const [openAmt, setOpenAmt] = useState(p.cashBook ? String(p.cashBook.opening) : '');
   const [fRoute, setFRoute] = useState<Route | ''>('');
   const [fStatus, setFStatus] = useState<Status | ''>('');
   const [fAccount, setFAccount] = useState('');
@@ -333,7 +362,7 @@ export function BankImport(p: Props) {
       const next = { ...m, [r.fp]: { ...m[r.fp], ...patch, ...mark } };
       // Editing a line yourself makes it your own; it stops following the others.
       followers.current.delete(r.fp);
-      if (base.find((b) => b.fp === r.fp)?.status !== 'check') return next;
+      if (base.find((b) => b.fp === r.fp)?.status !== 'check' || !r.key) return next;
       for (const o of base) {
         if (o.fp === r.fp || o.key !== r.key || o.status !== 'check' || (m[o.fp] && !followers.current.has(o.fp))) continue;
         followers.current.add(o.fp);
@@ -374,6 +403,11 @@ export function BankImport(p: Props) {
     edit(r, { project, ...(r.route === 'expense' && !r.type.trim() ? { type: 'VARIABLE' } : {}) });
   }
   function setRoute(r: Draft, route: Route) {
+    if (isManual(r.fp) && moneyIn(route) !== moneyIn(r.route)) {
+      const v = Math.abs(r.amount) || null;
+      setLine(r.fp, moneyIn(route) ? { credit: v, debit: null } : { debit: v, credit: null });
+      return edit(r, { route, amount: v ?? 0, gst: spends(route) && v ? gstIn(v) : 0, ...(route === 'personal' ? { project: personal } : {}) });
+    }
     edit(r, { route, gst: !spends(route) ? 0 : spends(r.route) ? r.gst : gstIn(Math.abs(r.amount)) * Math.sign(r.amount), ...(route === 'personal' ? { project: personal } : route === 'draw' && (!r.project || r.project === personal) ? { project: business } : {}) });
   }
 
@@ -503,7 +537,7 @@ export function BankImport(p: Props) {
   const statusOf = (r: Draft) => (skip.has(r.fp) ? 'Left out' : STATUS_LABEL[r.status]);
 
   return (
-    <Sheet open={p.open} title="Import bank CSV" onClose={p.onClose} wide>
+    <Sheet open={p.open} title={p.setup ? 'Set up your books' : 'Import bank CSV'} onClose={p.onClose} wide>
       <div className={`bank-import${books ? ' is-books' : ''}`}>
         <div className="bank-modes">
           <div className="d26-range budget-views" role="group" aria-label="Import or reopen">
@@ -531,7 +565,44 @@ export function BankImport(p: Props) {
           )}
           {mode === 'saved' && <span className="bank-note">{rows.length} lines saved in this month. Change any of them and save again: their expenses and draws update.</span>}
         </div>
-        {mode === 'new' && (
+        {mode === 'new' && p.setup && (
+          <div className="bank-setup-form">
+            <div className="bank-setup-step">
+              <h3 className="card-h">1 · Opening balance</h3>
+              <p className="field-hint">What was in the business account on the first day you're starting from. Every month after carries on from it.</p>
+              <div className="bank-files">
+                <input type="month" value={openMonth} onChange={(e) => setOpenMonth(e.target.value)} aria-label="Starting month" />
+                <input type="number" step="0.01" inputMode="decimal" value={openAmt} onChange={(e) => setOpenAmt(e.target.value)} placeholder="0.00" aria-label="Opening balance" size={10} />
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={!openMonth || openAmt.trim() === '' || Number.isNaN(Number(openAmt))}
+                  onClick={() => p.onSetOpening?.(openMonth, Math.round(Number(openAmt) * 100) / 100)}
+                >
+                  {p.cashBook ? 'Update' : 'Set it'}
+                </button>
+                {p.cashBook && <span className="bank-note">Set: {money(p.cashBook.opening)} from {p.cashBook.start}.</span>}
+              </div>
+            </div>
+            <div className="bank-setup-step">
+              <h3 className="card-h">2 · Your lines</h3>
+              <p className="field-hint">Add each expense or deposit: the date, the account, the amount, then where it goes and what it is. Pick a description you've used before and the rest fills in; a new one is remembered for next time. Your work is kept if you close this.</p>
+              <div className="bank-files">
+                <button type="button" className="btn btn-go" onClick={addLine} disabled={!accounts.length}>
+                  + Add a line
+                </button>
+                <button type="button" className="btn btn-quiet" onClick={addAccount}>
+                  + Add an account
+                </button>
+                {!accounts.length && <span className="bank-note">Add an account first (your business account), then your lines.</span>}
+                <button type="button" className="link-btn" onClick={() => setShowCsv((x) => !x)}>
+                  {showCsv ? 'Hide the .CSV import' : 'Have a bank .CSV? Import it instead'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {mode === 'new' && (!p.setup || showCsv) && (
         <div className="bank-files">
           <input ref={fileInput} type="file" accept=".csv,text/csv" multiple hidden onChange={(e) => (void read(e.target.files), (e.target.value = ''))} />
           <button type="button" className="btn btn-go" onClick={() => fileInput.current?.click()}>
@@ -553,7 +624,7 @@ export function BankImport(p: Props) {
         </div>
         )}
 
-        <details className="bank-setup" open={accounts.length > p.accounts.length || undefined}>
+        <details className="bank-setup" open={accounts.length > p.accounts.length || (p.setup && accounts.length < 2) || undefined}>
           <summary>Records setup · fiscal year ends {fyEnd} · personal division {personal} · {accounts.length} account{accounts.length === 1 ? '' : 's'}</summary>
           <label className="bank-fy">
             Fiscal year ends (MM-DD)
@@ -747,8 +818,27 @@ export function BankImport(p: Props) {
                             }
                           />
                         </td>
-                        <td className="col-date">{dayLabel(r.date)}</td>
-                        <td className="bank-mono">{acct(r.account)?.method || last4(r.account)}</td>
+                        {isManual(r.fp) ? (
+                          <>
+                            <td className="col-date">
+                              <input type="date" value={r.date} onChange={(e) => e.target.value && setLine(r.fp, { date: e.target.value })} aria-label="Date" />
+                            </td>
+                            <td>
+                              <select value={r.account} onChange={(e) => setLine(r.fp, { account: e.target.value })} aria-label="Account">
+                                {accounts.map((a) => (
+                                  <option key={a.id} value={a.number}>
+                                    {a.method || a.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="col-date">{dayLabel(r.date)}</td>
+                            <td className="bank-mono">{acct(r.account)?.method || last4(r.account)}</td>
+                          </>
+                        )}
                         {!books && (
                           <td className="bank-text" title={r.text}>
                             {r.text}
@@ -795,7 +885,21 @@ export function BankImport(p: Props) {
                           <Pick value={r.pmtCategory} options={cats} disabled={off} onChange={(v) => edit(r, { pmtCategory: v })} label="Category" need={spends(r.route)} />
                         </td>
                         <td className="col-amount" title={r.parts.length ? `What's left of ${money(r.total)} after the parts` : undefined}>
-                          {money(r.amount)}
+                          {isManual(r.fp) && !r.parts.length ? (
+                            <input
+                              className={`bank-amt${books && !r.amount ? ' is-need' : ''}`}
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              inputMode="decimal"
+                              value={r.amount ? Math.abs(r.amount) : ''}
+                              placeholder="0.00"
+                              aria-label="Amount"
+                              onChange={(e) => setManualAmount(r, e.target.value === '' ? null : Math.abs(Math.round(Number(e.target.value) * 100) / 100))}
+                            />
+                          ) : (
+                            money(r.amount)
+                          )}
                           {r.parts.length > 0 && <span className="money-orig">of {money(r.total)}</span>}
                         </td>
                         <td className="col-amount">

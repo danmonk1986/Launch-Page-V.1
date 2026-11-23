@@ -572,7 +572,8 @@ export function draft(
 export function learn(d: Draft, list: CommonExpense[], parts: Part[] = [], total = d.amount): CommonExpense | null {
   if (d.route !== 'expense' && d.route !== 'personal') return null;
   const same = list.find((c) => c.id === d.commonId && c.description === d.description) ?? list.find((c) => c.description.trim().toLowerCase() === d.description.trim().toLowerCase());
-  const keys = same ? [...new Set([...same.keys.filter((k) => k !== d.key), d.key])] : [d.key];
+  // V20-474: a line you typed has no bank merchant (key ''), so it teaches the description, not a merchant.
+  const keys = (same ? [...new Set([...same.keys.filter((k) => k !== d.key), d.key])] : [d.key]).filter(Boolean);
   return {
     id: same?.id ?? crypto.randomUUID(),
     project: d.project,

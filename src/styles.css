@@ -4800,3 +4800,9 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app .bank-import.is-books .bank-table tr.bank-row.is-alt:not(.needs-work) td { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); }
 .app .bank-import.is-books .bank-table tr.bank-row:not(.needs-work) td:first-child { border-radius: 8px 0 0 8px; }
 .app .bank-import.is-books .bank-table tr.bank-row:not(.needs-work) td:last-child { border-radius: 0 8px 8px 0; }
+/* V20-474 (Books): "Set up your books" form above the table; typed lines' amount box. */
+.bank-setup-form { display: grid; gap: 14px; margin-bottom: 12px; }
+.bank-setup-step .card-h { margin: 0 0 4px; }
+.bank-setup-step .field-hint { margin: 0 0 8px; }
+.bank-amt { width: 96px; text-align: right; }
+.bank-import.is-books .bank-amt.is-need { outline: 1px solid var(--accent-green); outline-offset: -1px; }
