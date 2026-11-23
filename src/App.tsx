@@ -1078,6 +1078,14 @@ export default function App() {
     // The import history last, so a line only counts as imported once what it made is saved.
     // V20-476: never save a second copy of a bank line (same FP, different id); reopened lines keep their id.
     const linesOk = await many(bankLineStore, bankLines, setBankLines, r.lines.filter((l) => !bankLines.some((x) => x.fp === l.fp && x.id !== l.id)));
+    // V20-485: spreadsheet lines a bank line took over (same expense) go, so the charge counts once.
+    if (r.removeLines?.length) {
+      const drop = new Set(r.removeLines);
+      const saved = r.lines.filter((l) => !bankLines.some((x) => x.fp === l.fp && x.id !== l.id));
+      const kept = [...bankLines.map((x) => saved.find((i) => i.id === x.id) ?? x), ...saved.filter((i) => !bankLines.some((x) => x.id === i.id))].filter((x) => !drop.has(x.id));
+      setBankLines(kept);
+      for (const id of drop) await bankLineStore.remove(userId, id, kept);
+    }
     if (r.update) {
       setStatus(`Updated ${r.lines.length} saved line${r.lines.length === 1 ? '' : 's'}${r.removeExpenses?.length ? `; ${r.removeExpenses.length} expense${r.removeExpenses.length > 1 ? 's' : ''} removed` : ''}.` + (oks.every(Boolean) && linesOk ? '' : ' Some saved on this device only.'));
       return;

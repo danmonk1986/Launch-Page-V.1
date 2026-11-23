@@ -41,6 +41,8 @@ export interface ImportResult {
   /** Reopening saved lines: expenses / draws a changed line no longer makes. */
   removeExpenses?: string[];
   removeDraws?: string[];
+  /** V20-485: spreadsheet lines a bank line took over (same charge), removed so nothing counts twice. */
+  removeLines?: string[];
   /** True when this saves changes to lines imported before. */
   update?: boolean;
   /** Budget audit: Budget lines updated to what the bank charged. */
@@ -476,7 +478,8 @@ export function BankImport(p: Props) {
       const b = r.budget?.apply ? p.budget.find((x) => x.id === r.budget!.lineId) : undefined;
       if (b) budgetLines.set(b.id, { ...b, amount: Math.round(Math.abs(r.total) * 100) / 100 });
     }
-    await p.onSave({ accounts, lines, expenses, draws, common: [...touched.values()], invoices, profile: changedProfile, budgetLines: [...budgetLines.values()] });
+    const removeLines = live.filter((r) => r.route === 'expense' && r.replacesLine && lines.some((l) => l.fp === r.fp && l.expenseId === r.expenseId)).map((r) => r.replacesLine as string);
+    await p.onSave({ accounts, lines, expenses, draws, common: [...touched.values()], invoices, profile: changedProfile, budgetLines: [...budgetLines.values()], removeLines });
     setSaving(false);
     clearDraft();
     p.onClose();

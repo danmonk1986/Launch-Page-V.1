@@ -398,6 +398,8 @@ export interface Draft extends ParsedLine {
   savedParts?: Part[];
   /** Budget audit (Nov 1): the Budget line this bill is, when the bank charged a different amount; apply updates it. */
   budget?: { lineId: string; planned: number; description: string; apply: boolean };
+  /** V20-485: the spreadsheet line (Launch Sheet / Records file) this bank line takes over, so it isn't counted twice. */
+  replacesLine?: string;
 }
 
 const owed = (l: ParsedLine) => l.debit ?? -(l.credit ?? 0);
@@ -431,7 +433,10 @@ export function draft(
 ): Draft[] {
   const done = new Set(ctx.imported.map((l) => l.fp));
   const acct = (num: string) => ctx.accounts.find((a) => a.number === num);
-  const usedExpense = new Set(ctx.imported.map((l) => l.expenseId).filter(Boolean));
+  // V20-485 (Dan, Nov 23): an expense that came in from a spreadsheet (fp 'sheet|…') is still free for the bank line
+  // that is the same charge: the bank line links it and takes the sheet line's place instead of adding a second copy.
+  const sheetLineOf = new Map(ctx.imported.filter((l) => l.fp.startsWith('sheet|') && l.expenseId).map((l) => [l.expenseId as string, l.id]));
+  const usedExpense = new Set(ctx.imported.filter((l) => !l.fp.startsWith('sheet|')).map((l) => l.expenseId).filter(Boolean));
   const ownerRe = ctx.owner.trim() ? new RegExp(ctx.owner.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') : null;
   const out: Draft[] = parsed
     .slice()
@@ -539,6 +544,8 @@ export function draft(
         if (hit) {
           usedExpense.add(hit.id);
           const moved = Math.abs((hit.amount ?? 0) - amt) >= 0.005;
+          const sheet = sheetLineOf.get(hit.id);
+          if (sheet) base.replacesLine = sheet;
           set({
             route: 'expense',
             expenseId: hit.id,
