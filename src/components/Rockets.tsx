@@ -2239,7 +2239,7 @@ export function useOpensUp(wrap: { current: HTMLElement | null }, open: boolean)
 }
 
 /** "What": type a new name, or open the list with ⌄ (or by typing) and pick one you've used before. */
-export function TitleCombo({ value, titles: allTitles, onChange, placeholder = 'Work Block #1 - Launch Page Construction', required = true, autoFocus, list, label }: { value: string; titles: string[]; onChange: (v: string) => void; placeholder?: string; required?: boolean; autoFocus?: boolean; /** Oct 24: names the list so its items get an ✕ that hides them (lib/hiddenPicks.ts). */ list?: string; /** Nov 1: the input's accessible name (bank import cells). */ label?: string }) {
+export function TitleCombo({ value, titles: allTitles, onChange, placeholder = 'Work Block #1 - Launch Page Construction', required = true, autoFocus, list, label, steady }: { value: string; titles: string[]; onChange: (v: string) => void; placeholder?: string; required?: boolean; autoFocus?: boolean; /** Oct 24: names the list so its items get an ✕ that hides them (lib/hiddenPicks.ts). */ list?: string; /** Nov 1: the input's accessible name (bank import cells). */ label?: string; /** V20-468 (Dan, Nov 23, Books): the same full list on every row (current one marked), nothing lit until hovered. */ steady?: boolean }) {
   const picks = useContext(HiddenPicksContext);
   const gone = new Set(list ? picks.hidden.filter((h) => h.list === list).map((h) => h.value) : []);
   const titles = gone.size ? allTitles.filter((t) => !gone.has(hiddenKey(t))) : allTitles;
@@ -2250,7 +2250,7 @@ export function TitleCombo({ value, titles: allTitles, onChange, placeholder = '
   const wrap = useRef<HTMLDivElement>(null);
   const up = useOpensUp(wrap, open);
   const q = value.trim().toLowerCase();
-  const shown = (filtering && q ? titles.filter((t) => t.toLowerCase().includes(q)) : titles).filter((t) => t !== value);
+  const shown = (filtering && q ? titles.filter((t) => t.toLowerCase().includes(q)) : titles).filter((t) => steady || t !== value);
   const pick = (t: string) => {
     onChange(t);
     setOpen(false);
@@ -2278,8 +2278,10 @@ export function TitleCombo({ value, titles: allTitles, onChange, placeholder = '
         onKeyDown={(e) => {
           if (e.key === 'ArrowDown') {
             e.preventDefault();
-            if (!open) setOpen(true);
-            else setHi((h) => Math.min(h + 1, shown.length - 1));
+            if (!open) {
+              setOpen(true);
+              if (steady) setHi(0);
+            } else setHi((h) => Math.min(h + 1, shown.length - 1));
           } else if (e.key === 'ArrowUp') {
             e.preventDefault();
             setHi((h) => Math.max(h - 1, 0));
@@ -2302,7 +2304,7 @@ export function TitleCombo({ value, titles: allTitles, onChange, placeholder = '
           tabIndex={-1}
           onClick={() => {
             setFiltering(false);
-            setHi(0);
+            setHi(steady ? -1 : 0);
             setOpen((x) => !x);
           }}
         >
@@ -2315,7 +2317,7 @@ export function TitleCombo({ value, titles: allTitles, onChange, placeholder = '
         <ul className={`combo-list${up ? ' is-up' : ''}`} role="listbox" id={listId}>
           {shown.map((t, i) => (
             <li key={t} role="option" aria-selected={i === hi} className={list ? 'combo-row' : undefined}>
-              <button type="button" className={`combo-opt combo-opt-plain ${i === hi ? 'is-hi' : ''}`} onMouseEnter={() => setHi(i)} onClick={() => pick(t)}>
+              <button type="button" className={`combo-opt combo-opt-plain ${i === hi ? 'is-hi' : ''}${steady && t === value ? ' is-current' : ''}`} onMouseEnter={() => setHi(i)} onMouseLeave={() => steady && setHi(-1)} onClick={() => pick(t)}>
                 {t}
               </button>
               {list && (

@@ -86,6 +86,7 @@ function guessAccount(number: string, file: string, sort: number): BankAccount {
  * Common Expenses first for Description); typing filters the list.
  */
 function Pick(p: { value: string; options: string[]; groups?: { label: string; options: string[] }[]; onChange: (v: string) => void; label: string; disabled?: boolean; wide?: boolean }) {
+  const books = useBooks();
   const titles = [...new Set([...(p.groups ?? []).flatMap((g) => g.options), ...p.options])];
   if (p.disabled)
     return (
@@ -95,7 +96,7 @@ function Pick(p: { value: string; options: string[]; groups?: { label: string; o
     );
   return (
     <div className={`bank-combo${p.wide ? ' is-wide' : ''}`}>
-      <TitleCombo value={p.value} titles={titles} onChange={p.onChange} placeholder="—" required={false} label={p.label} />
+      <TitleCombo value={p.value} titles={titles} onChange={p.onChange} placeholder="—" required={false} label={p.label} steady={books} />
     </div>
   );
 }
@@ -486,7 +487,7 @@ export function BankImport(p: Props) {
 
   return (
     <Sheet open={p.open} title="Import bank CSV" onClose={p.onClose} wide>
-      <div className="bank-import">
+      <div className={`bank-import${books ? ' is-books' : ''}`}>
         <div className="bank-modes">
           <div className="d26-range budget-views" role="group" aria-label="Import or reopen">
             <button type="button" aria-pressed={mode === 'new'} onClick={() => setMode('new')} title="Bring in new statements">

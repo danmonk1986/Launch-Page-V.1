@@ -35,7 +35,7 @@ import { meditationStore, MeditationsContext, type Meditation } from './lib/medi
 import { hiddenPickStore, HiddenPicksContext, pickKey as hiddenKey, type HiddenPick } from './lib/hiddenPicks';
 import { bankAccountStore, bankLineStore, commonStore, drawStore, type BankAccount, type BankLine, type CommonExpense, type Draw } from './lib/bank';
 import type { ImportResult } from './components/BankImport';
-import { customerStore, invoiceStore, profileStore, type Customer, type Invoice, type InvoiceProfile } from './lib/invoices';
+import { customerStore, emptyProfile, invoiceStore, profileStore, type Customer, type Invoice, type InvoiceProfile } from './lib/invoices';
 import { RecordsPage } from './components/Records';
 import { nextRepeat, readRepeat, writeRepeat } from './lib/repeat';
 import { Days26Page } from './components/Days26';
@@ -317,6 +317,10 @@ export default function App() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [invoiceProfile, setInvoiceProfile] = useState<InvoiceProfile[]>([]);
+  // V20-468b (Dan, Nov 23): a Books account with no invoice profile yet starts one from its business name, so the
+  // bank import lists that business (FNTSY LVNG) as a division and Records setup (personal division) can save.
+  const [blankProfile] = useState(emptyProfile);
+  const recordsProfile: InvoiceProfile | null = invoiceProfile[0] ?? (books ? { ...blankProfile, business: settings.account?.businessName ?? '' } : null);
   // V20-015 bookkeeping: bank accounts, imported statement lines, Common Expenses, draws.
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [bankLines, setBankLines] = useState<BankLine[]>([]);
@@ -2681,7 +2685,7 @@ export default function App() {
               projects={projects}
               invoices={invoices}
               customers={customers}
-              profile={invoiceProfile[0] ?? null}
+              profile={recordsProfile}
               onSave={invoiceOps.save}
               onDelete={invoiceOps.remove}
               onSaveCustomer={customerOps.save}
