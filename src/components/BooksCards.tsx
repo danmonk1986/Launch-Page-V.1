@@ -245,7 +245,8 @@ export function CashBookCard({ expenses, lines, cashBook, month: shown, onMonth,
         {card('Out', `− ${money(moneyOut)}`, 'your expenses')}
         {card('Closing', closing === null ? '—' : money(closing), closing === null ? 'set an opening balance' : closing < 0 ? 'below zero' : 'what\'s left', true)}
       </div>
-      {editing ? (
+      {/* V20-475 (Dan, Nov 23): with "Set up your books", the opening balance is set there (step 1), not here. */}
+      {onSetup ? null : editing ? (
         <form
           className="cashbook-set"
           onSubmit={(e) => {
