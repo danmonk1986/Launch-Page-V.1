@@ -169,6 +169,9 @@ export default function App() {
   // V20-453 (Dan, Nov 22): BETA TRACKS. A tester's track is on their account (set only by the invite function).
   // Books = the Books home (Budget, Expenses, Income), BOOKS logo. The admin sees it by signing in as a Books test account.
   const books = !isAdmin && trackOf(session?.user.app_metadata) === 'books';
+  // V20-464 (Dan, Nov 22): the Books overview's month, set by the Cash Book's ‹ ›; the Expenses and Income cards follow it.
+  const [booksMonth, setBooksMonth] = useState(() => new Date().toLocaleDateString('en-CA').slice(0, 7));
+  const booksDay = new Date(Number(booksMonth.slice(0, 4)), Number(booksMonth.slice(5, 7)) - 1, 1);
   /** The modules in force: beta mode's fixed MVP set, or the account's own switches (main). */
   const mods = books ? BOOKS_MODULES : beta ? BETA_MODULES : settings.modules;
   useEffect(() => {
@@ -2529,6 +2532,8 @@ export default function App() {
                     expenses={expenses}
                     lines={bankLines}
                     cashBook={settings.account.cashBook}
+                    month={booksMonth}
+                    onMonth={setBooksMonth}
                     onSetOpening={(start, opening) => void handleSave({ account: { ...settings.account, cashBook: { start, opening } } as BrandSettings['account'] })}
                     onDownloadBlank={() => downloadBlob('LAUNCH-SHEET-blank.xlsx', blankBooksFile({ purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' }))}
                     onImportFile={(f) => void importBooksFile(f)}
@@ -2550,7 +2555,7 @@ export default function App() {
                 !books ? null : (
                   <ExpensesCard
                     expenses={expenses}
-                    today={now}
+                    today={booksDay}
                     onOpenAll={() => {
                       presetRecordsView('expenses');
                       setPage('invoices');
@@ -2567,7 +2572,7 @@ export default function App() {
                 !books ? null : (
                   <IncomeCard
                     lines={bankLines}
-                    today={now}
+                    today={booksDay}
                     onOpenAll={() => {
                       presetRecordsView('income');
                       setPage('invoices');

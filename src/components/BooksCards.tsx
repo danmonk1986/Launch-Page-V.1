@@ -44,7 +44,8 @@ export function ExpensesCard({ expenses, today, onOpenAll, onAdd }: { expenses: 
   const m = iso(today);
   const month = expenses.filter((e) => e.date.slice(0, 7) === m);
   const total = month.reduce((a, e) => a + (e.amount ?? 0), 0);
-  const latest = [...expenses]
+  // V20-464: Latest = the Cash Book's month (the whole Books overview follows its ‹ ›).
+  const latest = [...month]
     .filter((e) => matchesSearch(q, e.description, e.category, e.project, e.notes))
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.sort - a.sort))
     .slice(0, SHOW);
@@ -63,7 +64,7 @@ export function ExpensesCard({ expenses, today, onOpenAll, onAdd }: { expenses: 
       </div>
       <h3 className="card-h">Latest</h3>
       {latest.length === 0 ? (
-        <p className="field-hint">No expenses yet. Tap + to add one, or ⌄ to import a bank statement.</p>
+        <p className="field-hint">{expenses.length ? `No expenses in ${monthName(today)} ${today.getFullYear()}.` : 'No expenses yet. Tap + to add one, or ⌄ to import a bank statement.'}</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Latest expenses">
           <div className="bc-row bc-head books-row" role="row">
@@ -94,7 +95,7 @@ export function IncomeCard({ lines, today, onOpenAll, onImport }: { lines: BankL
     .map((l) => ({ l, amount: l.credit ?? -(l.debit ?? 0), what: l.income?.description || (l.route === 'interest' ? 'Interest' : tidy(l.key)) }));
   const month = ins.filter((x) => x.l.date.slice(0, 7) === m);
   const total = month.reduce((a, x) => a + x.amount, 0);
-  const latest = ins
+  const latest = month
     .filter((x) => matchesSearch(q, x.what, x.l.text))
     .sort((a, b) => (a.l.date < b.l.date ? 1 : a.l.date > b.l.date ? -1 : 0))
     .slice(0, SHOW);
@@ -113,7 +114,7 @@ export function IncomeCard({ lines, today, onOpenAll, onImport }: { lines: BankL
       </div>
       <h3 className="card-h">Latest</h3>
       {latest.length === 0 ? (
-        <p className="field-hint">No income yet. Money in comes from your bank statements: tap + to import one.</p>
+        <p className="field-hint">{ins.length ? `No money in for ${monthName(today)} ${today.getFullYear()}.` : 'No income yet. Money in comes from your bank statements: tap + to import one.'}</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Latest income">
           <div className="bc-row bc-head books-row" role="row">
@@ -148,9 +149,12 @@ const shiftM = (m: string, n: number) => {
 };
 const mLabel = (m: string) => new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
-export function CashBookCard({ expenses, lines, cashBook, onSetOpening, onDownloadBlank, onImportFile, onImportBank, onExport }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; onSetOpening: (start: string, opening: number) => void; onDownloadBlank?: () => void; onImportFile?: (f: File) => void; onImportBank?: () => void; onExport?: () => void }) {
+export function CashBookCard({ expenses, lines, cashBook, month: shown, onMonth, onSetOpening, onDownloadBlank, onImportFile, onImportBank, onExport }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; month?: string; onMonth?: (m: string) => void; onSetOpening: (start: string, opening: number) => void; onDownloadBlank?: () => void; onImportFile?: (f: File) => void; onImportBank?: () => void; onExport?: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [month, setMonth] = useState(thisMonth);
+  // V20-464 (Dan, Nov 22): the month can be held by the Books home, so ‹ › moves the whole overview.
+  const [own, setOwn] = useState(thisMonth);
+  const month = shown ?? own;
+  const setMonth = onMonth ?? setOwn;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const inOf = (m: string) => lines.filter((l) => (l.route === 'income' || l.route === 'interest') && l.date.slice(0, 7) === m).reduce((a, l) => a + (l.credit ?? -(l.debit ?? 0)), 0);
