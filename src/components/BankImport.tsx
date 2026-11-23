@@ -640,7 +640,8 @@ export function BankImport(p: Props) {
                     <th className="col-center" title="Untick to leave a line out of this import">✓</th>
                     <th className="col-date">Date</th>
                     <th>Account</th>
-                    <th>Bank text</th>
+                    {/* V20-471 (Dan, Nov 23): Books drops Bank text (it fills Description; hover a description to see it). */}
+                    {!books && <th>Bank text</th>}
                     <th>Goes to</th>
                     <th>Division</th>
                     <th className="col-task">Description</th>
@@ -667,9 +668,11 @@ export function BankImport(p: Props) {
                           ))}
                       </select>
                     </th>
-                    <th>
-                      <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search lines" />
-                    </th>
+                    {!books && (
+                      <th>
+                        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search lines" />
+                      </th>
+                    )}
                     <th>
                       <select value={fRoute} onChange={(e) => setFRoute(e.target.value as Route | '')} aria-label="Filter by where it goes">
                         <option value="">All</option>
@@ -680,7 +683,17 @@ export function BankImport(p: Props) {
                         ))}
                       </select>
                     </th>
-                    <th colSpan={8} />
+                    {books ? (
+                      <>
+                        <th />
+                        <th>
+                          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search lines" />
+                        </th>
+                        <th colSpan={6} />
+                      </>
+                    ) : (
+                      <th colSpan={8} />
+                    )}
                     <th>
                       <select value={fStatus} onChange={(e) => setFStatus(e.target.value as Status | '')} aria-label="Filter by status">
                         <option value="">All</option>
@@ -722,9 +735,11 @@ export function BankImport(p: Props) {
                         </td>
                         <td className="col-date">{dayLabel(r.date)}</td>
                         <td className="bank-mono">{acct(r.account)?.method || last4(r.account)}</td>
-                        <td className="bank-text" title={r.text}>
-                          {r.text}
-                        </td>
+                        {!books && (
+                          <td className="bank-text" title={r.text}>
+                            {r.text}
+                          </td>
+                        )}
                         <td>
                           <select value={r.route} disabled={off} onChange={(e) => setRoute(r, e.target.value as Route)} aria-label="Goes to" title={ROUTES.find((x) => x.id === r.route)?.hint}>
                             {ROUTES.map((x) => (
@@ -738,7 +753,7 @@ export function BankImport(p: Props) {
                           <Pick value={r.project} options={divisions} disabled={off} onChange={(v) => edit(r, { project: v })} label="Division" />
                         </td>
                         <td className="col-task">
-                          <div className="bank-desc-wrap">
+                          <div className="bank-desc-wrap" title={books ? r.text : undefined}>
                           {!off && (r.route === 'expense' || r.route === 'personal') && (
                             <button type="button" className="icon-btn bank-split" aria-label="Split this charge" title="Split this charge: add a part under it (another division, or a personal share). The line keeps what's left." onClick={() => addPart(r)}>
                               ↳
@@ -808,7 +823,7 @@ export function BankImport(p: Props) {
                                 ×
                               </button>
                             </td>
-                            <td colSpan={3} className="bank-part-label">
+                            <td colSpan={books ? 2 : 3} className="bank-part-label">
                               ↳ part of {money(r.total)}
                             </td>
                             <td>
