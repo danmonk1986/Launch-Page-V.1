@@ -2585,7 +2585,7 @@ export default function App() {
                   />
                 )
               }
-              budget={!mods.budget ? null : <BudgetCard lines={budget} today={now} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
+              budget={!mods.budget ? null : <BudgetCard lines={budget} today={now} month={books ? booksMonth : undefined} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
               planner={!mods.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
               journal={!mods.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!mods.routine ? null : 
