@@ -568,7 +568,14 @@ export function BankImport(p: Props) {
             expenses.push(e);
             expenseId = e.id;
           }
-          line.parts.push({ route: x.route, amount: x.amount, expenseId, project: x.project, description: x.description, type: x.type, category: x.category, pmtCategory: x.pmtCategory, gst: x.gst });
+          // V20-517: a part that's a draw goes to Draws, for its own amount.
+          let drawId: string | null = null;
+          if (x.route === 'draw') {
+            const d: Draw = { id: crypto.randomUUID(), project: x.project, date: r.date, description: x.description, amount: Math.round(Math.abs(x.amount) * 100) / 100, notes: [r.notes.trim(), `${r.text} (part of ${money(r.total)})`].filter(Boolean).join(' — '), bankLineId: line.id, sort: draws.length };
+            draws.push(d);
+            drawId = d.id;
+          }
+          line.parts.push({ route: x.route, amount: x.amount, expenseId, drawId, project: x.project, description: x.description, type: x.type, category: x.category, pmtCategory: x.pmtCategory, gst: x.gst });
         }
       }
       if (r.route === 'draw') {
@@ -639,10 +646,18 @@ export function BankImport(p: Props) {
             expenseId = e.id;
             oldParts.delete(e.id);
           }
-          next.parts.push({ route: x.route, amount: x.amount, expenseId, project: x.project, description: x.description, type: x.type, category: x.category, pmtCategory: x.pmtCategory, gst: x.gst });
+          let drawId: string | null = null;
+          if (x.route === 'draw') {
+            const d: Draw = { id: crypto.randomUUID(), project: x.project, date: r.date, description: x.description, amount: Math.round(Math.abs(x.amount) * 100) / 100, notes: [r.notes.trim(), `${r.text} (part of ${money(r.total)})`].filter(Boolean).join(' — '), bankLineId: line.id, sort: p.draws.length + draws.length };
+            draws.push(d);
+            drawId = d.id;
+          }
+          next.parts.push({ route: x.route, amount: x.amount, expenseId, drawId, project: x.project, description: x.description, type: x.type, category: x.category, pmtCategory: x.pmtCategory, gst: x.gst });
         }
       }
       removeExpenses.push(...oldParts);
+      // V20-517: a reopened line's part draws are made again from its parts as they are now.
+      removeDraws.push(...(line.parts ?? []).map((x) => x.drawId).filter((x): x is string => !!x));
       const oldD = line.drawId ? p.draws.find((d) => d.id === line.drawId) : undefined;
       if (r.route === 'draw') {
         const d: Draw = { ...(oldD ?? { id: crypto.randomUUID(), sort: p.draws.length + draws.length, bankLineId: line.id }), project: r.project, date: r.date, description: r.description, amount: Math.round(r.amount * 100) / 100, notes: r.notes.trim() };
@@ -1410,10 +1425,20 @@ export function BankImport(p: Props) {
                               ↳ part of {money(r.total)}
                             </td>
                             <td>
-                              <select value={x.route} onChange={(e) => setPart(r, x.id, { route: e.target.value as Part['route'], ...(e.target.value === 'personal' ? { project: personal } : {}) })} aria-label="Part goes to">
-                                <option value="expense">Expense</option>
-                                {/* V20-516: under a Draw, a Personal part would count the same money twice (the draw is already yours). */}
-                                {(r.route !== 'draw' || x.route === 'personal') && <option value="personal">Personal</option>}
+                              {/* V20-517 (Dan, Nov 24): a part's Goes to has the same list as a line's. */}
+                              <select
+                                value={x.route}
+                                onChange={(e) => {
+                                  const route = e.target.value as Route;
+                                  setPart(r, x.id, { route, ...(route === 'personal' ? { project: personal } : x.project === personal ? { project: business } : {}), ...(spends(route) ? {} : { gst: false }) });
+                                }}
+                                aria-label="Part goes to"
+                              >
+                                {(books ? ROUTES : ROUTES.filter((o) => o.id === 'expense' || o.id === 'personal')).map((o) => (
+                                  <option key={o.id} value={o.id}>
+                                    {o.label}
+                                  </option>
+                                ))}
                               </select>
                             </td>
                             <td>

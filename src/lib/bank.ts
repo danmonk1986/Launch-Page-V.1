@@ -64,7 +64,7 @@ export interface BankLine {
   invoiceId: string | null;
   /** A split charge: the parts beyond the main line (each its own expense, or personal). */
   // V20-492: type / group / category / GST kept on the part itself too, so a personal part (no expense) keeps them.
-  parts?: { route: Route; amount: number; expenseId: string | null; project: string; description: string; type?: string; category?: string; pmtCategory?: string; gst?: boolean }[];
+  parts?: { route: Route; amount: number; expenseId: string | null; /** V20-517: a part that's a draw. */ drawId?: string | null; project: string; description: string; type?: string; category?: string; pmtCategory?: string; gst?: boolean }[];
   /** Money in (Nov 1, Records → Income): how a deposit or interest is documented; GST is what it collected. */
   income?: { project: string; description: string; gst: number; notes: string };
   sort: number;
@@ -102,7 +102,8 @@ export interface CommonExpense {
 /** One part of a split charge. The main line keeps whatever the parts don't cover. */
 export interface Part {
   id: string;
-  route: 'expense' | 'personal';
+  /** V20-517 (Dan, Nov 24): a part goes anywhere a line can (a $1,000 e-transfer: $300 rent expense, $700 draw). */
+  route: Route;
   project: string;
   description: string;
   type: string;
