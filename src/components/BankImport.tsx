@@ -147,6 +147,8 @@ function Pick(p: { value: string; options: string[]; groups?: { label: string; o
 
 /** Work in progress (Nov 1): kept on this device until it's saved or cleared, so closing the sheet loses nothing. */
 const DRAFT_KEY = 'launchpage.bank-draft.v1';
+/** V20-513 (Dan, Nov 24, Books): Split lives in the Division list (the ↳ button is gone on Books). */
+const SPLIT = 'Split this charge…';
 /** V20-509: one draft per signed-in account (STARDVST's work never shows, or gets wiped, in FNTSY LVNG's import). */
 function draftKey() {
   try {
@@ -414,21 +416,22 @@ export function BankImport(p: Props) {
    * V20-497 (Dan, Nov 23, Books): stacks. Sort one merchant at a time: every line from that merchant stacks together
    * (filled with the best guess), you confirm them, and finishing the last one moves to the next merchant still to sort.
    */
-  const [stackOn, setStackOn] = useState(false);
-  const [stackKey, setStackKey] = useState<string | null>(null);
-  const [stackSkipped, setStackSkipped] = useState<string[]>([]);
   const stackKeys = useMemo(() => {
     const out: string[] = [];
-    for (const r of live) if (r.key && needsWork(r) && !out.includes(r.key) && !stackSkipped.includes(r.key)) out.push(r.key);
+    for (const r of live) if (r.key && needsWork(r) && !out.includes(r.key)) out.push(r.key);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, skip, stackSkipped]);
-  useEffect(() => {
-    if (!stackOn) return;
-    if (stackKey && stackKeys.includes(stackKey)) return;
-    if (stackKeys.length) setStackKey(stackKeys[0]);
-    else (setStackOn(false), setStackKey(null), setStackSkipped([]));
-  }, [stackOn, stackKey, stackKeys]);
+  }, [rows, skip]);
+  /**
+   * V20-513 (Dan, Nov 24): the merchant list is fixed when you start, and nothing moves on by itself (filling one box
+   * used to jump to the next merchant). Accept, Skip or Back move between merchants; past the last, back to all lines.
+   */
+  const [stackList, setStackList] = useState<string[] | null>(null);
+  const [stackIdx, setStackIdx] = useState(0);
+  const stackOn = !!stackList;
+  const stackKey = stackList?.[stackIdx] ?? null;
+  const stopStack = () => (setStackList(null), setStackIdx(0));
+  const stackGo = (i: number) => (stackList && i >= stackList.length ? stopStack() : setStackIdx(Math.max(0, i)));
   const stackRows = stackOn && stackKey ? live.filter((r) => r.key === stackKey) : [];
   const confirmLine = (r: Draft) => edit(r, { status: 'edited' });
   const shown = rows.filter(
@@ -469,6 +472,19 @@ export function BankImport(p: Props) {
       const next = { ...m, [r.fp]: { ...m[r.fp], ...patch, ...mark } };
       // Editing a line yourself makes it your own; it stops following the others.
       followers.current.delete(r.fp);
+      // V20-513: sorting by merchant, what you fill in on one line fills down into that merchant's other lines where
+      // the same box is still empty (each line can still be changed on its own).
+      if (stackOn && r.key && r.key === stackKey) {
+        const FILL = ['project', 'description', 'type', 'category', 'pmtCategory'] as const;
+        for (const o of rows) {
+          if (o.fp === r.fp || o.key !== r.key || o.status === 'duplicate') continue;
+          const add: Partial<Draft> = {};
+          for (const k of FILL) if (k in patch && !(String(o[k] ?? '')).trim() && String(patch[k] ?? '').trim()) (add as Record<string, unknown>)[k] = patch[k];
+          if ('commonId' in patch && !o.description.trim()) add.commonId = patch.commonId;
+          if (Object.keys(add).length) next[o.fp] = { ...m[o.fp], ...next[o.fp], ...add };
+        }
+        return next;
+      }
       // V20-497: a two-way merchant's lines are each confirmed on their own (a crew dinner isn't the next drinks for one).
       if (base.find((b) => b.fp === r.fp)?.status !== 'check' || !r.key || r.confirm) return next;
       for (const o of base) {
@@ -1057,14 +1073,17 @@ export function BankImport(p: Props) {
         {books && rows.length > 0 && (stackOn && stackKey ? (
           <div className="bank-stackbar">
             <h3 className="card-h">
-              {stackRows[0]?.description || tidy(stackKey)} · {stackRows.length} line{stackRows.length === 1 ? '' : 's'} · merchant {stackKeys.indexOf(stackKey) + 1} of {stackKeys.length}
+              {stackRows[0]?.description || tidy(stackKey)} · {stackRows.length} line{stackRows.length === 1 ? '' : 's'} · merchant {stackIdx + 1} of {stackList?.length ?? 0}
             </h3>
-            <span className="bank-note">Check each line (one-tap picks under Description), then Confirm. Finishing the last one moves to the next merchant.</span>
-            <button type="button" className="btn" onClick={() => stackRows.filter((r) => needsWork(r) && !blank(r)).forEach(confirmLine)} title="Confirm every line here that's filled in">
-              Confirm all
+            <span className="bank-note">Fill in the first line: each empty box fills down to this merchant's other lines. Change any line on its own, then Accept.</span>
+            <button type="button" className="btn btn-quiet" disabled={stackIdx === 0} onClick={() => stackGo(stackIdx - 1)} title="Back to the merchant before">
+              ‹ Back
             </button>
-            <button type="button" className="btn btn-quiet" onClick={() => (setStackSkipped((l) => [...l, stackKey]), setStackKey(null))}>
-              Skip merchant
+            <button type="button" className="btn btn-quiet" onClick={() => stackGo(stackIdx + 1)} title="Leave this merchant as it is and go to the next">
+              Skip
+            </button>
+            <button type="button" className="btn" onClick={() => (stackRows.forEach(confirmLine), stackGo(stackIdx + 1))} title="These lines are right: confirm them and go to the next merchant">
+              Accept
             </button>
           </div>
         ) : (
@@ -1074,7 +1093,7 @@ export function BankImport(p: Props) {
               <span className="bank-note">
                 {stackKeys.length} merchant{stackKeys.length === 1 ? '' : 's'} to sort. Go one merchant at a time: every line from it together.
               </span>
-              <button type="button" className="btn" onClick={() => setStackOn(true)}>
+              <button type="button" className="btn" onClick={() => (setStackList(stackKeys), setStackIdx(0))}>
                 Sort by merchant
               </button>
             </div>
@@ -1274,11 +1293,18 @@ export function BankImport(p: Props) {
                           </select>
                         </td>
                         <td>
-                          <Pick value={r.project} options={divisions} disabled={off} onChange={(v) => setDivision(r, v)} label="Division" need={spends(r.route)} />
+                          <Pick
+                            value={r.project}
+                            options={books && (r.route === 'expense' || r.route === 'personal') ? [...divisions, SPLIT] : divisions}
+                            disabled={off}
+                            onChange={(v) => (v === SPLIT ? addPart(r) : setDivision(r, v))}
+                            label="Division"
+                            need={spends(r.route)}
+                          />
                         </td>
                         <td className="col-task">
                           <div className="bank-desc-wrap" title={books ? r.text : undefined}>
-                          {!off && (r.route === 'expense' || r.route === 'personal') && (
+                          {!off && !books && (r.route === 'expense' || r.route === 'personal') && (
                             <button type="button" className="icon-btn bank-split" aria-label="Split this charge" title="Split this charge: add a part under it (another division, or a personal share). The line keeps what's left." onClick={() => addPart(r)}>
                               ↳
                             </button>
@@ -1436,14 +1462,16 @@ export function BankImport(p: Props) {
               ) : (
               <>
               {/* V20-512 (Dan): Show all lines sits beside Process while sorting by merchant. */}
-              {books && stackOn && (
-                <button type="button" className="btn btn-quiet" onClick={() => (setStackOn(false), setStackKey(null), setStackSkipped([]))}>
+              {/* V20-513 (Dan): while sorting by merchant there's no Process: Show all lines first. */}
+              {books && stackOn ? (
+                <button type="button" className="btn btn-go" onClick={stopStack}>
                   Show all lines
                 </button>
-              )}
+              ) : (
               <button type="button" className="btn btn-go" disabled={saving || !live.length || overSplit.length > 0} onClick={() => void save()}>
                 {saving ? (books ? 'Processing…' : 'Saving…') : live.length ? (books ? `Process ${live.length} line${live.length === 1 ? '' : 's'}` : `Save ${live.length} line${live.length === 1 ? '' : 's'} to Records`) : 'Nothing new to import'}
               </button>
+              )}
               </>
               )}
             </div>
