@@ -420,11 +420,11 @@ export function sameBill(budgetName: string, other: string): boolean {
   if ((fa.length >= 4 && b.includes(fa)) || (fb.length >= 4 && a.includes(fb))) return true;
   // V20-488: or they share a distinctive word ("Claude Subscription" ↔ "Anthropic Claude Sub"). Words of 5+ letters,
   // not the generic ones every bill has.
-  const words = (t: string) => new Set(t.split(/[^a-z0-9]+/).filter((w) => w.length >= 5 && !GENERIC.has(w)));
+  const words = (t: string) => new Set(t.split(/[^a-z0-9]+/).filter((w) => w.length >= 5 && !BILL_WORDS.has(w)));
   const wb = words(b);
   return [...words(a)].some((w) => wb.has(w));
 }
-const GENERIC = new Set(['subscription', 'subscriptions', 'payment', 'payments', 'monthly', 'annual', 'yearly', 'store', 'stores', 'online', 'service', 'services', 'canada', 'insurance', 'account', 'transfer', 'purchase', 'market', 'company', 'limited', 'books', 'bill', 'bills', 'phone', 'mobile', 'internet', 'shop']);
+const BILL_WORDS = new Set(['subscription', 'subscriptions', 'payment', 'payments', 'monthly', 'annual', 'yearly', 'store', 'stores', 'online', 'service', 'services', 'canada', 'insurance', 'account', 'transfer', 'purchase', 'market', 'company', 'limited', 'books', 'bill', 'bills', 'phone', 'mobile', 'internet', 'shop']);
 const daysApart = (a: string, b: string) => Math.abs(new Date(a + 'T12:00').getTime() - new Date(b + 'T12:00').getTime()) / 86_400_000;
 const CARD_PAYMENT = /Bill Payment ATB Mastercard|PAYMENT - THANK YOU|PAYMENT RECEIVED/i;
 
