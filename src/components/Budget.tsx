@@ -42,11 +42,8 @@ const GROUP_ICON: Record<BudgetGroupBy, string> = {
 const SYNC = 'M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18.5 3v4h-4M5.5 21v-4h4';
 // V20-501: the Budget audit (a ticked box).
 const AUDIT = 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11';
-const AUDIT_GROUPS: { kind: AuditKind; title: string }[] = [
-  { kind: 'add', title: 'Add to the Budget' },
-  { kind: 'price', title: 'New price' },
-  { kind: 'rhythm', title: 'Now monthly' }
-];
+const AUDIT_LABEL: Record<AuditKind, string> = { add: 'Add to the Budget', price: 'New price', rhythm: 'Now monthly' };
+const AUDIT_SKIP = 'launchpage.budgetAuditSkip.v1';
 const auditDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
 
 type Props = {
@@ -294,23 +291,53 @@ export function BudgetPage(p: Props) {
 
   /** ⋯ Recalc: a line priced in another currency gets today's CAD amount. */
   const [recalcNote, setRecalcNote] = useState('');
-  // V20-501 (Dan, Nov 23, Books): the Budget audit. Its list, and the changes left unticked.
-  const [audit, setAudit] = useState<AuditChange[] | null>(null);
-  const [auditOff, setAuditOff] = useState<Set<string>>(new Set());
+  // V20-501 → V20-505 (Dan, Nov 24, Books): the Budget audit, worked out live; the header button shows its count and
+  // opens it as a card above the lines (the same as Expenses' audit). Tick = apply the change; bin = ignore it (that
+  // suggestion at that price isn't asked again, remembered on this device).
+  const [auditOpen, setAuditOpen] = useState(false);
   const [auditing, setAuditing] = useState(false);
-  const runAudit = () => {
-    setAuditOff(new Set());
-    setAudit(auditBudget(p.lines, p.expenses, new Date().toLocaleDateString('en-CA')));
-  };
-  const applyAudit = async () => {
-    if (!audit || !p.onSaveMany) return;
-    const picked = audit.filter((c) => !auditOff.has(c.key));
+  const [auditSkip, setAuditSkip] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(AUDIT_SKIP) ?? '[]') as string[];
+    } catch {
+      return [];
+    }
+  });
+  const skipKey = (c: AuditChange) => `${c.key}|${c.after.amount ?? ''}|${c.after.repeat ?? ''}`;
+  const audit = useMemo(
+    () => (books && p.onSaveMany ? auditBudget(p.lines, p.expenses, new Date().toLocaleDateString('en-CA')).filter((c) => !auditSkip.includes(skipKey(c))) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [books, p.lines, p.expenses, auditSkip]
+  );
+  const applyAudit = async (list: AuditChange[]) => {
+    if (!list.length || !p.onSaveMany) return;
     setAuditing(true);
-    await p.onSaveMany(picked.map((c) => c.after));
+    await p.onSaveMany(list.map((c) => c.after));
     setAuditing(false);
-    setAudit(null);
-    setRecalcNote(`Budget audit: ${picked.length} change${picked.length === 1 ? '' : 's'} applied.`);
+    setRecalcNote(`Budget audit: ${list.length} change${list.length === 1 ? '' : 's'} applied.`);
   };
+  const skipAudit = (c: AuditChange) => {
+    const next = [...auditSkip, skipKey(c)];
+    setAuditSkip(next);
+    try {
+      localStorage.setItem(AUDIT_SKIP, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  };
+  // Clicking an item: the Master list, everything showing, scrolled to its line and lit up.
+  const [spot, setSpot] = useState<{ id: string; n: number } | null>(null);
+  const showLine = (id: string) => {
+    setView('master');
+    setPick(null);
+    setClosed({});
+    setSpot((x) => ({ id, n: (x?.n ?? 0) + 1 }));
+  };
+  useEffect(() => {
+    if (!spot) return;
+    const t = window.setTimeout(() => document.getElementById(`bud-${spot.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+    return () => window.clearTimeout(t);
+  }, [spot]);
   async function recalc(l: BudgetLine) {
     if (l.foreign == null || !l.currency) return;
     setRecalcNote(`Getting today's ${l.currency} rate…`);
@@ -421,10 +448,11 @@ export function BudgetPage(p: Props) {
           </button>
           </>
           )}
-          {/* V20-501b: the audit in both views (Month opens first on Books). */}
+          {/* V20-501b / V20-505: the audit in both views; its count on the button. */}
           {books && p.onSaveMany && (
-            <button type="button" className="icon-btn tool-btn" aria-label="Budget audit" title="Budget audit: new prices, new fixed bills and bills gone monthly, from your Expenses" onClick={runAudit}>
+            <button type="button" className={`icon-btn tool-btn audit-btn${auditOpen ? ' is-on' : ''}`} aria-label={`Budget audit${audit.length ? `: ${audit.length} to check` : ''}`} aria-pressed={auditOpen} title="Budget audit: new prices, new fixed bills and bills gone monthly, from your Expenses" onClick={() => setAuditOpen((o) => !o)}>
               <Icon d={AUDIT} />
+              {audit.length > 0 && <span className="audit-count">{audit.length}</span>}
             </button>
           )}
           {/* V20-203 (Dan, Nov 14): search on one side, + on the other (then ×). */}
@@ -451,6 +479,66 @@ export function BudgetPage(p: Props) {
         <p className="field-hint recalc-note" role="status">
           {recalcNote}
         </p>
+      )}
+      {auditOpen && (
+        <div className="statement-check budget-audit-card">
+          <div className="statement-check-head">
+            <h3 className="card-h">{audit.length ? `Audit · ${audit.length} to check` : 'Audit · all clear'}</h3>
+            <button type="button" className="btn btn-quiet" onClick={() => setAuditOpen(false)}>
+              Hide
+            </button>
+            {audit.length > 0 && (
+              <button type="button" className="btn" disabled={auditing} onClick={() => void applyAudit(audit)}>
+                {auditing ? 'Fixing…' : `Fix all ${audit.length}`}
+              </button>
+            )}
+          </div>
+          <p className="field-hint">
+            {audit.length
+              ? "From your Expenses, last month and this month up to today. Click one to see its line below. The tick applies the change; the bin ignores it (it won't be suggested again at that price)."
+              : 'Your Budget matches your Expenses: no new prices, no fixed bills missing, nothing gone monthly.'}
+          </p>
+          {audit.length > 0 && (
+            <div className="statement-check-list">
+              {audit.map((c) => {
+                const latest = c.charges[0];
+                return (
+                  <div key={c.key} className="statement-check-row">
+                    <span className="col-date">{latest ? auditDate(latest.date) : ''}</span>
+                    <span className="bank-mono">{c.after.method || '—'}</span>
+                    {c.before ? (
+                      <button type="button" className="link-btn pl-desc statement-check-go" title="Show its line below" onClick={() => showLine(c.before!.id)}>
+                        {c.after.description}
+                      </button>
+                    ) : (
+                      <span className="pl-desc" title={c.why}>
+                        {c.after.description}
+                      </span>
+                    )}
+                    <span className="pl-mono">
+                      {c.before && c.kind !== 'add' && <s className="audit-was">{c.before.amount === null ? '—' : money(c.before.amount)}</s>} {money(c.after.amount ?? 0)}
+                    </span>
+                    <span className="statement-check-why" title={c.why}>
+                      {AUDIT_LABEL[c.kind]}
+                    </span>
+                    <span className="bc-lost-acts statement-check-acts">
+                      <button type="button" className="quick-btn statement-bin" disabled={auditing} onClick={() => skipAudit(c)} aria-label={`Ignore: ${c.after.description}`} title="Ignore it: don't suggest this again">
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+                        </svg>
+                      </button>
+                      <button type="button" className="quick-btn quick-done" disabled={auditing} onClick={() => void applyAudit([c])} aria-label={`Apply: ${c.after.description}`} title={`Apply: ${c.why}`}>
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12l5 5 9-10" />
+                        </svg>
+                      </button>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
       {view === 'month' && <BudgetMonth month={month} onMonth={setMonth} lines={p.lines} expenses={p.expenses} linkedIds={linkedIds} search={q} name={itemName} menu={lineMenu} />}
 
@@ -549,7 +637,7 @@ export function BudgetPage(p: Props) {
                   )}
                   {!shut &&
                     rows.map((l, i) => (
-                      <tr key={l.id} className={`task-row${i % 2 ? ' is-alt' : ''}`}>
+                      <tr key={l.id} id={`bud-${l.id}`} className={`task-row${i % 2 ? ' is-alt' : ''}${spot?.id === l.id ? ' is-spot' : ''}`}>
                         <td className="col-project">
                           {l.project ? (
                             (() => {
@@ -710,79 +798,6 @@ export function BudgetPage(p: Props) {
                   }}
                 >
                   {linking ? 'Linking…' : 'Link and clean up'}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </Sheet>
-
-      <Sheet open={!!audit} title="Budget audit" onClose={() => setAudit(null)}>
-        {audit && (
-          <div className="reminder budget-audit">
-            {audit.length === 0 ? (
-              <p className="panel-empty">Your Budget matches your Expenses: no new prices, no fixed bills missing, nothing gone monthly (last month and this month, up to today).</p>
-            ) : (
-              <>
-                <p className="panel-empty">
-                  From your Expenses, last month and this month up to today. Untick anything you don't want, then Apply.
-                </p>
-                {AUDIT_GROUPS.map(({ kind, title }) => {
-                  const list = audit.filter((c) => c.kind === kind);
-                  if (!list.length) return null;
-                  return (
-                    <div key={kind} className="audit-group">
-                      <h3 className="audit-title">
-                        {title} <span className="link-plan-dim">({list.length})</span>
-                      </h3>
-                      <ul>
-                        {list.map((c) => {
-                          const on = !auditOff.has(c.key);
-                          return (
-                            <li key={c.key} className={`audit-row${on ? '' : ' is-off'}`}>
-                              <label>
-                                <input
-                                  type="checkbox"
-                                  checked={on}
-                                  onChange={() =>
-                                    setAuditOff((o) => {
-                                      const n = new Set(o);
-                                      if (n.has(c.key)) n.delete(c.key);
-                                      else n.add(c.key);
-                                      return n;
-                                    })
-                                  }
-                                />
-                                <span className="audit-name">{c.after.description}</span>
-                                <span className="audit-amt">
-                                  {c.before && c.kind !== 'add' && <s>{c.before.amount === null ? 'no amount' : money(c.before.amount)}</s>} {money(c.after.amount ?? 0)}
-                                  {c.kind === 'rhythm' ? ' / month' : c.kind === 'add' ? ' / month' : ''}
-                                </span>
-                              </label>
-                              <span className="audit-why">{c.why}</span>
-                              <span className="audit-charges">
-                                {c.charges
-                                  .slice(0, 4)
-                                  .map((e) => `${auditDate(e.date)} ${money(e.amount ?? 0)}${e.description.trim() !== c.after.description ? ` · ${e.description}` : ''}`)
-                                  .join('  ·  ')}
-                                {c.charges.length > 4 ? `  · +${c.charges.length - 4} more` : ''}
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  );
-                })}
-              </>
-            )}
-            <div className="reminder-actions">
-              <button type="button" className="btn btn-quiet" onClick={() => setAudit(null)}>
-                {audit.length ? 'Cancel' : 'Close'}
-              </button>
-              {audit.length > 0 && (
-                <button type="button" className="btn" disabled={auditing || audit.every((c) => auditOff.has(c.key))} onClick={() => void applyAudit()}>
-                  {auditing ? 'Applying…' : `Apply ${audit.length - auditOff.size} change${audit.length - auditOff.size === 1 ? '' : 's'}`}
                 </button>
               )}
             </div>

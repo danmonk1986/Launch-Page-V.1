@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { money } from '../lib/budget';
 import type { BankAccount, BankLine } from '../lib/bank';
 import type { Expense } from '../lib/expenses';
@@ -28,10 +28,9 @@ const WHY: Record<Issue['why'], { label: string; fix: string }> = {
   personal: { label: 'Statement says Personal', fix: 'Use this filing' }
 };
 
-export function StatementCheck(p: { lines: BankLine[]; expenses: Expense[]; accounts: BankAccount[]; onImport: (r: ImportResult) => Promise<void>; onShow?: (expenseId: string, date: string) => void }) {
+export function StatementCheck(p: { lines: BankLine[]; expenses: Expense[]; accounts: BankAccount[]; onImport: (r: ImportResult) => Promise<void>; onShow?: (expenseId: string, date: string) => void; open: boolean; onClose: () => void; onCount?: (n: number) => void }) {
   const [kept, setKept] = useState<string[]>(readKept);
   const [busy, setBusy] = useState(false);
-  const [open, setOpen] = useState(false);
   const issues = useMemo<Issue[]>(() => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
@@ -68,7 +67,21 @@ export function StatementCheck(p: { lines: BankLine[]; expenses: Expense[]; acco
     return out.sort((x, y) => x.sheet.date.localeCompare(y.sheet.date));
   }, [p.lines, p.expenses, kept]);
 
-  if (!issues.length) return null;
+  // V20-505 (Dan, Nov 24): the Audit button in the Expenses header opens this card and shows its count.
+  useEffect(() => p.onCount?.(issues.length), [issues.length]);
+  if (!p.open) return null;
+  if (!issues.length)
+    return (
+      <div className="statement-check">
+        <div className="statement-check-head">
+          <h3 className="card-h">Audit · all clear</h3>
+          <button type="button" className="btn btn-quiet" onClick={p.onClose}>
+            Hide
+          </button>
+        </div>
+        <p className="field-hint">Everything from your spreadsheets is backed up by your bank statements.</p>
+      </div>
+    );
   const acct = (n: string) => p.accounts.find((a) => a.number === n)?.method || n;
   const empty: ImportResult = { accounts: [], lines: [], expenses: [], draws: [], common: [], invoices: [], profile: null, update: true };
   const accept = async (list: Issue[]) => {
@@ -100,17 +113,17 @@ export function StatementCheck(p: { lines: BankLine[]; expenses: Expense[]; acco
     <div className="statement-check">
       <div className="statement-check-head">
         <h3 className="card-h">
-          Not on your statement · {issues.length} · {money(total)}
+          Audit · not on your statement · {issues.length} · {money(total)}
         </h3>
-        <button type="button" className="btn btn-quiet" onClick={() => setOpen((x) => !x)}>
-          {open ? 'Hide' : 'Review'}
+        <button type="button" className="btn btn-quiet" onClick={p.onClose}>
+          Hide
         </button>
         <button type="button" className="btn" disabled={busy} onClick={() => void accept(issues)}>
           {busy ? 'Fixing…' : `Fix all ${issues.length}`}
         </button>
       </div>
       <p className="field-hint">These came from a spreadsheet you imported, but your bank statement for those dates doesn't back them up. Click one to see it below. The bin fixes it (removes the spreadsheet copy); the tick says it's right, so it stays in Expenses and drops off this list.</p>
-      {open && (
+      {(
         <div className="statement-check-list">
           {issues.map((i) => (
             <div key={i.sheet.id} className="statement-check-row">

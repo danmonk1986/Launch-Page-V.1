@@ -17,6 +17,8 @@ import { FoldTabs } from './FoldTabs';
 
 const IMPORT = 'M12 3v12M7 10l5 5 5-5M5 21h14';
 const PLUS = 'M12 5v14M5 12h14';
+// V20-505: the Audit (a ticked box), the same on Expenses and Budget.
+const AUDIT = 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11';
 type View = 'expenses' | 'income' | 'draws' | 'invoices';
 const CLOSE = 'M6 6l12 12M18 6L6 18';
 const VIEW_KEY = 'launchpage.records.view';
@@ -95,6 +97,9 @@ export function RecordsPage(
   const [focus, setFocus] = useState<{ month: string; fp: string } | null>(null);
   // V20-502: the expense picked in "Not on your statement" (scrolled to and lit up in the list).
   const [spot, setSpot] = useState<{ id: string; n: number } | null>(null);
+  // V20-505: the Audit (Not on your statement) opens from the header; its count shows on the button.
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [auditN, setAuditN] = useState(0);
   // V20-198: ⚙ › Data Management › Import bank statements opens Records, then this.
   useEffect(() => {
     const open = () => (setSetup(false), setFocus(null), setImporting(true));
@@ -158,6 +163,12 @@ export function RecordsPage(
           <button type="button" className="icon-btn tool-btn" aria-label="Import CSV" title="Import bank statements (CSV) into Expenses and Draws" onClick={() => setImporting(true)}>
             <Icon d={IMPORT} />
           </button>
+          {books && view === 'expenses' && (
+            <button type="button" className={`icon-btn tool-btn audit-btn${auditOpen ? ' is-on' : ''}`} aria-label={`Audit${auditN ? `: ${auditN} to check` : ''}`} aria-pressed={auditOpen} title="Audit: spreadsheet lines your bank statement doesn't back up" onClick={() => setAuditOpen((o) => !o)}>
+              <Icon d={AUDIT} />
+              {auditN > 0 && <span className="audit-count">{auditN}</span>}
+            </button>
+          )}
           {view === 'expenses' && (
             <button type="button" className="icon-btn tool-btn" aria-label="Add expense" title="Add an expense" onClick={() => setAddTick((n) => n + 1)}>
               <Icon d={PLUS} />
@@ -191,7 +202,7 @@ export function RecordsPage(
         <DrawsView draws={p.draws} fy={fy} fyEnd={fyEnd} search={q} onSave={p.onSaveDraw} onDelete={p.onDeleteDraw} />
       ) : (
         <>
-        {books && <StatementCheck lines={p.bankLines} expenses={p.expenses} accounts={p.bankAccounts} onImport={p.onImport} onShow={(id, date) => (setMonth(date.slice(0, 7)), setSpot((s) => ({ id, n: (s?.n ?? 0) + 1 })))} />}
+        {books && <StatementCheck lines={p.bankLines} expenses={p.expenses} accounts={p.bankAccounts} onImport={p.onImport} open={auditOpen} onClose={() => setAuditOpen(false)} onCount={setAuditN} onShow={(id, date) => (setMonth(date.slice(0, 7)), setSpot((s) => ({ id, n: (s?.n ?? 0) + 1 })))} />}
         <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} addTick={addTick} projects={p.projects} spot={spot}
           sourceOf={
             books
