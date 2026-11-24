@@ -280,7 +280,15 @@ export function BankImport(p: Props) {
       names.push(f.name);
       const have = new Set(all.map((l) => l.fp));
       all.push(...r.lines.filter((l) => !have.has(l.fp)));
-      for (const num of new Set(r.lines.map((l) => l.account))) if (!next.some((a) => a.number === num)) next.push(guessAccount(num, f.name, next.length));
+      for (const num of new Set(r.lines.map((l) => l.account))) {
+        if (next.some((a) => a.number === num)) continue;
+        const g = guessAccount(num, f.name, next.length);
+        // V20-510 (Dan, Nov 24): setting up your books starts with your business account. A file name rarely says
+        // which kind (ATB's doesn't), so with no business account yet, the first bank account is taken as Business.
+        const nameSaid = /PERSONAL|SAVING|TAX/i.test(f.name);
+        if (p.setup && g.kind === 'personal' && !nameSaid && !next.some((a) => a.kind === 'business')) next.push({ ...g, kind: 'business', name: `ATB Business ${last4(num)}`, method: 'ATB B.' });
+        else next.push(g);
+      }
     }
     setParsed(all);
     setFiles(names);
