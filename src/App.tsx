@@ -1439,15 +1439,9 @@ export default function App() {
     setStatus(`Linked ${plan.linked.length}, added ${plan.created.length} tasks, moved ${plan.remove.length} duplicates to Recently deleted.`);
   }
   /** An import: the budget becomes exactly this list. */
-  // V20-469 (Dan, Nov 23): Books is the business's books, so its Budget card and page leave out the personal division
-  // (the profile's, e.g. DANMONK26, and its older spelling DAN MONK). Hidden only: replace-all keeps them.
-  const squashDiv = (t: string) => t.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const personalDiv = squashDiv(invoiceProfile[0]?.personalDivision ?? '');
-  const isPersonalLine = (l: BudgetLine) => {
-    const d = squashDiv(l.project ?? '');
-    return !!personalDiv && !!d && (d === personalDiv || (d.length >= 5 && personalDiv.startsWith(d)));
-  };
-  const booksBudget = books && personalDiv ? budget.filter((l) => !isPersonalLine(l)) : budget;
+  // V20-469 → V20-486 (Dan, Nov 23): a business of one sees everything (personal division included); the Budget
+  // card and page narrow it with division filters instead of hiding lines.
+  const booksBudget = budget;
   /**
    * V20-483 (Dan, Nov 23, Books): lost budget items. A bill (fixed / annual) due in the overview's month that no
    * expense matches (linked to the line, or the same name loosely), once its due dates are 6 days past. Bills you
@@ -1479,7 +1473,7 @@ export default function App() {
         });
       })();
   const answerBill = (id: string, v: string) => void handleSave({ account: { ...settings.account, budgetSeen: { ...budgetSeen, [id]: v } } as BrandSettings['account'] });
-  const replaceShownBudget = (next: BudgetLine[]) => replaceBudget(booksBudget === budget ? next : [...next, ...budget.filter(isPersonalLine)]);
+  const replaceShownBudget = (next: BudgetLine[]) => replaceBudget(next);
 
   async function replaceBudget(next: BudgetLine[]) {
     const old = budget;

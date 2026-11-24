@@ -203,7 +203,8 @@ export function BudgetPage(p: Props) {
   const [groupBy, setGroupByState] = useState<BudgetGroupBy>(() => {
     try {
       const v = localStorage.getItem('launchpage.budget.groupBy');
-      return GROUP_BY.some((g) => g.id === v) ? (v as BudgetGroupBy) : 'section';
+      // V20-486 (Dan, Nov 23): Books opens on divisions, so a business of one filters business vs personal in a tap.
+      return GROUP_BY.some((g) => g.id === v) ? (v as BudgetGroupBy) : books ? 'project' : 'section';
     } catch {
       return 'section';
     }

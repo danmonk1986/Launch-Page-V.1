@@ -26,6 +26,8 @@ export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, 
     return projectList.find((x) => norm(x.name) === n) ?? projectList.find((x) => norm(x.name).startsWith(n) || n.startsWith(norm(x.name)));
   };
   const { q } = useHeaderSearch();
+  // V20-486 (Dan, Nov 23, Books): the division boxes are filters; everything shows until you pick one.
+  const [div, setDiv] = useState<string | null>(null);
   const perProject = monthlyByCategory(lines, 'project');
   const monthly = Object.values(perProject).reduce((a, x) => a + x, 0);
   const projects = Object.keys(perProject)
@@ -53,7 +55,7 @@ export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, 
           return { l, next };
         })
         .filter((x): x is { l: BudgetLine; next: string } => !!x.next && x.next >= from && x.next <= to))
-    .filter((x) => matchesSearch(q, x.l.description, x.l.project, x.l.notes))
+    .filter((x) => (div === null || x.l.project === div) && matchesSearch(q, x.l.description, x.l.project, x.l.notes))
     .sort((a, b) => (a.next < b.next ? -1 : a.next > b.next ? 1 : (b.l.amount ?? 0) - (a.l.amount ?? 0)));
   const dueTotal = due.reduce((a, x) => a + (x.l.amount ?? 0), 0);
   const day = (s: string) => new Date(`${s}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -80,16 +82,33 @@ export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, 
       </div>
       {lines.length > 0 && (
         <div className="budget-stats" aria-label="A month of spending">
-          <div className="budget-stat budget-stat-total" aria-pressed="true">
-            <span className="budget-stat-label">Monthly · by project</span>
-            <span className="budget-stat-value">{money(monthly)}</span>
-          </div>
-          {projects.map((k) => (
-            <div key={k} className="budget-stat">
-              <span className="budget-stat-label">{k}</span>
-              <span className="budget-stat-value">{money(perProject[k])}</span>
-            </div>
-          ))}
+          {month ? (
+            <>
+              <button type="button" className="budget-stat budget-stat-total" aria-pressed={div === null} title="Every division" onClick={() => setDiv(null)}>
+                <span className="budget-stat-label">Monthly · by project</span>
+                <span className="budget-stat-value">{money(monthly)}</span>
+              </button>
+              {projects.map((k) => (
+                <button key={k} type="button" className="budget-stat" aria-pressed={div === k} title={div === k ? 'Show every division' : `Show only ${k}`} onClick={() => setDiv(div === k ? null : k)}>
+                  <span className="budget-stat-label">{k}</span>
+                  <span className="budget-stat-value">{money(perProject[k])}</span>
+                </button>
+              ))}
+            </>
+          ) : (
+            <>
+              <div className="budget-stat budget-stat-total" aria-pressed="true">
+                <span className="budget-stat-label">Monthly · by project</span>
+                <span className="budget-stat-value">{money(monthly)}</span>
+              </div>
+              {projects.map((k) => (
+                <div key={k} className="budget-stat">
+                  <span className="budget-stat-label">{k}</span>
+                  <span className="budget-stat-value">{money(perProject[k])}</span>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
       <h3 className="card-h">
@@ -139,7 +158,7 @@ export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, 
       )}
       {/* V20-483 (Dan, Nov 23, Books): a bill that should have been charged but wasn't (e.g. a cancelled subscription)
           is a lost budget item: keep it (stop asking), skip this month, or remove it from the Budget. */}
-      {lost.length > 0 && month && (
+      {(lost = lost.filter((l) => div === null || l.project === div)).length > 0 && month && (
         <div className="bc-lost">
           <h3 className="card-h">
             Not charged in {new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1, 12).toLocaleDateString('en-US', { month: 'long' })} · {lost.length} · {money(lost.reduce((a, l) => a + (l.amount ?? 0), 0))}
