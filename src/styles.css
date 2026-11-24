@@ -4870,3 +4870,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .audit-was { color: var(--dim); margin-right: 4px; font-size: 0.9em; }
 .budget-lines tr.is-spot td { background: color-mix(in srgb, var(--accent-teal) 22%, transparent); }
 .budget-lines tr.is-spot td:first-child { box-shadow: inset 4px 0 0 var(--accent-teal); }
+/* V20-505b: room for the old → new price so it doesn't run into "New price". */
+.budget-audit-card .statement-check-row { grid-template-columns: 64px 70px minmax(0, 1fr) 210px 140px auto; }
+.budget-audit-card .statement-check-row .pl-mono { white-space: nowrap; text-align: right; }
+@media (max-width: 760px) { .budget-audit-card .statement-check-row { grid-template-columns: 56px minmax(0, 1fr) auto; } .budget-audit-card .statement-check-row .pl-mono { grid-column: 2; text-align: left; } }
