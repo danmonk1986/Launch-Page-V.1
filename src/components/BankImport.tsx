@@ -329,7 +329,8 @@ export function BankImport(p: Props) {
   const savedRows = useMemo<Draft[]>(() => {
     const strip = (notes: string, text: string) => notes.replace(text, '').replace(/\s*\(part of [^)]*\)/, '').replace(/\s*—\s*$/, '').trim();
     return p.imported
-      .filter((l) => l.date.slice(0, 7) === savedMonth)
+      // V20-522 (Dan): setting up, Saved shows every saved line (no month picker).
+      .filter((l) => (books && p.setup) || l.date.slice(0, 7) === savedMonth)
       .sort((a, b) => a.date.localeCompare(b.date) || a.account.localeCompare(b.account) || a.sort - b.sort)
       .map((l) => {
         const a = accounts.find((x) => x.number === l.account);
@@ -367,7 +368,7 @@ export function BankImport(p: Props) {
           savedParts: parts
         } satisfies Draft;
       });
-  }, [p.imported, p.expenses, p.draws, p.common, accounts, savedMonth, personal]);
+  }, [p.imported, p.expenses, p.draws, p.common, accounts, savedMonth, personal, books, p.setup]);
   const base = mode === 'saved' ? savedRows : fresh;
   /**
    * Lines with their splits. A line's parts are the ones made here, or (until then) the split its
@@ -773,7 +774,7 @@ export function BankImport(p: Props) {
               Saved · {p.imported.length}
             </button>
           </div>
-          {mode === 'saved' && <MonthNav month={savedMonth} onChange={setSavedMonth} />}
+          {mode === 'saved' && !(books && p.setup) && <MonthNav month={savedMonth} onChange={setSavedMonth} />}
           {/* V20-515 (Dan): on Books the work-in-progress note sits beside New import / Saved. */}
           {books && mode === 'new' && (!p.setup || track === 'csv') && (
             <span className="bank-note">
@@ -799,7 +800,7 @@ export function BankImport(p: Props) {
                 ))}
             </div>
           )}
-          {mode === 'saved' && <span className="bank-note">{rows.length} lines saved in this month. Change any of them and save again: their expenses and draws update.</span>}
+          {mode === 'saved' && <span className="bank-note">{rows.length} lines saved{books && p.setup ? '' : ' in this month'}. Change any of them and save again: their expenses and draws update.</span>}
         </div>
         {mode === 'new' && p.setup && (
           <div className="setup-tracks" role="group" aria-label="How do you want to set up?">
