@@ -306,6 +306,12 @@ export function BudgetPage(p: Props) {
     }
   });
   const undo = useBooksUndo();
+  // V20-507: "Build it from my expenses" on the empty Budget card opens the page with the Audit showing.
+  useEffect(() => {
+    const open = () => setAuditOpen(true);
+    window.addEventListener('budget:audit', open);
+    return () => window.removeEventListener('budget:audit', open);
+  }, []);
   // V20-506: Undo puts the ignored list back as it was.
   useEffect(() => {
     const re = () => {

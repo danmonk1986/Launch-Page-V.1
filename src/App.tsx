@@ -2838,7 +2838,7 @@ export default function App() {
                   />
                 )
               }
-              budget={!mods.budget ? null : <BudgetCard lines={booksBudget} today={now} month={books ? booksMonth : undefined} lost={lostBills} onKeep={(id) => answerBill(id, 'keep')} onSkip={(id) => answerBill(id, booksMonth)} onRemove={(id) => void deleteBudgetLine(id)} choicesFor={billChoices} onTie={tieBill} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
+              budget={!mods.budget ? null : <BudgetCard onBuild={books ? () => (setPage('budget'), setTimeout(() => window.dispatchEvent(new Event('budget:audit')), 250)) : undefined} lines={booksBudget} today={now} month={books ? booksMonth : undefined} lost={lostBills} onKeep={(id) => answerBill(id, 'keep')} onSkip={(id) => answerBill(id, booksMonth)} onRemove={(id) => void deleteBudgetLine(id)} choicesFor={billChoices} onTie={tieBill} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
               planner={!mods.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={removeDecision} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
               journal={!mods.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!mods.routine ? null : 
@@ -2918,6 +2918,8 @@ export default function App() {
             <RecordsPage
               cashBook={books ? settings.account.cashBook : undefined}
               onSetOpening={books ? (start, opening) => void handleSave({ account: { ...settings.account, cashBook: { start, opening } } as BrandSettings['account'] }) : undefined}
+              onDownloadSheet={books ? () => downloadBlob('LAUNCH-SHEET-blank.xlsx', blankBooksFile({ purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' })) : undefined}
+              onImportSheet={books ? (f) => void importBooksFile(f) : undefined}
               showInvoices={mods.invoice}
               showBooks={booksOn(mods)}
               showViews={{ expenses: mods.recExpenses, income: mods.recIncome, draws: mods.recDraws }}

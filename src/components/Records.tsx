@@ -69,6 +69,9 @@ export function RecordsPage(
     /** V20-474 (Books): the Cash Book's opening balance, set from "Set up your books". */
     cashBook?: { start: string; opening: number };
     onSetOpening?: (start: string, opening: number) => void;
+    /** V20-507 (Books setup, track 3): the blank Launch Sheet and importing it back. */
+    onDownloadSheet?: () => void;
+    onImportSheet?: (f: File) => void;
   }
 ) {
   const [view, setViewState] = useState<View>(() => {
@@ -239,6 +242,8 @@ export function RecordsPage(
         focus={focus}
         cashBook={p.cashBook}
         onSetOpening={p.onSetOpening}
+        onDownloadSheet={p.onDownloadSheet}
+        onImportSheet={p.onImportSheet}
       />
     </section>
   );

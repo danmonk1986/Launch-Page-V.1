@@ -4880,3 +4880,25 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .undo-toast > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .undo-toast .btn { padding: 6px 16px; min-height: 0; }
 .undo-toast-x { background: none; border: 0; color: var(--dim); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px; }
+
+/* V20-507 (Books): Set up your books: three tracks, card-size buttons, the worked-out opening balance, the Type hint. */
+.setup-tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 4px 0 18px; }
+.setup-track { all: unset; box-sizing: border-box; cursor: pointer; display: grid; gap: 4px; padding: 12px 14px; border: 1px solid var(--edge); border-radius: 12px; }
+.setup-track:hover { border-color: var(--edge-strong); }
+.setup-track[aria-pressed='true'] { border: 2px solid var(--accent-teal); padding: 11px 13px; background: color-mix(in srgb, var(--accent-teal) 8%, transparent); }
+.setup-track:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
+.setup-track-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+.setup-track-hint { font-size: 13px; color: var(--dim); }
+.bank-import.is-books .btn { min-height: 36px; font-size: 12px; padding: 0 14px; }
+.bank-import.is-books .d26-range button { min-height: 32px; font-size: 11px; padding: 0 12px; }
+.setup-opening { margin: 6px 0 14px; }
+.setup-opening-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--edge); margin-top: 8px; }
+.setup-opening-row.is-ok { border-color: var(--accent-green); }
+.setup-opening-row.is-warn { border-color: #ff9933; }
+.setup-opening-acct { font-family: var(--font-mono); font-size: 13px; min-width: 70px; }
+.setup-opening-date { font-size: 13px; color: var(--dim); }
+.setup-opening-amt { font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
+.setup-opening-check { flex: 1; min-width: 180px; font-size: 13px; color: var(--dim); }
+.setup-type-hint { margin: 6px 0 10px; }
+.bc-empty-build { display: grid; gap: 10px; justify-items: start; }
+.bc-empty-build .btn { min-height: 36px; font-size: 12px; padding: 0 14px; }

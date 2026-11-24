@@ -18,7 +18,7 @@ const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
  * V20-465 (Dan, Nov 23): on Books, `month` (YYYY-MM, from the Cash Book's ‹ ›) swaps "Next 7 days" for everything
  * due in that month, so the Budget card follows the overview like Expenses and Income. Main passes no month.
  */
-export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, projects: projectList = [], lost = [], onKeep, onSkip, onRemove, choicesFor, onTie }: { lines: BudgetLine[]; today: Date; month?: string; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void; projects?: Project[]; /** V20-483 (Books): bills due this month the bank never charged. */ lost?: BudgetLine[]; onKeep?: (id: string) => void; onSkip?: (id: string) => void; onRemove?: (id: string) => void; /** V20-487: the month's charges a lost bill could be. */ choicesFor?: (l: BudgetLine) => Expense[]; onTie?: (lineId: string, expenseId: string) => void }) {
+export function BudgetCard({ onBuild, lines, today, month, onOpenAll, onOpenLine, onAdd, projects: projectList = [], lost = [], onKeep, onSkip, onRemove, choicesFor, onTie }: { /** V20-507 (Books): an empty Budget says how it fills, and opens the Budget Audit. */ onBuild?: () => void; lines: BudgetLine[]; today: Date; month?: string; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void; projects?: Project[]; /** V20-483 (Books): bills due this month the bank never charged. */ lost?: BudgetLine[]; onKeep?: (id: string) => void; onSkip?: (id: string) => void; onRemove?: (id: string) => void; /** V20-487: the month's charges a lost bill could be. */ choicesFor?: (l: BudgetLine) => Expense[]; onTie?: (lineId: string, expenseId: string) => void }) {
   // V20-423 (Dan, Nov 20): the project is a coloured pill, like the Tasks card and the Budget page (same matching).
   const norm = (x: string) => x.toUpperCase().replace(/^STARDVST\s+/, '').replace(/[^A-Z0-9]/g, '');
   const projectFor = (name: string) => {
@@ -115,7 +115,14 @@ export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, 
       <h3 className="card-h">
         {wk && wk.label !== 'Next 7 days' ? `Due ${wk.label}` : 'Next 7 days'} · {due.length} · {money(dueTotal)}
       </h3>
-      {due.length === 0 ? (
+      {due.length === 0 && onBuild && !lines.length ? (
+        <div className="bc-empty-build">
+          <p className="field-hint">Your budget builds itself from your expenses. Add or import some (set each one Fixed or Variable), then the Audit turns every Fixed charge into a budget line.</p>
+          <button type="button" className="btn btn-go" onClick={onBuild}>
+            Build it from my expenses
+          </button>
+        </div>
+      ) : due.length === 0 ? (
         <p className="field-hint">{wk && wk.label !== 'Next 7 days' ? `Nothing due ${wk.label}.` : 'Nothing due in the next 7 days.'}</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Due in the next 7 days">

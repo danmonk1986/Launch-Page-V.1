@@ -72,7 +72,39 @@ type Props = {
   setup?: boolean;
   cashBook?: { start: string; opening: number };
   onSetOpening?: (start: string, opening: number) => void;
+  /** V20-507 (Books setup, track 3): the blank Launch Sheet to fill in, and importing it back. */
+  onDownloadSheet?: () => void;
+  onImportSheet?: (f: File) => void;
 };
+
+/**
+ * V20-507 (Dan, Nov 24): the opening balance from a statement's Balance column. Most bank CSVs have no opening row,
+ * but a running balance works it out: opening = the balance after the earliest line + what it took out − what it
+ * brought in. Every row is checked (each balance = the one before + in − out), which also settles which way the file
+ * runs and, for a credit card, that its balance is what you owe (out adds to it).
+ */
+export type OpeningCheck = { date: string; opening: number; rows: number; ok: number; breakAt: string | null; owed: boolean } | null;
+export function workOpening(lines: ParsedLine[]): OpeningCheck {
+  const rows = lines.filter((l) => l.balance !== null && !Number.isNaN(l.balance));
+  if (!rows.length) return null;
+  const net = (l: ParsedLine) => (l.credit ?? 0) - (l.debit ?? 0);
+  let best: { list: ParsedLine[]; owed: boolean; ok: number; breakAt: string | null } | null = null;
+  for (const list of [rows, [...rows].reverse()])
+    for (const owed of [false, true]) {
+      let ok = 0;
+      let breakAt: string | null = null;
+      for (let i = 1; i < list.length; i++) {
+        const want = (list[i - 1].balance ?? 0) + (owed ? -net(list[i]) : net(list[i]));
+        if (Math.abs(want - (list[i].balance ?? 0)) < 0.005) ok++;
+        else if (!breakAt) breakAt = list[i].date;
+      }
+      if (!best || ok > best.ok || (ok === best.ok && list[0].date < best.list[0].date)) best = { list, owed, ok, breakAt };
+    }
+  if (!best) return null;
+  const first = best.list[0];
+  const opening = Math.round(((first.balance ?? 0) - (best.owed ? -net(first) : net(first))) * 100) / 100;
+  return { date: first.date, opening, rows: best.list.length, ok: best.ok + 1, breakAt: best.breakAt, owed: best.owed };
+}
 
 const KINDS: { id: AccountKind; label: string; method: string }[] = [
   { id: 'business', label: 'Business', method: 'ATB B.' },
@@ -184,7 +216,10 @@ export function BankImport(p: Props) {
   }
   // V20-474: setup lines you type. Their fp starts "manual:"; their date, account and amount are edited in place.
   const isManual = (fp: string) => fp.startsWith('manual:');
-  const [showCsv, setShowCsv] = useState(false);
+  // V20-507 (Dan, Nov 24): three ways to set up: from scratch (type lines), import a bank CSV, or from the Launch Sheet.
+  type Track = 'scratch' | 'csv' | 'sheet';
+  const [track, setTrack] = useState<Track | null>(() => (saved?.parsed.some((l) => !l.fp.startsWith('manual:')) ? 'csv' : saved?.parsed.length ? 'scratch' : null));
+  const sheetInput = useRef<HTMLInputElement>(null);
   const today = new Date().toLocaleDateString('en-CA');
   function addLine() {
     const account = accounts.find((a) => a.kind === 'business')?.number ?? accounts[0]?.number ?? '';
@@ -622,6 +657,63 @@ export function BankImport(p: Props) {
           {mode === 'saved' && <span className="bank-note">{rows.length} lines saved in this month. Change any of them and save again: their expenses and draws update.</span>}
         </div>
         {mode === 'new' && p.setup && (
+          <div className="setup-tracks" role="group" aria-label="How do you want to set up?">
+            {(
+              [
+                { id: 'scratch', icon: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z', title: 'Start from scratch', hint: 'New, or no files: type your lines as you go' },
+                { id: 'csv', icon: 'M14 3v4a1 1 0 0 0 1 1h4M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2zM9 13h6M9 17h6', title: 'Import a bank CSV', hint: 'You bank online: bring in your statements' },
+                { id: 'sheet', icon: 'M4 5h16v14H4zM4 10h16M4 15h16M10 5v14', title: 'Create from a sheet', hint: 'You keep a spreadsheet: fill in the Launch Sheet' }
+              ] as { id: Track; icon: string; title: string; hint: string }[]
+            ).map((t) => (
+              <button key={t.id} type="button" className="setup-track" aria-pressed={track === t.id} onClick={() => setTrack(t.id)}>
+                <span className="setup-track-title">
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={t.icon} />
+                  </svg>
+                  {t.title}
+                </span>
+                <span className="setup-track-hint">{t.hint}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {mode === 'new' && p.setup && track === 'sheet' && (
+          <div className="bank-setup-form">
+            <div className="bank-setup-step">
+              <h3 className="card-h">1 · Download the Launch Sheet</h3>
+              <p className="field-hint">A blank workbook with LINES, EXPENSES, INCOME, DRAWS and BUDGET tabs. Fill in your month (or paste from the sheet you keep): the columns match. A Balance column works out your opening balance.</p>
+              <div className="bank-files">
+                <button type="button" className="btn btn-quiet" onClick={p.onDownloadSheet} disabled={!p.onDownloadSheet}>
+                  Download the blank sheet
+                </button>
+              </div>
+            </div>
+            <div className="bank-setup-step">
+              <h3 className="card-h">2 · Import it</h3>
+              <p className="field-hint">Bring the filled-in sheet back (.xlsx, or one tab as .csv). You'll see what's in it before anything is added.</p>
+              <div className="bank-files">
+                <input
+                  ref={sheetInput}
+                  type="file"
+                  accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (f && p.onImportSheet) {
+                      p.onImportSheet(f);
+                      p.onClose();
+                    }
+                  }}
+                />
+                <button type="button" className="btn btn-go" onClick={() => sheetInput.current?.click()} disabled={!p.onImportSheet}>
+                  Import your sheet
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {mode === 'new' && p.setup && track === 'scratch' && (
           <div className="bank-setup-form">
             <div className="bank-setup-step">
               <h3 className="card-h">1 · Opening balance</h3>
@@ -651,14 +743,11 @@ export function BankImport(p: Props) {
                   + Add an account
                 </button>
                 {!accounts.length && <span className="bank-note">Add an account first (your business account), then your lines.</span>}
-                <button type="button" className="link-btn" onClick={() => setShowCsv((x) => !x)}>
-                  {showCsv ? 'Hide the .CSV import' : 'Have a bank .CSV? Import it instead'}
-                </button>
               </div>
             </div>
           </div>
         )}
-        {mode === 'new' && (!p.setup || showCsv) && (
+        {mode === 'new' && (!p.setup || track === 'csv') && (
         <div className="bank-files">
           <input ref={fileInput} type="file" accept=".csv,text/csv" multiple hidden onChange={(e) => (void read(e.target.files), (e.target.value = ''))} />
           <button type="button" className="btn btn-go" onClick={() => fileInput.current?.click()}>
@@ -678,6 +767,50 @@ export function BankImport(p: Props) {
             </p>
           ))}
         </div>
+        )}
+        {/* V20-507: the CSV track works out each account's opening balance from its Balance column, checked row by row. */}
+        {mode === 'new' && p.setup && track === 'csv' && parsed.some((l) => !isManual(l.fp)) && (
+          <div className="bank-setup-step setup-opening">
+            <h3 className="card-h">Opening balance · worked out</h3>
+            {accounts
+              .filter((a) => parsed.some((l) => l.account === a.number && !isManual(l.fp)))
+              .map((a) => {
+                const w = workOpening(parsed.filter((l) => l.account === a.number && !isManual(l.fp)));
+                const forBook = a.kind === 'business' || !accounts.some((x) => x.kind === 'business' && parsed.some((l) => l.account === x.number));
+                const day = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
+                const set = p.cashBook && w && p.cashBook.start === w.date.slice(0, 7) && Math.abs(p.cashBook.opening - w.opening) < 0.005;
+                return (
+                  <div key={a.id} className={`setup-opening-row${w && !w.breakAt ? ' is-ok' : ' is-warn'}`}>
+                    <span className="setup-opening-acct">{a.method || a.name || last4(a.number)}</span>
+                    {w ? (
+                      <>
+                        <span className="setup-opening-date">{day(w.date)}</span>
+                        <span className="setup-opening-amt">{w.owed ? `${money(w.opening)} owed` : money(w.opening)}</span>
+                        <span className="setup-opening-check">{w.breakAt ? `Doesn't add up from ${day(w.breakAt)}: check it against your PDF statement` : `✓ All ${w.rows} balances add up`}</span>
+                        {forBook && !w.owed && p.onSetOpening && (
+                          <button type="button" className="btn btn-go" disabled={!!set} onClick={() => p.onSetOpening?.(w.date.slice(0, 7), w.opening)} title="The Cash Book starts from this">
+                            {set ? 'Cash Book set' : 'Use for the Cash Book'}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <span className="setup-opening-check">No Balance column in this file. Type the opening from your PDF statement{a.kind === 'card' ? ' (what you owed)' : ''}.</span>
+                        {forBook && p.onSetOpening && (
+                          <span className="bank-files">
+                            <input type="month" value={openMonth} onChange={(e) => setOpenMonth(e.target.value)} aria-label="Starting month" />
+                            <input type="number" step="0.01" inputMode="decimal" value={openAmt} onChange={(e) => setOpenAmt(e.target.value)} placeholder="0.00" aria-label="Opening balance" size={10} />
+                            <button type="button" className="btn btn-go" disabled={!openMonth || openAmt.trim() === '' || Number.isNaN(Number(openAmt))} onClick={() => p.onSetOpening?.(openMonth, Math.round(Number(openAmt) * 100) / 100)}>
+                              Set it
+                            </button>
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
         )}
 
         {/* V20-490 (Dan, Nov 23, Books): a statement with an account we haven't seen asks what it is first: its name and
@@ -857,6 +990,13 @@ export function BankImport(p: Props) {
               )}
             </div>
 
+            {/* V20-507 (Dan, Nov 24): Type feeds the Budget (the Audit turns every Fixed charge into a budget line), so a
+                new merchant's Type is asked for plainly. */}
+            {books && live.some((r) => spends(r.route) && !r.type.trim()) && (
+              <p className="field-hint setup-type-hint">
+                <strong>Type builds your Budget.</strong> Fixed: it comes every month (rent, a phone, a subscription), and the Budget Audit turns it into a budget line. Variable: it changes (fuel, groceries, a dinner).
+              </p>
+            )}
             <div className="task-scroll bank-scroll">
               <table className="task-table budget-table bank-table">
                 <thead>
