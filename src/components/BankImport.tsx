@@ -147,10 +147,23 @@ function Pick(p: { value: string; options: string[]; groups?: { label: string; o
 
 /** Work in progress (Nov 1): kept on this device until it's saved or cleared, so closing the sheet loses nothing. */
 const DRAFT_KEY = 'launchpage.bank-draft.v1';
+/** V20-509: one draft per signed-in account (STARDVST's work never shows, or gets wiped, in FNTSY LVNG's import). */
+function draftKey() {
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (!/^sb-.+-auth-token$/.test(k)) continue;
+      const id = (JSON.parse(localStorage.getItem(k) ?? 'null') as { user?: { id?: string } } | null)?.user?.id;
+      if (id) return `${DRAFT_KEY}.${id}`;
+    }
+  } catch {
+    /* ignore */
+  }
+  return DRAFT_KEY;
+}
 type Saved = { parsed: ParsedLine[]; files: string[]; edits: Record<string, Partial<Draft>>; skip: string[]; accounts: BankAccount[]; parts?: Record<string, Part[]> };
 function loadDraft(): Saved | null {
   try {
-    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? 'null') as Saved | null;
+    const d = JSON.parse(localStorage.getItem(draftKey()) ?? 'null') as Saved | null;
     return d && Array.isArray(d.parsed) ? d : null;
   } catch {
     return null;
@@ -196,8 +209,8 @@ export function BankImport(p: Props) {
   const [parts, setParts] = useState<Record<string, Part[]>>(saved?.parts ?? {});
   useEffect(() => {
     try {
-      if (parsed.length || Object.keys(edits).length || Object.keys(parts).length) localStorage.setItem(DRAFT_KEY, JSON.stringify({ parsed, files, edits, skip: [...skip], accounts, parts } satisfies Saved));
-      else localStorage.removeItem(DRAFT_KEY);
+      // V20-509: only work in progress is written; an empty screen never wipes it (Clear and Process do that).
+      if (parsed.length || Object.keys(edits).length || Object.keys(parts).length) localStorage.setItem(draftKey(), JSON.stringify({ parsed, files, edits, skip: [...skip], accounts, parts } satisfies Saved));
     } catch {
       /* full or blocked: the draft stays in memory */
     }
@@ -206,7 +219,7 @@ export function BankImport(p: Props) {
     // V20-476: forget the saved work right away. Process now closes this and leaves the page in the same moment, so
     // waiting for the effect left the old draft in storage, and reopening brought back edited lines as new (18 doubles).
     try {
-      localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(draftKey());
     } catch {
       /* ignore */
     }
