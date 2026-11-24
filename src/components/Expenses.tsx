@@ -9,6 +9,7 @@ import { MoneyField, settleMoney } from './MoneyField';
 import { AmountInput } from './AmountInput';
 import { originalLabel } from '../lib/currency';
 import { projectForDivision, type Project } from '../lib/projects';
+import type { BankLine } from '../lib/bank';
 
 const PLUS = 'M12 5v14M5 12h14';
 /** Nov 1: what the totals add up by (the square button cycles; remembered on this device). */
@@ -60,6 +61,9 @@ type Props = {
   addTick?: number;
   /** Division pills in their project's colour. */
   projects?: Project[];
+  /** V20-493 (Books): the statement line an expense came from (null = none anywhere). */
+  sourceOf?: (e: Expense) => BankLine | null;
+  onOpenSource?: (l: BankLine) => void;
 };
 
 /**
@@ -69,6 +73,10 @@ type Props = {
 export function ExpensesView(p: Props) {
   const { month, onMonth: setMonth } = p;
   const [editing, setEditing] = useState<Expense | null>(null);
+  // V20-493 (Dan, Nov 23): an expense that's on no statement and wasn't typed in Set up your books has no source:
+  // ask before it reports (e.g. a bill ticked as paid that was never charged).
+  const [noSource, setNoSource] = useState<Expense | null>(null);
+  const [sure, setSure] = useState(false);
   const needle = p.search.trim().toLowerCase();
 
   const monthRows = useMemo(
@@ -196,7 +204,24 @@ export function ExpensesView(p: Props) {
                       {e.budgetLineId && <span className="expense-link" aria-label="linked to a budget line"> $$$</span>}
                     </button>
                   </td>
-                  <td className="col-center">{e.method}</td>
+                  <td className="col-center">
+                    {p.sourceOf ? (
+                      <button
+                        type="button"
+                        className="link-btn expense-source"
+                        title="Show where this came from"
+                        onClick={() => {
+                          const l = p.sourceOf!(e);
+                          if (l) p.onOpenSource?.(l);
+                          else setNoSource(e);
+                        }}
+                      >
+                        {e.method || '—'}
+                      </button>
+                    ) : (
+                      e.method
+                    )}
+                  </td>
                   <td className="col-center">{e.type && <span className={`status${e.type === 'FIXED' ? ' status-three' : ''}`}>{e.type}</span>}</td>
                   <td className="col-center">{e.category}</td>
                   <td>{e.pmtCategory}</td>
@@ -211,6 +236,33 @@ export function ExpensesView(p: Props) {
           </table>
         </div>
       )}
+
+      <Sheet open={!!noSource} title="No source for this expense" onClose={() => (setNoSource(null), setSure(false))}>
+        {noSource && (
+          <>
+            <p className="field-hint">
+              {noSource.description || 'This expense'} ({noSource.date}, {noSource.amount === null ? '—' : money(noSource.amount)}) isn't on any bank statement you've imported, and it wasn't added in Set up your books. It may have come from a ticked budget task or an old spreadsheet, and it may never have been charged.
+            </p>
+            <div className="budget-empty-acts">
+              <button type="button" className="btn btn-quiet" onClick={() => (setNoSource(null), setSure(false))}>
+                Keep it (I paid it)
+              </button>
+              <button
+                type="button"
+                className={`btn${sure ? '' : ' btn-quiet'}`}
+                onClick={() => {
+                  if (!sure) return setSure(true);
+                  void p.onDelete(noSource.id);
+                  setNoSource(null);
+                  setSure(false);
+                }}
+              >
+                {sure ? 'Sure? Remove it' : 'Remove it'}
+              </button>
+            </div>
+          </>
+        )}
+      </Sheet>
 
       <Sheet open={!!editing} title={editing && p.expenses.some((e) => e.id === editing.id) ? 'Edit expense' : 'Add expense'} onClose={() => setEditing(null)} wide>
         {editing && (

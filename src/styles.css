@@ -4821,3 +4821,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .bank-newacct { border: 1px solid var(--accent-green); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
 .bank-newacct .card-h { margin: 0 0 4px; }
 .bank-newacct .field-hint { margin: 0 0 8px; }
+/* V20-493 (Books): an expense's method opens its source. */
+.expense-source { font: inherit; color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }

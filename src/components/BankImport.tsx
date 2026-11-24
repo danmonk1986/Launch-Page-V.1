@@ -51,6 +51,8 @@ export interface ImportResult {
 
 type Props = {
   open: boolean;
+  /** V20-493 (Books): opened from an expense's method: show the saved line it came from, on its own. */
+  focus?: { month: string; fp: string } | null;
   onClose: () => void;
   /** V20-470 (Dan, Nov 23, Books): after Process, go here (the Books home) instead of back to the page it opened on. */
   onDone?: () => void;
@@ -251,6 +253,15 @@ export function BankImport(p: Props) {
   const [mode, setMode] = useState<'new' | 'saved'>('new');
   const lastMonth = p.imported.reduce((m, l) => (l.date.slice(0, 7) > m ? l.date.slice(0, 7) : m), '') || new Date().toLocaleDateString('en-CA').slice(0, 7);
   const [savedMonth, setSavedMonth] = useState(lastMonth);
+  // V20-493: an expense's source: open Saved on its month with only that line showing (Show all lifts it).
+  const [onlyFp, setOnlyFp] = useState<string | null>(null);
+  useEffect(() => {
+    if (!p.open) return;
+    if (!p.focus) return setOnlyFp(null);
+    setMode('saved');
+    setSavedMonth(p.focus.month);
+    setOnlyFp(p.focus.fp);
+  }, [p.open, p.focus]);
   const savedRows = useMemo<Draft[]>(() => {
     const strip = (notes: string, text: string) => notes.replace(text, '').replace(/\s*\(part of [^)]*\)/, '').replace(/\s*—\s*$/, '').trim();
     return p.imported
@@ -340,6 +351,7 @@ export function BankImport(p: Props) {
   const needsWork = (r: (typeof rows)[number]) => r.status !== 'duplicate' && !skip.has(r.fp) && (r.status === 'check' || (spends(r.route) && blank(r)) || r.parts.some((x) => blank(x)));
   const shown = rows.filter(
     (r) =>
+      (!onlyFp || r.fp === onlyFp) &&
       (showDup || r.status !== 'duplicate') &&
       (!fRoute || r.route === fRoute) &&
       // A line being worked on stays in the Check filter until the filter changes.
@@ -563,6 +575,11 @@ export function BankImport(p: Props) {
             </button>
           </div>
           {mode === 'saved' && <MonthNav month={savedMonth} onChange={setSavedMonth} />}
+          {onlyFp && (
+            <button type="button" className="btn btn-quiet" onClick={() => setOnlyFp(null)} title="Show every line again">
+              The source line · Show all
+            </button>
+          )}
           {mode === 'saved' && rows.length > 0 && (
             <div className="area-filter pill-row bank-acct-pills" role="group" aria-label="Account">
               <button type="button" className="area-pill" aria-pressed={!fAccount} onClick={() => setFAccount('')}>

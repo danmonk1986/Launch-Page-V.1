@@ -90,11 +90,13 @@ export function RecordsPage(
   const [importing, setImporting] = useState(false);
   // V20-474: "Set up your books" opens the import blank.
   const [setup, setSetup] = useState(false);
+  // V20-493: an expense's method opens the statement line it came from.
+  const [focus, setFocus] = useState<{ month: string; fp: string } | null>(null);
   // V20-198: ⚙ › Data Management › Import bank statements opens Records, then this.
   useEffect(() => {
-    const open = () => (setSetup(false), setImporting(true));
+    const open = () => (setSetup(false), setFocus(null), setImporting(true));
     window.addEventListener('records:import', open);
-    const openSetup = () => (setSetup(true), setImporting(true));
+    const openSetup = () => (setSetup(true), setFocus(null), setImporting(true));
     window.addEventListener('records:setup', openSetup);
     // V20-453: the Expenses card's + opens Records, then Add expense.
     const add = () => setAddTick((n) => n + 1);
@@ -185,7 +187,14 @@ export function RecordsPage(
       ) : view === 'draws' ? (
         <DrawsView draws={p.draws} fy={fy} fyEnd={fyEnd} search={q} onSave={p.onSaveDraw} onDelete={p.onDeleteDraw} />
       ) : (
-        <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} addTick={addTick} projects={p.projects} />
+        <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} addTick={addTick} projects={p.projects}
+          sourceOf={
+            books
+              ? (e) => p.bankLines.find((l) => l.expenseId === e.id || (l.parts ?? []).some((x) => x.expenseId === e.id)) ?? null
+              : undefined
+          }
+          onOpenSource={(l) => (setSetup(false), setFocus({ month: l.date.slice(0, 7), fp: l.fp }), setImporting(true))}
+        />
       )}
       <BankImport
         open={importing}
@@ -201,6 +210,7 @@ export function RecordsPage(
         profile={p.profile}
         onSave={p.onImport}
         setup={setup}
+        focus={focus}
         cashBook={p.cashBook}
         onSetOpening={p.onSetOpening}
       />
