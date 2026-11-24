@@ -339,7 +339,9 @@ export function BankImport(p: Props) {
         const src = e ?? (l.route === 'personal' ? rule : undefined);
         const parts: Part[] | undefined = l.parts?.map((x) => {
           const pe = x.expenseId ? p.expenses.find((y) => y.id === x.expenseId) : undefined;
-          return { id: x.expenseId ?? crypto.randomUUID(), route: x.route === 'expense' ? 'expense' : 'personal', project: pe?.project ?? x.project, description: pe?.description ?? x.description, type: pe?.type ?? x.type ?? '', category: pe?.category ?? x.category ?? '', pmtCategory: pe?.pmtCategory ?? x.pmtCategory ?? '', amount: x.amount, gst: pe ? !!pe.gst : !!x.gst };
+          // V20-519: a part reopens as what it was saved as (a Draw part stayed a draw, not Personal).
+          const pd = x.drawId ? p.draws.find((y) => y.id === x.drawId) : undefined;
+          return { id: x.expenseId ?? crypto.randomUUID(), route: x.route, project: pe?.project ?? pd?.project ?? x.project, description: pe?.description ?? pd?.description ?? x.description, type: pe?.type ?? x.type ?? '', category: pe?.category ?? x.category ?? '', pmtCategory: pe?.pmtCategory ?? x.pmtCategory ?? '', amount: x.amount, gst: pe ? !!pe.gst : !!x.gst };
         });
         return {
           account: l.account, date: l.date, kind: l.kind, text: l.text, debit: l.debit, credit: l.credit, balance: l.balance, fp: l.fp, key: l.key,
@@ -348,7 +350,7 @@ export function BankImport(p: Props) {
           status: 'saved',
           why: `Saved${e ? ` as ${e.description}` : d ? ` as a draw (${d.description})` : ''}. Change anything and save again.`,
           project: l.income?.project ?? d?.project ?? src?.project ?? (l.route === 'personal' ? personal : ''),
-          description: l.income?.description ?? d?.description ?? src?.description ?? tidy(l.key),
+          description: l.income?.description ?? d?.description ?? src?.description ?? l.description ?? tidy(l.key),
           method: e?.method ?? a?.method ?? '',
           type: src?.type ?? '',
           category: src?.category ?? '',
@@ -588,6 +590,7 @@ export function BankImport(p: Props) {
         line.invoiceId = r.invoiceId;
       }
       if (r.route === 'income' || r.route === 'interest') line.income = { project: r.project, description: r.description, gst: r.route === 'income' ? Math.round(r.gst * 100) / 100 : 0, notes: r.notes.trim() };
+      if (r.route === 'transfer' && r.description.trim()) line.description = r.description.trim();
       const c = learn(r, common, r.parts, r.total);
       if (c) {
         common = common.some((x) => x.id === c.id) ? common.map((x) => (x.id === c.id ? c : x)) : [...common, c];
@@ -665,6 +668,7 @@ export function BankImport(p: Props) {
         next.drawId = d.id;
       } else if (oldD) removeDraws.push(oldD.id);
       next.income = r.route === 'income' || r.route === 'interest' ? { project: r.project, description: r.description, gst: r.route === 'income' ? Math.round(r.gst * 100) / 100 : 0, notes: r.notes.trim() } : undefined;
+      next.description = r.route === 'transfer' && r.description.trim() ? r.description.trim() : undefined;
       const c = learn(r, common, r.parts, r.total);
       if (c) {
         common = common.some((x) => x.id === c.id) ? common.map((x) => (x.id === c.id ? c : x)) : [...common, c];
