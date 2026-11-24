@@ -1457,7 +1457,8 @@ export default function App() {
         const shift = (d: string, n: number) => iso(new Date(new Date(`${d}T12:00:00`).getTime() + n * 86_400_000));
         const today = iso(new Date());
         return booksBudget.filter((l) => {
-          if (l.amount === null || l.currency || budgetSeen[l.id] === 'keep' || budgetSeen[l.id] === booksMonth) return false;
+          // V20-488: a bill with no amount yet is asked about too (Find the charge fills it in).
+          if (l.currency || budgetSeen[l.id] === 'keep' || budgetSeen[l.id] === booksMonth) return false;
           if (!(l.type.toUpperCase() === 'FIXED' || l.section === 'fixed' || l.section === 'annual')) return false;
           const r = readRepeat(l.repeat ?? null);
           const due: string[] = [];
@@ -1483,7 +1484,12 @@ export default function App() {
   };
   const tieBill = (lineId: string, expenseId: string) => {
     const e = expenses.find((x) => x.id === expenseId);
-    if (e) void saveExpense({ ...e, budgetLineId: lineId });
+    if (!e) return;
+    void saveExpense({ ...e, budgetLineId: lineId });
+    // V20-488: a bill missing its amount / group / category takes them from the charge it's tied to.
+    const l = budget.find((x) => x.id === lineId);
+    if (l && (l.amount === null || !l.category || !l.pmtCategory))
+      void budgetOps.save({ ...l, amount: l.amount ?? e.amount, category: l.category || e.category, pmtCategory: l.pmtCategory || e.pmtCategory });
   };
   const answerBill = (id: string, v: string) => void handleSave({ account: { ...settings.account, budgetSeen: { ...budgetSeen, [id]: v } } as BrandSettings['account'] });
   const replaceShownBudget = (next: BudgetLine[]) => replaceBudget(next);

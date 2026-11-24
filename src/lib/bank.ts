@@ -417,8 +417,14 @@ export function sameBill(budgetName: string, other: string): boolean {
   const first = (t: string) => t.split(' - ')[0].trim();
   const fa = first(a);
   const fb = first(b);
-  return (fa.length >= 4 && b.includes(fa)) || (fb.length >= 4 && a.includes(fb));
+  if ((fa.length >= 4 && b.includes(fa)) || (fb.length >= 4 && a.includes(fb))) return true;
+  // V20-488: or they share a distinctive word ("Claude Subscription" ↔ "Anthropic Claude Sub"). Words of 5+ letters,
+  // not the generic ones every bill has.
+  const words = (t: string) => new Set(t.split(/[^a-z0-9]+/).filter((w) => w.length >= 5 && !GENERIC.has(w)));
+  const wb = words(b);
+  return [...words(a)].some((w) => wb.has(w));
 }
+const GENERIC = new Set(['subscription', 'subscriptions', 'payment', 'payments', 'monthly', 'annual', 'yearly', 'store', 'stores', 'online', 'service', 'services', 'canada', 'insurance', 'account', 'transfer', 'purchase', 'market', 'company', 'limited', 'books', 'bill', 'bills', 'phone', 'mobile', 'internet', 'shop']);
 const daysApart = (a: string, b: string) => Math.abs(new Date(a + 'T12:00').getTime() - new Date(b + 'T12:00').getTime()) / 86_400_000;
 const CARD_PAYMENT = /Bill Payment ATB Mastercard|PAYMENT - THANK YOU|PAYMENT RECEIVED/i;
 
@@ -566,9 +572,10 @@ export function draft(
         const bill = (b: BudgetLine) => b.type.toUpperCase() === 'FIXED' || b.section === 'fixed' || b.section === 'annual';
         // V20-482: on Books the Budget follows the bank: a bill is also found through its Common Expense's name, loosely.
         const viaRule = (b: BudgetLine) => !!rule && (ctx.books ? sameBill(b.description, rule.description) : b.description.trim().toLowerCase() === rule.description.trim().toLowerCase());
-        const candidates = (ctx.budget ?? []).filter((b) => b.amount !== null && !b.currency && bill(b) && (b.id === lineId || (!lineId && (named(b.description) || viaRule(b)))));
+        // V20-488 (Books): a bill with no amount yet is found too, and takes the bank's.
+        const candidates = (ctx.budget ?? []).filter((b) => (b.amount !== null || !!ctx.books) && !b.currency && bill(b) && (b.id === lineId || (!lineId && (named(b.description) || viaRule(b)))));
         const line = candidates.sort((a, b) => Math.abs((a.amount ?? 0) - amt) - Math.abs((b.amount ?? 0) - amt))[0];
-        if (line && Math.abs((line.amount ?? 0) - amt) >= 0.005) base.budget = { lineId: line.id, planned: line.amount ?? 0, description: line.description, apply: true };
+        if (line && (line.amount === null || Math.abs((line.amount ?? 0) - amt) >= 0.005)) base.budget = { lineId: line.id, planned: line.amount ?? 0, description: line.description, apply: true };
       }
       if (base.route === 'income') {
         const inv = ctx.invoices.find((i) => !i.datePaid && Math.abs(invoiceTotals(i).subTotal - base.amount) < 0.01);

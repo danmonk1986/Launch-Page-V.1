@@ -476,7 +476,8 @@ export function BankImport(p: Props) {
     const budgetLines = new Map<string, BudgetLine>();
     for (const r of [...live].sort((a, b) => a.date.localeCompare(b.date))) {
       const b = r.budget?.apply ? p.budget.find((x) => x.id === r.budget!.lineId) : undefined;
-      if (b) budgetLines.set(b.id, { ...b, amount: Math.round(Math.abs(r.total) * 100) / 100 });
+      // V20-488: a bill missing its group / category takes the charge's.
+      if (b) budgetLines.set(b.id, { ...b, amount: Math.round(Math.abs(r.total) * 100) / 100, category: b.category || r.category, pmtCategory: b.pmtCategory || r.pmtCategory });
     }
     const removeLines = live.filter((r) => r.route === 'expense' && r.replacesLine && lines.some((l) => l.fp === r.fp && l.expenseId === r.expenseId)).map((r) => r.replacesLine as string);
     await p.onSave({ accounts, lines, expenses, draws, common: [...touched.values()], invoices, profile: changedProfile, budgetLines: [...budgetLines.values()], removeLines });
