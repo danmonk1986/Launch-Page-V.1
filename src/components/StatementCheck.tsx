@@ -51,6 +51,16 @@ export function StatementCheck(p: { lines: BankLine[]; expenses: Expense[]; acco
       if (!cover || s.date < cover.a || s.date > cover.z) continue;
       const bank = p.lines.find((b) => isBank(b) && b.account === s.account && Math.abs(amt(b) - amt(s)) < 0.005 && days(b.date, s.date) <= 4) ?? null;
       const expense = p.expenses.find((e) => e.id === s.expenseId) ?? null;
+      // V20-503: a statement line split into parts (4 insurance policies in one $421.17 charge): a part of the same
+      // amount is the charge. Already its own expense → Counted twice.
+      const split = bank
+        ? null
+        : p.lines.find((b) => isBank(b) && b.account === s.account && days(b.date, s.date) <= 4 && (b.parts ?? []).some((x) => Math.abs(x.amount - amt(s)) < 0.005));
+      const part = split?.parts?.find((x) => Math.abs(x.amount - amt(s)) < 0.005);
+      if (split && part) {
+        if (part.expenseId && part.expenseId !== s.expenseId) out.push({ sheet: s, expense, bank: split, why: 'double' });
+        continue;
+      }
       if (!bank) out.push({ sheet: s, expense, bank, why: 'gone' });
       else if (bank.route === 'expense' && bank.expenseId && bank.expenseId !== s.expenseId) out.push({ sheet: s, expense, bank, why: 'double' });
       else if (bank.route === 'personal') out.push({ sheet: s, expense, bank, why: 'personal' });
