@@ -1,7 +1,7 @@
 import { Icon } from './Tasks';
 import { money } from '../lib/budget';
 import type { Expense } from '../lib/expenses';
-import { tidy, type BankLine } from '../lib/bank';
+import { tidy, type BankLine, type Draw } from '../lib/bank';
 import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
 import { useRef, useState } from 'react';
 import { MonthNav, thisMonth } from './Expenses';
@@ -153,6 +153,58 @@ export function IncomeCard({ lines, today, onOpenAll, onImport }: { lines: BankL
               <span className="pl-name bc-name">{x.what}</span>
               <span className="pl-desc">{x.l.account}</span>
               <span className="pl-mono bc-amt">{money(x.amount)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** V20-523 (Dan, Nov 24): Draws get a home on the Books track: money you took out of the business, like Income's card. */
+export function DrawsCard({ draws, today, onOpenAll, onImport }: { draws: Draw[]; today: Date; onOpenAll: () => void; onImport?: () => void }) {
+  const { q } = useHeaderSearch();
+  const m = iso(today);
+  const month = draws.filter((d) => d.date.slice(0, 7) === m);
+  const total = month.reduce((a, d) => a + d.amount, 0);
+  const wk = booksWeek(m, false);
+  const latest = draws
+    .filter((d) => d.date >= wk.from && d.date <= wk.to)
+    .filter((d) => matchesSearch(q, d.description, d.project, d.notes))
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.sort - a.sort));
+  const wkTotal = latest.reduce((a, d) => a + d.amount, 0);
+  return (
+    <section className="panel panel-budget-card panel-books-card" aria-labelledby="h-draws-card">
+      <CardHead id="h-draws-card" title="Draws" openLabel="Open all Draws" onOpen={onOpenAll} addLabel="Import a bank statement" onAdd={onImport} />
+      <div className="budget-stats" aria-label="This month">
+        <div className="budget-stat budget-stat-total" aria-pressed="true">
+          <span className="budget-stat-label">{monthName(today)} · drawn</span>
+          <span className="budget-stat-value">{money(total)}</span>
+        </div>
+        <div className="budget-stat">
+          <span className="budget-stat-label">Draws</span>
+          <span className="budget-stat-value">{month.length}</span>
+        </div>
+      </div>
+      <h3 className="card-h">
+        {wk.label} · {latest.length} · {money(wkTotal)}
+      </h3>
+      {latest.length === 0 ? (
+        <p className="field-hint">{draws.length ? `No draws ${wk.label === 'Last 7 days' ? 'in the last 7 days' : `${wk.label}`}.` : 'No draws yet. Money you take out of the business (a transfer or e-transfer to you) comes from your bank statements.'}</p>
+      ) : (
+        <div className="bc-table" role="table" aria-label="Latest draws">
+          <div className="bc-row bc-head books-row" role="row">
+            <span role="columnheader">Date</span>
+            <span role="columnheader">What</span>
+            <span role="columnheader">Division</span>
+            <span role="columnheader" className="bc-amt">Amount</span>
+          </div>
+          {latest.map((d, i) => (
+            <button type="button" key={d.id} className={`bc-row bc-row-btn books-row${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Draws" onClick={onOpenAll}>
+              <span className="pl-mono pl-due">{day(d.date)}</span>
+              <span className="pl-name bc-name">{d.description || '—'}</span>
+              <span className="pl-desc">{d.project}</span>
+              <span className="pl-mono bc-amt">{money(d.amount)}</span>
             </button>
           ))}
         </div>

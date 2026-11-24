@@ -131,7 +131,7 @@ import { Welcome } from './components/Welcome';
 import { Tour } from './components/Tour';
 import { Setup, resetSetupClock, setupStepFor } from './components/Setup';
 import { BETA_MODULES, BOOKS_MODULES, BetaContext, BooksContext, booksPath, readLpMode, trackOf, writeLpMode, type LpMode } from './lib/beta';
-import { CashBookCard, ExpensesCard, IncomeCard } from './components/BooksCards';
+import { CashBookCard, DrawsCard, ExpensesCard, IncomeCard } from './components/BooksCards';
 import { blankBooksFile, downloadBlob, launchSheetFile, newOnly, readBooksFile } from './lib/booksFile';
 import { presetRecordsView } from './components/Records';
 import { KnowledgeBasePage } from './components/KnowledgeBase';
@@ -2832,6 +2832,23 @@ export default function App() {
                     }}
                     onImport={() => {
                       presetRecordsView('income', books ? booksMonth : undefined);
+                      setPage('invoices');
+                      setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
+                    }}
+                  />
+                )
+              }
+              draws={
+                !books ? null : (
+                  <DrawsCard
+                    draws={draws}
+                    today={booksDay}
+                    onOpenAll={() => {
+                      presetRecordsView('draws', books ? booksMonth : undefined);
+                      setPage('invoices');
+                    }}
+                    onImport={() => {
+                      presetRecordsView('draws', books ? booksMonth : undefined);
                       setPage('invoices');
                       setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
                     }}

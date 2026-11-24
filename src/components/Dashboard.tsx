@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 
-type Slots = { rockets: ReactNode; week: ReactNode; tasks: ReactNode; cashbook?: ReactNode; budget?: ReactNode; expenses?: ReactNode; income?: ReactNode; planner?: ReactNode; journal: ReactNode; today: ReactNode };
+type Slots = { rockets: ReactNode; week: ReactNode; tasks: ReactNode; cashbook?: ReactNode; budget?: ReactNode; expenses?: ReactNode; income?: ReactNode; draws?: ReactNode; planner?: ReactNode; journal: ReactNode; today: ReactNode };
 
-export function LaunchPageHome({ rockets, week, tasks, cashbook, budget, expenses, income, planner, journal, today }: Slots) {
+export function LaunchPageHome({ rockets, week, tasks, cashbook, budget, expenses, income, draws, planner, journal, today }: Slots) {
   return (
     <div className="home">
       <div className="home-main">
@@ -15,6 +15,8 @@ export function LaunchPageHome({ rockets, week, tasks, cashbook, budget, expense
         {/* V20-453: the Books track's cards (null everywhere else). */}
         {expenses}
         {income}
+        {/* V20-523: Draws get a home on the Books track. */}
+        {draws}
         {planner}
         {journal}
       </div>

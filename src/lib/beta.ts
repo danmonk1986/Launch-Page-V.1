@@ -16,13 +16,13 @@ export const BETA_MODULES: Modules = {
 
 /**
  * V20-453 (Dan, Nov 22): BETA TRACKS. The Books track (Dan's dad, a test harness for the books features): a Books
- * home with Budget, Expenses and Income, branded BOOKS. No rockets, routine, tasks, calendar, draws or invoices.
+ * home with Budget, Expenses, Income and Draws (V20-523), branded BOOKS. No rockets, routine, tasks, calendar or invoices.
  */
 export const BOOKS_MODULES: Modules = {
   ...DEFAULT_MODULES,
   rockets: false, routine: false, tasks: false, week: false,
   journal: false, days26: false, goals: false, milestones: false, budget: true, trips: false,
-  invoice: false, records: true, recExpenses: true, recIncome: true, recDraws: false,
+  invoice: false, records: true, recExpenses: true, recIncome: true, recDraws: true,
   crm: false, marketing: false, planner: false, projects: false, kb: false
 };
 export type BetaTrack = 'launch' | 'books';

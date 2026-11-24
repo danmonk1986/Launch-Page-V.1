@@ -806,8 +806,8 @@ export function BankImport(p: Props) {
           <div className="setup-tracks" role="group" aria-label="How do you want to set up?">
             {(
               [
-                { id: 'scratch', icon: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z', title: 'Start from scratch', hint: 'New, or no files: type your lines as you go' },
                 { id: 'csv', icon: 'M14 3v4a1 1 0 0 0 1 1h4M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2zM9 13h6M9 17h6', title: 'Import a bank CSV', hint: 'You bank online: bring in your statements' },
+                { id: 'scratch', icon: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z', title: 'Start from scratch', hint: 'New, or no files: type your lines as you go' },
                 { id: 'sheet', icon: 'M4 5h16v14H4zM4 10h16M4 15h16M10 5v14', title: 'Create from a sheet', hint: 'You keep a spreadsheet: fill in the Launch Sheet' }
               ] as { id: Track; icon: string; title: string; hint: string }[]
             ).map((t) => (
