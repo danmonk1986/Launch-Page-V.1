@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Icon } from './Tasks';
 import { monthlyByCategory, money, type BudgetLine } from '../lib/budget';
 import type { Project } from '../lib/projects';
+import type { Expense } from '../lib/expenses';
 import { nextRepeat, readRepeat, repeatOn } from '../lib/repeat';
 import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
 import { booksWeek } from './BooksCards';
@@ -17,7 +18,7 @@ const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
  * V20-465 (Dan, Nov 23): on Books, `month` (YYYY-MM, from the Cash Book's ‹ ›) swaps "Next 7 days" for everything
  * due in that month, so the Budget card follows the overview like Expenses and Income. Main passes no month.
  */
-export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, projects: projectList = [], lost = [], onKeep, onSkip, onRemove }: { lines: BudgetLine[]; today: Date; month?: string; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void; projects?: Project[]; /** V20-483 (Books): bills due this month the bank never charged. */ lost?: BudgetLine[]; onKeep?: (id: string) => void; onSkip?: (id: string) => void; onRemove?: (id: string) => void }) {
+export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, projects: projectList = [], lost = [], onKeep, onSkip, onRemove, choicesFor, onTie }: { lines: BudgetLine[]; today: Date; month?: string; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void; projects?: Project[]; /** V20-483 (Books): bills due this month the bank never charged. */ lost?: BudgetLine[]; onKeep?: (id: string) => void; onSkip?: (id: string) => void; onRemove?: (id: string) => void; /** V20-487: the month's charges a lost bill could be. */ choicesFor?: (l: BudgetLine) => Expense[]; onTie?: (lineId: string, expenseId: string) => void }) {
   // V20-423 (Dan, Nov 20): the project is a coloured pill, like the Tasks card and the Budget page (same matching).
   const norm = (x: string) => x.toUpperCase().replace(/^STARDVST\s+/, '').replace(/[^A-Z0-9]/g, '');
   const projectFor = (name: string) => {
@@ -169,6 +170,22 @@ export function BudgetCard({ lines, today, month, onOpenAll, onOpenLine, onAdd, 
               <span className="pl-desc">{l.description}</span>
               <span className="pl-mono bc-amt">{l.amount === null ? '—' : money(l.amount)}</span>
               <span className="bc-lost-acts">
+                {choicesFor && onTie && (
+                  <select
+                    className="bc-lost-find"
+                    value=""
+                    aria-label={`Find the charge for ${l.description}`}
+                    title="It was charged under another name (e.g. your Apple ID): pick the expense it was"
+                    onChange={(e) => e.target.value && onTie(l.id, e.target.value)}
+                  >
+                    <option value="">Find the charge…</option>
+                    {choicesFor(l).map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {new Date(`${x.date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {x.description || '—'} · {money(x.amount ?? 0)}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <button type="button" className="btn btn-quiet" onClick={() => onKeep?.(l.id)} title="It's still a bill (charged under another name, or not every month): stop asking">
                   Keep
                 </button>

@@ -1472,6 +1472,19 @@ export default function App() {
           return !expenses.some((e) => e.date >= from && e.date <= to && (e.budgetLineId === l.id || sameBill(l.description, e.description)));
         });
       })();
+  // V20-487 (Dan, Nov 23): "it was charged, just under another name" (Headway on the Apple ID): the month's expenses
+  // not tied to a Budget line, closest amount first, so a lost bill can be tied to the charge that paid it.
+  const billChoices = (l: BudgetLine): Expense[] => {
+    const end = new Date(Number(booksMonth.slice(0, 4)), Number(booksMonth.slice(5, 7)), 6, 12).toLocaleDateString('en-CA');
+    return expenses
+      .filter((e) => e.date >= `${booksMonth}-01` && e.date <= end && !e.budgetLineId && e.amount !== null)
+      .sort((a, b) => Math.abs((a.amount ?? 0) - (l.amount ?? 0)) - Math.abs((b.amount ?? 0) - (l.amount ?? 0)))
+      .slice(0, 15);
+  };
+  const tieBill = (lineId: string, expenseId: string) => {
+    const e = expenses.find((x) => x.id === expenseId);
+    if (e) void saveExpense({ ...e, budgetLineId: lineId });
+  };
   const answerBill = (id: string, v: string) => void handleSave({ account: { ...settings.account, budgetSeen: { ...budgetSeen, [id]: v } } as BrandSettings['account'] });
   const replaceShownBudget = (next: BudgetLine[]) => replaceBudget(next);
 
@@ -2642,7 +2655,7 @@ export default function App() {
                   />
                 )
               }
-              budget={!mods.budget ? null : <BudgetCard lines={booksBudget} today={now} month={books ? booksMonth : undefined} lost={lostBills} onKeep={(id) => answerBill(id, 'keep')} onSkip={(id) => answerBill(id, booksMonth)} onRemove={(id) => void deleteBudgetLine(id)} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
+              budget={!mods.budget ? null : <BudgetCard lines={booksBudget} today={now} month={books ? booksMonth : undefined} lost={lostBills} onKeep={(id) => answerBill(id, 'keep')} onSkip={(id) => answerBill(id, booksMonth)} onRemove={(id) => void deleteBudgetLine(id)} choicesFor={billChoices} onTie={tieBill} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
               planner={!mods.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
               journal={!mods.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!mods.routine ? null : 

@@ -4812,3 +4812,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .bc-lost-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--edge); }
 .bc-lost-acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 640px) { .bc-lost-row { grid-template-columns: minmax(0, 1fr) auto; } .bc-lost-acts { grid-column: 1 / -1; justify-content: flex-start; } }
+/* V20-487: Not charged › Find the charge… */
+.bc-lost-find { max-width: 220px; }
