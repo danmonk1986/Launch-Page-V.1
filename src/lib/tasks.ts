@@ -370,7 +370,9 @@ export function stepsByParent(list: Task[]) {
     if (t.deletedAt && !deleted.has(t.parentId)) continue; // deleted on its own: shown in Recently deleted
     m.set(t.parentId, [...(m.get(t.parentId) ?? []), t]);
   }
-  for (const v of m.values()) v.sort((a, b) => a.sort - b.sort);
+  // V20-499 (Dan, Nov 23): steps run in date order (a step added later with an earlier date slots in where it belongs);
+  // steps with no date after the dated ones, then in the order they were added.
+  for (const v of m.values()) v.sort((a, b) => (a.endDate ?? '9999').localeCompare(b.endDate ?? '9999') || a.sort - b.sort);
   return m;
 }
 
