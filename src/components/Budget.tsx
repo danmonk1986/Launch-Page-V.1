@@ -419,12 +419,13 @@ export function BudgetPage(p: Props) {
           >
             <Icon d={SYNC} />
           </button>
+          </>
+          )}
+          {/* V20-501b: the audit in both views (Month opens first on Books). */}
           {books && p.onSaveMany && (
             <button type="button" className="icon-btn tool-btn" aria-label="Budget audit" title="Budget audit: new prices, new fixed bills and bills gone monthly, from your Expenses" onClick={runAudit}>
               <Icon d={AUDIT} />
             </button>
-          )}
-          </>
           )}
           {/* V20-203 (Dan, Nov 14): search on one side, + on the other (then ×). */}
           {(
