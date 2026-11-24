@@ -1113,16 +1113,7 @@ export function BankImport(p: Props) {
             <h3 className="card-h">
               {stackRows[0]?.description || tidy(stackKey)} · {stackRows.length} line{stackRows.length === 1 ? '' : 's'} · merchant {stackIdx + 1} of {stackList?.length ?? 0}
             </h3>
-            <span className="bank-note">Fill in the first line: each empty box fills down to this merchant's other lines. Change any line on its own, then Accept.</span>
-            <button type="button" className="btn btn-quiet" disabled={stackIdx === 0} onClick={() => stackGo(stackIdx - 1)} title="Back to the merchant before">
-              ‹ Back
-            </button>
-            <button type="button" className="btn btn-quiet" onClick={() => stackGo(stackIdx + 1)} title="Leave this merchant as it is and go to the next">
-              Skip
-            </button>
-            <button type="button" className="btn" onClick={() => (stackRows.forEach(confirmLine), stackGo(stackIdx + 1))} title="These lines are right: confirm them and go to the next merchant">
-              Accept
-            </button>
+            <span className="bank-note">Fill in the first line: each empty box fills down to this merchant's other lines. Change any line on its own, then Accept (below).</span>
           </div>
         ) : (
           stackKeys.length > 0 && (
@@ -1513,10 +1504,22 @@ export function BankImport(p: Props) {
               <>
               {/* V20-512 (Dan): Show all lines sits beside Process while sorting by merchant. */}
               {/* V20-513 (Dan): while sorting by merchant there's no Process: Show all lines first. */}
+              {/* V20-524 (Dan): ‹ Back · Skip · Accept sit down here beside Show all lines; Accept is the green one. */}
               {books && stackOn ? (
-                <button type="button" className="btn btn-go" onClick={stopStack}>
-                  Show all lines
-                </button>
+                <>
+                  <button type="button" className="btn btn-quiet" onClick={stopStack}>
+                    Show all lines
+                  </button>
+                  <button type="button" className="btn btn-quiet" disabled={stackIdx === 0} onClick={() => stackGo(stackIdx - 1)} title="Back to the merchant before">
+                    ‹ Back
+                  </button>
+                  <button type="button" className="btn btn-quiet" onClick={() => stackGo(stackIdx + 1)} title="Leave this merchant as it is and go to the next">
+                    Skip
+                  </button>
+                  <button type="button" className="btn btn-go" onClick={() => (stackRows.forEach(confirmLine), stackGo(stackIdx + 1))} title="These lines are right: confirm them and go to the next merchant">
+                    Accept
+                  </button>
+                </>
               ) : (
               <button type="button" className="btn btn-go" disabled={saving || !live.length || overSplit.length > 0} onClick={() => void save()}>
                 {saving ? (books ? 'Processing…' : 'Saving…') : live.length ? (books ? `Process ${live.length} line${live.length === 1 ? '' : 's'}` : `Save ${live.length} line${live.length === 1 ? '' : 's'} to Records`) : 'Nothing new to import'}
