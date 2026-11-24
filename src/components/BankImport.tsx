@@ -129,7 +129,7 @@ function guessAccount(number: string, file: string, sort: number): BankAccount {
  * Type or pick (Nov 1): type anything, or ▾ for every value already in use (the merchant's own
  * Common Expenses first for Description); typing filters the list.
  */
-function Pick(p: { value: string; options: string[]; groups?: { label: string; options: string[] }[]; onChange: (v: string) => void; label: string; disabled?: boolean; wide?: boolean; /** V20-472: Books outlines an empty box that still needs filling. */ need?: boolean }) {
+function Pick(p: { value: string; options: string[]; groups?: { label: string; options: string[] }[]; onChange: (v: string) => void; label: string; disabled?: boolean; wide?: boolean; /** V20-472: Books outlines an empty box that still needs filling. */ need?: boolean; accent?: string }) {
   const books = useBooks();
   const titles = [...new Set([...(p.groups ?? []).flatMap((g) => g.options), ...p.options])];
   if (p.disabled)
@@ -140,7 +140,7 @@ function Pick(p: { value: string; options: string[]; groups?: { label: string; o
     );
   return (
     <div className={`bank-combo${p.wide ? ' is-wide' : ''}${books && p.need && !p.value.trim() ? ' is-need' : ''}`}>
-      <TitleCombo value={p.value} titles={titles} onChange={p.onChange} placeholder="—" required={false} label={p.label} steady={books} />
+      <TitleCombo value={p.value} titles={titles} onChange={p.onChange} placeholder="—" required={false} label={p.label} steady={books} accent={p.accent} />
     </div>
   );
 }
@@ -148,7 +148,7 @@ function Pick(p: { value: string; options: string[]; groups?: { label: string; o
 /** Work in progress (Nov 1): kept on this device until it's saved or cleared, so closing the sheet loses nothing. */
 const DRAFT_KEY = 'launchpage.bank-draft.v1';
 /** V20-513 (Dan, Nov 24, Books): Split lives in the Division list (the ↳ button is gone on Books). */
-const SPLIT = 'Split this charge…';
+const SPLIT = 'SPLIT';
 /** V20-509: one draft per signed-in account (STARDVST's work never shows, or gets wiped, in FNTSY LVNG's import). */
 function draftKey() {
   try {
@@ -1295,7 +1295,8 @@ export function BankImport(p: Props) {
                         <td>
                           <Pick
                             value={r.project}
-                            options={books && (r.route === 'expense' || r.route === 'personal') ? [...divisions, SPLIT] : divisions}
+                            options={books ? [...divisions, SPLIT] : divisions}
+                            accent={SPLIT}
                             disabled={off}
                             onChange={(v) => (v === SPLIT ? addPart(r) : setDivision(r, v))}
                             label="Division"
@@ -1403,7 +1404,7 @@ export function BankImport(p: Props) {
                               </select>
                             </td>
                             <td>
-                              <Pick value={x.project} options={divisions} onChange={(v) => setPart(r, x.id, { project: v })} label="Part division" />
+                              <Pick value={x.project} options={books ? [...divisions, SPLIT] : divisions} accent={SPLIT} onChange={(v) => (v === SPLIT ? addPart(r) : setPart(r, x.id, { project: v }))} label="Part division" />
                             </td>
                             <td className="col-task">
                               <Pick wide value={x.description} groups={[{ label: 'This merchant', options: [...new Set(others.map((c) => c.description))] }]} options={descriptions} onChange={(v) => setPartDescription(r, x, v)} label="Part description" />

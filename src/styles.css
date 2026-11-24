@@ -4932,3 +4932,5 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .bank-import.is-books .bank-combo.is-need .combo input,
 .bank-import.is-books .bank-amt.is-need { outline-color: var(--accent-teal); }
 .bank-import.is-books .bank-row.st-check td:first-child { box-shadow: inset 2px 0 0 var(--accent-teal); }
+/* V20-514 (Books): SPLIT in every Division list, in the colour the ↳ button had. */
+.combo-opt.is-accent { color: var(--accent-purple); font-weight: 700; letter-spacing: 0.08em; }
