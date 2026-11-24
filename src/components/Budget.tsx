@@ -9,6 +9,7 @@ import { thisMonth } from './Expenses';
 import { originalLabel, rateToCad, toCad } from '../lib/currency';
 import { BudgetMonth } from './BudgetMonth';
 import { auditBudget, type AuditChange, type AuditKind } from '../lib/budgetAudit';
+import { UNDONE_EVENT, rememberBooks, useBooksUndo } from '../lib/booksUndo';
 import { LineCard, type LinePicks } from './LineCard';
 import { lineDateKey, type Expense } from '../lib/expenses';
 import { fromLine, planLinks, taskFor, type LinkPlan } from '../lib/links';
@@ -44,6 +45,7 @@ const SYNC = 'M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18.5 3v4h-4M5.5 
 const AUDIT = 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11';
 const AUDIT_LABEL: Record<AuditKind, string> = { add: 'Add to the Budget', price: 'New price', rhythm: 'Now monthly' };
 const AUDIT_SKIP = 'launchpage.budgetAuditSkip.v1';
+const UNDO = 'M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11';
 const auditDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
 
 type Props = {
@@ -303,6 +305,19 @@ export function BudgetPage(p: Props) {
       return [];
     }
   });
+  const undo = useBooksUndo();
+  // V20-506: Undo puts the ignored list back as it was.
+  useEffect(() => {
+    const re = () => {
+      try {
+        setAuditSkip(JSON.parse(localStorage.getItem(AUDIT_SKIP) ?? '[]') as string[]);
+      } catch {
+        setAuditSkip([]);
+      }
+    };
+    window.addEventListener(UNDONE_EVENT, re);
+    return () => window.removeEventListener(UNDONE_EVENT, re);
+  }, []);
   const skipKey = (c: AuditChange) => `${c.key}|${c.after.amount ?? ''}|${c.after.repeat ?? ''}`;
   const audit = useMemo(
     () => (books && p.onSaveMany ? auditBudget(p.lines, p.expenses, new Date().toLocaleDateString('en-CA')).filter((c) => !auditSkip.includes(skipKey(c))) : []),
@@ -317,6 +332,7 @@ export function BudgetPage(p: Props) {
     setRecalcNote(`Budget audit: ${list.length} change${list.length === 1 ? '' : 's'} applied.`);
   };
   const skipAudit = (c: AuditChange) => {
+    rememberBooks(`${c.after.description}: suggestion ignored`);
     const next = [...auditSkip, skipKey(c)];
     setAuditSkip(next);
     try {
@@ -447,6 +463,12 @@ export function BudgetPage(p: Props) {
             <Icon d={SYNC} />
           </button>
           </>
+          )}
+          {/* V20-506: Undo the last change on the books (also Cmd / Ctrl + Z). */}
+          {books && (
+            <button type="button" className="icon-btn tool-btn" aria-label={undo.count ? `Undo: ${undo.label}` : 'Nothing to undo'} title={undo.count ? `Undo: ${undo.label} (Cmd/Ctrl + Z)` : 'Nothing to undo yet'} disabled={!undo.count} onClick={undo.undo}>
+              <Icon d={UNDO} />
+            </button>
           )}
           {/* V20-501b / V20-505: the audit in both views; its count on the button. */}
           {books && p.onSaveMany && (

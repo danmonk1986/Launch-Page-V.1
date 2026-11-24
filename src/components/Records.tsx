@@ -10,6 +10,7 @@ import type { Project } from '../lib/projects';
 import type { BankAccount, BankLine, CommonExpense, Draw } from '../lib/bank';
 import { fyOf } from '../lib/bank';
 import { StatementCheck } from './StatementCheck';
+import { useBooksUndo } from '../lib/booksUndo';
 import { BankImport, type ImportResult } from './BankImport';
 import { DrawsView, FyNav, thisFy } from './Draws';
 import { IncomeView } from './Income';
@@ -21,6 +22,7 @@ const PLUS = 'M12 5v14M5 12h14';
 const AUDIT = 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11';
 type View = 'expenses' | 'income' | 'draws' | 'invoices';
 const CLOSE = 'M6 6l12 12M18 6L6 18';
+const UNDO = 'M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11';
 const VIEW_KEY = 'launchpage.records.view';
 /** V20-453: the Books home's cards open Records on their own view (Expenses or Income). */
 // V20-464b (Dan, Nov 22): …and on the month the Books overview is showing (Income: that month's fiscal year).
@@ -100,6 +102,7 @@ export function RecordsPage(
   // V20-505: the Audit (Not on your statement) opens from the header; its count shows on the button.
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditN, setAuditN] = useState(0);
+  const undo = useBooksUndo();
   // V20-198: ⚙ › Data Management › Import bank statements opens Records, then this.
   useEffect(() => {
     const open = () => (setSetup(false), setFocus(null), setImporting(true));
@@ -163,6 +166,12 @@ export function RecordsPage(
           <button type="button" className="icon-btn tool-btn" aria-label="Import CSV" title="Import bank statements (CSV) into Expenses and Draws" onClick={() => setImporting(true)}>
             <Icon d={IMPORT} />
           </button>
+          {/* V20-506: Undo the last change on the books (also Cmd / Ctrl + Z). */}
+          {books && (
+            <button type="button" className="icon-btn tool-btn" aria-label={undo.count ? `Undo: ${undo.label}` : 'Nothing to undo'} title={undo.count ? `Undo: ${undo.label} (Cmd/Ctrl + Z)` : 'Nothing to undo yet'} disabled={!undo.count} onClick={undo.undo}>
+              <Icon d={UNDO} />
+            </button>
+          )}
           {books && view === 'expenses' && (
             <button type="button" className={`icon-btn tool-btn audit-btn${auditOpen ? ' is-on' : ''}`} aria-label={`Audit${auditN ? `: ${auditN} to check` : ''}`} aria-pressed={auditOpen} title="Audit: spreadsheet lines your bank statement doesn't back up" onClick={() => setAuditOpen((o) => !o)}>
               <Icon d={AUDIT} />

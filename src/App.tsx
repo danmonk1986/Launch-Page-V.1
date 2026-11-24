@@ -33,6 +33,7 @@ import { clearLegacyNonNegs, readLegacyNonNegs } from './lib/nonneg';
 import { syncNonNegs } from './lib/nnsync';
 import { meditationStore, MeditationsContext, type Meditation } from './lib/meditations';
 import { hiddenPickStore, HiddenPicksContext, pickKey as hiddenKey, type HiddenPick } from './lib/hiddenPicks';
+import { REMEMBER_EVENT, UNDONE_EVENT, UNDO_KEYS, setUndoHandler, setUndoState } from './lib/booksUndo';
 import { bankAccountStore, bankLineStore, commonStore, drawStore, sameBill, type BankAccount, type BankLine, type CommonExpense, type Draw } from './lib/bank';
 import type { ImportResult } from './components/BankImport';
 import { customerStore, emptyProfile, invoiceStore, profileStore, type Customer, type Invoice, type InvoiceProfile } from './lib/invoices';
@@ -857,6 +858,7 @@ export default function App() {
   function ops<T extends { id: string }>(store: Store<T>, list: T[], setList: (l: T[]) => void, name: (t: T) => string) {
     return {
       save: async (item: T) => {
+        trackOps(store, list.some((x) => x.id === item.id) ? 'changed' : 'added');
         const next = list.some((x) => x.id === item.id) ? list.map((x) => (x.id === item.id ? item : x)) : [...list, item];
         setList(next);
         const ok = await store.save(userId, item, next);
@@ -865,6 +867,7 @@ export default function App() {
       },
       /** Several at once (a reorder), so no save works from a stale list. */
       saveMany: async (items: T[]) => {
+        trackOps(store, 'changes saved');
         const byId = new Map(items.map((i) => [i.id, i]));
         const next = [...list.map((x) => byId.get(x.id) ?? x), ...items.filter((i) => !list.some((x) => x.id === i.id))];
         setList(next);
@@ -878,6 +881,7 @@ export default function App() {
         if (!newer) setStatus(ok ? 'Saved.' : 'Saved on this device only.');
       },
       remove: async (id: string) => {
+        trackOps(store, 'removed');
         const next = list.filter((x) => x.id !== id);
         setList(next);
         await store.remove(userId, id, next);
@@ -1003,6 +1007,134 @@ export default function App() {
   const drawOps = ops(drawStore, draws, setDraws, (d) => d.description || 'Draw');
   const bankLineOps = ops(bankLineStore, bankLines, setBankLines, (l) => l.income?.description || 'Deposit');
 
+  /**
+   * V20-506 (Dan, Nov 24, Books): Undo for an instant bad decision. Before each change on the books (expenses, statement
+   * lines, budget, Common Expenses, draws, accounts, the cash book's opening / bills answered, the audits' lists) a copy
+   * is kept; Undo puts the rows back as they were and removes what the change added. Last 20 steps, until the page
+   * reloads. Changes within 0.8 s are one step (one tap that saves several lists).
+   */
+  type BooksCopy = {
+    label: string;
+    expenses: Expense[];
+    bankLines: BankLine[];
+    budget: BudgetLine[];
+    common: CommonExpense[];
+    draws: Draw[];
+    accounts: BankAccount[];
+    cashBook: unknown;
+    budgetSeen: unknown;
+    keys: (string | null)[];
+  };
+  const booksNow = useRef({ expenses, bankLines, budget, common, draws, accounts: bankAccounts, settings });
+  booksNow.current = { expenses, bankLines, budget, common, draws, accounts: bankAccounts, settings };
+  const undoStack = useRef<BooksCopy[]>([]);
+  const lastCopy = useRef(0);
+  const undoing = useRef(false);
+  function remember(label: string) {
+    if (!books || undoing.current) return;
+    const now = Date.now();
+    if (now - lastCopy.current < 800 && undoStack.current.length) {
+      lastCopy.current = now;
+      return;
+    }
+    lastCopy.current = now;
+    const c = booksNow.current;
+    const keys = UNDO_KEYS.map((k) => {
+      try {
+        return localStorage.getItem(k);
+      } catch {
+        return null;
+      }
+    });
+    undoStack.current = [...undoStack.current.slice(-19), { label, expenses: expRef.current, bankLines: c.bankLines, budget: c.budget, common: c.common, draws: c.draws, accounts: c.accounts, cashBook: settingsRef.current.account?.cashBook ?? null, budgetSeen: settingsRef.current.account?.budgetSeen ?? null, keys }];
+    setUndoState({ count: undoStack.current.length, label, at: now });
+    setUndoToast({ text: label, at: now });
+  }
+  function trackOps(store: unknown, what: string) {
+    const name = store === budgetStore ? 'budget line' : store === drawStore ? 'draw' : store === bankLineStore ? 'statement line' : store === commonStore ? 'Common Expense' : store === bankAccountStore ? 'account' : '';
+    if (name) remember(`${name[0].toUpperCase()}${name.slice(1)} ${what}`);
+  }
+  async function undoBooksStep() {
+    const c = undoStack.current.pop();
+    if (!c) return;
+    undoing.current = true;
+    const now = booksNow.current;
+    const back = async <T extends { id: string }>(store: Store<T>, cur: T[], was: T[], set: (l: T[]) => void) => {
+      const wasIds = new Set(was.map((x) => x.id));
+      const added = cur.filter((x) => !wasIds.has(x.id));
+      const changed = was.filter((x) => {
+        const y = cur.find((z) => z.id === x.id);
+        return !y || JSON.stringify(y) !== JSON.stringify(x);
+      });
+      if (!added.length && !changed.length) return 0;
+      set(was);
+      for (const x of added) await store.remove(userId, x.id, was);
+      for (const x of changed) await store.save(userId, x, was);
+      return added.length + changed.length;
+    };
+    const setExp = (l: Expense[]) => {
+      expRef.current = l;
+      setExpenses(l);
+    };
+    let n = 0;
+    n += await back(expenseStore, expRef.current, c.expenses, setExp);
+    n += await back(bankLineStore, now.bankLines, c.bankLines, setBankLines);
+    n += await back(budgetStore, now.budget, c.budget, setBudget);
+    n += await back(commonStore, now.common, c.common, setCommon);
+    n += await back(drawStore, now.draws, c.draws, setDraws);
+    n += await back(bankAccountStore, now.accounts, c.accounts, setBankAccounts);
+    const acct = settingsRef.current.account;
+    if (JSON.stringify(acct?.cashBook ?? null) !== JSON.stringify(c.cashBook) || JSON.stringify(acct?.budgetSeen ?? null) !== JSON.stringify(c.budgetSeen)) {
+      await handleSave({ account: { ...acct, cashBook: c.cashBook ?? undefined, budgetSeen: c.budgetSeen ?? undefined } as BrandSettings['account'] });
+      n++;
+    }
+    UNDO_KEYS.forEach((k, i) => {
+      try {
+        const v = c.keys[i];
+        if (v === null) localStorage.removeItem(k);
+        else localStorage.setItem(k, v);
+      } catch {
+        /* ignore */
+      }
+    });
+    window.dispatchEvent(new Event(UNDONE_EVENT));
+    undoing.current = false;
+    lastCopy.current = 0;
+    const top = undoStack.current[undoStack.current.length - 1];
+    setUndoState({ count: undoStack.current.length, label: top?.label ?? '', at: 0 });
+    setUndoToast({ text: `Undone: ${c.label.toLowerCase()}${n ? '' : ' (nothing had changed)'}`, at: Date.now(), done: true });
+  }
+  const [undoToast, setUndoToast] = useState<{ text: string; at: number; done?: boolean } | null>(null);
+  useEffect(() => {
+    if (!undoToast) return;
+    const t = window.setTimeout(() => setUndoToast(null), undoToast.done ? 3000 : 8000);
+    return () => window.clearTimeout(t);
+  }, [undoToast]);
+  useEffect(() => {
+    if (!books) return;
+    setUndoHandler(() => void undoBooksStep());
+    const onRemember = (e: Event) => {
+      const label = String((e as CustomEvent).detail ?? 'Change');
+      remember(label);
+    };
+    window.addEventListener(REMEMBER_EVENT, onRemember);
+    // Cmd / Ctrl + Z, except while typing (the box keeps its own undo).
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.key.toLowerCase() !== 'z') return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.closest('input, textarea, select, [contenteditable="true"]'))) return;
+      if (!undoStack.current.length) return;
+      e.preventDefault();
+      void undoBooksStep();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      setUndoHandler(null);
+      window.removeEventListener(REMEMBER_EVENT, onRemember);
+      window.removeEventListener('keydown', onKey);
+    };
+  });
+
   /** V20-458 (Dan, Nov 22): the Books track's books file (.xlsx with Budget / Expenses / Income tabs, or one tab as .csv):
    *  read, count, ask, then add only what isn't here yet (same date, description and amount). */
   async function importBooksFile(file: File) {
@@ -1047,6 +1179,7 @@ export default function App() {
 
   /** V20-015: a confirmed bank import, saved list by list (each in one go). */
   async function saveImport(r: ImportResult) {
+    remember(r.removeExpenses?.length || r.removeLines?.length ? 'Lines fixed' : r.update ? 'Saved lines updated' : `${r.lines.length} lines imported`);
     const many = async <T extends { id: string }>(store: Store<T>, list: T[], set: (l: T[]) => void, items: T[]) => {
       if (!items.length) return true;
       const byId = new Map(items.map((i) => [i.id, i]));
@@ -1101,6 +1234,7 @@ export default function App() {
   const expRef = useRef(expenses);
   expRef.current = expenses;
   async function saveExpense(e: Expense, quiet = false) {
+    remember(expRef.current.some((x) => x.id === e.id) ? `${e.description || 'Expense'} changed` : `${e.description || 'Expense'} added`);
     const list = expRef.current;
     const next = list.some((x) => x.id === e.id) ? list.map((x) => (x.id === e.id ? e : x)) : [...list, e];
     expRef.current = next;
@@ -1110,6 +1244,7 @@ export default function App() {
     else if (!quiet) setStatus(`${e.description || 'Expense'} saved.`);
   }
   async function removeExpense(id: string) {
+    remember(`${expRef.current.find((x) => x.id === id)?.description || 'Expense'} removed`);
     const next = expRef.current.filter((x) => x.id !== id);
     expRef.current = next;
     setExpenses(next);
@@ -1535,6 +1670,7 @@ export default function App() {
   const replaceShownBudget = (next: BudgetLine[]) => replaceBudget(next);
 
   async function replaceBudget(next: BudgetLine[]) {
+    remember('Budget replaced');
     const old = budget;
     setBudget(next);
     const gone = old.filter((l) => !next.some((n) => n.id === l.id));
@@ -2285,6 +2421,7 @@ export default function App() {
   // V20-172: Settings sends only what changed; it's applied onto the latest copy and only those columns are written.
   async function handleSave(patch: Partial<BrandSettings>) {
     const prev = settingsRef.current;
+    if (patch.account && (JSON.stringify(patch.account.cashBook ?? null) !== JSON.stringify(prev.account?.cashBook ?? null) || JSON.stringify(patch.account.budgetSeen ?? null) !== JSON.stringify(prev.account?.budgetSeen ?? null))) remember('Cash Book / bill answer changed');
     const next = applySettingsPatch(prev, patch);
     settingsRef.current = next;
     setSettings(next);
@@ -2859,6 +2996,20 @@ export default function App() {
             <ComingSoon page={page} />
           )}
         </main>
+        {/* V20-506: what just changed on the books, with Undo. */}
+        {books && undoToast && (
+          <div className="undo-toast" role="status">
+            <span>{undoToast.text}</span>
+            {!undoToast.done && undoStack.current.length > 0 && (
+              <button type="button" className="btn btn-quiet" onClick={() => void undoBooksStep()}>
+                Undo
+              </button>
+            )}
+            <button type="button" className="undo-toast-x" aria-label="Close" onClick={() => setUndoToast(null)}>
+              ×
+            </button>
+          </div>
+        )}
         <footer className="toolbar">
           <img className="toolbar-logo" src="/launchpage-logo.png" alt="LaunchPage" />
           {/* V20-176 (Dan, Nov 13): the logo alone, centred; a message only shows while there is one. */}

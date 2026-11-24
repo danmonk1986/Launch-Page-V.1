@@ -3,6 +3,7 @@ import { money } from '../lib/budget';
 import type { BankAccount, BankLine } from '../lib/bank';
 import type { Expense } from '../lib/expenses';
 import type { ImportResult } from './BankImport';
+import { UNDONE_EVENT, rememberBooks } from '../lib/booksUndo';
 
 /**
  * V20-494 (Dan, Nov 23, Books): the statement check. A spreadsheet line (Launch Sheet / Records file, fp 'sheet|…')
@@ -31,6 +32,12 @@ const WHY: Record<Issue['why'], { label: string; fix: string }> = {
 export function StatementCheck(p: { lines: BankLine[]; expenses: Expense[]; accounts: BankAccount[]; onImport: (r: ImportResult) => Promise<void>; onShow?: (expenseId: string, date: string) => void; open: boolean; onClose: () => void; onCount?: (n: number) => void }) {
   const [kept, setKept] = useState<string[]>(readKept);
   const [busy, setBusy] = useState(false);
+  // V20-506: Undo puts a kept item back on the list.
+  useEffect(() => {
+    const re = () => setKept(readKept());
+    window.addEventListener(UNDONE_EVENT, re);
+    return () => window.removeEventListener(UNDONE_EVENT, re);
+  }, []);
   const issues = useMemo<Issue[]>(() => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
@@ -100,6 +107,7 @@ export function StatementCheck(p: { lines: BankLine[]; expenses: Expense[]; acco
     setBusy(false);
   };
   const keep = (i: Issue) => {
+    rememberBooks(`${i.expense?.description || 'Item'} kept`);
     const next = [...kept, i.sheet.fp];
     setKept(next);
     try {
