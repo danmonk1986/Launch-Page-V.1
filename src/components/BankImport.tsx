@@ -747,6 +747,12 @@ export function BankImport(p: Props) {
             </button>
           </div>
           {mode === 'saved' && <MonthNav month={savedMonth} onChange={setSavedMonth} />}
+          {/* V20-515 (Dan): on Books the work-in-progress note sits beside New import / Saved. */}
+          {books && mode === 'new' && (!p.setup || track === 'csv') && (
+            <span className="bank-note">
+              {files.length ? 'Your changes are kept until you process or clear.' : 'Nothing goes to Records until you press Process; your work here is kept if you close this.'}
+            </span>
+          )}
           {onlyFp && (
             <button type="button" className="btn btn-quiet" onClick={() => setOnlyFp(null)} title="Show every line again">
               The source line · Show all
@@ -870,9 +876,13 @@ export function BankImport(p: Props) {
               Clear
             </button>
           )}
-          <span className="bank-note">
-            {files.length ? `${files.length} file${files.length > 1 ? 's' : ''} · ${parsed.length} lines · your changes are kept until you ${books ? 'process' : 'save'} or clear` : `ATB exports: Personal, Mastercard, Business… pick several at once. Nothing goes to Records until you press ${books ? 'Process' : 'Save'}; your work here is kept if you close this.`}
-          </span>
+          {!books ? (
+            <span className="bank-note">
+              {files.length ? `${files.length} file${files.length > 1 ? 's' : ''} · ${parsed.length} lines · your changes are kept until you save or clear` : 'ATB exports: Personal, Mastercard, Business… pick several at once. Nothing goes to Records until you press Save; your work here is kept if you close this.'}
+            </span>
+          ) : (
+            files.length > 0 && <span className="bank-note">{`${files.length} file${files.length > 1 ? 's' : ''} · ${parsed.length} lines`}</span>
+          )}
           {errors.map((e) => (
             <p key={e} className="bank-error">
               {e}
