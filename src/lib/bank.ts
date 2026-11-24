@@ -406,6 +406,20 @@ export interface Draft extends ParsedLine {
 const owed = (l: ParsedLine) => l.debit ?? -(l.credit ?? 0);
 
 /**
+ * V20-496 (Dan, Nov 23, Books): the division decides personal vs expense. A Common Expense saved as "Personal · MWD"
+ * (mixed on main) fills as an Expense; one under your personal division fills as Personal.
+ */
+export function routeByDivision(route: Route, project: string, personal: string): Route {
+  if (route !== 'expense' && route !== 'personal') return route;
+  const sq = (t: string) => t.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!project.trim()) return route;
+  const d = sq(project);
+  const me = sq(personal);
+  // "DAN MONK" is an older spelling of DANMONK26: a division that starts the personal one counts as personal too.
+  return d === me || (d.length >= 5 && me.startsWith(d)) ? 'personal' : 'expense';
+}
+
+/**
  * V20-482 (Dan, Nov 23, Books): a Budget line and an expense / Common Expense are the same bill when their names match
  * loosely: the same name, or one holds the other's first part ("Adobe" ↔ "Paypal - Adobe - Design Subscription",
  * "Symless" ↔ "Paddle - Symless"). Short first parts (under 4 letters) don't count.
@@ -507,7 +521,7 @@ export function draft(
       const rule = commonFor(ctx.common, l.key, kind === 'personal', amt)[0];
       if (rule) {
         set({
-          route: rule.route,
+          route: ctx.books ? routeByDivision(rule.route, rule.project, ctx.personal) : rule.route,
           status: 'common',
           commonId: rule.id,
           why: `Common Expenses: ${rule.description}${rule.lastDate ? ` (last used ${rule.lastDate})` : ''}.`,

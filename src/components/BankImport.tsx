@@ -12,6 +12,7 @@ import {
   spends,
   learn,
   parseStatement,
+  routeByDivision,
   tidy,
   type AccountKind,
   type BankAccount,
@@ -403,7 +404,8 @@ export function BankImport(p: Props) {
     edit(r, {
       description,
       commonId: c.id,
-      route: c.route,
+      // V20-496: on Books the division decides personal vs expense.
+      route: books ? routeByDivision(c.route, c.project, personal) : c.route,
       project: c.project,
       type: c.type,
       category: c.category,
