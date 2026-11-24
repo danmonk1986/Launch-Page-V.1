@@ -1005,7 +1005,7 @@ export function BankImport(p: Props) {
                 </div>
               );
             })}
-        {!(books && p.setup && mode === 'new') && (
+        {!(books && p.setup) && (
         <details className="bank-setup" open={accounts.length > p.accounts.length || (p.setup && accounts.length < 2) || undefined}>
           <summary>Records setup · fiscal year ends {fyEnd} · {[...new Set([business, ...divs, personal].filter(Boolean))].length} divisions (personal: {personal}) · {accounts.length} account{accounts.length === 1 ? '' : 's'}</summary>
           {fyUI}
