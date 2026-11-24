@@ -19,7 +19,7 @@ import { HeaderClock } from './components/Clock';
 import { ComingSoon, LaunchPageHome } from './components/Dashboard';
 import { BudgetPage } from './components/Budget';
 import { HeaderSearchContext, matchesSearch } from './lib/headerSearch';
-import { byDate, decisionStore, type Decision } from './lib/decisions';
+import { byDate, decisionStore, newDecision, type Decision } from './lib/decisions';
 import { planStore, type Plan } from './lib/plans';
 import { PlannerPanel } from './components/Planner';
 import { BudgetCard } from './components/BudgetCard';
@@ -1393,6 +1393,13 @@ export default function App() {
     if (!existing || !sameTask(step, existing)) await taskOps.save(step);
     await decisionOps.save(existing ? d : { ...d, taskId: step.id });
   }
+  /** V20-500: a decision removed in the Planner takes its step in Tasks with it (Recently deleted, restorable). */
+  async function removeDecision(id: string) {
+    const d = decisions.find((x) => x.id === id);
+    await decisionOps.remove(id);
+    const step = liveTask(d?.taskId);
+    if (step && step.parentId) await taskOps.save({ ...step, deletedAt: new Date().toISOString() });
+  }
   /** A plan saved: its task takes the new name / description / date. */
   async function savePlan(p: Plan) {
     await planOps.save(p);
@@ -1405,9 +1412,26 @@ export default function App() {
   function decisionsFollowTasks(items: Task[]) {
     const before = tasksRef.current;
     const changedDecisions: Decision[] = [];
+    const removed: string[] = [];
     for (const t of items) {
       const old = before.find((x) => x.id === t.id);
-      if (!old || t.deletedAt) continue;
+      // V20-500 (Dan, Nov 23): two-way. A new step under a plan's task becomes a decision in that plan; a deleted step
+      // takes its decision with it; the plan task's date moves the plan's date.
+      const planOfParent = t.parentId ? plans.find((p) => p.taskId === t.parentId) : undefined;
+      if (!old) {
+        if (planOfParent && !t.deletedAt && t.task.trim() && !decisions.some((x) => x.taskId === t.id)) {
+          const sort = decisions.filter((x) => x.planId === planOfParent.id).reduce((m, x) => Math.max(m, x.sort + 1), 0);
+          changedDecisions.push({ ...newDecision(planOfParent.projectId ?? null, sort, planOfParent.id), title: t.task.trim(), description: (t.notes ?? '').trim(), decideBy: t.endDate ?? null, status: t.done ? 'done' : 'open', taskId: t.id });
+        }
+        continue;
+      }
+      if (t.deletedAt) {
+        if (!old.deletedAt) {
+          const gone = decisions.find((x) => x.taskId === t.id && !!x.planId);
+          if (gone) removed.push(gone.id);
+        }
+        continue;
+      }
       const d = decisions.find((x) => x.taskId === t.id && x.planId && plans.find((p) => p.id === x.planId)?.taskId === t.parentId);
       if (d) {
         let n = d;
@@ -1417,9 +1441,15 @@ export default function App() {
         if (n !== d) changedDecisions.push(n);
       }
       const plan = plans.find((p) => p.taskId === t.id);
-      if (plan && t.task.trim() && t.task !== old.task) void planOps.save({ ...plan, name: t.task.trim() });
+      if (plan) {
+        let np = plan;
+        if (t.task.trim() && t.task !== old.task) np = { ...np, name: t.task.trim() };
+        if ((t.endDate ?? null) !== (old.endDate ?? null)) np = { ...np, decideBy: t.endDate ?? null };
+        if (np !== plan) void planOps.save(np);
+      }
     }
     if (changedDecisions.length) void decisionOps.saveMany(changedDecisions);
+    for (const id of removed) void decisionOps.remove(id);
   }
   /** A budget line saved: its linked task takes the shared fields (name, repeat / date, amount). */
   async function saveBudgetLine(l: BudgetLine) {
@@ -2664,7 +2694,7 @@ export default function App() {
                 )
               }
               budget={!mods.budget ? null : <BudgetCard lines={booksBudget} today={now} month={books ? booksMonth : undefined} lost={lostBills} onKeep={(id) => answerBill(id, 'keep')} onSkip={(id) => answerBill(id, booksMonth)} onRemove={(id) => void deleteBudgetLine(id)} choicesFor={billChoices} onTie={tieBill} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
-              planner={!mods.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
+              planner={!mods.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={removeDecision} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
               journal={!mods.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!mods.routine ? null : 
                 <TodayPanel
@@ -2698,7 +2728,7 @@ export default function App() {
               expenses={expenses}
             />
           ) : page === 'planner' ? (
-            <PlannerPanel full decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={decisionOps.remove} onToWorkflow={decisionToWorkflow} onToggle={() => {
+            <PlannerPanel full decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={removeDecision} onToWorkflow={decisionToWorkflow} onToggle={() => {
               // V20-257 (Dan, Nov 15): ^ comes back to the Project Planner card, not the top of the page.
               returnTo.current = 'h-planner';
               setPage('launch');
