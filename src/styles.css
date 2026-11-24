@@ -4914,3 +4914,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .setup-div-add { display: inline-flex; align-items: center; gap: 6px; }
 .bank-newacct-h { display: flex; align-items: center; gap: 12px; }
 .bank-newacct-x { font-size: 12px; letter-spacing: 0.04em; text-transform: none; }
+/* V20-508b (Dan): Split (↳) is as tall as the description box beside it, square, same corners. */
+.bank-import.is-books .bank-desc-wrap { align-items: stretch; }
+.app .bank-import.is-books .bank-table .bank-split { width: auto; height: auto; min-height: 0; aspect-ratio: 1; align-self: stretch; border-radius: 8px; padding: 0; font-size: 14px; }
