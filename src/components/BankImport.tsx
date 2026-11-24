@@ -392,7 +392,9 @@ export function BankImport(p: Props) {
   const setPartsOf = (r: Row, next: Part[]) => setParts((m) => ({ ...m, [r.fp]: next }));
   /** ↳ Split: a new part under the line, like a step under a task. It starts as a copy with no amount. */
   const addPart = (r: Row) =>
-    setPartsOf(r, [...r.parts, { id: crypto.randomUUID(), route: r.route === 'personal' ? 'expense' : 'personal', project: r.route === 'personal' ? business : personal, description: r.description, type: r.type, category: r.category, pmtCategory: r.pmtCategory, amount: 0, gst: r.route === 'personal' }]);
+    // V20-516 (Dan, Nov 24): a part of a draw is a business cost paid out of it (an e-transfer that was $300 garage
+    // rent, the rest a draw): it starts as an Expense under the business. Elsewhere: business ↔ personal as before.
+    setPartsOf(r, [...r.parts, { id: crypto.randomUUID(), route: r.route === 'personal' || r.route === 'draw' ? 'expense' : 'personal', project: r.route === 'personal' || r.route === 'draw' ? business : personal, description: r.description, type: r.type, category: r.category, pmtCategory: r.pmtCategory, amount: 0, gst: r.route === 'personal' }]);
   const setPart = (r: Row, id: string, patch: Partial<Part>) => setPartsOf(r, r.parts.map((x) => (x.id === id ? { ...x, ...patch } : x)));
   /** A Common Expenses pick on a part fills it like a line. */
   function setPartDescription(r: Row, x: Part, description: string) {
@@ -1410,7 +1412,8 @@ export function BankImport(p: Props) {
                             <td>
                               <select value={x.route} onChange={(e) => setPart(r, x.id, { route: e.target.value as Part['route'], ...(e.target.value === 'personal' ? { project: personal } : {}) })} aria-label="Part goes to">
                                 <option value="expense">Expense</option>
-                                <option value="personal">Personal</option>
+                                {/* V20-516: under a Draw, a Personal part would count the same money twice (the draw is already yours). */}
+                                {(r.route !== 'draw' || x.route === 'personal') && <option value="personal">Personal</option>}
                               </select>
                             </td>
                             <td>
