@@ -349,12 +349,12 @@ export function BankImport(p: Props) {
           route: l.route,
           status: 'saved',
           why: `Saved${e ? ` as ${e.description}` : d ? ` as a draw (${d.description})` : ''}. Change anything and save again.`,
-          project: l.income?.project ?? d?.project ?? src?.project ?? (l.route === 'personal' ? personal : ''),
-          description: l.income?.description ?? d?.description ?? src?.description ?? l.description ?? tidy(l.key),
+          project: l.income?.project ?? d?.project ?? src?.project ?? l.filed?.project ?? (l.route === 'personal' ? personal : ''),
+          description: l.income?.description ?? d?.description ?? src?.description ?? l.filed?.description ?? l.description ?? tidy(l.key),
           method: e?.method ?? a?.method ?? '',
-          type: src?.type ?? '',
-          category: src?.category ?? '',
-          pmtCategory: src?.pmtCategory ?? '',
+          type: src?.type || l.filed?.type || '',
+          category: src?.category || l.filed?.category || '',
+          pmtCategory: src?.pmtCategory || l.filed?.pmtCategory || '',
           amount: l.route === 'expense' || l.route === 'personal' ? owedAmt : Math.abs(owedAmt),
           gst: l.income?.gst ?? e?.gst ?? 0,
           expenseId: l.expenseId,
@@ -592,7 +592,8 @@ export function BankImport(p: Props) {
       if (r.route === 'income' || r.route === 'interest') line.income = { project: r.project, description: r.description, gst: r.route === 'income' ? Math.round(r.gst * 100) / 100 : 0, notes: r.notes.trim() };
       if (r.route === 'transfer' && r.description.trim()) line.description = r.description.trim();
       // V20-520: a Personal line keeps its own filing (two charges from one merchant can be filed differently).
-      if (r.route === 'personal') line.filed = { project: r.project, description: r.description, type: r.type, category: r.category, pmtCategory: r.pmtCategory, notes: r.notes.trim() };
+      // V20-521 (Dan): every line keeps every box you filled (a draw or deposit's type / group / category too).
+      line.filed = { project: r.project, description: r.description, type: r.type, category: r.category, pmtCategory: r.pmtCategory, notes: r.notes.trim() };
       const c = learn(r, common, r.parts, r.total);
       if (c) {
         common = common.some((x) => x.id === c.id) ? common.map((x) => (x.id === c.id ? c : x)) : [...common, c];
@@ -671,7 +672,7 @@ export function BankImport(p: Props) {
       } else if (oldD) removeDraws.push(oldD.id);
       next.income = r.route === 'income' || r.route === 'interest' ? { project: r.project, description: r.description, gst: r.route === 'income' ? Math.round(r.gst * 100) / 100 : 0, notes: r.notes.trim() } : undefined;
       next.description = r.route === 'transfer' && r.description.trim() ? r.description.trim() : undefined;
-      next.filed = r.route === 'personal' ? { project: r.project, description: r.description, type: r.type, category: r.category, pmtCategory: r.pmtCategory, notes: r.notes.trim() } : undefined;
+      next.filed = { project: r.project, description: r.description, type: r.type, category: r.category, pmtCategory: r.pmtCategory, notes: r.notes.trim() };
       const c = learn(r, common, r.parts, r.total);
       if (c) {
         common = common.some((x) => x.id === c.id) ? common.map((x) => (x.id === c.id ? c : x)) : [...common, c];
