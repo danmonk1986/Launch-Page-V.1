@@ -134,7 +134,7 @@ export function BankImport(p: Props) {
   const [parsed, setParsed] = useState<ParsedLine[]>(saved?.parsed ?? []);
   const [files, setFiles] = useState<string[]>(saved?.files ?? []);
   const [errors, setErrors] = useState<string[]>([]);
-  const [accounts, setAccounts] = useState<BankAccount[]>(saved?.accounts?.length ? saved.accounts : p.accounts);
+  const [accounts, setAccounts] = useState<BankAccount[]>(() => [...p.accounts, ...(saved?.accounts ?? []).filter((a) => !p.accounts.some((x) => x.id === a.id || x.number === a.number) && (saved?.parsed ?? []).some((l) => l.account === a.number))]);
   const [fyEnd, setFyEnd] = useState(p.profile?.fyEnd ?? '09-30');
   const [personal, setPersonal] = useState(p.profile?.personalDivision || (p.profile?.person ?? '').toUpperCase().replace(/\s+/g, '') || 'PERSONAL');
   // Opening the sheet starts from what's saved (the profile and accounts load after the page).
@@ -143,9 +143,11 @@ export function BankImport(p: Props) {
     if (!p.open) return;
     setFyEnd(p.profile?.fyEnd ?? '09-30');
     setPersonal(defaultPersonal);
-    if (!parsed.length) setAccounts(p.accounts);
+    // V20-491: the saved accounts always win; work kept in this browser only adds accounts that aren't saved yet and
+    // that its lines still use (an old copy could otherwise bring back merged accounts or an old kind on Process).
+    setAccounts((cur) => [...p.accounts, ...cur.filter((a) => !p.accounts.some((x) => x.id === a.id || x.number === a.number) && parsed.some((l) => l.account === a.number))]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [p.open, p.profile?.id, p.profile?.fyEnd, defaultPersonal]);
+  }, [p.open, p.profile?.id, p.profile?.fyEnd, defaultPersonal, p.accounts]);
   /** Edits made in the table, by line (fingerprint), kept when the accounts change. */
   const [edits, setEdits] = useState<Record<string, Partial<Draft>>>(saved?.edits ?? {});
   const [skip, setSkip] = useState<Set<string>>(new Set(saved?.skip ?? []));
