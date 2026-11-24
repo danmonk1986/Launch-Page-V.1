@@ -1005,7 +1005,7 @@ export function BankImport(p: Props) {
                 </div>
               );
             })}
-        {!(books && p.setup) && (
+        {!(books && p.setup && mode === 'new') && (
         <details className="bank-setup" open={accounts.length > p.accounts.length || (p.setup && accounts.length < 2) || undefined}>
           <summary>Records setup · fiscal year ends {fyEnd} · {[...new Set([business, ...divs, personal].filter(Boolean))].length} divisions (personal: {personal}) · {accounts.length} account{accounts.length === 1 ? '' : 's'}</summary>
           {fyUI}
@@ -1050,7 +1050,7 @@ export function BankImport(p: Props) {
         </details>
         )}
         {/* V20-511 (Dan, Nov 24): setting up, each part is its own box: account type, divisions, fiscal year. */}
-        {books && p.setup && accounts.some((a) => parsed.some((l) => l.account === a.number) || !p.accounts.some((x) => x.id === a.id)) && (
+        {books && p.setup && mode === 'new' && accounts.some((a) => parsed.some((l) => l.account === a.number) || !p.accounts.some((x) => x.id === a.id)) && (
           <div className="bank-newacct setup-box">
             <h3 className="card-h">Select account type</h3>
             <p className="field-hint">Name each account and say what kind it is: that decides how money in and out is read (a business account's charges are expenses; a personal account's are personal).</p>
@@ -1084,13 +1084,13 @@ export function BankImport(p: Props) {
               })}
           </div>
         )}
-        {books && p.setup && (
+        {books && p.setup && mode === 'new' && (
           <div className="bank-newacct setup-box">
             <h3 className="card-h">Add divisions</h3>
             {divisionsUI}
           </div>
         )}
-        {books && p.setup && (
+        {books && p.setup && mode === 'new' && (
           <div className="bank-newacct setup-box">
             <h3 className="card-h">Set your fiscal year end</h3>
             {fyUI}
