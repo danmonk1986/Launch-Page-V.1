@@ -18,6 +18,8 @@ export interface InvoiceProfile {
   fyEnd: string;
   /** Records setup (Nov 1): the DIVISION personal lines go under (DANMONK26). Empty: the person's name. */
   personalDivision: string;
+  /** V20-508 (Dan, Nov 24, Books): the divisions you file under (your business, its brands or projects), added in Records setup. */
+  divisions?: string[];
   sort: number;
 }
 
@@ -270,7 +272,8 @@ export const profileStore = jsonStore<InvoiceProfile>('invoice_profile', 'launch
   web: s(d.web),
   gstNumber: s(d.gstNumber),
   fyEnd: /^\d\d-\d\d$/.test(s(d.fyEnd)) ? s(d.fyEnd) : '09-30',
-  personalDivision: s(d.personalDivision)
+  personalDivision: s(d.personalDivision),
+  ...(Array.isArray(d.divisions) ? { divisions: (d.divisions as unknown[]).map((x) => String(x ?? '').trim()).filter(Boolean) } : {})
 }));
 
 export const emptyProfile = (): InvoiceProfile => ({ id: crypto.randomUUID(), business: '', person: '', phone: '', email: '', web: '', gstNumber: '', fyEnd: '09-30', personalDivision: '', sort: 0 });

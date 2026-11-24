@@ -4902,3 +4902,15 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .setup-type-hint { margin: 6px 0 10px; }
 .bc-empty-build { display: grid; gap: 10px; justify-items: start; }
 .bc-empty-build .btn { min-height: 36px; font-size: 12px; padding: 0 14px; }
+
+/* V20-508 (Books): Records setup › Divisions; Remove on an unused new account. */
+.setup-divs { align-items: flex-start; }
+.setup-div-list { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.setup-div { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--edge); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; }
+.setup-div em { font-style: normal; font-weight: 400; color: var(--dim); letter-spacing: 0; }
+.setup-div.is-mine { border-color: var(--accent-teal); }
+.setup-div-x { all: unset; cursor: pointer; padding: 0 2px 0 4px; color: var(--dim); font-size: 15px; line-height: 1; }
+.setup-div-x:hover { color: #e2675c; }
+.setup-div-add { display: inline-flex; align-items: center; gap: 6px; }
+.bank-newacct-h { display: flex; align-items: center; gap: 12px; }
+.bank-newacct-x { font-size: 12px; letter-spacing: 0.04em; text-transform: none; }
