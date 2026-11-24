@@ -4934,3 +4934,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .bank-import.is-books .bank-row.st-check td:first-child { box-shadow: inset 2px 0 0 var(--accent-teal); }
 /* V20-514 (Books): SPLIT in every Division list, in the colour the ↳ button had. */
 .combo-opt.is-accent { color: var(--accent-purple); font-weight: 700; letter-spacing: 0.08em; }
+
+/* V20-525 (Books): room under the last line so its menus aren't cut off; Save / Load a copy. */
+.bank-import.is-books .bank-scroll { padding-bottom: 260px; }
+.bank-copy { display: inline-flex; gap: 14px; margin-left: auto; font-size: 13px; }

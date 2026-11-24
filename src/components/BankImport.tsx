@@ -218,6 +218,33 @@ export function BankImport(p: Props) {
       /* full or blocked: the draft stays in memory */
     }
   }, [parsed, files, edits, skip, accounts, parts]);
+  // V20-525 (Dan, Nov 24): a copy of the work in progress as a file, to keep before Process and load back if needed.
+  const copyInput = useRef<HTMLInputElement>(null);
+  function saveCopy() {
+    const data: Saved = { parsed, files, edits, skip: [...skip], accounts, parts };
+    const blob = new Blob([JSON.stringify({ kind: 'lp-books-import', savedAt: new Date().toISOString(), ...data }, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `LP-RECORDS-import-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  async function loadCopy(f: File) {
+    try {
+      const d = JSON.parse(await f.text()) as Partial<Saved> & { kind?: string };
+      if (d.kind !== 'lp-books-import' || !Array.isArray(d.parsed)) throw new Error('not a copy');
+      if (parsed.length && !window.confirm('Replace the lines here with the copy?')) return;
+      setParsed(d.parsed);
+      setFiles(d.files ?? []);
+      setEdits(d.edits ?? {});
+      setSkip(new Set(d.skip ?? []));
+      setParts(d.parts ?? {});
+      if (Array.isArray(d.accounts)) setAccounts(d.accounts);
+      setErrors([]);
+    } catch {
+      setErrors([`${f.name}: this isn't a saved copy of an import.`]);
+    }
+  }
   function clearDraft() {
     // V20-476: forget the saved work right away. Process now closes this and leaves the page in the same moment, so
     // waiting for the effect left the old draft in storage, and reopening brought back edited lines as new (18 doubles).
@@ -779,6 +806,29 @@ export function BankImport(p: Props) {
           {books && mode === 'new' && (!p.setup || track === 'csv') && (
             <span className="bank-note">
               {files.length ? 'Your changes are kept until you process or clear.' : 'Nothing goes to Records until you press Process; your work here is kept if you close this.'}
+            </span>
+          )}
+          {books && mode === 'new' && (!p.setup || track === 'csv') && (
+            <span className="bank-copy">
+              {parsed.length > 0 && (
+                <button type="button" className="link-btn" onClick={saveCopy} title="Download a copy of everything here, to keep before you Process">
+                  Save a copy
+                </button>
+              )}
+              <button type="button" className="link-btn" onClick={() => copyInput.current?.click()} title="Bring back a copy you saved">
+                Load a copy
+              </button>
+              <input
+                ref={copyInput}
+                type="file"
+                accept=".json,application/json"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  if (f) void loadCopy(f);
+                }}
+              />
             </span>
           )}
           {onlyFp && (
@@ -1507,14 +1557,14 @@ export function BankImport(p: Props) {
               {/* V20-524 (Dan): ‹ Back · Skip · Accept sit down here beside Show all lines; Accept is the green one. */}
               {books && stackOn ? (
                 <>
-                  <button type="button" className="btn btn-quiet" onClick={stopStack}>
-                    Show all lines
-                  </button>
                   <button type="button" className="btn btn-quiet" disabled={stackIdx === 0} onClick={() => stackGo(stackIdx - 1)} title="Back to the merchant before">
                     ‹ Back
                   </button>
+                  <button type="button" className="btn btn-quiet" onClick={stopStack}>
+                    Show all lines
+                  </button>
                   <button type="button" className="btn btn-quiet" onClick={() => stackGo(stackIdx + 1)} title="Leave this merchant as it is and go to the next">
-                    Skip
+                    Skip ›
                   </button>
                   <button type="button" className="btn btn-go" onClick={() => (stackRows.forEach(confirmLine), stackGo(stackIdx + 1))} title="These lines are right: confirm them and go to the next merchant">
                     Accept
