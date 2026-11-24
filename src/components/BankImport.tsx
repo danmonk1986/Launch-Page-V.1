@@ -647,6 +647,75 @@ export function BankImport(p: Props) {
     setSaving(false);
   }
 
+  // V20-511: the divisions and fiscal-year controls, shown in Records setup or, when setting up, in their own boxes.
+  const divisionsUI = (
+    <>
+          {/* V20-508 (Dan, Nov 24): Divisions in place of one "Personal division" box: your business, anything you add
+              (a brand, a project), and yours, the one personal lines go under. */}
+          <div className="bank-fy setup-divs">
+            <span>Divisions</span>
+            <span className="setup-div-list">
+              {[...new Set([business, ...divs, personal].filter(Boolean))].map((d) => (
+                <span key={d} className={`setup-div${d === personal ? ' is-mine' : ''}`}>
+                  {d}
+                  {d === personal ? <em> · personal</em> : d === business ? <em> · business</em> : null}
+                  {d !== personal && d !== business && (
+                    <button type="button" className="setup-div-x" aria-label={`Remove ${d}`} title="Remove" onClick={() => setDivs((l) => l.filter((x) => x !== d))}>
+                      ×
+                    </button>
+                  )}
+                </span>
+              ))}
+              <span className="setup-div-add">
+                <input
+                  value={newDiv}
+                  onChange={(e) => setNewDiv(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    const v = newDiv.trim();
+                    if (v && v !== personal && v !== business && !divs.includes(v)) setDivs((l) => [...l, v]);
+                    setNewDiv('');
+                  }}
+                  placeholder="Add a division"
+                  size={14}
+                  aria-label="Add a division"
+                />
+                <button
+                  type="button"
+                  className="btn btn-quiet"
+                  disabled={!newDiv.trim()}
+                  onClick={() => {
+                    const v = newDiv.trim();
+                    if (v && v !== personal && v !== business && !divs.includes(v)) setDivs((l) => [...l, v]);
+                    setNewDiv('');
+                  }}
+                >
+                  + Add
+                </button>
+              </span>
+            </span>
+          </div>
+          <label className="bank-fy">
+            Yours (personal)
+            <select value={personal} onChange={(e) => setPersonal(e.target.value)} aria-label="Your personal division">
+              {[...new Set([personal, ...divs].filter(Boolean))].map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+            <span className="bank-note">Lines filed under it are Personal (not a business expense), and so is any line without a division. Add your own (e.g. your name) above to use it here.</span>
+          </label>
+    </>
+  );
+  const fyUI = (
+          <label className="bank-fy">
+            Fiscal year ends (MM-DD)
+            <input value={fyEnd} onChange={(e) => setFyEnd(e.target.value)} pattern="\d\d-\d\d" maxLength={5} size={6} aria-label="Fiscal year ends" />
+            <span className="bank-note">FY{fyOf(new Date().toISOString().slice(0, 10), fyEnd)} is this year (named by the year it ends).</span>
+          </label>
+  );
   const statusOf = (r: Draft) => (skip.has(r.fp) ? 'Left out' : STATUS_LABEL[r.status]);
 
   return (
@@ -797,8 +866,8 @@ export function BankImport(p: Props) {
         )}
         {/* V20-507: the CSV track works out each account's opening balance from its Balance column, checked row by row. */}
         {mode === 'new' && p.setup && track === 'csv' && parsed.some((l) => !isManual(l.fp)) && (
-          <div className="bank-setup-step setup-opening">
-            <h3 className="card-h">Opening balance · worked out</h3>
+          <div className="bank-newacct setup-box setup-opening">
+            <h3 className="card-h">Set your opening balance</h3>
             {accounts
               .filter((a) => parsed.some((l) => l.account === a.number && !isManual(l.fp)))
               .map((a) => {
@@ -843,6 +912,7 @@ export function BankImport(p: Props) {
         {/* V20-490 (Dan, Nov 23, Books): a statement with an account we haven't seen asks what it is first: its name and
             kind, or "Same as" an account you already have (its lines move there). */}
         {books &&
+          !p.setup &&
           accounts
             .filter((a) => !p.accounts.some((x) => x.id === a.id || x.number === a.number))
             .map((a) => {
@@ -892,70 +962,11 @@ export function BankImport(p: Props) {
                 </div>
               );
             })}
+        {!(books && p.setup) && (
         <details className="bank-setup" open={accounts.length > p.accounts.length || (p.setup && accounts.length < 2) || undefined}>
           <summary>Records setup · fiscal year ends {fyEnd} · {[...new Set([business, ...divs, personal].filter(Boolean))].length} divisions (personal: {personal}) · {accounts.length} account{accounts.length === 1 ? '' : 's'}</summary>
-          <label className="bank-fy">
-            Fiscal year ends (MM-DD)
-            <input value={fyEnd} onChange={(e) => setFyEnd(e.target.value)} pattern="\d\d-\d\d" maxLength={5} size={6} aria-label="Fiscal year ends" />
-            <span className="bank-note">FY{fyOf(new Date().toISOString().slice(0, 10), fyEnd)} is this year (named by the year it ends).</span>
-          </label>
-          {/* V20-508 (Dan, Nov 24): Divisions in place of one "Personal division" box: your business, anything you add
-              (a brand, a project), and yours, the one personal lines go under. */}
-          <div className="bank-fy setup-divs">
-            <span>Divisions</span>
-            <span className="setup-div-list">
-              {[...new Set([business, ...divs, personal].filter(Boolean))].map((d) => (
-                <span key={d} className={`setup-div${d === personal ? ' is-mine' : ''}`}>
-                  {d}
-                  {d === personal ? <em> · personal</em> : d === business ? <em> · business</em> : null}
-                  {d !== personal && d !== business && (
-                    <button type="button" className="setup-div-x" aria-label={`Remove ${d}`} title="Remove" onClick={() => setDivs((l) => l.filter((x) => x !== d))}>
-                      ×
-                    </button>
-                  )}
-                </span>
-              ))}
-              <span className="setup-div-add">
-                <input
-                  value={newDiv}
-                  onChange={(e) => setNewDiv(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => {
-                    if (e.key !== 'Enter') return;
-                    e.preventDefault();
-                    const v = newDiv.trim();
-                    if (v && v !== personal && v !== business && !divs.includes(v)) setDivs((l) => [...l, v]);
-                    setNewDiv('');
-                  }}
-                  placeholder="Add a division"
-                  size={14}
-                  aria-label="Add a division"
-                />
-                <button
-                  type="button"
-                  className="btn btn-quiet"
-                  disabled={!newDiv.trim()}
-                  onClick={() => {
-                    const v = newDiv.trim();
-                    if (v && v !== personal && v !== business && !divs.includes(v)) setDivs((l) => [...l, v]);
-                    setNewDiv('');
-                  }}
-                >
-                  + Add
-                </button>
-              </span>
-            </span>
-          </div>
-          <label className="bank-fy">
-            Yours (personal)
-            <select value={personal} onChange={(e) => setPersonal(e.target.value)} aria-label="Your personal division">
-              {[...new Set([personal, ...divs].filter(Boolean))].map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-            <span className="bank-note">Lines filed under it are Personal (not a business expense), and so is any line without a division. Add your own (e.g. your name) above to use it here.</span>
-          </label>
+          {fyUI}
+          {divisionsUI}
           {accounts.length > 0 && (
             <table className="bank-accounts">
               <thead>
@@ -994,6 +1005,54 @@ export function BankImport(p: Props) {
             </table>
           )}
         </details>
+        )}
+        {/* V20-511 (Dan, Nov 24): setting up, each part is its own box: account type, divisions, fiscal year. */}
+        {books && p.setup && accounts.some((a) => parsed.some((l) => l.account === a.number) || !p.accounts.some((x) => x.id === a.id)) && (
+          <div className="bank-newacct setup-box">
+            <h3 className="card-h">Select account type</h3>
+            <p className="field-hint">Name each account and say what kind it is: that decides how money in and out is read (a business account's charges are expenses; a personal account's are personal).</p>
+            {accounts
+              .filter((a) => parsed.some((l) => l.account === a.number) || !p.accounts.some((x) => x.id === a.id))
+              .map((a) => {
+                const set = (patch: Partial<BankAccount>) => setAccounts((l) => l.map((x) => (x.id === a.id ? { ...x, ...patch } : x)));
+                const n = parsed.filter((x) => x.account === a.number).length;
+                const isNew = !p.accounts.some((x) => x.id === a.id || x.number === a.number);
+                return (
+                  <div key={a.id} className="bank-files setup-acct-row">
+                    <span className="bank-mono setup-acct-num">
+                      {last4(a.number)} · {n} line{n === 1 ? '' : 's'}
+                    </span>
+                    <input value={a.name} onChange={(e) => set({ name: e.target.value })} placeholder="ATB Business" aria-label="Account name" />
+                    <input value={a.method} onChange={(e) => set({ method: e.target.value })} placeholder="Short name (ATB B.)" aria-label="Payment method" size={10} />
+                    <select value={a.kind} onChange={(e) => set({ kind: e.target.value as AccountKind })} aria-label="Kind">
+                      {KINDS.map((k) => (
+                        <option key={k.id} value={k.id}>
+                          {k.label}
+                        </option>
+                      ))}
+                    </select>
+                    {isNew && n === 0 && (
+                      <button type="button" className="link-btn bank-newacct-x" onClick={() => setAccounts((l) => l.filter((x) => x.id !== a.id))} title="Remove this account (no lines use it)">
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        )}
+        {books && p.setup && (
+          <div className="bank-newacct setup-box">
+            <h3 className="card-h">Add divisions</h3>
+            {divisionsUI}
+          </div>
+        )}
+        {books && p.setup && (
+          <div className="bank-newacct setup-box">
+            <h3 className="card-h">Set your fiscal year end</h3>
+            {fyUI}
+          </div>
+        )}
 
         {books && rows.length > 0 && (stackOn && stackKey ? (
           <div className="bank-stackbar">
@@ -1014,6 +1073,7 @@ export function BankImport(p: Props) {
         ) : (
           stackKeys.length > 0 && (
             <div className="bank-stackbar">
+              <h3 className="card-h">Merchants + Common Expenses</h3>
               <span className="bank-note">
                 {stackKeys.length} merchant{stackKeys.length === 1 ? '' : 's'} to sort. Go one merchant at a time: every line from it together.
               </span>

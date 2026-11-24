@@ -4917,3 +4917,18 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-508b (Dan): Split (↳) is as tall as the description box beside it, square, same corners. */
 .bank-import.is-books .bank-desc-wrap { align-items: stretch; }
 .app .bank-import.is-books .bank-table .bank-split { width: auto; height: auto; min-height: 0; aspect-ratio: 1; align-self: stretch; border-radius: 8px; padding: 0; font-size: 14px; }
+
+/* V20-511 (Dan, Nov 24, Books): setup sections are boxes with a header; highlighted boxes and outlines take colour 2 (teal). */
+.setup-box { display: grid; gap: 10px; }
+.setup-box .card-h, .bank-stackbar .card-h { margin: 0; }
+.bank-stackbar .card-h { flex-basis: 100%; }
+.setup-box .bank-fy { margin: 0; }
+.setup-acct-row { align-items: center; }
+.setup-acct-num { min-width: 120px; font-size: 13px; }
+.bank-import.is-books .bank-newacct,
+.bank-import.is-books .bank-stackbar,
+.statement-check,
+.bank-import.is-books .setup-opening-row.is-ok { border-color: var(--accent-teal); }
+.bank-import.is-books .bank-combo.is-need .combo input,
+.bank-import.is-books .bank-amt.is-need { outline-color: var(--accent-teal); }
+.bank-import.is-books .bank-row.st-check td:first-child { box-shadow: inset 2px 0 0 var(--accent-teal); }
