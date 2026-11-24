@@ -397,6 +397,9 @@ export interface Draft extends ParsedLine {
   notes: string;
   /** A saved line reopened (Nov 1): its parts as saved. */
   savedParts?: Part[];
+  /** V20-497 (Books): this merchant has been more than one thing (crew dinner / drinks for one): filled with the best
+   *  guess, but it waits for you to confirm. */
+  confirm?: boolean;
   /** Budget audit (Nov 1): the Budget line this bill is, when the bank charged a different amount; apply updates it. */
   budget?: { lineId: string; planned: number; description: string; apply: boolean };
   /** V20-485: the spreadsheet line (Launch Sheet / Records file) this bank line takes over, so it isn't counted twice. */
@@ -518,7 +521,14 @@ export function draft(
         });
       }
 
-      const rule = commonFor(ctx.common, l.key, kind === 'personal', amt)[0];
+      const found = commonFor(ctx.common, l.key, kind === 'personal', amt);
+      let rule = found[0];
+      // V20-497 (Dan, Nov 23, Books): a merchant you've filed more than one way (Players Lounge = crew dinner or drinks
+      // for one; a gas station = fuel or snacks; a family e-transfer = loan or rent) isn't sorted for you: the closest
+      // amount is the guess, and the line waits for you to confirm it.
+      const ways = ctx.books ? found.filter((c) => c.keys.includes(l.key)) : [];
+      const twoWays = new Set(ways.map((c) => c.description.trim().toLowerCase())).size >= 2;
+      if (twoWays) rule = [...ways].sort((a, b) => (a.amount === null ? 1 : 0) - (b.amount === null ? 1 : 0) || Math.abs((a.amount ?? 0) - Math.abs(amt)) - Math.abs((b.amount ?? 0) - Math.abs(amt)))[0];
       if (rule) {
         set({
           route: ctx.books ? routeByDivision(rule.route, rule.project, ctx.personal) : rule.route,
@@ -532,6 +542,11 @@ export function draft(
           pmtCategory: rule.pmtCategory,
           gst: hasGst(rule) ? gstIn(Math.abs(amt)) * Math.sign(amt) : 0
         });
+        if (twoWays) {
+          base.status = 'check';
+          base.confirm = true;
+          base.why = `This merchant has been ${[...new Set(ways.map((c) => c.description))].slice(0, 4).join(' or ')}: best guess by amount, confirm it.`;
+        }
         // A FIXED bill at a different amount than usual (PayPal $1,453 isn't the $12.99 subscription;
         // last year's insurance was a different charge): filled in, but to check.
         // V20-467 (Dan, Nov 23): on Books a known merchant stays sorted within 20%; further off is left to sort.

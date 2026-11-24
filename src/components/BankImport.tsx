@@ -350,8 +350,30 @@ export function BankImport(p: Props) {
    */
   const blank = (x: { project: string; description: string; type: string; category: string; pmtCategory: string }) => [x.project, x.description, x.type, x.category, x.pmtCategory].some((v) => !(v ?? '').trim());
   const needsWork = (r: (typeof rows)[number]) => r.status !== 'duplicate' && !skip.has(r.fp) && (r.status === 'check' || (spends(r.route) && blank(r)) || r.parts.some((x) => blank(x)));
+  /**
+   * V20-497 (Dan, Nov 23, Books): stacks. Sort one merchant at a time: every line from that merchant stacks together
+   * (filled with the best guess), you confirm them, and finishing the last one moves to the next merchant still to sort.
+   */
+  const [stackOn, setStackOn] = useState(false);
+  const [stackKey, setStackKey] = useState<string | null>(null);
+  const [stackSkipped, setStackSkipped] = useState<string[]>([]);
+  const stackKeys = useMemo(() => {
+    const out: string[] = [];
+    for (const r of live) if (r.key && needsWork(r) && !out.includes(r.key) && !stackSkipped.includes(r.key)) out.push(r.key);
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, skip, stackSkipped]);
+  useEffect(() => {
+    if (!stackOn) return;
+    if (stackKey && stackKeys.includes(stackKey)) return;
+    if (stackKeys.length) setStackKey(stackKeys[0]);
+    else (setStackOn(false), setStackKey(null), setStackSkipped([]));
+  }, [stackOn, stackKey, stackKeys]);
+  const stackRows = stackOn && stackKey ? live.filter((r) => r.key === stackKey) : [];
+  const confirmLine = (r: Draft) => edit(r, { status: 'edited' });
   const shown = rows.filter(
     (r) =>
+      (!stackOn || !stackKey || r.key === stackKey) &&
       (!onlyFp || r.fp === onlyFp) &&
       (showDup || r.status !== 'duplicate') &&
       (!fRoute || r.route === fRoute) &&
@@ -387,9 +409,10 @@ export function BankImport(p: Props) {
       const next = { ...m, [r.fp]: { ...m[r.fp], ...patch, ...mark } };
       // Editing a line yourself makes it your own; it stops following the others.
       followers.current.delete(r.fp);
-      if (base.find((b) => b.fp === r.fp)?.status !== 'check' || !r.key) return next;
+      // V20-497: a two-way merchant's lines are each confirmed on their own (a crew dinner isn't the next drinks for one).
+      if (base.find((b) => b.fp === r.fp)?.status !== 'check' || !r.key || r.confirm) return next;
       for (const o of base) {
-        if (o.fp === r.fp || o.key !== r.key || o.status !== 'check' || (m[o.fp] && !followers.current.has(o.fp))) continue;
+        if (o.fp === r.fp || o.key !== r.key || o.status !== 'check' || o.confirm || (m[o.fp] && !followers.current.has(o.fp))) continue;
         followers.current.add(o.fp);
         const { gst, ...rest } = patch;
         next[o.fp] = { ...m[o.fp], ...rest, ...mark, ...(gst === undefined ? {} : { gst: gst ? gstIn(Math.abs(o.amount)) * Math.sign(o.amount) : 0 }) };
@@ -755,6 +778,34 @@ export function BankImport(p: Props) {
           )}
         </details>
 
+        {books && rows.length > 0 && (stackOn && stackKey ? (
+          <div className="bank-stackbar">
+            <h3 className="card-h">
+              {stackRows[0]?.description || tidy(stackKey)} · {stackRows.length} line{stackRows.length === 1 ? '' : 's'} · merchant {stackKeys.indexOf(stackKey) + 1} of {stackKeys.length}
+            </h3>
+            <span className="bank-note">Check each line (one-tap picks under Description), then Confirm. Finishing the last one moves to the next merchant.</span>
+            <button type="button" className="btn" onClick={() => stackRows.filter((r) => needsWork(r) && !blank(r)).forEach(confirmLine)} title="Confirm every line here that's filled in">
+              Confirm all
+            </button>
+            <button type="button" className="btn btn-quiet" onClick={() => (setStackSkipped((l) => [...l, stackKey]), setStackKey(null))}>
+              Skip merchant
+            </button>
+            <button type="button" className="btn btn-quiet" onClick={() => (setStackOn(false), setStackKey(null), setStackSkipped([]))}>
+              Show all lines
+            </button>
+          </div>
+        ) : (
+          stackKeys.length > 0 && (
+            <div className="bank-stackbar">
+              <span className="bank-note">
+                {stackKeys.length} merchant{stackKeys.length === 1 ? '' : 's'} to sort. Go one merchant at a time: every line from it together.
+              </span>
+              <button type="button" className="btn" onClick={() => setStackOn(true)}>
+                Sort by merchant
+              </button>
+            </div>
+          )
+        ))}
         {rows.length > 0 && (
           <>
             <div className="budget-stats bank-stats" aria-label="What this import adds">
@@ -1014,6 +1065,11 @@ export function BankImport(p: Props) {
                           <span className={`bank-status st-${r.status}`} title={r.why}>
                             {statusOf(r)}
                           </span>
+                          {books && !off && r.status === 'check' && !blank(r) && (
+                            <button type="button" className="btn btn-quiet bank-confirm" onClick={() => confirmLine(r)} title={r.confirm ? 'The guess is right: confirm it' : 'Looks right: confirm it'}>
+                              Confirm
+                            </button>
+                          )}
                           {r.budget && !off && (
                             <label className="bank-budget" title={`Budget plans ${money(r.budget.planned)} for ${r.budget.description}; the bank charged ${money(Math.abs(r.total))}. Ticked: Budget takes the new amount when you save.`}>
                               <input type="checkbox" checked={r.budget.apply} onChange={() => edit(r, { budget: { ...r.budget!, apply: !r.budget!.apply } })} />
