@@ -4814,3 +4814,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 @media (max-width: 640px) { .bc-lost-row { grid-template-columns: minmax(0, 1fr) auto; } .bc-lost-acts { grid-column: 1 / -1; justify-content: flex-start; } }
 /* V20-487: Not charged › Find the charge… */
 .bc-lost-find { max-width: 220px; }
+/* V20-489 (Dan, Nov 23, Books): room between the last line and the Process button so they never overlap. */
+.bank-import.is-books .bank-scroll { padding-bottom: 16px; }
+.bank-import.is-books .bank-foot { margin-top: 20px; padding: 12px 0 8px; border-top: 1px solid var(--edge); }
