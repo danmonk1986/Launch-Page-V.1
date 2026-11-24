@@ -1066,9 +1066,6 @@ export function BankImport(p: Props) {
             <button type="button" className="btn btn-quiet" onClick={() => (setStackSkipped((l) => [...l, stackKey]), setStackKey(null))}>
               Skip merchant
             </button>
-            <button type="button" className="btn btn-quiet" onClick={() => (setStackOn(false), setStackKey(null), setStackSkipped([]))}>
-              Show all lines
-            </button>
           </div>
         ) : (
           stackKeys.length > 0 && (
@@ -1437,9 +1434,17 @@ export function BankImport(p: Props) {
                 {saving ? 'Saving…' : changed.length ? `Save ${changed.length} change${changed.length === 1 ? '' : 's'}` : 'No changes yet'}
               </button>
               ) : (
+              <>
+              {/* V20-512 (Dan): Show all lines sits beside Process while sorting by merchant. */}
+              {books && stackOn && (
+                <button type="button" className="btn btn-quiet" onClick={() => (setStackOn(false), setStackKey(null), setStackSkipped([]))}>
+                  Show all lines
+                </button>
+              )}
               <button type="button" className="btn btn-go" disabled={saving || !live.length || overSplit.length > 0} onClick={() => void save()}>
                 {saving ? (books ? 'Processing…' : 'Saving…') : live.length ? (books ? `Process ${live.length} line${live.length === 1 ? '' : 's'}` : `Save ${live.length} line${live.length === 1 ? '' : 's'} to Records`) : 'Nothing new to import'}
               </button>
+              </>
               )}
             </div>
           </>
