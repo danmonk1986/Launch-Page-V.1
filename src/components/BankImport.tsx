@@ -265,7 +265,7 @@ export function BankImport(p: Props) {
         const src = e ?? (l.route === 'personal' ? rule : undefined);
         const parts: Part[] | undefined = l.parts?.map((x) => {
           const pe = x.expenseId ? p.expenses.find((y) => y.id === x.expenseId) : undefined;
-          return { id: x.expenseId ?? crypto.randomUUID(), route: x.route === 'expense' ? 'expense' : 'personal', project: pe?.project ?? x.project, description: pe?.description ?? x.description, type: pe?.type ?? '', category: pe?.category ?? '', pmtCategory: pe?.pmtCategory ?? '', amount: x.amount, gst: !!pe?.gst };
+          return { id: x.expenseId ?? crypto.randomUUID(), route: x.route === 'expense' ? 'expense' : 'personal', project: pe?.project ?? x.project, description: pe?.description ?? x.description, type: pe?.type ?? x.type ?? '', category: pe?.category ?? x.category ?? '', pmtCategory: pe?.pmtCategory ?? x.pmtCategory ?? '', amount: x.amount, gst: pe ? !!pe.gst : !!x.gst };
         });
         return {
           account: l.account, date: l.date, kind: l.kind, text: l.text, debit: l.debit, credit: l.credit, balance: l.balance, fp: l.fp, key: l.key,
@@ -453,7 +453,7 @@ export function BankImport(p: Props) {
             expenses.push(e);
             expenseId = e.id;
           }
-          line.parts.push({ route: x.route, amount: x.amount, expenseId, project: x.project, description: x.description });
+          line.parts.push({ route: x.route, amount: x.amount, expenseId, project: x.project, description: x.description, type: x.type, category: x.category, pmtCategory: x.pmtCategory, gst: x.gst });
         }
       }
       if (r.route === 'draw') {
@@ -522,7 +522,7 @@ export function BankImport(p: Props) {
             expenseId = e.id;
             oldParts.delete(e.id);
           }
-          next.parts.push({ route: x.route, amount: x.amount, expenseId, project: x.project, description: x.description });
+          next.parts.push({ route: x.route, amount: x.amount, expenseId, project: x.project, description: x.description, type: x.type, category: x.category, pmtCategory: x.pmtCategory, gst: x.gst });
         }
       }
       removeExpenses.push(...oldParts);

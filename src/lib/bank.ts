@@ -63,7 +63,8 @@ export interface BankLine {
   drawId: string | null;
   invoiceId: string | null;
   /** A split charge: the parts beyond the main line (each its own expense, or personal). */
-  parts?: { route: Route; amount: number; expenseId: string | null; project: string; description: string }[];
+  // V20-492: type / group / category / GST kept on the part itself too, so a personal part (no expense) keeps them.
+  parts?: { route: Route; amount: number; expenseId: string | null; project: string; description: string; type?: string; category?: string; pmtCategory?: string; gst?: boolean }[];
   /** Money in (Nov 1, Records → Income): how a deposit or interest is documented; GST is what it collected. */
   income?: { project: string; description: string; gst: number; notes: string };
   sort: number;
