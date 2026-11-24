@@ -1348,6 +1348,8 @@ export default function App() {
   function planToTasks(plan: Plan) {
     const already = liveTask(plan.taskId);
     if (already) {
+      // V20-498 (Dan, Nov 23): open Tasks on the plan's own task (scrolled to and highlighted), not just the page.
+      setFocusTask(already.id);
       setPage('tasks');
       setStatus(`${plan.name} is already in Tasks (${taskName(already)}).`);
       return;
