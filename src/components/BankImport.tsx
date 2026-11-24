@@ -784,10 +784,18 @@ export function BankImport(p: Props) {
                   </span>
                 </div>
               )}
-              <div className="budget-stat">
-                <span className="budget-stat-label">To check</span>
-                <span className="budget-stat-value">{live.filter(needsWork).length}</span>
-              </div>
+              {/* V20-495 (Books): To check is a filter: tap to see just the lines with an empty box (parts included). */}
+              {books ? (
+                <button type="button" className="budget-stat" aria-pressed={fStatus === 'check'} title={fStatus === 'check' ? 'Show every line' : 'Show only the lines with something to fill in'} onClick={() => setFStatus(fStatus === 'check' ? '' : 'check')}>
+                  <span className="budget-stat-label">To check</span>
+                  <span className="budget-stat-value">{live.filter(needsWork).length}</span>
+                </button>
+              ) : (
+                <div className="budget-stat">
+                  <span className="budget-stat-label">To check</span>
+                  <span className="budget-stat-value">{live.filter(needsWork).length}</span>
+                </div>
+              )}
               {fys.length > 0 && (
                 <div className="budget-stat">
                   <span className="budget-stat-label">Fiscal year</span>
