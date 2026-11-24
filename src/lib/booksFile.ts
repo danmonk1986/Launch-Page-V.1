@@ -298,6 +298,27 @@ export function newOnly(found: BooksFound, have: { budget: BudgetLine[]; expense
     const keepE = new Set(lines.flatMap((l) => [l.expenseId, ...(l.parts ?? []).map((x) => x.expenseId)]).filter((x): x is string => !!x));
     const keepD = new Set(lines.map((l) => l.drawId).filter((x): x is string => !!x));
     const known = new Set(have.accounts.map((a) => a.number));
+    // V20-490 (Dan, Nov 23): a spreadsheet names its accounts in words ("ATB P", "MC", "ATB B"); match each to an account
+    // you already have instead of making a new one: the same name or pmt method (punctuation aside), the end of one
+    // ("MC" → "ATB MC"), or the only account of that kind (personal / card / business).
+    const sq = (t: string) => t.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const matchFor = (a: BankAccount): BankAccount | null => {
+      const n = sq(a.name || a.number);
+      if (!n) return null;
+      const same = have.accounts.filter((x) => [x.method, x.name, x.number].some((v) => !!v && sq(v) === n));
+      if (same.length === 1) return same[0];
+      const ends = have.accounts.filter((x) => n.length >= 2 && [x.method, x.name].some((v) => !!v && sq(v).endsWith(n)));
+      if (ends.length === 1) return ends[0];
+      const kind = have.accounts.filter((x) => x.kind === a.kind);
+      return kind.length === 1 ? kind[0] : null;
+    };
+    const moveTo = new Map<string, string>();
+    for (const a of found.sheet.accounts) {
+      if (known.has(a.number)) continue;
+      const m = matchFor(a);
+      if (m) moveTo.set(a.number, m.number);
+    }
+    for (const l of lines) l.account = moveTo.get(l.account) ?? l.account;
     const used = new Set(lines.map((l) => l.account));
     sheet = {
       lines,

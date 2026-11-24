@@ -636,6 +636,53 @@ export function BankImport(p: Props) {
         </div>
         )}
 
+        {/* V20-490 (Dan, Nov 23, Books): a statement with an account we haven't seen asks what it is first: its name and
+            kind, or "Same as" an account you already have (its lines move there). */}
+        {books &&
+          accounts
+            .filter((a) => !p.accounts.some((x) => x.id === a.id || x.number === a.number))
+            .map((a) => {
+              const set = (patch: Partial<BankAccount>) => setAccounts((l) => l.map((x) => (x.id === a.id ? { ...x, ...patch } : x)));
+              const n = parsed.filter((x) => x.account === a.number).length;
+              return (
+                <div key={a.id} className="bank-newacct">
+                  <h3 className="card-h">
+                    {p.setup ? 'New account' : 'New account in this statement'} · {last4(a.number)} · {n} line{n === 1 ? '' : 's'}
+                  </h3>
+                  <p className="field-hint">Which account is this? Name it and say what kind it is (that decides how money in and out is read), or pick the account you already have.</p>
+                  <div className="bank-files">
+                    <input value={a.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. ATB Business" aria-label="Account name" />
+                    <input value={a.method} onChange={(e) => set({ method: e.target.value })} placeholder="Short name (ATB B.)" aria-label="Payment method" size={10} />
+                    <select value={a.kind} onChange={(e) => set({ kind: e.target.value as AccountKind })} aria-label="Kind">
+                      {KINDS.map((k) => (
+                        <option key={k.id} value={k.id}>
+                          {k.label}
+                        </option>
+                      ))}
+                    </select>
+                    {p.accounts.length > 0 && (
+                      <select
+                        value=""
+                        aria-label="Same as an account you have"
+                        onChange={(e) => {
+                          const to = p.accounts.find((x) => x.id === e.target.value);
+                          if (!to) return;
+                          setParsed((l) => l.map((x) => (x.account === a.number ? { ...x, account: to.number } : x)));
+                          setAccounts((l) => l.filter((x) => x.id !== a.id));
+                        }}
+                      >
+                        <option value="">Same as…</option>
+                        {p.accounts.map((x) => (
+                          <option key={x.id} value={x.id}>
+                            {x.name || x.method} {last4(x.number)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
         <details className="bank-setup" open={accounts.length > p.accounts.length || (p.setup && accounts.length < 2) || undefined}>
           <summary>Records setup · fiscal year ends {fyEnd} · personal division {personal} · {accounts.length} account{accounts.length === 1 ? '' : 's'}</summary>
           <label className="bank-fy">

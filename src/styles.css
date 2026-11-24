@@ -4817,3 +4817,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-489 (Dan, Nov 23, Books): room between the last line and the Process button so they never overlap. */
 .bank-import.is-books .bank-scroll { padding-bottom: 16px; }
 .bank-import.is-books .bank-foot { margin-top: 20px; padding: 12px 0 8px; border-top: 1px solid var(--edge); }
+/* V20-490 (Books): a new account in a statement asks what it is. */
+.bank-newacct { border: 1px solid var(--accent-green); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+.bank-newacct .card-h { margin: 0 0 4px; }
+.bank-newacct .field-hint { margin: 0 0 8px; }
