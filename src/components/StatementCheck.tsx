@@ -28,7 +28,7 @@ const WHY: Record<Issue['why'], { label: string; fix: string }> = {
   personal: { label: 'Statement says Personal', fix: 'Use this filing' }
 };
 
-export function StatementCheck(p: { lines: BankLine[]; expenses: Expense[]; accounts: BankAccount[]; onImport: (r: ImportResult) => Promise<void> }) {
+export function StatementCheck(p: { lines: BankLine[]; expenses: Expense[]; accounts: BankAccount[]; onImport: (r: ImportResult) => Promise<void>; onShow?: (expenseId: string, date: string) => void }) {
   const [kept, setKept] = useState<string[]>(readKept);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
@@ -106,7 +106,14 @@ export function StatementCheck(p: { lines: BankLine[]; expenses: Expense[]; acco
             <div key={i.sheet.id} className="statement-check-row">
               <span className="col-date">{new Date(`${i.sheet.date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
               <span className="bank-mono">{acct(i.sheet.account)}</span>
-              <span className="pl-desc">{i.expense?.description || i.sheet.text || '—'}</span>
+              {/* V20-502 (Dan): clicking an item takes you to it in the Expenses list below. */}
+              {i.expense && p.onShow ? (
+                <button type="button" className="link-btn pl-desc statement-check-go" title="Show it in the list below" onClick={() => p.onShow!(i.expense!.id, i.expense!.date)}>
+                  {i.expense.description || i.sheet.text || '—'}
+                </button>
+              ) : (
+                <span className="pl-desc">{i.expense?.description || i.sheet.text || '—'}</span>
+              )}
               <span className="pl-mono">{money(i.expense?.amount ?? i.sheet.debit ?? 0)}</span>
               <span className="statement-check-why">{WHY[i.why].label}</span>
               <span className="bc-lost-acts">

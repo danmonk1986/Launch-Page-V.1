@@ -64,6 +64,8 @@ type Props = {
   /** V20-493 (Books): the statement line an expense came from (null = none anywhere). */
   sourceOf?: (e: Expense) => BankLine | null;
   onOpenSource?: (l: BankLine) => void;
+  /** V20-502 (Books): an item picked in "Not on your statement": scroll to its row and light it up. `n` re-runs it. */
+  spot?: { id: string; n: number } | null;
 };
 
 /**
@@ -118,6 +120,13 @@ export function ExpensesView(p: Props) {
   const ti = TALLIES.findIndex((t) => t.id === tally);
   const nextTally = TALLIES[(ti + 1) % TALLIES.length];
   const rows = pick ? monthRows.filter((e) => keyOf(e) === pick) : monthRows;
+  // V20-502: a picked item clears the box filter so its row is in the list, then scrolls to it.
+  useEffect(() => {
+    if (!p.spot) return;
+    setPick(null);
+    const t = window.setTimeout(() => document.getElementById(`exp-${p.spot!.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+    return () => window.clearTimeout(t);
+  }, [p.spot]);
   const lineName = (id: string | null) => (id ? p.lines.find((l) => l.id === id)?.description : undefined);
   const picks = (f: (x: { project: string; method: string; pmtCategory: string }) => string) =>
     [...new Set([...p.expenses, ...p.lines].map(f).map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -195,7 +204,7 @@ export function ExpensesView(p: Props) {
             </thead>
             <tbody>
               {rows.map((e, i) => (
-                <tr key={e.id} className={`task-row${i % 2 ? ' is-alt' : ''}`}>
+                <tr key={e.id} id={`exp-${e.id}`} className={`task-row${i % 2 ? ' is-alt' : ''}${p.spot?.id === e.id ? ' is-spot' : ''}`}>
                   <td className="col-project">{e.project ? <span className="chip" style={{ ['--chip' as string]: projectForDivision(p.projects ?? [], e.project)?.color }}>{e.project}</span> : <span className="chip chip-empty">—</span>}</td>
                   <td className="col-date">{dayLabel(e.date)}</td>
                   <td className="col-task">

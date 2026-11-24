@@ -93,6 +93,8 @@ export function RecordsPage(
   const [setup, setSetup] = useState(false);
   // V20-493: an expense's method opens the statement line it came from.
   const [focus, setFocus] = useState<{ month: string; fp: string } | null>(null);
+  // V20-502: the expense picked in "Not on your statement" (scrolled to and lit up in the list).
+  const [spot, setSpot] = useState<{ id: string; n: number } | null>(null);
   // V20-198: ⚙ › Data Management › Import bank statements opens Records, then this.
   useEffect(() => {
     const open = () => (setSetup(false), setFocus(null), setImporting(true));
@@ -189,8 +191,8 @@ export function RecordsPage(
         <DrawsView draws={p.draws} fy={fy} fyEnd={fyEnd} search={q} onSave={p.onSaveDraw} onDelete={p.onDeleteDraw} />
       ) : (
         <>
-        {books && <StatementCheck lines={p.bankLines} expenses={p.expenses} accounts={p.bankAccounts} onImport={p.onImport} />}
-        <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} addTick={addTick} projects={p.projects}
+        {books && <StatementCheck lines={p.bankLines} expenses={p.expenses} accounts={p.bankAccounts} onImport={p.onImport} onShow={(id, date) => (setMonth(date.slice(0, 7)), setSpot((s) => ({ id, n: (s?.n ?? 0) + 1 })))} />}
+        <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} addTick={addTick} projects={p.projects} spot={spot}
           sourceOf={
             books
               ? (e) => p.bankLines.find((l) => l.expenseId === e.id || (l.parts ?? []).some((x) => x.expenseId === e.id)) ?? null

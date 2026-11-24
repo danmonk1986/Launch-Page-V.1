@@ -4849,3 +4849,10 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .budget-audit .audit-amt { font-family: var(--mono, monospace); white-space: nowrap; }
 .budget-audit .audit-amt s { color: var(--dim); margin-right: 4px; }
 .budget-audit .audit-why, .budget-audit .audit-charges { padding-left: 26px; font-size: 13px; color: var(--dim); }
+
+/* V20-502 (Books): an item picked in "Not on your statement" lights up in the Expenses list. */
+.statement-check-go { text-align: left; justify-self: start; text-decoration: underline dotted; text-underline-offset: 3px; }
+.exp-lines tr.is-spot td { background: color-mix(in srgb, var(--accent-teal) 22%, transparent); }
+.exp-lines tr.is-spot td:first-child { box-shadow: inset 4px 0 0 var(--accent-teal); }
+/* V20-501c: room for "Apply n changes". */
+.budget-audit .reminder-actions .btn { white-space: nowrap; padding-inline: 22px; min-width: max-content; }
