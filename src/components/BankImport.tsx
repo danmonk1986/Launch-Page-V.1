@@ -19,6 +19,7 @@ import {
   type BankLine,
   type CommonExpense,
   type Draft,
+  CARD_PAYMENT,
   type Draw,
   type ParsedLine,
   type Part,
@@ -350,7 +351,8 @@ export function BankImport(p: Props) {
           status: 'saved',
           why: `Saved${e ? ` as ${e.description}` : d ? ` as a draw (${d.description})` : ''}. Change anything and save again.`,
           project: l.income?.project ?? d?.project ?? src?.project ?? l.filed?.project ?? (l.route === 'personal' ? personal : ''),
-          description: l.income?.description ?? d?.description ?? src?.description ?? l.filed?.description ?? l.description ?? tidy(l.key),
+          // V20-521b: a line saved before its name was kept gets the same name the import gave it (card payments).
+          description: l.income?.description ?? d?.description ?? src?.description ?? l.filed?.description ?? l.description ?? (CARD_PAYMENT.test(l.text) ? 'ATB Mastercard payment' : tidy(l.key)),
           method: e?.method ?? a?.method ?? '',
           type: src?.type || l.filed?.type || '',
           category: src?.category || l.filed?.category || '',

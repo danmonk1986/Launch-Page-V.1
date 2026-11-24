@@ -451,7 +451,7 @@ export function sameBill(budgetName: string, other: string): boolean {
 }
 const BILL_WORDS = new Set(['subscription', 'subscriptions', 'payment', 'payments', 'monthly', 'annual', 'yearly', 'store', 'stores', 'online', 'service', 'services', 'canada', 'insurance', 'account', 'transfer', 'purchase', 'market', 'company', 'limited', 'books', 'bill', 'bills', 'phone', 'mobile', 'internet', 'shop']);
 const daysApart = (a: string, b: string) => Math.abs(new Date(a + 'T12:00').getTime() - new Date(b + 'T12:00').getTime()) / 86_400_000;
-const CARD_PAYMENT = /Bill Payment ATB Mastercard|PAYMENT - THANK YOU|PAYMENT RECEIVED/i;
+export const CARD_PAYMENT = /Bill Payment ATB Mastercard|PAYMENT - THANK YOU|PAYMENT RECEIVED/i;
 
 /**
  * First pass at every line: Common Expenses where the merchant has been documented before,
