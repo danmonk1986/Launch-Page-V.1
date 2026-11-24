@@ -1458,6 +1458,14 @@ export default function App() {
     const changed = linked.map((t) => fromLine(t, l)).filter((t, i) => JSON.stringify(t) !== JSON.stringify(linked[i]));
     if (changed.length) await taskOps.saveMany(changed);
   }
+  /** V20-501 (Books): the Budget audit's changes saved together; linked tasks follow their lines. */
+  async function saveBudgetLines(ls: BudgetLine[]) {
+    if (!ls.length) return;
+    await budgetOps.saveMany(ls);
+    const changed = ls.flatMap((l) => tasks.filter((t) => t.budgetLineId === l.id && !t.deletedAt).map((t) => [t, fromLine(t, l)] as const)).filter(([a, b]) => JSON.stringify(a) !== JSON.stringify(b)).map(([, b]) => b);
+    if (changed.length) await taskOps.saveMany(changed);
+    setStatus(`Budget audit: ${ls.length} line${ls.length === 1 ? '' : 's'} saved.`);
+  }
   /** A budget line removed: its task stays, unlinked. */
   async function deleteBudgetLine(id: string) {
     await budgetOps.remove(id);
@@ -2810,6 +2818,7 @@ export default function App() {
               onReplace={replaceShownBudget}
               tasks={tasks}
               onApplyLinks={applyLinks}
+              onSaveMany={books ? saveBudgetLines : undefined}
               expenses={expenses}
               openId={budgetOpen}
               onOpened={() => setBudgetOpen(null)}

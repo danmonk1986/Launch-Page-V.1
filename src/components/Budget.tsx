@@ -8,6 +8,7 @@ import { useOpensUp } from './Rockets';
 import { thisMonth } from './Expenses';
 import { originalLabel, rateToCad, toCad } from '../lib/currency';
 import { BudgetMonth } from './BudgetMonth';
+import { auditBudget, type AuditChange, type AuditKind } from '../lib/budgetAudit';
 import { LineCard, type LinePicks } from './LineCard';
 import { lineDateKey, type Expense } from '../lib/expenses';
 import { fromLine, planLinks, taskFor, type LinkPlan } from '../lib/links';
@@ -39,6 +40,14 @@ const GROUP_ICON: Record<BudgetGroupBy, string> = {
 };
 // Oct 28: the same Sync icon as the calendar.
 const SYNC = 'M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18.5 3v4h-4M5.5 21v-4h4';
+// V20-501: the Budget audit (a ticked box).
+const AUDIT = 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11';
+const AUDIT_GROUPS: { kind: AuditKind; title: string }[] = [
+  { kind: 'add', title: 'Add to the Budget' },
+  { kind: 'price', title: 'New price' },
+  { kind: 'rhythm', title: 'Now monthly' }
+];
+const auditDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
 
 type Props = {
   lines: BudgetLine[];
@@ -63,6 +72,8 @@ type Props = {
   /** Link and dedupe (LP-030 step 3). */
   tasks: Task[];
   onApplyLinks: (plan: LinkPlan) => Promise<void>;
+  /** V20-501 (Books): the Budget audit's changes, saved together. */
+  onSaveMany?: (lines: BudgetLine[]) => Promise<void>;
 };
 
 type BudgetView = 'master' | 'month';
@@ -283,6 +294,23 @@ export function BudgetPage(p: Props) {
 
   /** ⋯ Recalc: a line priced in another currency gets today's CAD amount. */
   const [recalcNote, setRecalcNote] = useState('');
+  // V20-501 (Dan, Nov 23, Books): the Budget audit. Its list, and the changes left unticked.
+  const [audit, setAudit] = useState<AuditChange[] | null>(null);
+  const [auditOff, setAuditOff] = useState<Set<string>>(new Set());
+  const [auditing, setAuditing] = useState(false);
+  const runAudit = () => {
+    setAuditOff(new Set());
+    setAudit(auditBudget(p.lines, p.expenses, new Date().toLocaleDateString('en-CA')));
+  };
+  const applyAudit = async () => {
+    if (!audit || !p.onSaveMany) return;
+    const picked = audit.filter((c) => !auditOff.has(c.key));
+    setAuditing(true);
+    await p.onSaveMany(picked.map((c) => c.after));
+    setAuditing(false);
+    setAudit(null);
+    setRecalcNote(`Budget audit: ${picked.length} change${picked.length === 1 ? '' : 's'} applied.`);
+  };
   async function recalc(l: BudgetLine) {
     if (l.foreign == null || !l.currency) return;
     setRecalcNote(`Getting today's ${l.currency} rate…`);
@@ -391,6 +419,11 @@ export function BudgetPage(p: Props) {
           >
             <Icon d={SYNC} />
           </button>
+          {books && p.onSaveMany && (
+            <button type="button" className="icon-btn tool-btn" aria-label="Budget audit" title="Budget audit: new prices, new fixed bills and bills gone monthly, from your Expenses" onClick={runAudit}>
+              <Icon d={AUDIT} />
+            </button>
+          )}
           </>
           )}
           {/* V20-203 (Dan, Nov 14): search on one side, + on the other (then ×). */}
@@ -676,6 +709,79 @@ export function BudgetPage(p: Props) {
                   }}
                 >
                   {linking ? 'Linking…' : 'Link and clean up'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </Sheet>
+
+      <Sheet open={!!audit} title="Budget audit" onClose={() => setAudit(null)}>
+        {audit && (
+          <div className="reminder budget-audit">
+            {audit.length === 0 ? (
+              <p className="panel-empty">Your Budget matches your Expenses: no new prices, no fixed bills missing, nothing gone monthly (last month and this month, up to today).</p>
+            ) : (
+              <>
+                <p className="panel-empty">
+                  From your Expenses, last month and this month up to today. Untick anything you don't want, then Apply.
+                </p>
+                {AUDIT_GROUPS.map(({ kind, title }) => {
+                  const list = audit.filter((c) => c.kind === kind);
+                  if (!list.length) return null;
+                  return (
+                    <div key={kind} className="audit-group">
+                      <h3 className="audit-title">
+                        {title} <span className="link-plan-dim">({list.length})</span>
+                      </h3>
+                      <ul>
+                        {list.map((c) => {
+                          const on = !auditOff.has(c.key);
+                          return (
+                            <li key={c.key} className={`audit-row${on ? '' : ' is-off'}`}>
+                              <label>
+                                <input
+                                  type="checkbox"
+                                  checked={on}
+                                  onChange={() =>
+                                    setAuditOff((o) => {
+                                      const n = new Set(o);
+                                      if (n.has(c.key)) n.delete(c.key);
+                                      else n.add(c.key);
+                                      return n;
+                                    })
+                                  }
+                                />
+                                <span className="audit-name">{c.after.description}</span>
+                                <span className="audit-amt">
+                                  {c.before && c.kind !== 'add' && <s>{c.before.amount === null ? 'no amount' : money(c.before.amount)}</s>} {money(c.after.amount ?? 0)}
+                                  {c.kind === 'rhythm' ? ' / month' : c.kind === 'add' ? ' / month' : ''}
+                                </span>
+                              </label>
+                              <span className="audit-why">{c.why}</span>
+                              <span className="audit-charges">
+                                {c.charges
+                                  .slice(0, 4)
+                                  .map((e) => `${auditDate(e.date)} ${money(e.amount ?? 0)}${e.description.trim() !== c.after.description ? ` · ${e.description}` : ''}`)
+                                  .join('  ·  ')}
+                                {c.charges.length > 4 ? `  · +${c.charges.length - 4} more` : ''}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+            <div className="reminder-actions">
+              <button type="button" className="btn btn-quiet" onClick={() => setAudit(null)}>
+                {audit.length ? 'Cancel' : 'Close'}
+              </button>
+              {audit.length > 0 && (
+                <button type="button" className="btn" disabled={auditing || audit.every((c) => auditOff.has(c.key))} onClick={() => void applyAudit()}>
+                  {auditing ? 'Applying…' : `Apply ${audit.length - auditOff.size} change${audit.length - auditOff.size === 1 ? '' : 's'}`}
                 </button>
               )}
             </div>
