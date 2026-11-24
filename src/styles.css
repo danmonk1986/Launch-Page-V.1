@@ -4856,3 +4856,8 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .exp-lines tr.is-spot td:first-child { box-shadow: inset 4px 0 0 var(--accent-teal); }
 /* V20-501c: room for "Apply n changes". */
 .budget-audit .reminder-actions .btn { white-space: nowrap; padding-inline: 22px; min-width: max-content; }
+
+/* V20-504 (Books): Not on your statement: card-size bin + tick. */
+.statement-check-acts { gap: 10px; }
+.app .quick-btn.statement-bin { border-color: rgb(255 120 110 / 0.6); color: #e2675c; }
+.app .quick-btn.statement-bin:hover { background: rgb(226 103 92 / 0.12); }

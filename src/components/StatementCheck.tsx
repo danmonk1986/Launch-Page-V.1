@@ -106,10 +106,10 @@ export function StatementCheck(p: { lines: BankLine[]; expenses: Expense[]; acco
           {open ? 'Hide' : 'Review'}
         </button>
         <button type="button" className="btn" disabled={busy} onClick={() => void accept(issues)}>
-          {busy ? 'Fixing…' : `Accept all ${issues.length}`}
+          {busy ? 'Fixing…' : `Fix all ${issues.length}`}
         </button>
       </div>
-      <p className="field-hint">These came from a spreadsheet you imported, but your bank statement for those dates doesn't back them up. Accept fixes each one; Keep leaves it as it is.</p>
+      <p className="field-hint">These came from a spreadsheet you imported, but your bank statement for those dates doesn't back them up. Click one to see it below. The bin fixes it (removes the spreadsheet copy); the tick says it's right, so it stays in Expenses and drops off this list.</p>
       {open && (
         <div className="statement-check-list">
           {issues.map((i) => (
@@ -126,12 +126,17 @@ export function StatementCheck(p: { lines: BankLine[]; expenses: Expense[]; acco
               )}
               <span className="pl-mono">{money(i.expense?.amount ?? i.sheet.debit ?? 0)}</span>
               <span className="statement-check-why">{WHY[i.why].label}</span>
-              <span className="bc-lost-acts">
-                <button type="button" className="btn btn-quiet" disabled={busy} onClick={() => void accept([i])} title={WHY[i.why].fix}>
-                  Accept
+              {/* V20-504 (Dan): card-size icons: the bin fixes it (removes the spreadsheet copy), the tick keeps it as it is. */}
+              <span className="bc-lost-acts statement-check-acts">
+                <button type="button" className="quick-btn statement-bin" disabled={busy} onClick={() => void accept([i])} aria-label={`${WHY[i.why].fix}: ${i.expense?.description ?? ''}`} title={`${WHY[i.why].fix} (fix it)`}>
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+                  </svg>
                 </button>
-                <button type="button" className="btn btn-quiet" onClick={() => keep(i)} title="It's right as it is: stop asking">
-                  Keep
+                <button type="button" className="quick-btn quick-done" onClick={() => keep(i)} aria-label={`Keep ${i.expense?.description ?? ''} as it is`} title="It's right: keep it in Expenses and stop asking">
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12l5 5 9-10" />
+                  </svg>
                 </button>
               </span>
             </div>
