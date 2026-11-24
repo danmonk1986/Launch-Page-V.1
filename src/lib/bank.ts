@@ -69,6 +69,8 @@ export interface BankLine {
   income?: { project: string; description: string; gst: number; notes: string };
   /** V20-519 (Dan, Nov 24): what you called a line that makes no record of its own (a transfer): kept, not back to the bank text. */
   description?: string;
+  /** V20-520: a Personal line's filing as you left it (it makes no expense to keep it in). */
+  filed?: { project: string; description: string; type: string; category: string; pmtCategory: string; notes: string };
   sort: number;
 }
 
@@ -155,7 +157,8 @@ export const bankLineStore = jsonStore<BankLine>('bank_lines', 'launchpage.bank-
   invoiceId: s(d.invoiceId) || null,
   parts: Array.isArray(d.parts) ? (d.parts as BankLine['parts']) : undefined,
   income: d.income && typeof d.income === 'object' ? (d.income as BankLine['income']) : undefined,
-  ...(s(d.description) ? { description: s(d.description) } : {})
+  ...(s(d.description) ? { description: s(d.description) } : {}),
+  ...(d.filed && typeof d.filed === 'object' ? { filed: d.filed as BankLine['filed'] } : {})
 }));
 
 export const commonStore = jsonStore<CommonExpense>('expense_rules', 'launchpage.expense-rules.v1', (d) => ({

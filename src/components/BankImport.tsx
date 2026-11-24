@@ -336,7 +336,7 @@ export function BankImport(p: Props) {
         const e = l.expenseId ? p.expenses.find((x) => x.id === l.expenseId) : undefined;
         const d = l.drawId ? p.draws.find((x) => x.id === l.drawId) : undefined;
         const rule = commonFor(p.common, l.key, a?.kind === 'personal', l.debit ?? -(l.credit ?? 0))[0];
-        const src = e ?? (l.route === 'personal' ? rule : undefined);
+        const src = e ?? (l.route === 'personal' ? l.filed ?? rule : undefined);
         const parts: Part[] | undefined = l.parts?.map((x) => {
           const pe = x.expenseId ? p.expenses.find((y) => y.id === x.expenseId) : undefined;
           // V20-519: a part reopens as what it was saved as (a Draw part stayed a draw, not Personal).
@@ -361,7 +361,7 @@ export function BankImport(p: Props) {
           invoiceId: l.invoiceId,
           commonId: rule?.id ?? null,
           pairOf: null,
-          notes: l.income?.notes ?? (e ? strip(e.notes, l.text) : d?.notes ?? ''),
+          notes: l.income?.notes ?? (e ? strip(e.notes, l.text) : d?.notes ?? l.filed?.notes ?? ''),
           savedParts: parts
         } satisfies Draft;
       });
@@ -591,6 +591,8 @@ export function BankImport(p: Props) {
       }
       if (r.route === 'income' || r.route === 'interest') line.income = { project: r.project, description: r.description, gst: r.route === 'income' ? Math.round(r.gst * 100) / 100 : 0, notes: r.notes.trim() };
       if (r.route === 'transfer' && r.description.trim()) line.description = r.description.trim();
+      // V20-520: a Personal line keeps its own filing (two charges from one merchant can be filed differently).
+      if (r.route === 'personal') line.filed = { project: r.project, description: r.description, type: r.type, category: r.category, pmtCategory: r.pmtCategory, notes: r.notes.trim() };
       const c = learn(r, common, r.parts, r.total);
       if (c) {
         common = common.some((x) => x.id === c.id) ? common.map((x) => (x.id === c.id ? c : x)) : [...common, c];
@@ -669,6 +671,7 @@ export function BankImport(p: Props) {
       } else if (oldD) removeDraws.push(oldD.id);
       next.income = r.route === 'income' || r.route === 'interest' ? { project: r.project, description: r.description, gst: r.route === 'income' ? Math.round(r.gst * 100) / 100 : 0, notes: r.notes.trim() } : undefined;
       next.description = r.route === 'transfer' && r.description.trim() ? r.description.trim() : undefined;
+      next.filed = r.route === 'personal' ? { project: r.project, description: r.description, type: r.type, category: r.category, pmtCategory: r.pmtCategory, notes: r.notes.trim() } : undefined;
       const c = learn(r, common, r.parts, r.total);
       if (c) {
         common = common.some((x) => x.id === c.id) ? common.map((x) => (x.id === c.id ? c : x)) : [...common, c];
