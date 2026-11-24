@@ -4823,3 +4823,12 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .bank-newacct .field-hint { margin: 0 0 8px; }
 /* V20-493 (Books): an expense's method opens its source. */
 .expense-source { font: inherit; color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+/* V20-494 (Books): Not on your statement. */
+.statement-check { border: 1px solid var(--accent-green); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+.statement-check-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.statement-check-head .card-h { margin: 0 auto 0 0; }
+.statement-check .field-hint { margin: 6px 0 0; }
+.statement-check-list { margin-top: 10px; }
+.statement-check-row { display: grid; grid-template-columns: 64px 70px minmax(0, 1fr) 90px 170px auto; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--edge); }
+.statement-check-why { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-teal); }
+@media (max-width: 760px) { .statement-check-row { grid-template-columns: 56px minmax(0, 1fr) auto; } .statement-check-row .bank-mono, .statement-check-why { display: none; } }

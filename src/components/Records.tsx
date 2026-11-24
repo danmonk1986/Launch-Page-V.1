@@ -9,6 +9,7 @@ import type { Expense } from '../lib/expenses';
 import type { Project } from '../lib/projects';
 import type { BankAccount, BankLine, CommonExpense, Draw } from '../lib/bank';
 import { fyOf } from '../lib/bank';
+import { StatementCheck } from './StatementCheck';
 import { BankImport, type ImportResult } from './BankImport';
 import { DrawsView, FyNav, thisFy } from './Draws';
 import { IncomeView } from './Income';
@@ -187,6 +188,8 @@ export function RecordsPage(
       ) : view === 'draws' ? (
         <DrawsView draws={p.draws} fy={fy} fyEnd={fyEnd} search={q} onSave={p.onSaveDraw} onDelete={p.onDeleteDraw} />
       ) : (
+        <>
+        {books && <StatementCheck lines={p.bankLines} expenses={p.expenses} accounts={p.bankAccounts} onImport={p.onImport} />}
         <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} addTick={addTick} projects={p.projects}
           sourceOf={
             books
@@ -195,6 +198,7 @@ export function RecordsPage(
           }
           onOpenSource={(l) => (setSetup(false), setFocus({ month: l.date.slice(0, 7), fp: l.fp }), setImporting(true))}
         />
+        </>
       )}
       <BankImport
         open={importing}
