@@ -346,9 +346,9 @@ export function BankImport(p: Props) {
     () => {
       const out = draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business: lineDiv, personal, budget: p.budget, books });
       if (!books || !defDiv) return out;
-      return out.map((d) =>
+      return out.map((d): Draft =>
         (d.route === 'expense' || d.route === 'personal') && !d.commonId && d.status !== 'duplicate'
-          ? { ...d, project: defDiv, route: defDiv === personal ? 'personal' : 'expense' }
+          ? { ...d, project: defDiv, route: (defDiv === personal ? 'personal' : 'expense') as Route }
           : d
       );
     },
