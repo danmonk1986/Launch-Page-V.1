@@ -339,10 +339,20 @@ export function BankImport(p: Props) {
    * V20-526 (Dan, Nov 25): the division this import's business lines start under. Click a division pill to make it the
    * default (a statement that's all one brand); your business name otherwise. Kept with the work in progress.
    */
-  const lineDiv = defDiv && defDiv !== personal ? defDiv : business;
+  // V20-526b (Dan): a picked default applies to every spending line the Common Expenses don't already file, on any
+  // account: your personal division → Personal, any other → an Expense under it (as when you pick a division by hand).
+  const lineDiv = business;
   const fresh = useMemo(
-    () => draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business: lineDiv, personal, budget: p.budget, books }),
-    [parsed, accounts, p.common, p.imported, p.expenses, p.invoices, owner, lineDiv, personal, p.budget, books]
+    () => {
+      const out = draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business: lineDiv, personal, budget: p.budget, books });
+      if (!books || !defDiv) return out;
+      return out.map((d) =>
+        (d.route === 'expense' || d.route === 'personal') && !d.commonId && d.status !== 'duplicate'
+          ? { ...d, project: defDiv, route: defDiv === personal ? 'personal' : 'expense' }
+          : d
+      );
+    },
+    [parsed, accounts, p.common, p.imported, p.expenses, p.invoices, owner, lineDiv, personal, p.budget, books, defDiv]
   );
 
   /**
@@ -736,15 +746,11 @@ export function BankImport(p: Props) {
             <span>Divisions</span>
             <span className="setup-div-list">
               {[...new Set([business, ...divs, personal].filter(Boolean))].map((d) => (
-                <span key={d} className={`setup-div${d === personal ? ' is-mine' : ''}${d === lineDiv && d !== personal ? ' is-default' : ''}`}>
-                  {d === personal ? (
-                    d
-                  ) : (
-                    <button type="button" className="setup-div-pick" aria-pressed={d === lineDiv} title={d === lineDiv ? 'Business lines in this import start under this division' : 'Make this the default for business lines in this import'} onClick={() => setDefDiv(d === business ? null : d)}>
-                      {d}
-                    </button>
-                  )}
-                  {d === personal ? <em> · personal</em> : d === lineDiv ? <em> · default</em> : d === business ? <em> · business</em> : null}
+                <span key={d} className={`setup-div${d === personal ? ' is-mine' : ''}${d === defDiv ? ' is-default' : ''}`}>
+                  <button type="button" className="setup-div-pick" aria-pressed={d === defDiv} title={d === defDiv ? 'Every line in this import starts under this division (click again to go back to automatic)' : 'Make this the default for every line in this import'} onClick={() => setDefDiv(d === defDiv ? null : d)}>
+                    {d}
+                  </button>
+                  {d === defDiv ? <em> · default</em> : d === personal ? <em> · personal</em> : d === business ? <em> · business</em> : null}
                   {d !== personal && d !== business && (
                     <button type="button" className="setup-div-x" aria-label={`Remove ${d}`} title="Remove" onClick={() => (setDivs((l) => l.filter((x) => x !== d)), d === defDiv && setDefDiv(null))}>
                       ×
@@ -782,6 +788,9 @@ export function BankImport(p: Props) {
               </span>
             </span>
           </div>
+          <p className="field-hint setup-div-hint">
+            {defDiv ? `Every line in this import starts under ${defDiv} (the Common Expenses you've built still file their own merchants). Click it again to go back to automatic.` : 'Click a division to make it the default for every line in this import: a statement that is all one brand, or all personal.'}
+          </p>
           <label className="bank-fy">
             Yours (personal)
             <select value={personal} onChange={(e) => setPersonal(e.target.value)} aria-label="Your personal division">
