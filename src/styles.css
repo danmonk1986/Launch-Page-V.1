@@ -4938,3 +4938,9 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 /* V20-525 (Books): room under the last line so its menus aren't cut off; Save / Load a copy. */
 .bank-import.is-books .bank-scroll { padding-bottom: 260px; }
 .bank-copy { display: inline-flex; gap: 14px; margin-left: auto; font-size: 13px; }
+
+/* V20-526 (Books): click a division pill to make it this import's default for business lines. */
+.setup-div-pick { all: unset; cursor: pointer; }
+.setup-div-pick:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; border-radius: 4px; }
+.setup-div.is-default { border-color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 18%, transparent); }
+.setup-div:not(.is-mine):hover { border-color: var(--accent-teal); }

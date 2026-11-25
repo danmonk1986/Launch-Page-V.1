@@ -163,7 +163,7 @@ function draftKey() {
   }
   return DRAFT_KEY;
 }
-type Saved = { parsed: ParsedLine[]; files: string[]; edits: Record<string, Partial<Draft>>; skip: string[]; accounts: BankAccount[]; parts?: Record<string, Part[]> };
+type Saved = { parsed: ParsedLine[]; files: string[]; edits: Record<string, Partial<Draft>>; skip: string[]; accounts: BankAccount[]; parts?: Record<string, Part[]>; defDiv?: string | null };
 function loadDraft(): Saved | null {
   try {
     const d = JSON.parse(localStorage.getItem(draftKey()) ?? 'null') as Saved | null;
@@ -182,6 +182,8 @@ function loadDraft(): Saved | null {
 export function BankImport(p: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
   const saved = useMemo(loadDraft, []);
+  // V20-526: the default division for this import's business lines (see lineDiv).
+  const [defDiv, setDefDiv] = useState<string | null>(() => saved?.defDiv ?? null);
   const [parsed, setParsed] = useState<ParsedLine[]>(saved?.parsed ?? []);
   const [files, setFiles] = useState<string[]>(saved?.files ?? []);
   const [errors, setErrors] = useState<string[]>([]);
@@ -213,15 +215,15 @@ export function BankImport(p: Props) {
   useEffect(() => {
     try {
       // V20-509: only work in progress is written; an empty screen never wipes it (Clear and Process do that).
-      if (parsed.length || Object.keys(edits).length || Object.keys(parts).length) localStorage.setItem(draftKey(), JSON.stringify({ parsed, files, edits, skip: [...skip], accounts, parts } satisfies Saved));
+      if (parsed.length || Object.keys(edits).length || Object.keys(parts).length) localStorage.setItem(draftKey(), JSON.stringify({ parsed, files, edits, skip: [...skip], accounts, parts, defDiv } satisfies Saved));
     } catch {
       /* full or blocked: the draft stays in memory */
     }
-  }, [parsed, files, edits, skip, accounts, parts]);
+  }, [parsed, files, edits, skip, accounts, parts, defDiv]);
   // V20-525 (Dan, Nov 24): a copy of the work in progress as a file, to keep before Process and load back if needed.
   const copyInput = useRef<HTMLInputElement>(null);
   function saveCopy() {
-    const data: Saved = { parsed, files, edits, skip: [...skip], accounts, parts };
+    const data: Saved = { parsed, files, edits, skip: [...skip], accounts, parts, defDiv };
     const blob = new Blob([JSON.stringify({ kind: 'lp-books-import', savedAt: new Date().toISOString(), ...data }, null, 1)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -239,6 +241,7 @@ export function BankImport(p: Props) {
       setEdits(d.edits ?? {});
       setSkip(new Set(d.skip ?? []));
       setParts(d.parts ?? {});
+      setDefDiv(d.defDiv ?? null);
       if (Array.isArray(d.accounts)) setAccounts(d.accounts);
       setErrors([]);
     } catch {
@@ -258,6 +261,7 @@ export function BankImport(p: Props) {
     setEdits({});
     setSkip(new Set());
     setParts({});
+    setDefDiv(null);
     setErrors([]);
     setAccounts(p.accounts);
   }
@@ -331,9 +335,14 @@ export function BankImport(p: Props) {
   const books = useBooks();
   const owner = profile?.person ?? '';
   const business = (profile?.business ?? '').replace(/\s+(LIMITED|LTD\.?|INC\.?|CORP\.?)$/i, '');
+  /**
+   * V20-526 (Dan, Nov 25): the division this import's business lines start under. Click a division pill to make it the
+   * default (a statement that's all one brand); your business name otherwise. Kept with the work in progress.
+   */
+  const lineDiv = defDiv && defDiv !== personal ? defDiv : business;
   const fresh = useMemo(
-    () => draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business, personal, budget: p.budget, books }),
-    [parsed, accounts, p.common, p.imported, p.expenses, p.invoices, owner, business, personal, p.budget, books]
+    () => draft(parsed, { accounts, common: p.common, imported: p.imported, expenses: p.expenses, invoices: p.invoices, owner, business: lineDiv, personal, budget: p.budget, books }),
+    [parsed, accounts, p.common, p.imported, p.expenses, p.invoices, owner, lineDiv, personal, p.budget, books]
   );
 
   /**
@@ -727,11 +736,17 @@ export function BankImport(p: Props) {
             <span>Divisions</span>
             <span className="setup-div-list">
               {[...new Set([business, ...divs, personal].filter(Boolean))].map((d) => (
-                <span key={d} className={`setup-div${d === personal ? ' is-mine' : ''}`}>
-                  {d}
-                  {d === personal ? <em> · personal</em> : d === business ? <em> · business</em> : null}
+                <span key={d} className={`setup-div${d === personal ? ' is-mine' : ''}${d === lineDiv && d !== personal ? ' is-default' : ''}`}>
+                  {d === personal ? (
+                    d
+                  ) : (
+                    <button type="button" className="setup-div-pick" aria-pressed={d === lineDiv} title={d === lineDiv ? 'Business lines in this import start under this division' : 'Make this the default for business lines in this import'} onClick={() => setDefDiv(d === business ? null : d)}>
+                      {d}
+                    </button>
+                  )}
+                  {d === personal ? <em> · personal</em> : d === lineDiv ? <em> · default</em> : d === business ? <em> · business</em> : null}
                   {d !== personal && d !== business && (
-                    <button type="button" className="setup-div-x" aria-label={`Remove ${d}`} title="Remove" onClick={() => setDivs((l) => l.filter((x) => x !== d))}>
+                    <button type="button" className="setup-div-x" aria-label={`Remove ${d}`} title="Remove" onClick={() => (setDivs((l) => l.filter((x) => x !== d)), d === defDiv && setDefDiv(null))}>
                       ×
                     </button>
                   )}
