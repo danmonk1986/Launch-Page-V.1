@@ -1,5 +1,5 @@
 import { isoDate } from '../lib/rockets';
-import { Fragment, useId, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { FormActions, HeadIcon, Sheet } from './Sheet';
 import { TitleCombo } from './Rockets';
 import { AmountInput } from './AmountInput';
@@ -69,6 +69,14 @@ export function InvoicesPage(p: Props) {
     byMonth.set(k, [...(byMonth.get(k) ?? []), i]);
   }
   const customer = (id: string | null) => p.customers.find((c) => c.id === id) ?? null;
+  // V20-537 (Dan, Nov 26): "Create an invoice" on the Cash Book lands here: a new user starts with the invoice setup
+  // (your details and customers); after that it opens a new invoice.
+  const hasProfile = !!p.profile?.business;
+  useEffect(() => {
+    const go = () => (hasProfile ? setEditing(startInvoice(p.invoices, p.customers, isoDate(new Date()))) : setDetails(true));
+    window.addEventListener('records:invoice', go);
+    return () => window.removeEventListener('records:invoice', go);
+  }, [hasProfile, p.invoices, p.customers]);
 
   return (
     <section className="panel panel-budget panel-records" aria-labelledby="h-invoices">

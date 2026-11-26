@@ -328,7 +328,7 @@ const shiftM = (m: string, n: number) => {
 };
 const mLabel = (m: string) => new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
-export function CashBookCard({ expenses, lines, cashBook, month: shown, onMonth, onSetOpening, onDownloadBlank, onImportFile, onImportBank, onExport, onSetup }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; month?: string; onMonth?: (m: string) => void; onSetOpening: (start: string, opening: number) => void; onDownloadBlank?: () => void; onImportFile?: (f: File) => void; onImportBank?: () => void; onExport?: () => void; /** V20-474: one button, "Set up your books". */ onSetup?: () => void }) {
+export function CashBookCard({ expenses, lines, cashBook, month: shown, onMonth, onSetOpening, onDownloadBlank, onImportFile, onImportBank, onExport, onSetup, onInvoice }: { expenses: Expense[]; lines: BankLine[]; cashBook?: { start: string; opening: number }; month?: string; onMonth?: (m: string) => void; onSetOpening: (start: string, opening: number) => void; onDownloadBlank?: () => void; onImportFile?: (f: File) => void; onImportBank?: () => void; onExport?: () => void; /** V20-474: one button, "Set up your books". */ onSetup?: () => void; /** V20-537 (Main): Create an invoice beside it. */ onInvoice?: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   // V20-464 (Dan, Nov 22): the month can be held by the Books home, so ‹ › moves the whole overview.
   const [own, setOwn] = useState(thisMonth);
@@ -446,6 +446,11 @@ export function CashBookCard({ expenses, lines, cashBook, month: shown, onMonth,
             <button type="button" className="btn btn-go" onClick={onSetup}>
               Set up your books
             </button>
+            {onInvoice && (
+              <button type="button" className="btn btn-quiet" onClick={onInvoice}>
+                Create an invoice
+              </button>
+            )}
           </div>
         </div>
       ) : (onDownloadBlank || onImportFile || onImportBank) && (

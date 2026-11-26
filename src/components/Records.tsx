@@ -28,7 +28,7 @@ const VIEW_KEY = 'launchpage.records.view';
 // V20-464b (Dan, Nov 22): …and on the month the Books overview is showing (Income: that month's fiscal year).
 // Read once when the page opens; from there the page's own ‹ › moves it on its own.
 let presetMonth: string | null = null;
-export const presetRecordsView = (v: 'expenses' | 'income' | 'draws', month?: string) => {
+export const presetRecordsView = (v: 'expenses' | 'income' | 'draws' | 'invoices', month?: string) => {
   presetMonth = month ?? null;
   try {
     localStorage.setItem(VIEW_KEY, v);

@@ -174,7 +174,7 @@ export default function App() {
   // The Books look (logo, Books home, no page tabs) stays on the Books track.
   const booksTools = books || !beta;
   /** Open a Records page (Books: from the home; Main: from the Records cards), optionally firing an event on it. */
-  const openRecords = (view: 'expenses' | 'income' | 'draws', ev?: string, month?: string) => {
+  const openRecords = (view: 'expenses' | 'income' | 'draws' | 'invoices', ev?: string, month?: string) => {
     presetRecordsView(view, month ?? (books ? booksMonth : undefined));
     setPage('invoices');
     setRecordsOpen(true);
@@ -2656,6 +2656,7 @@ export default function App() {
       }
       onImportBank={() => openRecords('income', 'records:import')}
       onSetup={() => openRecords('expenses', 'records:setup', booksMonth)}
+      onInvoice={!books && mods.invoice ? () => openRecords('invoices', 'records:invoice') : undefined}
     />
   );
 
