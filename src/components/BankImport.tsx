@@ -955,15 +955,18 @@ export function BankImport(p: Props) {
             <div className="bank-setup-step">
               <h3 className="card-h">2 · Your lines</h3>
               <p className="field-hint">Add each expense or deposit: the date, the account, the amount, then where it goes and what it is. Pick a description you've used before and the rest fills in; a new one is remembered for next time. Your work is kept if you close this.</p>
-              <div className="bank-files">
-                <button type="button" className="btn btn-go" onClick={addLine} disabled={!accounts.length}>
-                  + Add a line
-                </button>
-                <button type="button" className="btn btn-quiet" onClick={addAccount}>
-                  + Add an account
-                </button>
-                {!accounts.length && <span className="bank-note">Add an account first (your business account), then your lines.</span>}
-              </div>
+              {/* V20-530 (Dan): once there are lines, the add buttons sit under the last line. */}
+              {!parsed.length && (
+                <div className="bank-files">
+                  <button type="button" className="btn btn-go" onClick={addLine} disabled={!accounts.length}>
+                    + Add a line
+                  </button>
+                  <button type="button" className="btn btn-quiet" onClick={addAccount}>
+                    + Add an account
+                  </button>
+                  {!accounts.length && <span className="bank-note">Add an account first (your business account), then your lines.</span>}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1568,7 +1571,18 @@ export function BankImport(p: Props) {
                   <input type="checkbox" checked={showDup} onChange={(e) => setShowDup(e.target.checked)} /> Show {dups} already imported
                 </label>
               )}
-              <span className="bank-note">Hover a status to see why a line was routed that way.</span>
+              {books && p.setup && track === 'scratch' && mode === 'new' && parsed.length > 0 ? (
+                <span className="bank-add-under">
+                  <button type="button" className="btn btn-go" onClick={addLine} disabled={!accounts.length}>
+                    + Add a line
+                  </button>
+                  <button type="button" className="btn btn-quiet" onClick={addAccount}>
+                    + Add an account
+                  </button>
+                </span>
+              ) : (
+                <span className="bank-note">Hover a status to see why a line was routed that way.</span>
+              )}
               {overSplit.length > 0 && <span className="bank-error bank-inline">{overSplit.length} split{overSplit.length > 1 ? 's add' : ' adds'} up to more than the charge: fix the parts before saving.</span>}
               {mode === 'saved' ? (
               <button type="button" className="btn btn-go" disabled={saving || !changed.length || overSplit.length > 0} onClick={() => void saveSaved()}>

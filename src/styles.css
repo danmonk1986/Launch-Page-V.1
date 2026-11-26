@@ -4966,3 +4966,4 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .app.app .bc-row.bw-drw { grid-template-areas: "name name name" "date div amt"; grid-template-columns: auto minmax(0, 1fr) auto; }
 }
 .app.app .panel-books-card .bc-table, .app.app .panel-budget-card .bc-table:has(.books-wide) { overflow-x: auto; }
+.bank-add-under { display: inline-flex; gap: 10px; margin-right: auto; }
