@@ -955,8 +955,8 @@ export function BankImport(p: Props) {
             <div className="bank-setup-step">
               <h3 className="card-h">2 · Your lines</h3>
               <p className="field-hint">Add each expense or deposit: the date, the account, the amount, then where it goes and what it is. Pick a description you've used before and the rest fills in; a new one is remembered for next time. Your work is kept if you close this.</p>
-              {/* V20-530 (Dan): once there are lines, the add buttons sit under the last line. */}
-              {!parsed.length && (
+              {/* V20-530 (Dan): the add buttons are here and, once there are lines, under the last line too. */}
+              {(
                 <div className="bank-files">
                   <button type="button" className="btn btn-go" onClick={addLine} disabled={!accounts.length}>
                     + Add a line
