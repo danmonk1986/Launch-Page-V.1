@@ -4969,3 +4969,6 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 }
 .app.app .panel-books-card .bc-table, .app.app .panel-budget-card .bc-table:has(.books-wide) { overflow-x: auto; }
 .bank-add-under { display: inline-flex; gap: 10px; margin-right: auto; }
+
+/* V20-531 (Books): the Save icon says Saved for a moment. */
+.bank-saved-flash { align-self: center; font-size: 13px; color: var(--accent-teal); margin-right: 4px; }

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { Sheet } from './Sheet';
+import { FormActions, HeadIcon, SAVE_ICON, Sheet } from './Sheet';
 import { BUDGET_CATEGORIES, PMT_CATEGORIES, money, type BudgetLine } from '../lib/budget';
 import {
   ROUTES,
@@ -151,6 +151,9 @@ const DRAFT_KEY = 'launchpage.bank-draft.v1';
 /** V20-513 (Dan, Nov 24, Books): Split lives in the Division list (the ↳ button is gone on Books). */
 const SPLIT = 'SPLIT';
 /** V20-509: one draft per signed-in account (STARDVST's work never shows, or gets wiped, in FNTSY LVNG's import). */
+const DOWNLOAD_ICON = 'M12 4v11M7 10l5 5 5-5M5 20h14';
+const UPLOAD_ICON = 'M12 15V4M7 9l5-5 5 5M5 20h14';
+
 function draftKey() {
   try {
     for (const k of Object.keys(localStorage)) {
@@ -212,14 +215,26 @@ export function BankImport(p: Props) {
   const followers = useRef(new Set<string>());
   /** Split charges (Nov 1): the parts under a line, by line. */
   const [parts, setParts] = useState<Record<string, Part[]>>(saved?.parts ?? {});
-  useEffect(() => {
+  function writeDraft() {
     try {
       // V20-509: only work in progress is written; an empty screen never wipes it (Clear and Process do that).
       if (parsed.length || Object.keys(edits).length || Object.keys(parts).length) localStorage.setItem(draftKey(), JSON.stringify({ parsed, files, edits, skip: [...skip], accounts, parts, defDiv } satisfies Saved));
+      return true;
     } catch {
       /* full or blocked: the draft stays in memory */
+      return false;
     }
+  }
+  useEffect(() => {
+    writeDraft();
   }, [parsed, files, edits, skip, accounts, parts, defDiv]);
+  // V20-531 (Dan): a Save icon in the header. Work saves itself as you go; pressing it saves right now and says so.
+  const [savedFlash, setSavedFlash] = useState(false);
+  function saveNow() {
+    if (!writeDraft()) return;
+    setSavedFlash(true);
+    window.setTimeout(() => setSavedFlash(false), 2200);
+  }
   // V20-525 (Dan, Nov 24): a copy of the work in progress as a file, to keep before Process and load back if needed.
   const copyInput = useRef<HTMLInputElement>(null);
   function saveCopy() {
@@ -834,28 +849,37 @@ export function BankImport(p: Props) {
               {files.length ? 'Your changes are kept until you process or clear.' : 'Nothing goes to Records until you press Process; your work here is kept if you close this.'}
             </span>
           )}
-          {books && mode === 'new' && (!p.setup || track === 'csv') && (
-            <span className="bank-copy">
-              {parsed.length > 0 && (
-                <button type="button" className="link-btn" onClick={saveCopy} title="Download a copy of everything here, to keep before you Process">
-                  Save a copy
-                </button>
-              )}
-              <button type="button" className="link-btn" onClick={() => copyInput.current?.click()} title="Bring back a copy you saved">
-                Load a copy
-              </button>
-              <input
-                ref={copyInput}
-                type="file"
-                accept=".json,application/json"
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = '';
-                  if (f) void loadCopy(f);
-                }}
-              />
-            </span>
+          {/* V20-531 (Dan): Save, Save a copy and Load a copy are icons in the header, beside the ×, on every track. */}
+          {books && mode === 'new' && (
+            <FormActions
+              formId=""
+              hideSave
+              extra={
+                <>
+                  {savedFlash && <span className="bank-saved-flash" role="status">Saved</span>}
+                  <button type="button" className="icon-btn tool-btn" onClick={() => copyInput.current?.click()} aria-label="Load a copy" title="Load a copy: bring back a copy you saved">
+                    <HeadIcon d={UPLOAD_ICON} />
+                  </button>
+                  <button type="button" className="icon-btn tool-btn" onClick={saveCopy} disabled={!parsed.length} aria-label="Save a copy" title="Save a copy: download everything here, to keep before you Process">
+                    <HeadIcon d={DOWNLOAD_ICON} />
+                  </button>
+                  <button type="button" className="icon-btn tool-btn tool-btn-go" onClick={saveNow} disabled={!parsed.length} aria-label="Save" title="Save: your work here saves as you go; this saves it right now">
+                    <HeadIcon d={SAVE_ICON} />
+                  </button>
+                  <input
+                    ref={copyInput}
+                    type="file"
+                    accept=".json,application/json"
+                    hidden
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = '';
+                      if (f) void loadCopy(f);
+                    }}
+                  />
+                </>
+              }
+            />
           )}
           {onlyFp && (
             <button type="button" className="btn btn-quiet" onClick={() => setOnlyFp(null)} title="Show every line again">
