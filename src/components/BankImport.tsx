@@ -53,6 +53,8 @@ export interface ImportResult {
 
 type Props = {
   open: boolean;
+  /** V20-540: your Projects' names (Main), shown with the divisions already in your books. */
+  projectNames?: string[];
   /** V20-493 (Books): opened from an expense's method: show the saved line it came from, on its own. */
   focus?: { month: string; fp: string } | null;
   onClose: () => void;
@@ -522,7 +524,11 @@ export function BankImport(p: Props) {
   // Values typed in this import join the lists straight away (CC PMT typed once is offered on the next line).
   const typed = (f: (x: { project: string; category: string; pmtCategory: string; description: string }) => string) =>
     rows.flatMap((r) => [f(r), ...r.parts.map(f)]).map((x) => (x ?? '').trim()).filter(Boolean);
-  const divisions = [...new Set([...pick((c) => c.project), ...typed((x) => x.project), ...divs, personal, business].filter(Boolean))].sort();
+  const projDivs = (p.projectNames ?? []).map((n) => n.trim().toUpperCase().replace(/^STARDVST\s+/, '')).filter(Boolean);
+  const divisions = [...new Set([...pick((c) => c.project), ...typed((x) => x.project), ...projDivs, ...divs, personal, business].filter(Boolean))].sort();
+  // V20-540 (Dan, Nov 26): the Divisions box shows every division your books already use (Projects, Common Expenses,
+  // expenses, this import), not only the ones typed into it; business first, then the rest, yours last.
+  const shownDivs = [...new Set([business, ...[...new Set([...projDivs, ...divisions.map((d) => d.toUpperCase()), ...divs])].filter((d) => d !== business && d !== personal).sort(), personal].filter(Boolean))];
   // The sheet's full lists, in its order, then anything else already in use.
   const groups = [...new Set([...BUDGET_CATEGORIES, ...pick((c) => c.category), ...typed((x) => x.category)])];
   const cats = [...new Set([...PMT_CATEGORIES, ...pick((c) => c.pmtCategory), ...typed((x) => x.pmtCategory)])];
@@ -760,13 +766,13 @@ export function BankImport(p: Props) {
           <div className="bank-fy setup-divs">
             <span>Divisions</span>
             <span className="setup-div-list">
-              {[...new Set([business, ...divs, personal].filter(Boolean))].map((d) => (
+              {shownDivs.map((d) => (
                 <span key={d} className={`setup-div${d === personal ? ' is-mine' : ''}${d === defDiv ? ' is-default' : ''}`}>
                   <button type="button" className="setup-div-pick" aria-pressed={d === defDiv} title={d === defDiv ? 'Every line in this import starts under this division (click again to go back to automatic)' : 'Make this the default for every line in this import'} onClick={() => setDefDiv(d === defDiv ? null : d)}>
                     {d}
                   </button>
                   {d === defDiv ? <em> · default</em> : d === personal ? <em> · personal</em> : d === business ? <em> · business</em> : null}
-                  {d !== personal && d !== business && (
+                  {divs.includes(d) && d !== personal && d !== business && (
                     <button type="button" className="setup-div-x" aria-label={`Remove ${d}`} title="Remove" onClick={() => (setDivs((l) => l.filter((x) => x !== d)), d === defDiv && setDefDiv(null))}>
                       ×
                     </button>
@@ -781,7 +787,7 @@ export function BankImport(p: Props) {
                     if (e.key !== 'Enter') return;
                     e.preventDefault();
                     const v = newDiv.trim();
-                    if (v && v !== personal && v !== business && !divs.includes(v)) setDivs((l) => [...l, v]);
+                    if (v && !shownDivs.includes(v)) setDivs((l) => [...l, v]);
                     setNewDiv('');
                   }}
                   placeholder="Add a division"
@@ -794,7 +800,7 @@ export function BankImport(p: Props) {
                   disabled={!newDiv.trim()}
                   onClick={() => {
                     const v = newDiv.trim();
-                    if (v && v !== personal && v !== business && !divs.includes(v)) setDivs((l) => [...l, v]);
+                    if (v && !shownDivs.includes(v)) setDivs((l) => [...l, v]);
                     setNewDiv('');
                   }}
                 >
@@ -809,7 +815,7 @@ export function BankImport(p: Props) {
           <label className="bank-fy">
             Yours (personal)
             <select value={personal} onChange={(e) => setPersonal(e.target.value)} aria-label="Your personal division">
-              {[...new Set([personal, ...divs].filter(Boolean))].map((d) => (
+              {[...new Set([personal, ...shownDivs.filter((d) => d !== business)].filter(Boolean))].map((d) => (
                 <option key={d} value={d}>
                   {d}
                 </option>

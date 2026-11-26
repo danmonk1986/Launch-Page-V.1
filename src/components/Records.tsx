@@ -232,6 +232,7 @@ export function RecordsPage(
       )}
       <BankImport
         open={importing}
+        projectNames={p.projects.filter((x) => x.status !== 'archived').map((x) => x.name)}
         onClose={() => setImporting(false)}
         onDone={books ? p.onClose : undefined}
         accounts={p.bankAccounts}
