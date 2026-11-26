@@ -18,7 +18,7 @@ const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
  * V20-465 (Dan, Nov 23): on Books, `month` (YYYY-MM, from the Cash Book's ‹ ›) swaps "Next 7 days" for everything
  * due in that month, so the Budget card follows the overview like Expenses and Income. Main passes no month.
  */
-export function BudgetCard({ onBuild, lines, today, month, onOpenAll, onOpenLine, onAdd, projects: projectList = [], lost = [], onKeep, onSkip, onRemove, choicesFor, onTie }: { /** V20-507 (Books): an empty Budget says how it fills, and opens the Budget Audit. */ onBuild?: () => void; lines: BudgetLine[]; today: Date; month?: string; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void; projects?: Project[]; /** V20-483 (Books): bills due this month the bank never charged. */ lost?: BudgetLine[]; onKeep?: (id: string) => void; onSkip?: (id: string) => void; onRemove?: (id: string) => void; /** V20-487: the month's charges a lost bill could be. */ choicesFor?: (l: BudgetLine) => Expense[]; onTie?: (lineId: string, expenseId: string) => void }) {
+export function BudgetCard({ wide, onBuild, lines, today, month, onOpenAll, onOpenLine, onAdd, projects: projectList = [], lost = [], onKeep, onSkip, onRemove, choicesFor, onTie }: { /** V20-527 (Books): Type / Group / Category columns too. */ wide?: boolean; /** V20-507 (Books): an empty Budget says how it fills, and opens the Budget Audit. */ onBuild?: () => void; lines: BudgetLine[]; today: Date; month?: string; onOpenAll: () => void; onOpenLine?: (id: string) => void; onAdd?: () => void; projects?: Project[]; /** V20-483 (Books): bills due this month the bank never charged. */ lost?: BudgetLine[]; onKeep?: (id: string) => void; onSkip?: (id: string) => void; onRemove?: (id: string) => void; /** V20-487: the month's charges a lost bill could be. */ choicesFor?: (l: BudgetLine) => Expense[]; onTie?: (lineId: string, expenseId: string) => void }) {
   // V20-423 (Dan, Nov 20): the project is a coloured pill, like the Tasks card and the Budget page (same matching).
   const norm = (x: string) => x.toUpperCase().replace(/^STARDVST\s+/, '').replace(/[^A-Z0-9]/g, '');
   const projectFor = (name: string) => {
@@ -127,26 +127,29 @@ export function BudgetCard({ onBuild, lines, today, month, onOpenAll, onOpenLine
       ) : (
         <div className="bc-table" role="table" aria-label="Due in the next 7 days">
           {/* V20-422: column headers, like the Tasks card. */}
-          <div className="bc-row bc-head" role="row">
-            <span role="columnheader">Date</span>
-            <span role="columnheader">Line item</span>
-            <span role="columnheader">Project</span>
-            <span role="columnheader">Method</span>
-            <span role="columnheader" className="bc-amt">Amount</span>
+          <div className={`bc-row bc-head${wide ? ' books-wide bw-bud' : ''}`} role="row">
+            <span role="columnheader" className="c-date">Date</span>
+            <span role="columnheader" className="c-name">Line item</span>
+            <span role="columnheader" className="c-div">Project</span>
+            {wide && <span role="columnheader" className="c-x">Type</span>}
+            {wide && <span role="columnheader" className="c-x">Group</span>}
+            {wide && <span role="columnheader" className="c-x">Category</span>}
+            <span role="columnheader" className="c-meth">Method</span>
+            <span role="columnheader" className="c-amt bc-amt">Amount</span>
           </div>
           {due.map(({ l, next }, i) => (
             // V20-269 (Dan, Nov 15): a row opens its line's Edit line on the Budget page.
             <button
               type="button"
               key={`${l.id}|${next}`}
-              className={`bc-row bc-row-btn${i % 2 ? ' is-alt' : ''}`}
+              className={`bc-row bc-row-btn${wide ? ' books-wide bw-bud' : ''}${i % 2 ? ' is-alt' : ''}`}
               role="row"
               title={`Edit ${l.description}`}
               onClick={() => (onOpenLine ? onOpenLine(l.id) : onOpenAll())}
             >
-              <span className="pl-mono pl-due">{day(next)}</span>
-              <span className="pl-name bc-name">{l.description}</span>
-              <span className="pl-desc bc-proj">
+              <span className="c-date pl-mono pl-due">{day(next)}</span>
+              <span className="c-name pl-name bc-name">{l.description}</span>
+              <span className="c-div pl-desc bc-proj">
                 {l.project
                   ? (() => {
                       const pr = projectFor(l.project);
@@ -158,8 +161,11 @@ export function BudgetCard({ onBuild, lines, today, month, onOpenAll, onOpenLine
                     })()
                   : null}
               </span>
-              <span className="pl-desc">{l.method}</span>
-              <span className="pl-mono bc-amt">{l.amount === null ? '—' : money(l.amount)}</span>
+              {wide && <span className="c-x pl-desc">{l.type || '—'}</span>}
+              {wide && <span className="c-x pl-desc">{l.category || '—'}</span>}
+              {wide && <span className="c-x pl-desc">{l.pmtCategory || '—'}</span>}
+              <span className="c-meth pl-desc">{l.method}</span>
+              <span className="c-amt pl-mono bc-amt">{l.amount === null ? '—' : money(l.amount)}</span>
             </button>
           ))}
         </div>

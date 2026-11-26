@@ -4945,3 +4945,24 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .setup-div.is-default { border-color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 18%, transparent); }
 .setup-div:not(.is-mine):hover { border-color: var(--accent-teal); }
 .setup-div-hint { margin: -2px 0 4px; }
+
+/* V20-527 (Dan, Nov 25, Books): more columns on the home cards. Desktop: one row per line; phones: two lines (name;
+   date · division · method · amount), the extra columns hidden. */
+.app.app .bc-row.books-wide { min-width: 0; gap: 12px; }
+.app.app .bc-row.books-wide > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app.app .bc-row.bw-exp { grid-template-columns: 100px 110px minmax(140px, 2fr) 90px 90px 110px 70px 70px 100px; }
+.app.app .bc-row.bw-inc { grid-template-columns: 100px 110px minmax(160px, 2fr) 80px 90px 80px 110px; }
+.app.app .bc-row.bw-drw { grid-template-columns: 100px 110px minmax(160px, 2fr) minmax(120px, 1.4fr) 110px; }
+.app.app .bc-row.bw-bud { grid-template-columns: 100px minmax(160px, 2fr) 120px 90px 90px 110px 70px 100px; }
+.app.app .bc-row.books-wide .bc-proj .chip { max-width: 100%; }
+@media (max-width: 720px) {
+  .app.app .bc-row.books-wide { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "name name name name" "date div meth amt"; gap: 4px 10px; padding: 10px 12px; }
+  .app.app .bc-row.books-wide > .c-x { display: none; }
+  .app.app .bc-row.books-wide > .c-date { grid-area: date; }
+  .app.app .bc-row.books-wide > .c-div { grid-area: div; }
+  .app.app .bc-row.books-wide > .c-name { grid-area: name; white-space: normal; }
+  .app.app .bc-row.books-wide > .c-meth { grid-area: meth; }
+  .app.app .bc-row.books-wide > .c-amt { grid-area: amt; text-align: right; }
+  .app.app .bc-row.bw-drw { grid-template-areas: "name name name" "date div amt"; grid-template-columns: auto minmax(0, 1fr) auto; }
+}
+.app.app .panel-books-card .bc-table, .app.app .panel-budget-card .bc-table:has(.books-wide) { overflow-x: auto; }

@@ -87,18 +87,29 @@ export function ExpensesCard({ expenses, today, onOpenAll, onAdd }: { expenses: 
         <p className="field-hint">{expenses.length ? `No expenses ${wk.label === 'Last 7 days' ? 'in the last 7 days' : `${wk.label}`}.` : 'No expenses yet. Tap + to add one, or ⌄ to import a bank statement.'}</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Latest expenses">
-          <div className="bc-row bc-head books-row" role="row">
-            <span role="columnheader">Date</span>
-            <span role="columnheader">What</span>
-            <span role="columnheader">Category</span>
-            <span role="columnheader" className="bc-amt">Amount</span>
+          {/* V20-527 (Dan, Nov 25): more columns on the Books cards (desktop); phones keep two lines. */}
+          <div className="bc-row bc-head books-wide bw-exp" role="row">
+            <span role="columnheader" className="c-date">Date</span>
+            <span role="columnheader" className="c-div">Division</span>
+            <span role="columnheader" className="c-name">What</span>
+            <span role="columnheader" className="c-x">Type</span>
+            <span role="columnheader" className="c-x">Group</span>
+            <span role="columnheader" className="c-x">Category</span>
+            <span role="columnheader" className="c-meth">Method</span>
+            <span role="columnheader" className="c-x bc-amt">GST</span>
+            <span role="columnheader" className="c-amt bc-amt">Amount</span>
           </div>
           {latest.map((e, i) => (
-            <button type="button" key={e.id} className={`bc-row bc-row-btn books-row${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Expenses" onClick={onOpenAll}>
-              <span className="pl-mono pl-due">{day(e.date)}</span>
-              <span className="pl-name bc-name">{e.description || '—'}</span>
-              <span className="pl-desc">{e.category}</span>
-              <span className="pl-mono bc-amt">{e.amount === null ? '—' : money(e.amount)}</span>
+            <button type="button" key={e.id} className={`bc-row bc-row-btn books-wide bw-exp${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Expenses" onClick={onOpenAll}>
+              <span className="c-date pl-mono pl-due">{day(e.date)}</span>
+              <span className="c-div pl-desc">{e.project || '—'}</span>
+              <span className="c-name pl-name bc-name">{e.description || '—'}</span>
+              <span className="c-x pl-desc">{e.type || '—'}</span>
+              <span className="c-x pl-desc">{e.category || '—'}</span>
+              <span className="c-x pl-desc">{e.pmtCategory || '—'}</span>
+              <span className="c-meth pl-desc">{e.method || '—'}</span>
+              <span className="c-x pl-mono bc-amt">{e.gst ? money(e.gst) : '—'}</span>
+              <span className="c-amt pl-mono bc-amt">{e.amount === null ? '—' : money(e.amount)}</span>
             </button>
           ))}
         </div>
@@ -107,7 +118,11 @@ export function ExpensesCard({ expenses, today, onOpenAll, onAdd }: { expenses: 
   );
 }
 
-export function IncomeCard({ lines, today, onOpenAll, onImport }: { lines: BankLine[]; today: Date; onOpenAll: () => void; onImport?: () => void }) {
+export function IncomeCard({ lines, today, onOpenAll, onImport, accounts = [] }: { lines: BankLine[]; today: Date; onOpenAll: () => void; onImport?: () => void; /** V20-527: account short names (ATB B.) in place of numbers. */ accounts?: { number: string; method: string; name: string }[] }) {
+  const acctName = (n: string) => {
+    const a = accounts.find((x) => x.number === n);
+    return a?.method || a?.name || (n.length > 4 ? `••${n.slice(-4)}` : n);
+  };
   const { q } = useHeaderSearch();
   const m = iso(today);
   const ins = lines
@@ -141,18 +156,24 @@ export function IncomeCard({ lines, today, onOpenAll, onImport }: { lines: BankL
         <p className="field-hint">{ins.length ? `No money in ${wk.label === 'Last 7 days' ? 'in the last 7 days' : `${wk.label}`}.` : 'No income yet. Money in comes from your bank statements: tap + to import one.'}</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Latest income">
-          <div className="bc-row bc-head books-row" role="row">
-            <span role="columnheader">Date</span>
-            <span role="columnheader">From</span>
-            <span role="columnheader">Account</span>
-            <span role="columnheader" className="bc-amt">Amount</span>
+          <div className="bc-row bc-head books-wide bw-inc" role="row">
+            <span role="columnheader" className="c-date">Date</span>
+            <span role="columnheader" className="c-div">Division</span>
+            <span role="columnheader" className="c-name">From</span>
+            <span role="columnheader" className="c-x">Kind</span>
+            <span role="columnheader" className="c-meth">Account</span>
+            <span role="columnheader" className="c-x bc-amt">GST</span>
+            <span role="columnheader" className="c-amt bc-amt">Amount</span>
           </div>
           {latest.map((x, i) => (
-            <button type="button" key={x.l.id} className={`bc-row bc-row-btn books-row${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Income" onClick={onOpenAll}>
-              <span className="pl-mono pl-due">{day(x.l.date)}</span>
-              <span className="pl-name bc-name">{x.what}</span>
-              <span className="pl-desc">{x.l.account}</span>
-              <span className="pl-mono bc-amt">{money(x.amount)}</span>
+            <button type="button" key={x.l.id} className={`bc-row bc-row-btn books-wide bw-inc${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Income" onClick={onOpenAll}>
+              <span className="c-date pl-mono pl-due">{day(x.l.date)}</span>
+              <span className="c-div pl-desc">{x.l.income?.project || '—'}</span>
+              <span className="c-name pl-name bc-name">{x.what}</span>
+              <span className="c-x pl-desc">{x.l.route === 'interest' ? 'Interest' : 'Income'}</span>
+              <span className="c-meth pl-desc">{acctName(x.l.account)}</span>
+              <span className="c-x pl-mono bc-amt">{x.l.income?.gst ? money(x.l.income.gst) : '—'}</span>
+              <span className="c-amt pl-mono bc-amt">{money(x.amount)}</span>
             </button>
           ))}
         </div>
@@ -193,18 +214,20 @@ export function DrawsCard({ draws, today, onOpenAll, onImport }: { draws: Draw[]
         <p className="field-hint">{draws.length ? `No draws ${wk.label === 'Last 7 days' ? 'in the last 7 days' : `${wk.label}`}.` : 'No draws yet. Money you take out of the business (a transfer or e-transfer to you) comes from your bank statements.'}</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Latest draws">
-          <div className="bc-row bc-head books-row" role="row">
-            <span role="columnheader">Date</span>
-            <span role="columnheader">What</span>
-            <span role="columnheader">Division</span>
-            <span role="columnheader" className="bc-amt">Amount</span>
+          <div className="bc-row bc-head books-wide bw-drw" role="row">
+            <span role="columnheader" className="c-date">Date</span>
+            <span role="columnheader" className="c-div">Division</span>
+            <span role="columnheader" className="c-name">What</span>
+            <span role="columnheader" className="c-x">Notes</span>
+            <span role="columnheader" className="c-amt bc-amt">Amount</span>
           </div>
           {latest.map((d, i) => (
-            <button type="button" key={d.id} className={`bc-row bc-row-btn books-row${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Draws" onClick={onOpenAll}>
-              <span className="pl-mono pl-due">{day(d.date)}</span>
-              <span className="pl-name bc-name">{d.description || '—'}</span>
-              <span className="pl-desc">{d.project}</span>
-              <span className="pl-mono bc-amt">{money(d.amount)}</span>
+            <button type="button" key={d.id} className={`bc-row bc-row-btn books-wide bw-drw${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Draws" onClick={onOpenAll}>
+              <span className="c-date pl-mono pl-due">{day(d.date)}</span>
+              <span className="c-div pl-desc">{d.project || '—'}</span>
+              <span className="c-name pl-name bc-name">{d.description || '—'}</span>
+              <span className="c-x pl-desc">{d.notes || '—'}</span>
+              <span className="c-amt pl-mono bc-amt">{money(d.amount)}</span>
             </button>
           ))}
         </div>

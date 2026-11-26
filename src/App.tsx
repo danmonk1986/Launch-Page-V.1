@@ -2824,6 +2824,7 @@ export default function App() {
               income={
                 !books ? null : (
                   <IncomeCard
+                    accounts={bankAccounts}
                     lines={bankLines}
                     today={booksDay}
                     onOpenAll={() => {
@@ -2855,7 +2856,7 @@ export default function App() {
                   />
                 )
               }
-              budget={!mods.budget ? null : <BudgetCard onBuild={books ? () => (setPage('budget'), setTimeout(() => window.dispatchEvent(new Event('budget:audit')), 250)) : undefined} lines={booksBudget} today={now} month={books ? booksMonth : undefined} lost={lostBills} onKeep={(id) => answerBill(id, 'keep')} onSkip={(id) => answerBill(id, booksMonth)} onRemove={(id) => void deleteBudgetLine(id)} choicesFor={billChoices} onTie={tieBill} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
+              budget={!mods.budget ? null : <BudgetCard wide={books} onBuild={books ? () => (setPage('budget'), setTimeout(() => window.dispatchEvent(new Event('budget:audit')), 250)) : undefined} lines={booksBudget} today={now} month={books ? booksMonth : undefined} lost={lostBills} onKeep={(id) => answerBill(id, 'keep')} onSkip={(id) => answerBill(id, booksMonth)} onRemove={(id) => void deleteBudgetLine(id)} choicesFor={billChoices} onTie={tieBill} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
               planner={!mods.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={removeDecision} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
               journal={!mods.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!mods.routine ? null : 
