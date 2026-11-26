@@ -178,7 +178,7 @@ export function LineCard(p: {
           <span>Notes</span>
           <input value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
         </label>
-        <label className="choice push-pick" title={withhold ? 'Budget only: no task' : 'Saves a linked task too: ticking it off adds this to Expenses'}>
+        <label className="choice push-pick" title={withhold ? 'Budget only: no task' : 'Saves a linked task too (a reminder; the expense comes from your bank)'}>
           <input type="checkbox" checked={withhold} onChange={(e) => setWithholdPick(e.target.checked)} />
           <span>Withhold from Task List</span>
         </label>

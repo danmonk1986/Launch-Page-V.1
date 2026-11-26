@@ -43,7 +43,7 @@ export interface Task {
   deletedAt: string | null;
   googleEventId: string | null;
   launchId: string | null;
-  /** The budget line this task pays (LP-030). Ticking it adds a line to Expenses. Column from 0031. */
+  /** The budget line this task pays (LP-030). Column from 0031. (V20-538: ticking it no longer adds an expense.) */
   budgetLineId?: string | null;
   sort: number;
 }

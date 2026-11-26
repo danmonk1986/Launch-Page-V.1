@@ -70,7 +70,7 @@ type Props = {
 
 /**
  * Expenses (LP-030): what was actually paid, a month at a time, in the Launch Sheet's
- * EXPENSES columns. Ticking a task linked to a budget line adds a row here.
+ * EXPENSES columns. (V20-538: ticking a budget task no longer adds a row.)
  */
 export function ExpensesView(p: Props) {
   const { month, onMonth: setMonth } = p;
@@ -184,7 +184,7 @@ export function ExpensesView(p: Props) {
       {rows.length === 0 ? (
         <p className="panel-empty">
           {needle ? 'No expenses match in ' : 'No expenses yet in '}
-          {monthLabel(month)}. Ticking a task linked to a budget line adds one here, or import a bank statement (CSV) or tap +.
+          {monthLabel(month)}. Import a bank statement (CSV) or tap + to add one.
         </p>
       ) : (
         <div className="task-scroll">

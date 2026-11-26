@@ -25,7 +25,7 @@ import { PlannerPanel } from './components/Planner';
 import { BudgetCard } from './components/BudgetCard';
 import { budgetStore, download as downloadText, linesToCsv, newBudgetLine, type BudgetLine } from './lib/budget';
 import { rateToCad, toCad } from './lib/currency';
-import { expenseFromLine, expenseStore, type Expense } from './lib/expenses';
+import { expenseStore, type Expense } from './lib/expenses';
 import { billName, fromLine, moneyIn, sectionForTask, type LinkPlan } from './lib/links';
 import { RoutinePicker } from './components/RoutinePicker';
 import { RoutineEditor } from './components/RoutineEditor';
@@ -1273,30 +1273,8 @@ export default function App() {
       setStatus(`${line.description}: budget updated to the amount paid.`);
     }
   }
-  /**
-   * Tick to pay (LP-030): ticking a task linked to a budget line adds that line to Expenses,
-   * dated the day it was ticked; unticking takes it back out.
-   */
-  async function payFor(items: Task[]) {
-    // V20-481 (Dan, Nov 23): on Books nothing goes from Budget to Expenses by itself: an expense comes from the bank or
-    // from you adding it (a budgeted bill may not have been charged, e.g. a cancelled subscription). Main keeps tick to pay.
-    if (books) return;
-    for (const t of items) {
-      if (!t.budgetLineId) continue;
-      const old = tasks.find((x) => x.id === t.id);
-      const newDay = t.doneAt ? isoDate(new Date(t.doneAt)) : null;
-      const oldDay = old?.doneAt ? isoDate(new Date(old.doneAt)) : null;
-      if (newDay && newDay !== oldDay) {
-        const line = budget.find((l) => l.id === t.budgetLineId);
-        if (!line || expRef.current.some((e) => e.taskId === t.id && e.date === newDay)) continue;
-        await saveExpense(expenseFromLine(line, newDay, t.id, expRef.current.reduce((m, e) => Math.max(m, e.sort + 1), 0)), true);
-        setStatus(`${line.description}: paid, added to Expenses.`);
-      } else if (oldDay && !newDay) {
-        for (const e of expRef.current.filter((x) => x.taskId === t.id && x.date === oldDay)) await removeExpense(e.id);
-        setStatus(`${taskName(t)}: taken back out of Expenses.`);
-      }
-    }
-  }
+  // V20-538 (Dan, Nov 26): tick to pay is gone everywhere (Books dropped it in V20-481). A budget line never makes an
+  // expense: an expense comes from the bank or from you adding it. Ticking a linked task just marks it done.
   /** A linked task renamed or rescheduled: its budget line follows (name, repeat, date). */
   // Oct 28: a linked bill's Task is its kind (MM / EOM / ANN BILL…). When the rule for that changes,
   // bills already swapped (Description = the line item) take the new name by themselves.
@@ -1428,7 +1406,6 @@ export default function App() {
     eventFollowsTasks([t]);
     decisionsFollowTasks([t]);
     await taskOps.save(t);
-    await payFor([t]);
     await lineFollowsTask(t);
     checkTaskClash(t, old);
   };
@@ -1460,7 +1437,6 @@ export default function App() {
     eventFollowsTasks(items);
     decisionsFollowTasks(items);
     await taskOps.saveMany(items);
-    await payFor(items);
   };
 
   /**
