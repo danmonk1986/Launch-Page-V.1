@@ -1803,6 +1803,7 @@ function TimedForm({
   const [pastErr, setPastErr] = useState(false);
   // V20-351 (Dan, Nov 19): STARTED AT: save this new launch at its passed time, on the clock since then.
   const startedThen = useRef(false);
+  const loggedThen = useRef(false);
   // What = a category (Work Block #1…, or any you type, which joins the list once saved) and a
   // description. Saved as one title, "Category - Description", so lists read the same (Oct 20).
   // V20-078 (Nov 12): a NEW launch that starts filled in (from a task, a routine step, rocket + in Complete)
@@ -1850,7 +1851,9 @@ function TimedForm({
         // go straight to Missed / "has passed"). Editing an old one still asks Started then / Log instead.
         const since = startedThen.current;
         startedThen.current = false;
-        if (!launch && d.repeat === 'once' && passedToday(d) && !(since && d.onDate === isoDate(new Date()))) {
+        const logged = loggedThen.current;
+        loggedThen.current = false;
+        if (!launch && d.repeat === 'once' && passedToday(d) && !logged && !(since && d.onDate === isoDate(new Date()))) {
           setPastErr(true);
           return;
         }
@@ -1868,7 +1871,7 @@ function TimedForm({
           const fresh = next.urls.filter((u) => !rockets.some((r) => rocketUrls(r).includes(u)));
           if (fresh.length) await onAddRocket(fresh);
         }
-        await onSave(since && !launch ? { ...next, startedThen: true } : next);
+        await onSave(logged ? { ...next, loggedThen: true } : since && !launch ? { ...next, startedThen: true } : next);
       }}
     >
       {ask && launch && (
@@ -2064,6 +2067,20 @@ function TimedForm({
                   </button>
                 </>
               )}
+              {/* V20-546 (Dan, Nov 26): it already happened: log it, like adding a log in Stats. */}
+              {' · '}
+              <button
+                type="button"
+                className="field-error-action"
+                title={`Log ${d.minutes} minutes on ${d.onDate} from ${formatMinutes(toMinutes(d.atTime))}, as done`}
+                onClick={(e) => {
+                  loggedThen.current = true;
+                  setPastErr(false);
+                  e.currentTarget.form?.requestSubmit();
+                }}
+              >
+                Log it
+              </button>
             </span>
           )}
       </div>

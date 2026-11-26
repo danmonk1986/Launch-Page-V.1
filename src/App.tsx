@@ -909,7 +909,36 @@ export default function App() {
   // (Snooze → Edit snoozes 10 minutes, which hid an edit to 3 minutes from now).
   function saveLaunchEdit(input: Launch, fromTask = false) {
     // V20-351: STARTED AT (new launch, time already gone today): on the clock since its set time, no pop-up.
-    const { startedThen, ...l } = input;
+    const { startedThen, loggedThen, ...l } = input;
+    // V20-546 (Dan, Nov 26): LOG IT: the block already happened at its date and time; it's saved as done with its
+    // minutes (in Stats like a log added there), and never pops up.
+    if (loggedThen && l.onDate) {
+      const day = new Date(`${l.onDate}T12:00:00`);
+      const start = new Date(`${l.onDate}T${l.atTime}:00`);
+      const list = logRef.current;
+      const cur = logFor(list, l, day);
+      const item: LaunchLog = {
+        ...cur,
+        title: [l.title, ...(l.steps ?? [])].join(' - '),
+        projectId: l.projectId ?? null,
+        planned: l.minutes,
+        outcome: 'done',
+        launchedAt: start.toISOString(),
+        finishedAt: new Date(start.getTime() + l.minutes * 60_000).toISOString(),
+        loggedMin: l.minutes,
+        timeSource: 'entered',
+        pausedMin: 0,
+        pausedAt: null,
+        routineDay: l.onDate
+      };
+      const next = list.some((g) => g.id === item.id) ? list.map((g) => (g.id === item.id ? item : g)) : [...list, item];
+      logRef.current = next;
+      setLaunchLog(next);
+      void launchLogStore.save(userId, item, next);
+      setHandled(markHandled(l, day, 'done'));
+      setStatus(`${l.title}: ${l.minutes} minutes logged on ${l.onDate}.`);
+      return launchOps.save(l);
+    }
     const old = launches.find((x) => x.id === l.id);
     const moved = !old || old.atTime !== l.atTime || old.onDate !== l.onDate || JSON.stringify(old.onceTime) !== JSON.stringify(l.onceTime) || old.repeat !== l.repeat;
     if (moved && snoozed[l.id]) {

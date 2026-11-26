@@ -36,6 +36,9 @@ export interface Launch {
   /** V20-351: set by the form's STARTED AT button for this one save only (never stored): the block has been on the
    *  clock since its set time today. */
   startedThen?: boolean;
+  /** V20-546: set by the form's LOG IT button for this one save only (never stored): the block already happened at its
+   *  set date and time; log it as done for its minutes. */
+  loggedThen?: boolean;
   id: string;
   title: string;
   /** V20-277 (Dan, Nov 16): the pieces of the block, names only (column from 0065). Part ticks the ones done. */
