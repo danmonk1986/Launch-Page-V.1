@@ -245,8 +245,8 @@ export function IncomeCard({ lines, today, onOpenAll, onImport, accounts = [], p
       ) : (
         <div className="bc-table" role="table" aria-label="Latest income">
           <div className="bc-row bc-head books-wide bw-inc" role="row">
-            <span role="columnheader" className="c-date">Date</span>
             <span role="columnheader" className="c-div">Division</span>
+            <span role="columnheader" className="c-date">Date</span>
             <span role="columnheader" className="c-name">Description</span>
             <span role="columnheader" className="c-x">Kind</span>
             <span role="columnheader" className="c-meth">Account</span>
@@ -255,8 +255,8 @@ export function IncomeCard({ lines, today, onOpenAll, onImport, accounts = [], p
           </div>
           {latest.map((x, i) => (
             <button type="button" key={x.l.id} className={`bc-row bc-row-btn books-wide bw-inc${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Income" onClick={onOpenAll}>
-              <span className="c-date pl-mono pl-due">{day(x.l.date)}</span>
               <span className="c-div pl-desc bc-proj"><DivChip name={x.l.income?.project ?? ''} projects={projects} /></span>
+              <span className="c-date pl-mono pl-due">{day(x.l.date)}</span>
               <span className="c-name pl-name bc-name">{x.what}</span>
               <span className="c-x pl-desc">{x.l.route === 'interest' ? 'Interest' : 'Income'}</span>
               <span className="c-meth pl-desc">{acctName(x.l.account)}</span>

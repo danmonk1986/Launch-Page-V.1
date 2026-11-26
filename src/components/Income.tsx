@@ -153,8 +153,9 @@ export function IncomeView(p: Props) {
           <table className="task-table budget-table expenses-table income-table">
             <thead>
               <tr>
-                <th className="col-date">Date</th>
+                {/* V20-543 (Dan, Nov 26): Division first, like Expenses and Draws. */}
                 <th className="col-project">Division</th>
+                <th className="col-date">Date</th>
                 <th className="col-task">Description</th>
                 <th>Invoice</th>
                 <th>Account</th>
@@ -166,8 +167,8 @@ export function IncomeView(p: Props) {
             <tbody>
               {moneyIn.map((r, i) => (
                 <tr key={r.line.id} className={`task-row${i % 2 ? ' is-alt' : ''}`} title={r.line.text}>
-                  <td className="col-date">{dayLabel(r.line.date)}</td>
                   <td className="col-project">{cell(r, 'project')}</td>
+                  <td className="col-date">{dayLabel(r.line.date)}</td>
                   <td className="col-task">{cell(r, 'description', true)}</td>
                   <td>
                     {r.line.route === 'income' ? (
