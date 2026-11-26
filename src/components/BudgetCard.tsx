@@ -161,7 +161,7 @@ export function BudgetCard({ wide, onBuild, lines, today, month, onOpenAll, onOp
                     })()
                   : null}
               </span>
-              {wide && <span className="c-x pl-desc">{l.type || '—'}</span>}
+              {wide && <span className="c-x pl-desc">{l.type ? <span className={`status${l.type.toUpperCase() === 'FIXED' ? ' status-three' : ''}`}>{l.type.toUpperCase()}</span> : '—'}</span>}
               {wide && <span className="c-x pl-desc">{l.category || '—'}</span>}
               {wide && <span className="c-x pl-desc">{l.pmtCategory || '—'}</span>}
               <span className="c-meth pl-desc">{l.method}</span>

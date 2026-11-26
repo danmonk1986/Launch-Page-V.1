@@ -168,28 +168,30 @@ export function ExpensesCard({ expenses, today, onOpenAll, onAdd, projects = [],
       ) : (
         <div className="bc-table" role="table" aria-label="Latest expenses">
           {/* V20-527 (Dan, Nov 25): more columns on the Books cards (desktop); phones keep two lines. */}
+          {/* V20-542 (Dan, Nov 26): the cards take the pop-in pages' style: their column order, the same-width
+              division pill, Type as a pill, the middle columns centred. */}
           <div className="bc-row bc-head books-wide bw-exp" role="row">
-            <span role="columnheader" className="c-date">Date</span>
             <span role="columnheader" className="c-div">Division</span>
-            <span role="columnheader" className="c-name">What</span>
+            <span role="columnheader" className="c-date">Date</span>
+            <span role="columnheader" className="c-name">Description</span>
+            <span role="columnheader" className="c-meth">Method</span>
             <span role="columnheader" className="c-x">Type</span>
             <span role="columnheader" className="c-x">Group</span>
             <span role="columnheader" className="c-x">Category</span>
-            <span role="columnheader" className="c-meth">Method</span>
-            <span role="columnheader" className="c-x bc-amt">GST</span>
-            <span role="columnheader" className="c-amt bc-amt">Amount</span>
+            <span role="columnheader" className="c-amt bc-amt">Total</span>
+            <span role="columnheader" className="c-x bc-amt">GST/HST</span>
           </div>
           {latest.map((e, i) => (
             <button type="button" key={e.id} className={`bc-row bc-row-btn books-wide bw-exp${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Expenses" onClick={onOpenAll}>
-              <span className="c-date pl-mono pl-due">{day(e.date)}</span>
               <span className="c-div pl-desc bc-proj"><DivChip name={e.project} projects={projects} /></span>
+              <span className="c-date pl-mono pl-due">{day(e.date)}</span>
               <span className="c-name pl-name bc-name">{e.description || '—'}</span>
-              <span className="c-x pl-desc">{e.type || '—'}</span>
+              <span className="c-meth pl-desc">{e.method || '—'}</span>
+              <span className="c-x pl-desc">{e.type ? <span className={`status${e.type === 'FIXED' ? ' status-three' : ''}`}>{e.type}</span> : '—'}</span>
               <span className="c-x pl-desc">{e.category || '—'}</span>
               <span className="c-x pl-desc">{e.pmtCategory || '—'}</span>
-              <span className="c-meth pl-desc">{e.method || '—'}</span>
-              <span className="c-x pl-mono bc-amt">{e.gst ? money(e.gst) : '—'}</span>
               <span className="c-amt pl-mono bc-amt">{e.amount === null ? '—' : money(e.amount)}</span>
+              <span className="c-x pl-mono bc-amt">{e.gst ? money(e.gst) : '—'}</span>
             </button>
           ))}
         </div>
@@ -245,11 +247,11 @@ export function IncomeCard({ lines, today, onOpenAll, onImport, accounts = [], p
           <div className="bc-row bc-head books-wide bw-inc" role="row">
             <span role="columnheader" className="c-date">Date</span>
             <span role="columnheader" className="c-div">Division</span>
-            <span role="columnheader" className="c-name">From</span>
+            <span role="columnheader" className="c-name">Description</span>
             <span role="columnheader" className="c-x">Kind</span>
             <span role="columnheader" className="c-meth">Account</span>
-            <span role="columnheader" className="c-x bc-amt">GST</span>
             <span role="columnheader" className="c-amt bc-amt">Amount</span>
+            <span role="columnheader" className="c-x bc-amt">GST</span>
           </div>
           {latest.map((x, i) => (
             <button type="button" key={x.l.id} className={`bc-row bc-row-btn books-wide bw-inc${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Income" onClick={onOpenAll}>
@@ -258,8 +260,8 @@ export function IncomeCard({ lines, today, onOpenAll, onImport, accounts = [], p
               <span className="c-name pl-name bc-name">{x.what}</span>
               <span className="c-x pl-desc">{x.l.route === 'interest' ? 'Interest' : 'Income'}</span>
               <span className="c-meth pl-desc">{acctName(x.l.account)}</span>
-              <span className="c-x pl-mono bc-amt">{x.l.income?.gst ? money(x.l.income.gst) : '—'}</span>
               <span className="c-amt pl-mono bc-amt">{money(x.amount)}</span>
+              <span className="c-x pl-mono bc-amt">{x.l.income?.gst ? money(x.l.income.gst) : '—'}</span>
             </button>
           ))}
         </div>
@@ -295,19 +297,19 @@ export function DrawsCard({ draws, today, onOpenAll, onImport, projects = [], fy
       ) : (
         <div className="bc-table" role="table" aria-label="Latest draws">
           <div className="bc-row bc-head books-wide bw-drw" role="row">
-            <span role="columnheader" className="c-date">Date</span>
             <span role="columnheader" className="c-div">Division</span>
-            <span role="columnheader" className="c-name">What</span>
-            <span role="columnheader" className="c-x">Notes</span>
-            <span role="columnheader" className="c-amt bc-amt">Amount</span>
+            <span role="columnheader" className="c-date">Date</span>
+            <span role="columnheader" className="c-name">Description</span>
+            <span role="columnheader" className="c-amt bc-amt">Transferred</span>
+            <span role="columnheader" className="c-x c-note">Notes</span>
           </div>
           {latest.map((d, i) => (
             <button type="button" key={d.id} className={`bc-row bc-row-btn books-wide bw-drw${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Draws" onClick={onOpenAll}>
-              <span className="c-date pl-mono pl-due">{day(d.date)}</span>
               <span className="c-div pl-desc bc-proj"><DivChip name={d.project} projects={projects} /></span>
+              <span className="c-date pl-mono pl-due">{day(d.date)}</span>
               <span className="c-name pl-name bc-name">{d.description || '—'}</span>
-              <span className="c-x pl-desc">{d.notes || '—'}</span>
               <span className="c-amt pl-mono bc-amt">{money(d.amount)}</span>
+              <span className="c-x c-note pl-desc">{d.notes || '—'}</span>
             </button>
           ))}
         </div>
