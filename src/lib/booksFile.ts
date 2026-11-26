@@ -294,7 +294,7 @@ export function newOnly(found: BooksFound, have: { budget: BudgetLine[]; expense
   if (found.sheet) {
     const fps = new Set(have.lines.map((l) => l.fp));
     const ids = new Set([...have.expenses.map((e) => e.id), ...have.draws.map((w) => w.id)]);
-    let lines = found.sheet.lines.filter((l) => !fps.has(l.fp) && !(l.expenseId && ids.has(l.expenseId)) && !(l.drawId && ids.has(l.drawId)));
+    const lines = found.sheet.lines.filter((l) => !fps.has(l.fp) && !(l.expenseId && ids.has(l.expenseId)) && !(l.drawId && ids.has(l.drawId)));
     const known = new Set(have.accounts.map((a) => a.number));
     // V20-490 (Dan, Nov 23): a spreadsheet names its accounts in words ("ATB P", "MC", "ATB B"); match each to an account
     // you already have instead of making a new one: the same name or pmt method (punctuation aside), the end of one
@@ -317,19 +317,8 @@ export function newOnly(found: BooksFound, have: { budget: BudgetLine[]; expense
       if (m) moveTo.set(a.number, m.number);
     }
     for (const l of lines) l.account = moveTo.get(l.account) ?? l.account;
-    // V20-539 (Dan, Nov 26, the overlap test): a line can be here already under another fingerprint (one account's lines
-    // came from its bank CSV, the other's from a spreadsheet), so the same account, date and amount also counts as
-    // here, one for one: two real charges of the same amount on the same day both still come in if only one is here.
-    const same = (a: string) => a.replace(/\D/g, '').slice(-4) || a.toUpperCase();
-    const keyOf = (l: { account: string; date: string; debit: number | null; credit: number | null }) => `${same(l.account)}|${l.date}|${amt(l.debit)}|${amt(l.credit)}`;
-    const here = new Map<string, number>();
-    for (const h of have.lines) here.set(keyOf(h), (here.get(keyOf(h)) ?? 0) + 1);
-    lines = lines.filter((l) => {
-      const n = here.get(keyOf(l)) ?? 0;
-      if (!n) return true;
-      here.set(keyOf(l), n - 1);
-      return false;
-    });
+    // V20-539 → 541 (Dan, Nov 26): no silent skipping by date and amount (four rounds at the Stampede are four real
+    // charges): lines go to the import's review, where a maybe-here line is flagged and left out until you tick it.
     const keepE = new Set(lines.flatMap((l) => [l.expenseId, ...(l.parts ?? []).map((x) => x.expenseId)]).filter((x): x is string => !!x));
     const keepD = new Set(lines.map((l) => l.drawId).filter((x): x is string => !!x));
     const used = new Set(lines.map((l) => l.account));

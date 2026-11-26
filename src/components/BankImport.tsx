@@ -156,6 +156,18 @@ const SPLIT = 'SPLIT';
 const DOWNLOAD_ICON = 'M12 4v11M7 10l5 5 5-5M5 20h14';
 const UPLOAD_ICON = 'M12 15V4M7 9l5-5 5 5M5 20h14';
 
+/**
+ * V20-541 (Dan, Nov 26): a Launch Sheet goes through the same weigh station as a bank CSV: its lines load into this
+ * table, filed as the sheet has them, and nothing is saved until Process. A line that might already be here (same date
+ * and amount on any account, or an expense / draw with no statement line) is flagged and left out: tick it to bring it
+ * in (four rounds at the Stampede are four real charges).
+ */
+export type QueuedSheet = { file: string; lines: BankLine[]; expenses: Expense[]; draws: Draw[]; accounts: BankAccount[] };
+let queuedSheet: QueuedSheet | null = null;
+export const queueSheetLines = (q: QueuedSheet) => {
+  queuedSheet = q;
+};
+
 function draftKey() {
   try {
     for (const k of Object.keys(localStorage)) {
@@ -213,6 +225,67 @@ export function BankImport(p: Props) {
   /** Edits made in the table, by line (fingerprint), kept when the accounts change. */
   const [edits, setEdits] = useState<Record<string, Partial<Draft>>>(saved?.edits ?? {});
   const [skip, setSkip] = useState<Set<string>>(new Set(saved?.skip ?? []));
+  useEffect(() => {
+    if (!p.open || !queuedSheet) return;
+    const q = queuedSheet;
+    queuedSheet = null;
+    if (parsed.length && !window.confirm(`Replace the lines here with the ${q.lines.length} from ${q.file}?`)) return;
+    const amt = (v: number | null | undefined) => (v == null ? '' : v.toFixed(2));
+    const k = (date: string, debit: number | null, credit: number | null) => `${date}|${amt(debit)}|${amt(credit)}`;
+    // What's here already, by date and amount: statement lines, then expenses and draws with no statement line.
+    const pool = new Map<string, string[]>();
+    const put = (key: string, what: string) => pool.set(key, [...(pool.get(key) ?? []), what]);
+    const acctName = (n: string) => accounts.find((a) => a.number === n)?.method || (n.length > 4 ? `••${n.slice(-4)}` : n);
+    for (const l of p.imported) put(k(l.date, l.debit, l.credit), `${l.income?.description || l.description || tidy(l.key)} (${acctName(l.account)})`);
+    const lined = new Set(p.imported.flatMap((l) => [l.expenseId, l.drawId, ...(l.parts ?? []).flatMap((x) => [x.expenseId, x.drawId])]).filter(Boolean) as string[]);
+    for (const e of p.expenses) if (!lined.has(e.id) && e.amount !== null) put(k(e.date, e.amount >= 0 ? e.amount : null, e.amount < 0 ? -e.amount : null), `${e.description} (an expense)`);
+    for (const d of p.draws) if (!lined.has(d.id)) put(k(d.date, d.amount, null), `${d.description} (a draw)`);
+    const ex = new Map(q.expenses.map((e) => [e.id, e]));
+    const dr = new Map(q.draws.map((d) => [d.id, d]));
+    const nextEdits: Record<string, Partial<Draft>> = {};
+    const nextParts: Record<string, Part[]> = {};
+    const out = new Set<string>();
+    for (const l of q.lines) {
+      const e = l.expenseId ? ex.get(l.expenseId) : undefined;
+      const d = l.drawId ? dr.get(l.drawId) : undefined;
+      const owedAmt = l.debit ?? -(l.credit ?? 0);
+      const f = l.filed;
+      const key = k(l.date, l.debit, l.credit);
+      // A line imported before (same fingerprint) is "already here" by itself; it doesn't use up a match.
+      const here = p.imported.some((x) => x.fp === l.fp) ? [] : pool.get(key) ?? [];
+      const hit = here.shift();
+      if (hit) pool.set(key, here);
+      if (hit) out.add(l.fp);
+      nextEdits[l.fp] = {
+        route: l.route,
+        status: hit ? 'check' : 'auto',
+        why: hit ? `Maybe already here: ${hit} on the same day for the same amount. Left out: tick it if it's a separate charge.` : `From ${q.file}, filed as the sheet has it.`,
+        project: l.income?.project ?? d?.project ?? e?.project ?? f?.project ?? '',
+        description: l.income?.description ?? d?.description ?? e?.description ?? f?.description ?? l.description ?? tidy(l.key),
+        method: e?.method ?? '',
+        type: e?.type ?? f?.type ?? '',
+        category: e?.category ?? f?.category ?? '',
+        pmtCategory: e?.pmtCategory ?? f?.pmtCategory ?? '',
+        amount: l.route === 'expense' || l.route === 'personal' ? owedAmt : Math.abs(owedAmt),
+        gst: l.income?.gst ?? e?.gst ?? 0,
+        notes: l.income?.notes ?? d?.notes ?? e?.notes ?? f?.notes ?? ''
+      };
+      if (l.parts?.length)
+        nextParts[l.fp] = l.parts.map((x) => {
+          const pe = x.expenseId ? ex.get(x.expenseId) : undefined;
+          return { id: crypto.randomUUID(), route: x.route, project: pe?.project ?? x.project, description: pe?.description ?? x.description, type: pe?.type ?? x.type ?? '', category: pe?.category ?? x.category ?? '', pmtCategory: pe?.pmtCategory ?? x.pmtCategory ?? '', amount: x.amount, gst: pe ? !!pe.gst : !!x.gst };
+        });
+    }
+    setParsed(q.lines.map((l) => ({ account: l.account, date: l.date, kind: l.kind, text: l.text, debit: l.debit, credit: l.credit, balance: l.balance, fp: l.fp, key: l.key })));
+    setFiles([q.file]);
+    setEdits(nextEdits);
+    setParts(nextParts);
+    setSkip(out);
+    setAccounts((cur) => [...cur, ...q.accounts.filter((a) => !cur.some((x) => x.number === a.number))]);
+    setMode('new');
+    setErrors([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.open]);
   /** Lines filled in by following another line of the same new merchant (they keep following until edited). */
   const followers = useRef(new Set<string>());
   /** Split charges (Nov 1): the parts under a line, by line. */

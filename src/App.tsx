@@ -35,7 +35,7 @@ import { meditationStore, MeditationsContext, type Meditation } from './lib/medi
 import { hiddenPickStore, HiddenPicksContext, pickKey as hiddenKey, type HiddenPick } from './lib/hiddenPicks';
 import { REMEMBER_EVENT, UNDONE_EVENT, UNDO_KEYS, setUndoHandler, setUndoState } from './lib/booksUndo';
 import { bankAccountStore, bankLineStore, commonStore, drawStore, sameBill, type BankAccount, type BankLine, type CommonExpense, type Draw } from './lib/bank';
-import type { ImportResult } from './components/BankImport';
+import { queueSheetLines, type ImportResult } from './components/BankImport';
 import { customerStore, emptyProfile, invoiceStore, profileStore, type Customer, type Invoice, type InvoiceProfile } from './lib/invoices';
 import { RecordsPage } from './components/Records';
 import { nextRepeat, readRepeat, repeatOn, writeRepeat } from './lib/repeat';
@@ -1165,30 +1165,23 @@ export default function App() {
       return setStatus('Nothing to import: no rows found in LINES, EXPENSES, PERSONAL EXPENSES, INCOME, DRAWS or BUDGET. Use the blank Launch Sheet\'s columns.');
     }
     if (!total) return setStatus(`Everything in ${file.name} is already here (${fresh.skipped} lines).`);
-    const n = (k: string) => sheet?.lines.filter((l) => l.route === k).length ?? 0;
-    // V20-459: the opening balance comes from the sheet's Balance column when the cash book hasn't got one yet.
+    // V20-541 (Dan, Nov 26): the sheet's lines go to the import's review (the weigh station), like a bank CSV; the
+    // budget lines and a first opening balance are asked about here.
     const opening = !settings.account.cashBook && sheet?.lines.length ? sheet.opening : null;
-    const parts = [
-      sheet?.lines.length
-        ? `${sheet.lines.length} line${sheet.lines.length === 1 ? '' : 's'} (${n('expense')} expenses, ${n('income') + n('interest')} money in, ${n('draw')} draws, ${n('personal')} personal, ${n('transfer')} transfers)`
-        : '',
-      fresh.budget.length ? `${fresh.budget.length} budget line${fresh.budget.length === 1 ? '' : 's'}` : ''
-    ].filter(Boolean);
-    const openNote = opening ? `\n\nCash Book opening balance: ${opening.opening.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })} at the start of ${new Date(`${opening.start}-01T12:00`).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' })} (worked out from the Balance column; change it any time).` : '';
-    const from = found.tabs.length ? ` (from ${found.tabs.join(', ')})` : '';
-    if (!window.confirm(`Add ${parts.join(', ')}${from}?${fresh.skipped ? ` ${fresh.skipped} already here, skipped.` : ''}${openNote}`)) return;
-    if (sheet?.lines.length) {
-      setStatus(`Importing ${sheet.lines.length} lines… a big file can take a minute.`);
-      const after = <T extends { sort: number }>(have: T[], add: T[]) => {
-        const start = have.reduce((m, x) => Math.max(m, x.sort + 1), 0);
-        return add.map((x, i) => ({ ...x, sort: start + i }));
-      };
-      await saveImport({ accounts: after(bankAccounts, sheet.accounts), lines: after(bankLines, sheet.lines), expenses: after(expRef.current, sheet.expenses), draws: after(draws, sheet.draws), common: [], invoices: [], profile: null });
+    const openNote = opening ? `Cash Book opening balance: ${opening.opening.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })} at the start of ${new Date(`${opening.start}-01T12:00`).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' })} (worked out from the Balance column; change it any time).` : '';
+    if (fresh.budget.length || opening) {
+      const ask = [fresh.budget.length ? `Add ${fresh.budget.length} budget line${fresh.budget.length === 1 ? '' : 's'} from ${file.name}?` : '', openNote].filter(Boolean).join('\n\n');
+      if (window.confirm(ask)) {
+        if (opening) await handleSave({ account: { ...settings.account, cashBook: opening } as BrandSettings['account'] });
+        const base = budget.reduce((m, l) => Math.max(m, l.sort + 1), 0);
+        if (fresh.budget.length) await budgetOps.saveMany(fresh.budget.map((l, i) => ({ ...l, sort: base + i })));
+      }
     }
-    if (opening) await handleSave({ account: { ...settings.account, cashBook: opening } as BrandSettings['account'] });
-    const base = budget.reduce((m, l) => Math.max(m, l.sort + 1), 0);
-    if (fresh.budget.length) await budgetOps.saveMany(fresh.budget.map((l, i) => ({ ...l, sort: base + i })));
-    setStatus(`Imported ${parts.join(', ')} from ${file.name}.`);
+    if (sheet?.lines.length) {
+      queueSheetLines({ file: file.name, lines: sheet.lines, expenses: sheet.expenses, draws: sheet.draws, accounts: sheet.accounts });
+      openRecords('expenses', 'records:import');
+      setStatus(`${sheet.lines.length} lines from ${file.name} are in the import to check${fresh.skipped ? ` (${fresh.skipped} imported before, skipped)` : ''}. Nothing is saved until you Process.`);
+    } else setStatus(`Imported ${fresh.budget.length} budget lines from ${file.name}.`);
   }
 
   /** V20-015: a confirmed bank import, saved list by list (each in one go). */
