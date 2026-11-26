@@ -1606,7 +1606,7 @@ export function BankImport(p: Props) {
               )}
               {/* V20-530c (Dan): typing lines from scratch, + Add a line is the green button beside Process (hollow). */}
               {scratchRow && (
-                <button type="button" className="btn btn-go" onClick={addLine} disabled={!accounts.length}>
+                <button type="button" className="btn btn-go bank-foot-pair" onClick={addLine} disabled={!accounts.length}>
                   + Add a line
                 </button>
               )}

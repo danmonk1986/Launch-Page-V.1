@@ -2361,6 +2361,8 @@ select.status-pick:not([multiple]) { padding: 3px 10px !important; min-width: 96
 .bank-status.st-matched { border-color: var(--accent-green); color: var(--accent-green); }
 .bank-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: flex-end; }
 .bank-foot .btn { margin-left: auto; }
+/* V20-530d (Dan): + Add a line sits right beside Process, not across the row. */
+.bank-foot .btn.bank-foot-pair { margin-left: 0; }
 .bank-stats { margin: 0; }
 .panel-records .expenses-table input.bank-desc { background: transparent; color: inherit; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; font: inherit; width: 100%; }
 .panel-records .expenses-table input.bank-desc:hover, .panel-records .expenses-table input.bank-desc:focus { border-color: var(--edge); }
