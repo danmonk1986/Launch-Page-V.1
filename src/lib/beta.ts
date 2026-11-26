@@ -31,6 +31,9 @@ export const trackOf = (meta: Record<string, unknown> | undefined | null): BetaT
 /** True on the Books track (a tester whose account is set to Books). */
 export const BooksContext = createContext(false);
 export const useBooks = () => useContext(BooksContext);
+/** V20-532 (Dan, Nov 26): the Books tools (import + setup, audits, Undo, Draws, columns, pills): Books track and Main. */
+export const BooksToolsContext = createContext(false);
+export const useBooksTools = () => useContext(BooksToolsContext);
 /** /books in the address: the invite and sign-in pages wear BOOKS before anyone has signed in. */
 export const booksPath = () => typeof window !== 'undefined' && /^\/books(\/|$)/.test(window.location.pathname);
 export const BOOKS_LOGO = '/books-logo.png';

@@ -4972,3 +4972,17 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 
 /* V20-531 (Books): the Save icon says Saved for a moment. */
 .bank-saved-flash { align-self: center; font-size: 13px; color: var(--accent-teal); margin-right: 4px; }
+
+/* V20-532 (Dan, Nov 26): in Main the Cash Book sits at the top of the Records tab. */
+.records-cashbook { margin-bottom: 24px; }
+.records-cashbook > .panel { margin: 0; }
+/* V20-533 (Dan): Records rows: the method (opens its statement line) was a full-size link button (14px top margin, 44px
+   tall), so Books rows stood ~1.5x taller than Main's and the method sat low. Desktop only; phones keep the tap size. */
+@media (min-width: 641px) {
+  .app .expense-source { margin: 0; width: auto; min-height: 0; padding: 0; line-height: inherit; vertical-align: baseline; }
+}
+/* V20-534 (Dan): the Budget card on L4UNCH P4GE: Project and Method centred (desktop). */
+@media (min-width: 641px) {
+  .app.app .panel-budget-card .bc-row:not(.books-wide) > :is(.c-div, .c-meth) { text-align: center; justify-self: stretch; }
+  .app.app .panel-budget-card .bc-row:not(.books-wide) > .c-div .chip { margin-inline: auto; }
+}

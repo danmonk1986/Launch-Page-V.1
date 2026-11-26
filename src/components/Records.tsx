@@ -1,5 +1,5 @@
 import { useHeaderSearch } from '../lib/headerSearch';
-import { useBooks } from '../lib/beta';
+import { useBooks, useBooksTools } from '../lib/beta';
 import { useEffect, useState, type ComponentProps } from 'react';
 import { Icon } from './Tasks';
 import { ExpensesView, MonthNav, thisMonth } from './Expenses';
@@ -93,6 +93,8 @@ export function RecordsPage(
   const [preset] = useState(takePresetMonth);
   const [month, setMonth] = useState(() => preset ?? thisMonth());
   const books = useBooks();
+  // V20-532: the Books tools also run in Main; the Books look (title, ^, no tabs) stays on the Books track.
+  const tools = useBooksTools();
   // V20-245: the header search drives this page.
   const { q } = useHeaderSearch();
   const [importing, setImporting] = useState(false);
@@ -170,12 +172,12 @@ export function RecordsPage(
             <Icon d={IMPORT} />
           </button>
           {/* V20-506: Undo the last change on the books (also Cmd / Ctrl + Z). */}
-          {books && (
+          {tools && (
             <button type="button" className="icon-btn tool-btn" aria-label={undo.count ? `Undo: ${undo.label}` : 'Nothing to undo'} title={undo.count ? `Undo: ${undo.label} (Cmd/Ctrl + Z)` : 'Nothing to undo yet'} disabled={!undo.count} onClick={undo.undo}>
               <Icon d={UNDO} />
             </button>
           )}
-          {books && view === 'expenses' && (
+          {tools && view === 'expenses' && (
             <button type="button" className={`icon-btn tool-btn audit-btn${auditOpen ? ' is-on' : ''}`} aria-label={`Audit${auditN ? `: ${auditN} to check` : ''}`} aria-pressed={auditOpen} title="Audit: spreadsheet lines your bank statement doesn't back up" onClick={() => setAuditOpen((o) => !o)}>
               <Icon d={AUDIT} />
               {auditN > 0 && <span className="audit-count">{auditN}</span>}
@@ -214,10 +216,10 @@ export function RecordsPage(
         <DrawsView draws={p.draws} fy={fy} fyEnd={fyEnd} search={q} onSave={p.onSaveDraw} onDelete={p.onDeleteDraw} />
       ) : (
         <>
-        {books && <StatementCheck lines={p.bankLines} expenses={p.expenses} accounts={p.bankAccounts} onImport={p.onImport} open={auditOpen} onClose={() => setAuditOpen(false)} onCount={setAuditN} onShow={(id, date) => (setMonth(date.slice(0, 7)), setSpot((s) => ({ id, n: (s?.n ?? 0) + 1 })))} />}
+        {tools && <StatementCheck lines={p.bankLines} expenses={p.expenses} accounts={p.bankAccounts} onImport={p.onImport} open={auditOpen} onClose={() => setAuditOpen(false)} onCount={setAuditN} onShow={(id, date) => (setMonth(date.slice(0, 7)), setSpot((s) => ({ id, n: (s?.n ?? 0) + 1 })))} />}
         <ExpensesView month={month} onMonth={setMonth} expenses={p.expenses} lines={p.lines} search={q} onSave={p.onSaveExpense} onDelete={p.onDeleteExpense} addTick={addTick} projects={p.projects} spot={spot}
           sourceOf={
-            books
+            tools
               ? (e) => p.bankLines.find((l) => l.expenseId === e.id || (l.parts ?? []).some((x) => x.expenseId === e.id)) ?? null
               : undefined
           }

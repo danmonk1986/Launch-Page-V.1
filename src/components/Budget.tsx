@@ -1,5 +1,5 @@
 import { useHeaderSearch } from '../lib/headerSearch';
-import { useBooks } from '../lib/beta';
+import { useBooks, useBooksTools } from '../lib/beta';
 import { blankBudgetCsv, download as downloadFile } from '../lib/budget';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from './Sheet';
@@ -137,6 +137,8 @@ function shortDate(iso: string | null) {
 /** Budget V.1: the Launch Sheet's BUDGET tab, laid out like the task list. */
 export function BudgetPage(p: Props) {
   const books = useBooks();
+  // V20-532: the Budget audit, Undo and blank sheet also run in Main.
+  const tools = useBooksTools();
   // The box clicked: shows only its lines. null = everything.
   const [pick, setPick] = useState<string | null>(null);
   // V20-245: the header search drives this page.
@@ -326,9 +328,9 @@ export function BudgetPage(p: Props) {
   }, []);
   const skipKey = (c: AuditChange) => `${c.key}|${c.after.amount ?? ''}|${c.after.repeat ?? ''}`;
   const audit = useMemo(
-    () => (books && p.onSaveMany ? auditBudget(p.lines, p.expenses, new Date().toLocaleDateString('en-CA')).filter((c) => !auditSkip.includes(skipKey(c))) : []),
+    () => (tools && p.onSaveMany ? auditBudget(p.lines, p.expenses, new Date().toLocaleDateString('en-CA')).filter((c) => !auditSkip.includes(skipKey(c))) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [books, p.lines, p.expenses, auditSkip]
+    [tools, p.lines, p.expenses, auditSkip]
   );
   const applyAudit = async (list: AuditChange[]) => {
     if (!list.length || !p.onSaveMany) return;
@@ -471,13 +473,13 @@ export function BudgetPage(p: Props) {
           </>
           )}
           {/* V20-506: Undo the last change on the books (also Cmd / Ctrl + Z). */}
-          {books && (
+          {tools && (
             <button type="button" className="icon-btn tool-btn" aria-label={undo.count ? `Undo: ${undo.label}` : 'Nothing to undo'} title={undo.count ? `Undo: ${undo.label} (Cmd/Ctrl + Z)` : 'Nothing to undo yet'} disabled={!undo.count} onClick={undo.undo}>
               <Icon d={UNDO} />
             </button>
           )}
           {/* V20-501b / V20-505: the audit in both views; its count on the button. */}
-          {books && p.onSaveMany && (
+          {tools && p.onSaveMany && (
             <button type="button" className={`icon-btn tool-btn audit-btn${auditOpen ? ' is-on' : ''}`} aria-label={`Budget audit${audit.length ? `: ${audit.length} to check` : ''}`} aria-pressed={auditOpen} title="Budget audit: new prices, new fixed bills and bills gone monthly, from your Expenses" onClick={() => setAuditOpen((o) => !o)}>
               <Icon d={AUDIT} />
               {audit.length > 0 && <span className="audit-count">{audit.length}</span>}
@@ -595,7 +597,7 @@ export function BudgetPage(p: Props) {
       )}
 
       {view !== 'master' ? null : p.lines.length === 0 ? (
-        books ? (
+        tools ? (
           // V20-456 (Dan, Nov 22): Books track only: the empty Budget hands out a blank sheet to fill in and bring back.
           <div className="budget-empty">
             <p className="panel-empty">

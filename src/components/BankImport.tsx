@@ -30,7 +30,7 @@ import { newExpense, type Expense } from '../lib/expenses';
 import type { Invoice, InvoiceProfile } from '../lib/invoices';
 import { MonthNav, dayLabel } from './Expenses';
 import { TitleCombo } from './Rockets';
-import { useBooks } from '../lib/beta';
+import { useBooksTools } from '../lib/beta';
 
 export interface ImportResult {
   accounts: BankAccount[];
@@ -131,7 +131,7 @@ function guessAccount(number: string, file: string, sort: number): BankAccount {
  * Common Expenses first for Description); typing filters the list.
  */
 function Pick(p: { value: string; options: string[]; groups?: { label: string; options: string[] }[]; onChange: (v: string) => void; label: string; disabled?: boolean; wide?: boolean; /** V20-472: Books outlines an empty box that still needs filling. */ need?: boolean; accent?: string }) {
-  const books = useBooks();
+  const books = useBooksTools(); // V20-532: the Books import runs in Main too.
   const titles = [...new Set([...(p.groups ?? []).flatMap((g) => g.options), ...p.options])];
   if (p.disabled)
     return (
@@ -347,7 +347,7 @@ export function BankImport(p: Props) {
 
   const profile = p.profile;
   // V20-467: Books sorts by Budget item too, and keeps a known merchant sorted within 20%.
-  const books = useBooks();
+  const books = useBooksTools(); // V20-532: the Books import runs in Main too.
   const owner = profile?.person ?? '';
   const business = (profile?.business ?? '').replace(/\s+(LIMITED|LTD\.?|INC\.?|CORP\.?)$/i, '');
   /**

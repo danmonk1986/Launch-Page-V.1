@@ -130,7 +130,7 @@ import { SignIn } from './components/SignIn';
 import { Welcome } from './components/Welcome';
 import { Tour } from './components/Tour';
 import { Setup, resetSetupClock, setupStepFor } from './components/Setup';
-import { BETA_MODULES, BOOKS_MODULES, BetaContext, BooksContext, booksPath, readLpMode, trackOf, writeLpMode, type LpMode } from './lib/beta';
+import { BETA_MODULES, BOOKS_MODULES, BetaContext, BooksContext, BooksToolsContext, booksPath, readLpMode, trackOf, writeLpMode, type LpMode } from './lib/beta';
 import { CashBookCard, DrawsCard, ExpensesCard, IncomeCard } from './components/BooksCards';
 import { blankBooksFile, downloadBlob, launchSheetFile, newOnly, readBooksFile } from './lib/booksFile';
 import { presetRecordsView } from './components/Records';
@@ -170,6 +170,9 @@ export default function App() {
   // V20-453 (Dan, Nov 22): BETA TRACKS. A tester's track is on their account (set only by the invite function).
   // Books = the Books home (Budget, Expenses, Income), BOOKS logo. The admin sees it by signing in as a Books test account.
   const books = !isAdmin && trackOf(session?.user.app_metadata) === 'books';
+  // V20-532 (Dan, Nov 26): the Books tools (new import + setup, audits, Undo, Draws, columns, pills) also run in Main.
+  // The Books look (logo, Books home, no page tabs) stays on the Books track.
+  const booksTools = books || !beta;
   // V20-464 (Dan, Nov 22): the Books overview's month, set by the Cash Book's ‹ ›; the Expenses and Income cards follow it.
   const [booksMonth, setBooksMonth] = useState(() => new Date().toLocaleDateString('en-CA').slice(0, 7));
   const booksDay = new Date(Number(booksMonth.slice(0, 4)), Number(booksMonth.slice(5, 7)) - 1, 1);
@@ -1031,7 +1034,7 @@ export default function App() {
   const lastCopy = useRef(0);
   const undoing = useRef(false);
   function remember(label: string) {
-    if (!books || undoing.current) return;
+    if (!booksTools || undoing.current) return;
     const now = Date.now();
     if (now - lastCopy.current < 800 && undoStack.current.length) {
       lastCopy.current = now;
@@ -1111,7 +1114,7 @@ export default function App() {
     return () => window.clearTimeout(t);
   }, [undoToast]);
   useEffect(() => {
-    if (!books) return;
+    if (!booksTools) return;
     setUndoHandler(() => void undoBooksStep());
     const onRemember = (e: Event) => {
       const label = String((e as CustomEvent).detail ?? 'Change');
@@ -1623,7 +1626,7 @@ export default function App() {
    * kept, or skipped for this month, aren't asked about.
    */
   const budgetSeen = settings.account?.budgetSeen ?? {};
-  const lostBills: BudgetLine[] = !books
+  const lostBills: BudgetLine[] = !booksTools
     ? []
     : (() => {
         const start = new Date(Number(booksMonth.slice(0, 4)), Number(booksMonth.slice(5, 7)) - 1, 1, 12);
@@ -2623,9 +2626,40 @@ export default function App() {
     ? ({ ...theme, '--accent-teal': '#0DAEAA', '--accent-purple': '#6A4FA3', '--accent-pink': '#C2338F' } as CSSProperties)
     : theme;
 
+  // V20-532 (Dan, Nov 26): the Cash Book is on the Books home, and at the top of the Records tab in Main.
+  const cashBookCard = (
+    <CashBookCard
+      expenses={expenses}
+      lines={bankLines}
+      cashBook={settings.account.cashBook}
+      month={booksMonth}
+      onMonth={setBooksMonth}
+      onSetOpening={(start, opening) => void handleSave({ account: { ...settings.account, cashBook: { start, opening } } as BrandSettings['account'] })}
+      onDownloadBlank={() => downloadBlob('LAUNCH-SHEET-blank.xlsx', blankBooksFile({ purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' }))}
+      onImportFile={(f) => void importBooksFile(f)}
+      onExport={() =>
+        downloadBlob(
+          `${exportBrand()}-LAUNCH-SHEET-${new Date().toLocaleDateString('en-CA')}.xlsx`,
+          launchSheetFile({ lines: bankLines, expenses, draws, accounts: bankAccounts, budget, common, invoices }, { purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' })
+        )
+      }
+      onImportBank={() => {
+        presetRecordsView('income', books ? booksMonth : undefined);
+        setPage('invoices');
+        setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
+      }}
+      onSetup={() => {
+        presetRecordsView('expenses', booksMonth);
+        setPage('invoices');
+        setTimeout(() => window.dispatchEvent(new Event('records:setup')), 250);
+      }}
+    />
+  );
+
   return (
     <BetaContext.Provider value={beta}>
     <BooksContext.Provider value={books}>
+    <BooksToolsContext.Provider value={booksTools}>
     <HeaderSearchContext.Provider value={{ q: headerQ, setQ: setHeaderQ }}>
     <MeditationsContext.Provider value={{ list: meditations, save: saveMeditation, remove: removeMeditation }}>
     <HiddenPicksContext.Provider value={{ hidden: hiddenPicks, hide: hidePick }}>
@@ -2774,36 +2808,7 @@ export default function App() {
                   }}
                 />
               }
-              cashbook={
-                !books ? null : (
-                  <CashBookCard
-                    expenses={expenses}
-                    lines={bankLines}
-                    cashBook={settings.account.cashBook}
-                    month={booksMonth}
-                    onMonth={setBooksMonth}
-                    onSetOpening={(start, opening) => void handleSave({ account: { ...settings.account, cashBook: { start, opening } } as BrandSettings['account'] })}
-                    onDownloadBlank={() => downloadBlob('LAUNCH-SHEET-blank.xlsx', blankBooksFile({ purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' }))}
-                    onImportFile={(f) => void importBooksFile(f)}
-                    onExport={() =>
-                      downloadBlob(
-                        `${exportBrand()}-LAUNCH-SHEET-${new Date().toLocaleDateString('en-CA')}.xlsx`,
-                        launchSheetFile({ lines: bankLines, expenses, draws, accounts: bankAccounts, budget, common, invoices }, { purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' })
-                      )
-                    }
-                    onImportBank={() => {
-                      presetRecordsView('income', books ? booksMonth : undefined);
-                      setPage('invoices');
-                      setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
-                    }}
-                    onSetup={() => {
-                      presetRecordsView('expenses', booksMonth);
-                      setPage('invoices');
-                      setTimeout(() => window.dispatchEvent(new Event('records:setup')), 250);
-                    }}
-                  />
-                )
-              }
+              cashbook={!books ? null : cashBookCard}
               expenses={
                 !books ? null : (
                   <ExpensesCard
@@ -2859,7 +2864,7 @@ export default function App() {
                   />
                 )
               }
-              budget={!mods.budget ? null : <BudgetCard wide={books} onBuild={books ? () => (setPage('budget'), setTimeout(() => window.dispatchEvent(new Event('budget:audit')), 250)) : undefined} lines={booksBudget} today={now} month={books ? booksMonth : undefined} lost={lostBills} onKeep={(id) => answerBill(id, 'keep')} onSkip={(id) => answerBill(id, booksMonth)} onRemove={(id) => void deleteBudgetLine(id)} choicesFor={billChoices} onTie={tieBill} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
+              budget={!mods.budget ? null : <BudgetCard wide={books} onBuild={booksTools ? () => (setPage('budget'), setTimeout(() => window.dispatchEvent(new Event('budget:audit')), 250)) : undefined} lines={booksBudget} today={now} month={books ? booksMonth : undefined} lost={lostBills} onKeep={(id) => answerBill(id, 'keep')} onSkip={(id) => answerBill(id, booksMonth)} onRemove={(id) => void deleteBudgetLine(id)} choicesFor={billChoices} onTie={tieBill} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
               planner={!mods.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={removeDecision} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
               journal={!mods.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
               today={!mods.routine ? null : 
@@ -2936,11 +2941,13 @@ export default function App() {
               onCheckin={setCheckin}
             />
           ) : page === 'invoices' ? (
+            <>
+            {!books && booksTools && booksOn(mods) && <div className="records-cashbook">{cashBookCard}</div>}
             <RecordsPage
-              cashBook={books ? settings.account.cashBook : undefined}
-              onSetOpening={books ? (start, opening) => void handleSave({ account: { ...settings.account, cashBook: { start, opening } } as BrandSettings['account'] }) : undefined}
-              onDownloadSheet={books ? () => downloadBlob('LAUNCH-SHEET-blank.xlsx', blankBooksFile({ purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' })) : undefined}
-              onImportSheet={books ? (f) => void importBooksFile(f) : undefined}
+              cashBook={booksTools ? settings.account.cashBook : undefined}
+              onSetOpening={booksTools ? (start, opening) => void handleSave({ account: { ...settings.account, cashBook: { start, opening } } as BrandSettings['account'] }) : undefined}
+              onDownloadSheet={booksTools ? () => downloadBlob('LAUNCH-SHEET-blank.xlsx', blankBooksFile({ purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' })) : undefined}
+              onImportSheet={booksTools ? (f) => void importBooksFile(f) : undefined}
               showInvoices={mods.invoice}
               showBooks={booksOn(mods)}
               showViews={{ expenses: mods.recExpenses, income: mods.recIncome, draws: mods.recDraws }}
@@ -2967,6 +2974,7 @@ export default function App() {
               onSaveProfile={profileOps.save}
               onClose={() => setPage('launch')}
             />
+            </>
           ) : page === 'kb' ? (
             <KnowledgeBasePage userId={userId} onStatus={setStatus} />
           ) : page === 'budget' ? (
@@ -2978,7 +2986,7 @@ export default function App() {
               onReplace={replaceShownBudget}
               tasks={tasks}
               onApplyLinks={applyLinks}
-              onSaveMany={books ? saveBudgetLines : undefined}
+              onSaveMany={booksTools ? saveBudgetLines : undefined}
               expenses={expenses}
               openId={budgetOpen}
               onOpened={() => setBudgetOpen(null)}
@@ -3020,7 +3028,7 @@ export default function App() {
           )}
         </main>
         {/* V20-506: what just changed on the books, with Undo. */}
-        {books && undoToast && (
+        {booksTools && undoToast && (
           <div className="undo-toast" role="status">
             <span>{undoToast.text}</span>
             {!undoToast.done && undoStack.current.length > 0 && (
@@ -3440,6 +3448,7 @@ export default function App() {
     </HiddenPicksContext.Provider>
     </MeditationsContext.Provider>
     </HeaderSearchContext.Provider>
+    </BooksToolsContext.Provider>
     </BooksContext.Provider>
     </BetaContext.Provider>
   );
