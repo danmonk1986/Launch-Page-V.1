@@ -4955,7 +4955,7 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
 .app.app .bc-row.bw-exp { grid-template-columns: 132px 100px minmax(140px, 2fr) 90px 100px 90px 110px 100px 80px; }
 .app.app .bc-row.bw-inc { grid-template-columns: 132px 100px minmax(160px, 2fr) 80px 90px 110px 80px; }
 .app.app .bc-row.bw-drw { grid-template-columns: 132px 100px minmax(160px, 2fr) 120px minmax(120px, 1.4fr); }
-.app.app .bc-row.bw-bud { grid-template-columns: 100px minmax(160px, 2fr) 132px 100px 90px 110px 90px 100px; }
+.app.app .bc-row.bw-bud { grid-template-columns: 100px minmax(160px, 2fr) 120px 90px 90px 110px 70px 100px; }
 .app.app .bc-row.books-wide .bc-proj .chip { max-width: 100%; }
 @media (max-width: 720px) {
   .app.app .bc-row.books-wide { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "name name name name" "date div meth amt"; gap: 4px 10px; padding: 10px 12px; }
@@ -4987,12 +4987,11 @@ img.topbar-logo { max-width: min(600px, 40vw); object-fit: contain; object-posit
   .app.app .panel-budget-card .bc-row:not(.books-wide) > .c-div .chip { margin-inline: auto; }
 }
 
-/* V20-542 (Dan, Nov 26): the overview cards (Expenses, Income, Draws, Budget) take the pop-in pages' style on desktop:
+/* V20-542 (Dan, Nov 26): the overview cards (Expenses, Income, Draws; the Budget card stays as it is, V20-544) take the pop-in pages' style on desktop:
    the same-width division pill (centred), Type as a pill, Method / Type / Group / Category / Kind centred. */
 @media (min-width: 721px) {
-  .app.app :is(.panel-books-card, .panel-budget-card) .bc-row > .c-div { text-align: center; overflow: visible; }
-  .app.app :is(.panel-books-card, .panel-budget-card) .bc-row > .c-div .chip { display: inline-block; width: 124px; max-width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
-  .app.app :is(.panel-books-card, .panel-budget-card) .bc-row > :is(.c-meth, .c-x):not(.bc-amt):not(.c-note) { text-align: center; }
-  .app.app :is(.panel-books-card, .panel-budget-card) .bc-row .status { display: inline-block; }
-  .app.app .panel-budget-card .bc-row:not(.books-wide) { grid-template-columns: 110px minmax(160px, 1.6fr) 132px 90px 110px; }
+  .app.app .panel-books-card .bc-row > .c-div { text-align: center; overflow: visible; }
+  .app.app .panel-books-card .bc-row > .c-div .chip { display: inline-block; width: 124px; max-width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+  .app.app .panel-books-card .bc-row > :is(.c-meth, .c-x):not(.bc-amt):not(.c-note) { text-align: center; }
+  .app.app .panel-books-card .bc-row .status { display: inline-block; }
 }
