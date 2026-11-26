@@ -1,10 +1,10 @@
 import { Icon } from './Tasks';
 import { money } from '../lib/budget';
 import type { Expense } from '../lib/expenses';
-import { tidy, type BankLine, type Draw } from '../lib/bank';
+import { fyOf, fyRange, tidy, type BankLine, type Draw } from '../lib/bank';
 import { useHeaderSearch, matchesSearch } from '../lib/headerSearch';
-import { useRef, useState } from 'react';
-import { MonthNav, thisMonth } from './Expenses';
+import { useRef, useState, type ReactNode } from 'react';
+import { MonthNav, TALLIES, TALLY_KEY, thisMonth, type Tally } from './Expenses';
 
 /**
  * V20-453 (Dan, Nov 22): the Books home (beta Books track). Two cards beside the Budget card, laid out like it:
@@ -33,6 +33,58 @@ export function booksWeek(month: string, ahead: boolean): { from: string; to: st
   return { from: `${month}-01`, to: `${month}-07`, label: `${short(first)} – 7` };
 }
 
+
+/**
+ * V20-536 (Dan, Nov 26): the cards are the overview. Their boxes match the pop-in pages' (the better ones), led by the
+ * fiscal year's total: FY · the month (by …) · GST/HST · one box per group (tap one to show only its lines). Under
+ * them, the latest 5 up to the end of the month (fewer if there are fewer).
+ */
+const LATEST = 5;
+function fyOfMonth(m: string, fyEnd: string) {
+  const fy = fyOf(`${m}-15`, fyEnd);
+  return { fy, ...fyRange(fy, fyEnd) };
+}
+const monthEnd = (m: string) => `${m}-31`;
+function readTally(): Tally {
+  try {
+    const v = localStorage.getItem(TALLY_KEY) as Tally | null;
+    return v && TALLIES.some((t) => t.id === v) ? v : 'pmtCategory';
+  } catch {
+    return 'pmtCategory';
+  }
+}
+function CardBoxes(p: { lead?: ReactNode; fyLabel: string; fyValue: number; monthLabel: string; monthValue: number; extra?: ReactNode; byKey: Record<string, number>; pick: string | null; onPick: (k: string | null) => void }) {
+  return (
+    <div className="budget-stats" aria-label="The year and the month">
+      {p.lead}
+      <div className="budget-stat budget-stat-fy">
+        <span className="budget-stat-label">{p.fyLabel}</span>
+        <span className="budget-stat-value">{money(p.fyValue)}</span>
+      </div>
+      <button type="button" className="budget-stat budget-stat-total" aria-pressed={p.pick === null} title="Show everything" onClick={() => p.onPick(null)}>
+        <span className="budget-stat-label">{p.monthLabel}</span>
+        <span className="budget-stat-value">{money(p.monthValue)}</span>
+      </button>
+      {p.extra}
+      {Object.keys(p.byKey)
+        .sort((a, b) => p.byKey[b] - p.byKey[a])
+        .map((k) => (
+          <button key={k} type="button" className="budget-stat" aria-pressed={p.pick === k} title={p.pick === k ? 'Show everything' : `Show only ${k}`} onClick={() => p.onPick(p.pick === k ? null : k)}>
+            <span className="budget-stat-label">{k}</span>
+            <span className="budget-stat-value">{money(p.byKey[k])}</span>
+          </button>
+        ))}
+    </div>
+  );
+}
+const sumBy = <T,>(rows: T[], key: (r: T) => string, amt: (r: T) => number) =>
+  rows.reduce<Record<string, number>>((m, r) => {
+    const k = key(r);
+    m[k] = (m[k] ?? 0) + amt(r);
+    return m;
+  }, {});
+const latestHead = (n: number, pick: string | null, total: number) => `Latest ${n}${pick ? ` · ${pick}` : ''} · ${money(total)}`;
+
 function CardHead({ id, title, openLabel, onOpen, addLabel, onAdd }: { id: string; title: string; openLabel: string; onOpen: () => void; addLabel?: string; onAdd?: () => void }) {
   return (
     <div className="panel-head">
@@ -55,36 +107,64 @@ function CardHead({ id, title, openLabel, onOpen, addLabel, onAdd }: { id: strin
   );
 }
 
-export function ExpensesCard({ expenses, today, onOpenAll, onAdd, projects = [] }: { expenses: Expense[]; today: Date; onOpenAll: () => void; onAdd?: () => void; projects?: { name: string; color: string }[] }) {
+export function ExpensesCard({ expenses, today, onOpenAll, onAdd, projects = [], fyEnd = '09-30' }: { expenses: Expense[]; today: Date; onOpenAll: () => void; onAdd?: () => void; projects?: { name: string; color: string }[]; fyEnd?: string }) {
   const { q } = useHeaderSearch();
   const m = iso(today);
+  const fy = fyOfMonth(m, fyEnd);
+  const fyTotal = expenses.filter((e) => e.date >= fy.from && e.date <= fy.to).reduce((a, e) => a + (e.amount ?? 0), 0);
   const month = expenses.filter((e) => e.date.slice(0, 7) === m);
   const total = month.reduce((a, e) => a + (e.amount ?? 0), 0);
-  // V20-464: the Cash Book's month (the whole Books overview follows its ‹ ›). V20-466: one week of it.
-  const wk = booksWeek(m, false);
+  const gst = month.reduce((a, e) => a + (e.gst ?? 0), 0);
+  // The same grouping as the Expenses page (its square button; remembered on this device).
+  const [tally, setTallyState] = useState<Tally>(readTally);
+  const [pick, setPick] = useState<string | null>(null);
+  const ti = TALLIES.findIndex((t) => t.id === tally);
+  const next = TALLIES[(ti + 1) % TALLIES.length];
+  const setTally = (t: Tally) => {
+    setTallyState(t);
+    setPick(null);
+    try {
+      localStorage.setItem(TALLY_KEY, t);
+    } catch {
+      /* ignore */
+    }
+  };
+  const keyOf = (e: Expense) => e[tally].trim().toUpperCase() || 'OTHER';
+  const byKey = sumBy(month, keyOf, (e) => e.amount ?? 0);
   const latest = expenses
-    .filter((e) => e.date >= wk.from && e.date <= wk.to)
+    .filter((e) => e.date <= monthEnd(m) && (!pick || (e.date.slice(0, 7) === m && keyOf(e) === pick)))
     .filter((e) => matchesSearch(q, e.description, e.category, e.project, e.notes))
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.sort - a.sort));
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.sort - a.sort))
+    .slice(0, LATEST);
   const wkTotal = latest.reduce((a, e) => a + (e.amount ?? 0), 0);
   return (
     <section className="panel panel-budget-card panel-books-card" aria-labelledby="h-expenses-card">
       <CardHead id="h-expenses-card" title="Expenses" openLabel="Open all Expenses" onOpen={onOpenAll} addLabel="Add an expense" onAdd={onAdd} />
-      <div className="budget-stats" aria-label="This month">
-        <div className="budget-stat budget-stat-total" aria-pressed="true">
-          <span className="budget-stat-label">{monthName(today)} · spent</span>
-          <span className="budget-stat-value">{money(total)}</span>
-        </div>
-        <div className="budget-stat">
-          <span className="budget-stat-label">Entries</span>
-          <span className="budget-stat-value">{month.length}</span>
-        </div>
-      </div>
-      <h3 className="card-h">
-        {wk.label} · {latest.length} · {money(wkTotal)}
-      </h3>
+      <CardBoxes
+        lead={
+          <button type="button" className="icon-btn tool-btn budget-groupby" aria-label={`Totals by ${TALLIES[ti].label}. Switch to ${next.label}`} title={`By ${TALLIES[ti].label} · tap for ${next.label}`} onClick={() => setTally(next.id)}>
+            <Icon d={TALLIES[ti].icon} />
+          </button>
+        }
+        fyLabel={`FY${fy.fy} · spent`}
+        fyValue={fyTotal}
+        monthLabel={`${monthName(today)} · by ${TALLIES[ti].label}`}
+        monthValue={total}
+        extra={
+          gst > 0 ? (
+            <div className="budget-stat">
+              <span className="budget-stat-label">GST/HST</span>
+              <span className="budget-stat-value">{money(gst)}</span>
+            </div>
+          ) : null
+        }
+        byKey={byKey}
+        pick={pick}
+        onPick={setPick}
+      />
+      <h3 className="card-h">{latestHead(latest.length, pick, wkTotal)}</h3>
       {latest.length === 0 ? (
-        <p className="field-hint">{expenses.length ? `No expenses ${wk.label === 'Last 7 days' ? 'in the last 7 days' : `${wk.label}`}.` : 'No expenses yet. Tap + to add one, or ⌄ to import a bank statement.'}</p>
+        <p className="field-hint">{expenses.length ? 'No expenses up to this month.' : 'No expenses yet. Tap + to add one, or ⌄ to import a bank statement.'}</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Latest expenses">
           {/* V20-527 (Dan, Nov 25): more columns on the Books cards (desktop); phones keep two lines. */}
@@ -130,42 +210,36 @@ function DivChip({ name, projects = [] }: { name: string; projects?: { name: str
   );
 }
 
-export function IncomeCard({ lines, today, onOpenAll, onImport, accounts = [], projects = [] }: { projects?: { name: string; color: string }[]; lines: BankLine[]; today: Date; onOpenAll: () => void; onImport?: () => void; /** V20-527: account short names (ATB B.) in place of numbers. */ accounts?: { number: string; method: string; name: string }[] }) {
+export function IncomeCard({ lines, today, onOpenAll, onImport, accounts = [], projects = [], fyEnd = '09-30' }: { projects?: { name: string; color: string }[]; lines: BankLine[]; today: Date; onOpenAll: () => void; onImport?: () => void; /** V20-527: account short names (ATB B.) in place of numbers. */ accounts?: { number: string; method: string; name: string }[]; fyEnd?: string }) {
   const acctName = (n: string) => {
     const a = accounts.find((x) => x.number === n);
     return a?.method || a?.name || (n.length > 4 ? `••${n.slice(-4)}` : n);
   };
   const { q } = useHeaderSearch();
   const m = iso(today);
+  const fy = fyOfMonth(m, fyEnd);
   const ins = lines
     .filter((l) => l.route === 'income' || l.route === 'interest')
     .map((l) => ({ l, amount: l.credit ?? -(l.debit ?? 0), what: l.income?.description || (l.route === 'interest' ? 'Interest' : tidy(l.key)) }));
+  const fyTotal = ins.filter((x) => x.l.date >= fy.from && x.l.date <= fy.to).reduce((a, x) => a + x.amount, 0);
   const month = ins.filter((x) => x.l.date.slice(0, 7) === m);
   const total = month.reduce((a, x) => a + x.amount, 0);
-  const wk = booksWeek(m, false);
+  const [pick, setPick] = useState<string | null>(null);
+  const keyOf = (x: (typeof ins)[number]) => (x.l.route === 'interest' && !x.l.income?.project ? 'INTEREST' : (x.l.income?.project ?? '').trim().toUpperCase() || 'OTHER');
+  const byKey = sumBy(month, keyOf, (x) => x.amount);
   const latest = ins
-    .filter((x) => x.l.date >= wk.from && x.l.date <= wk.to)
+    .filter((x) => x.l.date <= monthEnd(m) && (!pick || (x.l.date.slice(0, 7) === m && keyOf(x) === pick)))
     .filter((x) => matchesSearch(q, x.what, x.l.text))
-    .sort((a, b) => (a.l.date < b.l.date ? 1 : a.l.date > b.l.date ? -1 : 0));
+    .sort((a, b) => (a.l.date < b.l.date ? 1 : a.l.date > b.l.date ? -1 : 0))
+    .slice(0, LATEST);
   const wkTotal = latest.reduce((a, x) => a + x.amount, 0);
   return (
     <section className="panel panel-budget-card panel-books-card" aria-labelledby="h-income-card">
       <CardHead id="h-income-card" title="Income" openLabel="Open all Income" onOpen={onOpenAll} addLabel="Import a bank statement" onAdd={onImport} />
-      <div className="budget-stats" aria-label="This month">
-        <div className="budget-stat budget-stat-total" aria-pressed="true">
-          <span className="budget-stat-label">{monthName(today)} · in</span>
-          <span className="budget-stat-value">{money(total)}</span>
-        </div>
-        <div className="budget-stat">
-          <span className="budget-stat-label">Deposits</span>
-          <span className="budget-stat-value">{month.length}</span>
-        </div>
-      </div>
-      <h3 className="card-h">
-        {wk.label} · {latest.length} · {money(wkTotal)}
-      </h3>
+      <CardBoxes fyLabel={`FY${fy.fy} · in`} fyValue={fyTotal} monthLabel={`${monthName(today)} · in`} monthValue={total} byKey={byKey} pick={pick} onPick={setPick} />
+      <h3 className="card-h">{latestHead(latest.length, pick, wkTotal)}</h3>
       {latest.length === 0 ? (
-        <p className="field-hint">{ins.length ? `No money in ${wk.label === 'Last 7 days' ? 'in the last 7 days' : `${wk.label}`}.` : 'No income yet. Money in comes from your bank statements: tap + to import one.'}</p>
+        <p className="field-hint">{ins.length ? 'No money in up to this month.' : 'No income yet. Money in comes from your bank statements: tap + to import one.'}</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Latest income">
           <div className="bc-row bc-head books-wide bw-inc" role="row">
@@ -195,35 +269,29 @@ export function IncomeCard({ lines, today, onOpenAll, onImport, accounts = [], p
 }
 
 /** V20-523 (Dan, Nov 24): Draws get a home on the Books track: money you took out of the business, like Income's card. */
-export function DrawsCard({ draws, today, onOpenAll, onImport, projects = [] }: { draws: Draw[]; today: Date; onOpenAll: () => void; onImport?: () => void; projects?: { name: string; color: string }[] }) {
+export function DrawsCard({ draws, today, onOpenAll, onImport, projects = [], fyEnd = '09-30' }: { draws: Draw[]; today: Date; onOpenAll: () => void; onImport?: () => void; projects?: { name: string; color: string }[]; fyEnd?: string }) {
   const { q } = useHeaderSearch();
   const m = iso(today);
+  const fy = fyOfMonth(m, fyEnd);
+  const fyTotal = draws.filter((d) => d.date >= fy.from && d.date <= fy.to).reduce((a, d) => a + d.amount, 0);
   const month = draws.filter((d) => d.date.slice(0, 7) === m);
   const total = month.reduce((a, d) => a + d.amount, 0);
-  const wk = booksWeek(m, false);
+  const [pick, setPick] = useState<string | null>(null);
+  const keyOf = (d: Draw) => d.project.trim().toUpperCase() || 'OTHER';
+  const byKey = sumBy(month, keyOf, (d) => d.amount);
   const latest = draws
-    .filter((d) => d.date >= wk.from && d.date <= wk.to)
+    .filter((d) => d.date <= monthEnd(m) && (!pick || (d.date.slice(0, 7) === m && keyOf(d) === pick)))
     .filter((d) => matchesSearch(q, d.description, d.project, d.notes))
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.sort - a.sort));
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.sort - a.sort))
+    .slice(0, LATEST);
   const wkTotal = latest.reduce((a, d) => a + d.amount, 0);
   return (
     <section className="panel panel-budget-card panel-books-card" aria-labelledby="h-draws-card">
       <CardHead id="h-draws-card" title="Draws" openLabel="Open all Draws" onOpen={onOpenAll} addLabel="Import a bank statement" onAdd={onImport} />
-      <div className="budget-stats" aria-label="This month">
-        <div className="budget-stat budget-stat-total" aria-pressed="true">
-          <span className="budget-stat-label">{monthName(today)} · drawn</span>
-          <span className="budget-stat-value">{money(total)}</span>
-        </div>
-        <div className="budget-stat">
-          <span className="budget-stat-label">Draws</span>
-          <span className="budget-stat-value">{month.length}</span>
-        </div>
-      </div>
-      <h3 className="card-h">
-        {wk.label} · {latest.length} · {money(wkTotal)}
-      </h3>
+      <CardBoxes fyLabel={`FY${fy.fy} · drawn`} fyValue={fyTotal} monthLabel={`${monthName(today)} · drawn`} monthValue={total} byKey={byKey} pick={pick} onPick={setPick} />
+      <h3 className="card-h">{latestHead(latest.length, pick, wkTotal)}</h3>
       {latest.length === 0 ? (
-        <p className="field-hint">{draws.length ? `No draws ${wk.label === 'Last 7 days' ? 'in the last 7 days' : `${wk.label}`}.` : 'No draws yet. Money you take out of the business (a transfer or e-transfer to you) comes from your bank statements.'}</p>
+        <p className="field-hint">{draws.length ? 'No draws up to this month.' : 'No draws yet. Money you take out of the business (a transfer or e-transfer to you) comes from your bank statements.'}</p>
       ) : (
         <div className="bc-table" role="table" aria-label="Latest draws">
           <div className="bc-row bc-head books-wide bw-drw" role="row">

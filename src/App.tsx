@@ -2661,6 +2661,7 @@ export default function App() {
 
   const expensesCard = (
     <ExpensesCard
+      fyEnd={invoiceProfile[0]?.fyEnd ?? '09-30'}
       projects={projects}
       expenses={expenses}
       today={booksDay}
@@ -2670,6 +2671,7 @@ export default function App() {
   );
   const incomeCard = (
     <IncomeCard
+      fyEnd={invoiceProfile[0]?.fyEnd ?? '09-30'}
       projects={projects}
       accounts={bankAccounts}
       lines={bankLines}
@@ -2680,6 +2682,7 @@ export default function App() {
   );
   const drawsCard = (
     <DrawsCard
+      fyEnd={invoiceProfile[0]?.fyEnd ?? '09-30'}
       projects={projects}
       draws={draws}
       today={booksDay}

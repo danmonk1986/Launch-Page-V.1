@@ -13,9 +13,9 @@ import type { BankLine } from '../lib/bank';
 
 const PLUS = 'M12 5v14M5 12h14';
 /** Nov 1: what the totals add up by (the square button cycles; remembered on this device). */
-type Tally = 'pmtCategory' | 'category' | 'method' | 'type' | 'project';
-const TALLY_KEY = 'launchpage.records.tally';
-const TALLIES: { id: Tally; label: string; icon: string }[] = [
+export type Tally = 'pmtCategory' | 'category' | 'method' | 'type' | 'project';
+export const TALLY_KEY = 'launchpage.records.tally';
+export const TALLIES: { id: Tally; label: string; icon: string }[] = [
   { id: 'pmtCategory', label: 'Category', icon: 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01' },
   { id: 'category', label: 'Group', icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
   { id: 'method', label: 'Method', icon: 'M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zM2 10h20M6 15h4' },
