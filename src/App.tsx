@@ -2807,6 +2807,7 @@ export default function App() {
               expenses={
                 !books ? null : (
                   <ExpensesCard
+                    projects={projects}
                     expenses={expenses}
                     today={booksDay}
                     onOpenAll={() => {
@@ -2824,6 +2825,7 @@ export default function App() {
               income={
                 !books ? null : (
                   <IncomeCard
+                    projects={projects}
                     accounts={bankAccounts}
                     lines={bankLines}
                     today={booksDay}
@@ -2842,6 +2844,7 @@ export default function App() {
               draws={
                 !books ? null : (
                   <DrawsCard
+                    projects={projects}
                     draws={draws}
                     today={booksDay}
                     onOpenAll={() => {

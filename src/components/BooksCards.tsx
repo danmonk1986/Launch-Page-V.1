@@ -55,7 +55,7 @@ function CardHead({ id, title, openLabel, onOpen, addLabel, onAdd }: { id: strin
   );
 }
 
-export function ExpensesCard({ expenses, today, onOpenAll, onAdd }: { expenses: Expense[]; today: Date; onOpenAll: () => void; onAdd?: () => void }) {
+export function ExpensesCard({ expenses, today, onOpenAll, onAdd, projects = [] }: { expenses: Expense[]; today: Date; onOpenAll: () => void; onAdd?: () => void; projects?: { name: string; color: string }[] }) {
   const { q } = useHeaderSearch();
   const m = iso(today);
   const month = expenses.filter((e) => e.date.slice(0, 7) === m);
@@ -102,7 +102,7 @@ export function ExpensesCard({ expenses, today, onOpenAll, onAdd }: { expenses: 
           {latest.map((e, i) => (
             <button type="button" key={e.id} className={`bc-row bc-row-btn books-wide bw-exp${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Expenses" onClick={onOpenAll}>
               <span className="c-date pl-mono pl-due">{day(e.date)}</span>
-              <span className="c-div pl-desc">{e.project || '—'}</span>
+              <span className="c-div pl-desc bc-proj"><DivChip name={e.project} projects={projects} /></span>
               <span className="c-name pl-name bc-name">{e.description || '—'}</span>
               <span className="c-x pl-desc">{e.type || '—'}</span>
               <span className="c-x pl-desc">{e.category || '—'}</span>
@@ -118,7 +118,19 @@ export function ExpensesCard({ expenses, today, onOpenAll, onAdd }: { expenses: 
   );
 }
 
-export function IncomeCard({ lines, today, onOpenAll, onImport, accounts = [] }: { lines: BankLine[]; today: Date; onOpenAll: () => void; onImport?: () => void; /** V20-527: account short names (ATB B.) in place of numbers. */ accounts?: { number: string; method: string; name: string }[] }) {
+/** V20-528 (Dan, Nov 25): divisions show as pills in their project colour, like the Budget card. */
+function DivChip({ name, projects = [] }: { name: string; projects?: { name: string; color: string }[] }) {
+  if (!name) return <>—</>;
+  const n = (v: string) => v.trim().toUpperCase().replace(/^STARDVST\s+/, '');
+  const pr = projects.find((x) => n(x.name) === n(name)) ?? projects.find((x) => n(x.name).startsWith(n(name)) || n(name).startsWith(n(x.name)));
+  return (
+    <span className="chip" style={pr ? { ['--chip' as string]: pr.color } : undefined} title={name}>
+      {pr ? pr.name.replace(/^STARDVST\s+/i, '') : name}
+    </span>
+  );
+}
+
+export function IncomeCard({ lines, today, onOpenAll, onImport, accounts = [], projects = [] }: { projects?: { name: string; color: string }[]; lines: BankLine[]; today: Date; onOpenAll: () => void; onImport?: () => void; /** V20-527: account short names (ATB B.) in place of numbers. */ accounts?: { number: string; method: string; name: string }[] }) {
   const acctName = (n: string) => {
     const a = accounts.find((x) => x.number === n);
     return a?.method || a?.name || (n.length > 4 ? `••${n.slice(-4)}` : n);
@@ -168,7 +180,7 @@ export function IncomeCard({ lines, today, onOpenAll, onImport, accounts = [] }:
           {latest.map((x, i) => (
             <button type="button" key={x.l.id} className={`bc-row bc-row-btn books-wide bw-inc${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Income" onClick={onOpenAll}>
               <span className="c-date pl-mono pl-due">{day(x.l.date)}</span>
-              <span className="c-div pl-desc">{x.l.income?.project || '—'}</span>
+              <span className="c-div pl-desc bc-proj"><DivChip name={x.l.income?.project ?? ''} projects={projects} /></span>
               <span className="c-name pl-name bc-name">{x.what}</span>
               <span className="c-x pl-desc">{x.l.route === 'interest' ? 'Interest' : 'Income'}</span>
               <span className="c-meth pl-desc">{acctName(x.l.account)}</span>
@@ -183,7 +195,7 @@ export function IncomeCard({ lines, today, onOpenAll, onImport, accounts = [] }:
 }
 
 /** V20-523 (Dan, Nov 24): Draws get a home on the Books track: money you took out of the business, like Income's card. */
-export function DrawsCard({ draws, today, onOpenAll, onImport }: { draws: Draw[]; today: Date; onOpenAll: () => void; onImport?: () => void }) {
+export function DrawsCard({ draws, today, onOpenAll, onImport, projects = [] }: { draws: Draw[]; today: Date; onOpenAll: () => void; onImport?: () => void; projects?: { name: string; color: string }[] }) {
   const { q } = useHeaderSearch();
   const m = iso(today);
   const month = draws.filter((d) => d.date.slice(0, 7) === m);
@@ -224,7 +236,7 @@ export function DrawsCard({ draws, today, onOpenAll, onImport }: { draws: Draw[]
           {latest.map((d, i) => (
             <button type="button" key={d.id} className={`bc-row bc-row-btn books-wide bw-drw${i % 2 ? ' is-alt' : ''}`} role="row" title="Open Draws" onClick={onOpenAll}>
               <span className="c-date pl-mono pl-due">{day(d.date)}</span>
-              <span className="c-div pl-desc">{d.project || '—'}</span>
+              <span className="c-div pl-desc bc-proj"><DivChip name={d.project} projects={projects} /></span>
               <span className="c-name pl-name bc-name">{d.description || '—'}</span>
               <span className="c-x pl-desc">{d.notes || '—'}</span>
               <span className="c-amt pl-mono bc-amt">{money(d.amount)}</span>
