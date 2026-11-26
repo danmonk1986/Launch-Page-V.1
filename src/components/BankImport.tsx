@@ -811,6 +811,8 @@ export function BankImport(p: Props) {
             <span className="bank-note">FY{fyOf(new Date().toISOString().slice(0, 10), fyEnd)} is this year (named by the year it ends).</span>
           </label>
   );
+  // V20-530c: typing lines from scratch (Add a line sits beside Process).
+  const scratchRow = books && p.setup && track === 'scratch' && mode === 'new' && parsed.length > 0;
   const statusOf = (r: Draft) => (skip.has(r.fp) ? 'Left out' : STATUS_LABEL[r.status]);
 
   return (
@@ -1571,18 +1573,7 @@ export function BankImport(p: Props) {
                   <input type="checkbox" checked={showDup} onChange={(e) => setShowDup(e.target.checked)} /> Show {dups} already imported
                 </label>
               )}
-              {books && p.setup && track === 'scratch' && mode === 'new' && parsed.length > 0 ? (
-                <span className="bank-add-under">
-                  <button type="button" className="btn btn-go" onClick={addLine} disabled={!accounts.length}>
-                    + Add a line
-                  </button>
-                  <button type="button" className="btn btn-quiet" onClick={addAccount}>
-                    + Add an account
-                  </button>
-                </span>
-              ) : (
-                <span className="bank-note">Hover a status to see why a line was routed that way.</span>
-              )}
+              <span className="bank-note">Hover a status to see why a line was routed that way.</span>
               {overSplit.length > 0 && <span className="bank-error bank-inline">{overSplit.length} split{overSplit.length > 1 ? 's add' : ' adds'} up to more than the charge: fix the parts before saving.</span>}
               {mode === 'saved' ? (
               <button type="button" className="btn btn-go" disabled={saving || !changed.length || overSplit.length > 0} onClick={() => void saveSaved()}>
@@ -1609,9 +1600,15 @@ export function BankImport(p: Props) {
                   </button>
                 </>
               ) : (
-              <button type="button" className="btn btn-go" disabled={saving || !live.length || overSplit.length > 0} onClick={() => void save()}>
+              <button type="button" className={`btn ${scratchRow ? 'btn-quiet' : 'btn-go'}`} disabled={saving || !live.length || overSplit.length > 0} onClick={() => void save()}>
                 {saving ? (books ? 'Processing…' : 'Saving…') : live.length ? (books ? `Process ${live.length} line${live.length === 1 ? '' : 's'}` : `Save ${live.length} line${live.length === 1 ? '' : 's'} to Records`) : 'Nothing new to import'}
               </button>
+              )}
+              {/* V20-530c (Dan): typing lines from scratch, + Add a line is the green button beside Process (hollow). */}
+              {scratchRow && (
+                <button type="button" className="btn btn-go" onClick={addLine} disabled={!accounts.length}>
+                  + Add a line
+                </button>
               )}
               </>
               )}
