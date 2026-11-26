@@ -64,6 +64,8 @@ export function RecordsPage(
     /** V20-161 (Dan, Nov 13): Settings › Modules. Invoice = the Invoices view; Records = Expenses, Income and Draws. */
     showInvoices?: boolean;
     showBooks?: boolean;
+    /** V20-535: Main's Records page popped in from its card: titled by the view, ^ back to the Records cards, menu kept. */
+    popIn?: boolean;
     /** V20-310: each bookkeeping view on its own (Settings › Modules › Records). */
     showViews?: { expenses: boolean; income: boolean; draws: boolean };
     /** V20-474 (Books): the Cash Book's opening balance, set from "Set up your books". */
@@ -143,7 +145,8 @@ export function RecordsPage(
   // V20-191 (Dan, Nov 14): the views are tabs, the same as Tasks and Timed launches (were pills).
   const views = <FoldTabs label="Records" items={shownViews.map((v) => ({ id: v.id, label: v.label }))} value={view} onPick={setView} />;
 
-  if (view === 'invoices' && p.showInvoices !== false) return <InvoicesPage {...p} title="Records" below={views} />;
+  if (view === 'invoices' && p.showInvoices !== false) return <InvoicesPage {...p} title={p.popIn ? 'Invoices' : 'Records'} closeLabel={p.popIn ? 'Back to Records' : undefined} below={views} />;
+  const chevron = books || p.popIn;
 
   return (
     <section className="panel panel-budget panel-records" aria-labelledby="h-records">
@@ -151,12 +154,12 @@ export function RecordsPage(
         {/* V20-455b/d (Dan, Nov 22): on the Books track (a test harness) the page is titled by its card (EXPENSES or
             INCOME) and its ^ goes back to BOOKS.
             Main keeps its × (the harness doesn't change the real Records page). */}
-        {books ? (
+        {chevron ? (
           <div className="rockets-title">
             <h2 id="h-records" className="panel-title">
               {view === 'income' ? 'Income' : view === 'draws' ? 'Draws' : 'Expenses'}
             </h2>
-            <button type="button" className="rockets-toggle is-open" aria-label="Back to BOOKS" title="Back to BOOKS" onClick={p.onClose}>
+            <button type="button" className="rockets-toggle is-open" aria-label={books ? 'Back to BOOKS' : 'Back to Records'} title={books ? 'Back to BOOKS' : 'Back to Records'} onClick={p.onClose}>
               <Icon d="M6 9l6 6 6-6" />
             </button>
           </div>
@@ -188,7 +191,7 @@ export function RecordsPage(
               <Icon d={PLUS} />
             </button>
           )}
-          {!books && (
+          {!chevron && (
             <button type="button" className="icon-btn tool-btn" aria-label="Back to L4UNCH P4GE" title="Back to L4UNCH P4GE" onClick={p.onClose}>
               <Icon d={CLOSE} />
             </button>

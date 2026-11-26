@@ -41,6 +41,8 @@ type Props = {
   title?: string;
   /** Records (Nov 1): the view pills, under the header. */
   below?: ReactNode;
+  /** V20-535: what the × says (Main's Records pop-in goes back to the Records cards). */
+  closeLabel?: string;
 };
 
 const shortDate = (s: string | null) => (s ? new Date(`${s}T12:00:00`).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '');
@@ -81,7 +83,7 @@ export function InvoicesPage(p: Props) {
           <button type="button" className="icon-btn tool-btn" aria-label="New invoice" title="New invoice" onClick={() => setEditing(startInvoice(p.invoices, p.customers, isoDate(new Date())))}>
             <Icon d={PLUS} />
           </button>
-          <button type="button" className="icon-btn tool-btn" aria-label="Back to L4UNCH P4GE" title="Back to L4UNCH P4GE" onClick={p.onClose}>
+          <button type="button" className="icon-btn tool-btn" aria-label={p.closeLabel ?? 'Back to L4UNCH P4GE'} title={p.closeLabel ?? 'Back to L4UNCH P4GE'} onClick={p.onClose}>
             <Icon d={CLOSE} />
           </button>
         </div>

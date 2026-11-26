@@ -173,6 +173,14 @@ export default function App() {
   // V20-532 (Dan, Nov 26): the Books tools (new import + setup, audits, Undo, Draws, columns, pills) also run in Main.
   // The Books look (logo, Books home, no page tabs) stays on the Books track.
   const booksTools = books || !beta;
+  /** Open a Records page (Books: from the home; Main: from the Records cards), optionally firing an event on it. */
+  const openRecords = (view: 'expenses' | 'income' | 'draws', ev?: string, month?: string) => {
+    presetRecordsView(view, month ?? (books ? booksMonth : undefined));
+    setPage('invoices');
+    setRecordsOpen(true);
+    window.scrollTo(0, 0);
+    if (ev) setTimeout(() => window.dispatchEvent(new Event(ev)), 250);
+  };
   // V20-464 (Dan, Nov 22): the Books overview's month, set by the Cash Book's ‹ ›; the Expenses and Income cards follow it.
   const [booksMonth, setBooksMonth] = useState(() => new Date().toLocaleDateString('en-CA').slice(0, 7));
   const booksDay = new Date(Number(booksMonth.slice(0, 4)), Number(booksMonth.slice(5, 7)) - 1, 1);
@@ -212,6 +220,9 @@ export default function App() {
     if (h === 'records') return 'invoices';
     return (['launch', 'tasks', 'days26', 'budget', 'invoices', 'journal', 'kb'] as PageId[]).includes(h as PageId) ? (h as PageId) : 'launch';
   });
+  // V20-535 (Dan, Nov 26): in Main the Records tab is a page of cards (Cash Book, Expenses, Income, Draws); a card's
+  // chevron pops in its page, which has the Expenses · Income · Draws · Invoices menu and a ^ back to the cards.
+  const [recordsOpen, setRecordsOpen] = useState(false);
   useEffect(() => {
     // Keep the address on the page you're on, so a refresh stays there.
     const want = page === 'launch' ? '' : `#${page}`;
@@ -2643,18 +2654,41 @@ export default function App() {
           launchSheetFile({ lines: bankLines, expenses, draws, accounts: bankAccounts, budget, common, invoices }, { purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' })
         )
       }
-      onImportBank={() => {
-        presetRecordsView('income', books ? booksMonth : undefined);
-        setPage('invoices');
-        setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
-      }}
-      onSetup={() => {
-        presetRecordsView('expenses', booksMonth);
-        setPage('invoices');
-        setTimeout(() => window.dispatchEvent(new Event('records:setup')), 250);
-      }}
+      onImportBank={() => openRecords('income', 'records:import')}
+      onSetup={() => openRecords('expenses', 'records:setup', booksMonth)}
     />
   );
+
+  const expensesCard = (
+    <ExpensesCard
+      projects={projects}
+      expenses={expenses}
+      today={booksDay}
+      onOpenAll={() => openRecords('expenses')}
+      onAdd={() => openRecords('expenses', 'records:add')}
+    />
+  );
+  const incomeCard = (
+    <IncomeCard
+      projects={projects}
+      accounts={bankAccounts}
+      lines={bankLines}
+      today={booksDay}
+      onOpenAll={() => openRecords('income')}
+      onImport={() => openRecords('income', 'records:import')}
+    />
+  );
+  const drawsCard = (
+    <DrawsCard
+      projects={projects}
+      draws={draws}
+      today={booksDay}
+      onOpenAll={() => openRecords('draws')}
+      onImport={() => openRecords('draws', 'records:import')}
+    />
+  );
+  /** V20-535: Main's Records tab shows these cards until one is popped in. */
+  const recordsHome = !books && booksTools && booksOn(mods);
 
   return (
     <BetaContext.Provider value={beta}>
@@ -2687,6 +2721,7 @@ export default function App() {
           // V20-249: a greyed-out (switched off) page opens Settings › Modules instead.
           if (hiddenPages.includes(pg)) return setSettingsOpen('modules');
           setFocusTask(null);
+          if (pg === 'invoices') setRecordsOpen(false);
           setPage(pg);
         }}
         right={
@@ -2809,61 +2844,9 @@ export default function App() {
                 />
               }
               cashbook={!books ? null : cashBookCard}
-              expenses={
-                !books ? null : (
-                  <ExpensesCard
-                    projects={projects}
-                    expenses={expenses}
-                    today={booksDay}
-                    onOpenAll={() => {
-                      presetRecordsView('expenses', books ? booksMonth : undefined);
-                      setPage('invoices');
-                    }}
-                    onAdd={() => {
-                      presetRecordsView('expenses', books ? booksMonth : undefined);
-                      setPage('invoices');
-                      setTimeout(() => window.dispatchEvent(new Event('records:add')), 250);
-                    }}
-                  />
-                )
-              }
-              income={
-                !books ? null : (
-                  <IncomeCard
-                    projects={projects}
-                    accounts={bankAccounts}
-                    lines={bankLines}
-                    today={booksDay}
-                    onOpenAll={() => {
-                      presetRecordsView('income', books ? booksMonth : undefined);
-                      setPage('invoices');
-                    }}
-                    onImport={() => {
-                      presetRecordsView('income', books ? booksMonth : undefined);
-                      setPage('invoices');
-                      setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
-                    }}
-                  />
-                )
-              }
-              draws={
-                !books ? null : (
-                  <DrawsCard
-                    projects={projects}
-                    draws={draws}
-                    today={booksDay}
-                    onOpenAll={() => {
-                      presetRecordsView('draws', books ? booksMonth : undefined);
-                      setPage('invoices');
-                    }}
-                    onImport={() => {
-                      presetRecordsView('draws', books ? booksMonth : undefined);
-                      setPage('invoices');
-                      setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
-                    }}
-                  />
-                )
-              }
+              expenses={!books ? null : expensesCard}
+              income={!books ? null : incomeCard}
+              draws={!books ? null : drawsCard}
               budget={!mods.budget ? null : <BudgetCard wide={books} onBuild={booksTools ? () => (setPage('budget'), setTimeout(() => window.dispatchEvent(new Event('budget:audit')), 250)) : undefined} lines={booksBudget} today={now} month={books ? booksMonth : undefined} lost={lostBills} onKeep={(id) => answerBill(id, 'keep')} onSkip={(id) => answerBill(id, booksMonth)} onRemove={(id) => void deleteBudgetLine(id)} choicesFor={billChoices} onTie={tieBill} onOpenAll={() => setPage('budget')} onOpenLine={(id) => { setBudgetOpen(id); setPage('budget'); }} onAdd={() => { setBudgetOpen('new'); setPage('budget'); }} projects={projects} />}
               planner={!mods.planner ? null : <PlannerPanel decisions={decisions} plans={plans} projects={projects} onSave={saveDecision} onSaveMany={decisionOps.saveMany} onSavePlan={savePlan} onPlanToTasks={planToTasks} onRemove={removeDecision} onToWorkflow={decisionToWorkflow} onToggle={() => setPage('planner')} />}
               journal={!mods.journal ? null : <JournalPanel entries={journal} today={now} day={journalDay} onSave={saveJournal} onDelete={deleteJournal} onImport={importJournal} onOpen={() => setPage('journal')} />}
@@ -2940,10 +2923,19 @@ export default function App() {
               checkinText={checkinText}
               onCheckin={setCheckin}
             />
+          ) : page === 'invoices' && recordsHome && !recordsOpen ? (
+            <div className="home records-home">
+              <div className="home-main">
+                {cashBookCard}
+                {expensesCard}
+                {incomeCard}
+                {drawsCard}
+              </div>
+            </div>
           ) : page === 'invoices' ? (
             <>
-            {!books && booksTools && booksOn(mods) && <div className="records-cashbook">{cashBookCard}</div>}
             <RecordsPage
+              popIn={recordsHome}
               cashBook={booksTools ? settings.account.cashBook : undefined}
               onSetOpening={booksTools ? (start, opening) => void handleSave({ account: { ...settings.account, cashBook: { start, opening } } as BrandSettings['account'] }) : undefined}
               onDownloadSheet={booksTools ? () => downloadBlob('LAUNCH-SHEET-blank.xlsx', blankBooksFile({ purple: settings.accentPurple || '#8869cb', teal: settings.accentTeal || '#06f9c2' })) : undefined}
@@ -2972,7 +2964,7 @@ export default function App() {
               onSaveCustomer={customerOps.save}
               onDeleteCustomer={customerOps.remove}
               onSaveProfile={profileOps.save}
-              onClose={() => setPage('launch')}
+              onClose={() => (recordsHome ? (setRecordsOpen(false), window.scrollTo(0, 0)) : setPage('launch'))}
             />
             </>
           ) : page === 'kb' ? (
@@ -3387,8 +3379,7 @@ export default function App() {
                   button: 'Import',
                   onClick: () => {
                     setSettingsOpen(false);
-                    setPage('invoices');
-                    setTimeout(() => window.dispatchEvent(new Event('records:import')), 250);
+                    openRecords('expenses', 'records:import');
                   }
                 }
               ]
